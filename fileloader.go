@@ -7,8 +7,8 @@ package main
 
 import (
 	"fmt"
-	"io/ioutil"
 	"net/http"
+	"os"
 	"strings"
 )
 
@@ -32,7 +32,7 @@ func (h *FileLoader) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 			filePath = "/" + filePath
 		}
 		
-		fileData, err := ioutil.ReadFile(filePath)
+		fileData, err := os.ReadFile(filePath)
 		if err != nil {
 			res.WriteHeader(http.StatusNotFound)
 			res.Write([]byte(fmt.Sprintf("Could not load file %s", filePath)))

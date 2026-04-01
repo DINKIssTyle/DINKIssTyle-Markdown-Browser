@@ -1,19 +1,57 @@
-# README
+# DKST Markdown Browser
 
-## About
+A lightweight, elegant cross-platform Markdown viewer built with [Wails](https://wails.io).
 
-This is the official Wails Vanilla template.
+![Main Screenshot](doc/screenshot.png)
 
-You can configure the project by editing `wails.json`. More information about the project settings can be found
-here: https://wails.io/docs/reference/project-config
+## Features
 
-## Live Development
+- **Dual Rendering Engines**: Choose between `Marked` and `Remark` for your preferred rendering style.
+- **Search & Navigation**: Quickly search for keywords within the current folder and navigate through historical files.
+- **Modern UI**: Sleek dark-mode interface with smooth transitions and Material Design icons.
+- **Customizable**: Adjustable font sizes and live theme switching (Light/Dark).
+- **Native Experience**: Native macOS menu bar, About dialog, and window controls.
+- **File Management**: Recent files list and support for Drag & Drop to open files instantly.
+- **Cross-Platform**: Optimized for macOS, Windows, and Linux.
 
-To run in live development mode, run `wails dev` in the project directory. This will run a Vite development
-server that will provide very fast hot reload of your frontend changes. If you want to develop in a browser
-and have access to your Go methods, there is also a dev server that runs on http://localhost:34115. Connect
-to this in your browser, and you can call your Go code from devtools.
+## Prerequisites
 
-## Building
+- **Go**: Version 1.23 or higher
+- **Wails**: Version v2.11.0 or higher
+- **Node.js**: Version 18 or higher (with npm)
+- **CGO Tools**: Required for native compilation (e.g., GCC or Clang)
 
-To build a redistributable, production mode package, use `wails build`.
+## Building from Source
+
+### macOS
+The macOS build script generates a universal binary (if chosen) and handles the application bundle (`.app`).
+```bash
+chmod +x build_macos.sh
+./build_macos.sh [arm64 | amd64 | universal]
+```
+
+### Windows
+The Windows build script generates the executable (`.exe`) with embedded icons.
+```cmd
+build_windows.bat [amd64 | arm64 | 386]
+```
+
+### Linux
+The Linux build script generates the binary for your specific architecture.
+```bash
+chmod +x build_linux.sh
+./build_linux.sh [amd64 | arm64 | arm]
+```
+
+## Folder Structure
+
+- `frontend/`: Svelte/React/Vue (standard JS/HTML/CSS) frontend assets.
+- `build/`: Project icons, macOS `Info.plist`, and build-related assets.
+- `dist/`: Final build output directory.
+- `doc/`: Screenshots and documentation assets.
+
+## License
+
+Created by **DINKIssTyle**.
+Copyright (c) 2026 DINKI'ssTyle. All rights reserved.
+Refer to `THIRD-PARTY-NOTICES.md` for open-source library licenses.

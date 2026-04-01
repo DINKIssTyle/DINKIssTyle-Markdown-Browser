@@ -1,36 +1,59 @@
 <!DOCTYPE html>
-<html lang="ko" class="dark">
+<html lang="en" class="dark">
+
 <head>
-    <meta charset="UTF-8"/>
-    <meta content="width=device-width, initial-scale=1.0" name="viewport"/>
-    <title>DINKIssTyle Markdown Browser</title>
+    <meta charset="UTF-8" />
+    <meta content="width=device-width, initial-scale=1.0" name="viewport" />
+    <title>DKST Markdown Browser</title>
 </head>
+
 <body>
     <div id="app">
         <!-- Toolbar -->
         <header id="toolbar" class="toolbar">
             <div class="nav-group">
-                <button id="btn-back" title="뒤로 (Back)" class="nav-btn" disabled>←</button>
-                <button id="btn-forward" title="앞으로 (Forward)" class="nav-btn" disabled>→</button>
-                <button id="btn-home" title="홈 (Home)" class="nav-btn">🏠</button>
-                <button id="btn-open" title="파일 열기 (Open)" class="nav-btn">📂</button>
+                <button id="btn-back" title="Back" aria-label="Back" class="nav-btn icon-btn" disabled>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_back</span>
+                </button>
+                <button id="btn-forward" title="Forward" aria-label="Forward" class="nav-btn icon-btn" disabled>
+                    <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                </button>
+                <button id="btn-home" title="Home" aria-label="Home" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">home</span>
+                </button>
+                <button id="btn-open" title="Open File" aria-label="Open File" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">folder_open</span>
+                </button>
             </div>
 
             <div class="address-bar">
-                <span id="current-path">DINKIssTyle Markdown Browser</span>
+                <span id="current-path">DKST Markdown Browser</span>
             </div>
 
             <div class="action-group">
                 <div class="render-toggle">
-                  <select id="select-engine">
-                    <option value="marked">Marked</option>
-                    <option value="remark">Remark</option>
-                  </select>
+                    <select id="select-engine">
+                        <option value="marked">Marked</option>
+                        <option value="remark">Remark</option>
+                    </select>
                 </div>
-                <button id="btn-font-minus" title="폰트 작게" class="nav-btn font-btn">A-</button>
-                <button id="btn-font-plus" title="폰트 크게" class="nav-btn font-btn">A+</button>
-                <button id="btn-theme-toggle" title="테마 토글" class="nav-btn">🌓</button>
-                <button id="btn-search-toggle" title="검색" class="nav-btn">🔍</button>
+                <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
+                    <span class="material-symbols-outlined info-btn-icon" aria-hidden="true">info</span>
+                </button>
+                <button id="btn-font-minus" title="Decrease Font Size" aria-label="Decrease Font Size" class="nav-btn icon-btn font-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
+                    <span class="font-adjust-label" aria-hidden="true">-</span>
+                </button>
+                <button id="btn-font-plus" title="Increase Font Size" aria-label="Increase Font Size" class="nav-btn icon-btn font-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
+                    <span class="font-adjust-label" aria-hidden="true">+</span>
+                </button>
+                <button id="btn-theme-toggle" title="Toggle Theme" aria-label="Toggle Theme" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
+                </button>
+                <button id="btn-search-toggle" title="Search" aria-label="Search" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                </button>
             </div>
         </header>
 
@@ -39,14 +62,14 @@
             <article id="content-view" class="content-view">
                 <!-- Home Screen (Recent Files) -->
                 <div id="home-screen" class="home-screen">
-                    <h1>📝 DINKIssTyle Markdown Browser</h1>
-                    <p class="home-subtitle">마크다운 파일을 열거나 드래그하세요.</p>
+                    <h1>📝 DKST Markdown Browser</h1>
+                    <p class="home-subtitle">Open or drag a Markdown file here.</p>
                     <div id="recent-files-list" class="recent-list">
-                        <div class="empty-state">최근에 열거나 드래그한 파일이 없습니다.</div>
+                        <div class="empty-state">No recently opened files.</div>
                     </div>
                     <div class="recent-actions">
-                        <button id="btn-open-home" class="action-btn primary">📂 파일 열기</button>
-                        <button id="btn-clear-recent" class="action-btn secondary">🗑 최근 목록 지우기</button>
+                        <button id="btn-open-home" class="action-btn primary">📂 Open File</button>
+                        <button id="btn-clear-recent" class="action-btn secondary">🗑 Clear Recent Files</button>
                     </div>
                 </div>
                 <div id="markdown-container" class="markdown-container hidden"></div>
@@ -55,15 +78,26 @@
             <!-- Sidebar (Search) - on the RIGHT -->
             <aside id="search-sidebar" class="sidebar hidden">
                 <div class="search-header">
-                    <input type="text" id="search-input" placeholder="내용 검색..." />
-                    <button id="btn-search-folder" title="검색 폴더 선택" class="nav-btn">📁</button>
+                    <input type="text" id="search-input" placeholder="Search keyword..." />
                 </div>
                 <div id="search-results" class="search-results">
-                    <div class="search-hint">파일을 열거나 폴더를 선택하여 검색하세요.</div>
+                    <div class="search-hint">Open a file then type to search.</div>
                 </div>
             </aside>
         </main>
+
+        <!-- Floating highlight navigator -->
+        <div id="highlight-nav" class="highlight-nav hidden">
+            <button id="btn-hl-prev" title="Previous">↑</button>
+            <span id="hl-counter">1 / 1</span>
+            <button id="btn-hl-next" title="Next">↓</button>
+            <button id="btn-hl-close" title="Close">✕</button>
+        </div>
+
+        <!-- Toast message -->
+        <div id="toast" class="toast"></div>
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>
+
 </html>

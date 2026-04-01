@@ -1,3 +1,10 @@
+@font-face {
+    font-family: "Material Symbols Outlined";
+    font-style: normal;
+    font-weight: 400;
+    src: url("./assets/fonts/material-symbols-outlined.woff2") format("woff2");
+}
+
 :root {
     --bg-color: #ffffff;
     --surface-color: #f5f5f7;
@@ -35,6 +42,23 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.material-symbols-outlined {
+    font-family: "Material Symbols Outlined";
+    font-weight: normal;
+    font-style: normal;
+    font-size: 20px;
+    line-height: 1;
+    letter-spacing: normal;
+    text-transform: none;
+    display: inline-block;
+    white-space: nowrap;
+    word-wrap: normal;
+    direction: ltr;
+    font-feature-settings: "liga";
+    -webkit-font-feature-settings: "liga";
+    -webkit-font-smoothing: antialiased;
+}
+
 #app {
     display: flex;
     flex-direction: column;
@@ -53,6 +77,12 @@ body {
     padding: 0 16px;
     z-index: 100;
     justify-content: space-between;
+
+    /* 툴바에서 텍스트 선택(드래그) 방지 */
+    user-select: none;
+    -webkit-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
 }
 
 .nav-group, .action-group {
@@ -61,11 +91,37 @@ body {
     gap: 8px;
 }
 
+.info-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    width: 36px;
+    height: 36px;
+    padding: 0;
+    border-radius: 10px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, opacity 0.2s;
+}
+
+.info-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+html.dark .info-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.info-btn-icon {
+    font-size: 21px;
+}
+
 .nav-btn {
     background: transparent;
     border: none;
     color: var(--text-color);
-    font-size: 18px;
     width: 36px;
     height: 36px;
     border-radius: 8px;
@@ -74,6 +130,28 @@ body {
     align-items: center;
     justify-content: center;
     transition: background 0.2s;
+}
+
+.icon-btn {
+    position: relative;
+}
+
+.icon-btn:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
+.font-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.font-adjust-label {
+    position: absolute;
+    right: 5px;
+    bottom: 4px;
+    font-size: 11px;
+    font-weight: 700;
+    line-height: 1;
 }
 
 .nav-btn:hover {
@@ -141,6 +219,8 @@ html.dark .nav-btn:hover {
     gap: 8px;
     border-bottom: 1px solid var(--border-color);
     flex-shrink: 0;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 #search-input {
@@ -184,6 +264,9 @@ html.dark .nav-btn:hover {
     margin: 60px auto;
     text-align: center;
     width: 100%;
+    /* 홈스크린 UI 요소는 텍스트 선택 방지 */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .home-screen h1 {
@@ -274,6 +357,9 @@ html.dark .recent-item:hover {
     width: 100%;
     line-height: 1.5;
     word-wrap: break-word;
+    /* 마크다운 콘텐츠는 텍스트 선택 가능하게 명시 */
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .markdown-container h1, .markdown-container h2 {
@@ -392,3 +478,90 @@ html.dark .recent-item:hover {
     border-radius: 4px;
 }
 html.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+
+/* ── Search highlight ─────────────────────────────────── */
+.search-highlight {
+    background: #ffe566;
+    color: #1a1000;
+    border-radius: 2px;
+    padding: 0 1px;
+    transition: background 0.2s;
+}
+.search-highlight.active {
+    background: #ff8800;
+    color: #fff;
+    outline: 2px solid #ff8800;
+    outline-offset: 1px;
+}
+html.dark .search-highlight {
+    background: #5a4a00;
+    color: #ffe566;
+}
+html.dark .search-highlight.active {
+    background: #cc6600;
+    color: #fff;
+    outline-color: #cc6600;
+}
+
+/* ── Floating highlight navigator ──────────────────────── */
+.highlight-nav {
+    position: fixed;
+    bottom: 28px;
+    left: 50%;
+    transform: translateX(-50%);
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    border: 1px solid var(--border-color);
+    border-radius: 24px;
+    padding: 6px 14px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    z-index: 500;
+    font-size: 13px;
+    color: var(--text-color);
+    user-select: none;
+}
+.highlight-nav button {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 16px;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.15s;
+}
+.highlight-nav button:hover { background: rgba(128,128,128,0.2); }
+#hl-counter { min-width: 48px; text-align: center; font-weight: 600; }
+
+/* ── Toast ─────────────────────────────────────────────── */
+.toast {
+    position: fixed;
+    bottom: 80px;
+    left: 50%;
+    transform: translateX(-50%) translateY(8px);
+    background: rgba(30, 30, 30, 0.88);
+    color: #fff;
+    padding: 9px 20px;
+    border-radius: 10px;
+    font-size: 13px;
+    opacity: 0;
+    transition: opacity 0.25s, transform 0.25s;
+    pointer-events: none;
+    z-index: 600;
+    white-space: nowrap;
+}
+html:not(.dark) .toast {
+    background: rgba(50, 50, 50, 0.88);
+}
+.toast.show {
+    opacity: 1;
+    transform: translateX(-50%) translateY(0);
+}

@@ -9,7 +9,6 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io/ioutil"
 	"os"
 	"path/filepath"
 	"strings"
@@ -46,7 +45,7 @@ type App struct {
 // NewApp creates a new App application struct
 func NewApp() *App {
 	configDir, _ := os.UserConfigDir()
-	appDir := filepath.Join(configDir, "dinkisstyle-markdown-browser")
+	appDir := filepath.Join(configDir, "dkst-markdown-browser")
 	os.MkdirAll(appDir, 0755)
 
 	return &App{
@@ -83,7 +82,7 @@ func (a *App) OpenFile() (FileResult, error) {
 
 // ReadFile reads the content of a file
 func (a *App) ReadFile(path string) (string, error) {
-	content, err := ioutil.ReadFile(path)
+	content, err := os.ReadFile(path)
 	if err != nil {
 		return "", err
 	}
@@ -100,7 +99,7 @@ func (a *App) SearchMarkdown(dir string, query string) ([]map[string]string, err
 			return err
 		}
 		if !info.IsDir() && filepath.Ext(path) == ".md" {
-			content, err := ioutil.ReadFile(path)
+			content, err := os.ReadFile(path)
 			if err != nil {
 				return nil // Skip files that can't be read
 			}
@@ -121,7 +120,7 @@ func (a *App) SearchMarkdown(dir string, query string) ([]map[string]string, err
 // GetRecentFiles returns the list of recently opened files
 func (a *App) GetRecentFiles() []RecentFile {
 	var recent []RecentFile
-	data, err := ioutil.ReadFile(a.recentPath)
+	data, err := os.ReadFile(a.recentPath)
 	if err != nil {
 		return []RecentFile{}
 	}
@@ -147,12 +146,12 @@ func (a *App) saveRecentFile(path string) {
 	}
 
 	data, _ := json.Marshal(newRecent)
-	ioutil.WriteFile(a.recentPath, data, 0644)
+	os.WriteFile(a.recentPath, data, 0644)
 }
 
 // ClearRecentFiles clears the list of recently opened files
 func (a *App) ClearRecentFiles() {
-	ioutil.WriteFile(a.recentPath, []byte("[]"), 0644)
+	os.WriteFile(a.recentPath, []byte("[]"), 0644)
 }
 
 // GetSettings loads the application settings
@@ -163,7 +162,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.FontSize = 16
 	settings.Engine = "marked"
 
-	data, err := ioutil.ReadFile(a.settingsPath)
+	data, err := os.ReadFile(a.settingsPath)
 	if err == nil {
 		json.Unmarshal(data, &settings)
 	}
@@ -173,7 +172,7 @@ func (a *App) GetSettings() AppSettings {
 // SaveSettings saves the application settings
 func (a *App) SaveSettings(settings AppSettings) {
 	data, _ := json.Marshal(settings)
-	ioutil.WriteFile(a.settingsPath, data, 0644)
+	os.WriteFile(a.settingsPath, data, 0644)
 }
 
 // GetSystemTheme returns the current theme (light/dark)

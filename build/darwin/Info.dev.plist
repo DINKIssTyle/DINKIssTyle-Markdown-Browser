@@ -8,7 +8,7 @@
         <key>CFBundleExecutable</key>
         <string>{{.OutputFilename}}</string>
         <key>CFBundleIdentifier</key>
-        <string>com.wails.{{.Name}}</string>
+        <string>com.dinkisstyle.mdbrowser</string>
         <key>CFBundleVersion</key>
         <string>{{.Info.ProductVersion}}</string>
         <key>CFBundleGetInfoString</key>
@@ -22,7 +22,19 @@
         <key>NSHighResolutionCapable</key>
         <string>true</string>
         <key>NSHumanReadableCopyright</key>
-        <string>{{.Info.Copyright}}</string>
+        <string>Copyright (C) 2026 DINKI'ssTyle. All rights reserved.</string>
+
+        <!-- 사용자 선택 파일/폴더 접근 권한 (macOS 10.15+) -->
+        <key>com.apple.security.files.user-selected.read-only</key>
+        <true/>
+
+        <!-- 로컬 네트워크 (wails localhost dev server) 허용 -->
+        <key>NSAppTransportSecurity</key>
+        <dict>
+            <key>NSAllowsLocalNetworking</key>
+            <true/>
+        </dict>
+
         {{if .Info.FileAssociations}}
         <key>CFBundleDocumentTypes</key>
         <array>
@@ -42,13 +54,14 @@
           {{end}}
         </array>
         {{end}}
+
         {{if .Info.Protocols}}
         <key>CFBundleURLTypes</key>
         <array>
           {{range .Info.Protocols}}
             <dict>
                 <key>CFBundleURLName</key>
-                <string>com.wails.{{.Scheme}}</string>
+                <string>com.dinkisstyle.mdbrowser.{{.Scheme}}</string>
                 <key>CFBundleURLSchemes</key>
                 <array>
                     <string>{{.Scheme}}</string>
@@ -59,10 +72,5 @@
           {{end}}
         </array>
         {{end}}
-        <key>NSAppTransportSecurity</key>
-        <dict>
-            <key>NSAllowsLocalNetworking</key>
-            <true/>
-        </dict>
     </dict>
 </plist>

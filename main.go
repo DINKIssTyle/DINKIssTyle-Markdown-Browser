@@ -1,3 +1,8 @@
+/*
+ * Created by DINKIssTyle on 2026.
+ * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
+ */
+
 package main
 
 import (
@@ -6,6 +11,7 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 )
 
 //go:embed all:frontend/dist
@@ -18,9 +24,12 @@ func main() {
 	// Create and configure the file loader
 	fileLoader := NewFileLoader()
 
+	// Build the platform-specific menu (macOS: native menu bar, others: nil)
+	appMenu := buildAppMenu(app)
+
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "DINKIssTyle Markdown Browser",
+		Title:  "DKST Markdown Browser",
 		Width:  1200,
 		Height: 800,
 		AssetServer: &assetserver.Options{
@@ -31,6 +40,19 @@ func main() {
 		OnStartup:        app.startup,
 		Bind: []interface{}{
 			app,
+		},
+		// macOS native menu bar
+		Menu: appMenu,
+		// macOS-specific window chrome
+		// TitleBarDefault: 표준 macOS 타이틀바를 유지 (최신 macOS 호환)
+		// HiddenInset은 타이틀 없이 트래픽라이트만 남아 창 드래그가 불가능해짐
+		Mac: &mac.Options{
+			TitleBar:   mac.TitleBarDefault(),
+			Appearance: mac.NSAppearanceNameAqua, // 시스템 라이트/다크 자동 따름
+			About: &mac.AboutInfo{
+				Title:   "DKST Markdown Browser",
+				Message: "Version 1.0.0\nCopyright (C) 2026 DINKI'ssTyle.\nAll rights reserved.",
+			},
 		},
 	})
 
