@@ -4,6 +4,8 @@ import {main} from '../models';
 
 export function ClearRecentFiles():Promise<void>;
 
+export function ConfirmOpenExternalURL(arg1:string):Promise<boolean>;
+
 export function GetRecentFiles():Promise<Array<main.RecentFile>>;
 
 export function GetSettings():Promise<main.AppSettings>;

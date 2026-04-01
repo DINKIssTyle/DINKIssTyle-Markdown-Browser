@@ -12,6 +12,7 @@ import remarkHtml from 'remark-html';
 
 import {
     OpenFile,
+    ConfirmOpenExternalURL,
     OpenExternalPath,
     OpenExternalURL,
     ReadFile,
@@ -596,7 +597,9 @@ async function openContextLink(href, newTab) {
 
 async function openExternalPath(path) {
     try {
+        LogInfo(`external path request path=${path}`);
         await OpenExternalPath(path);
+        LogInfo(`external path success path=${path}`);
     } catch (error) {
         LogError(`external path fallback failed path=${path}: ${error?.message || error}`);
         showToast('Failed to open path in Finder.');
@@ -605,9 +608,12 @@ async function openExternalPath(path) {
 
 async function openExternalURL(href) {
     try {
+        LogInfo(`external url request href=${href}`);
         await OpenExternalURL(href);
+        LogInfo(`external url success href=${href}`);
     } catch (error) {
         LogError(`external url fallback failed href=${href}: ${error?.message || error}`);
+        LogInfo(`external url runtime fallback href=${href}`);
         BrowserOpenURL(href);
     }
 }
@@ -881,12 +887,7 @@ function postProcess() {
             event.stopPropagation();
 
             if (isExternalURL(href)) {
-                const ok = window.confirm(`External link detected.\n\nOpen in your system browser?\n${href}`);
-                if (ok) {
-                    window.setTimeout(() => {
-                        void openExternalURL(href);
-                    }, 0);
-                }
+                void confirmAndOpenExternalLink(href);
                 return;
             }
 
@@ -915,6 +916,20 @@ function postProcess() {
     });
 
     el.markdownContainer.style.fontSize = `${currentFontSize}px`;
+}
+
+async function confirmAndOpenExternalLink(href) {
+    LogInfo(`external link click href=${href}`);
+    try {
+        const ok = await ConfirmOpenExternalURL(href);
+        LogInfo(`external link confirm href=${href} ok=${ok}`);
+        if (ok) {
+            LogInfo(`external link dispatch href=${href}`);
+            await openExternalURL(href);
+        }
+    } catch (error) {
+        LogError(`external link confirm failed href=${href}: ${error?.message || error}`);
+    }
 }
 
 function resolveLink(rel, options = {}) {

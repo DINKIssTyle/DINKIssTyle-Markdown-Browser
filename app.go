@@ -10,6 +10,7 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"log"
 	"mime"
 	"os"
 	"os/exec"
@@ -210,6 +211,27 @@ func (a *App) OpenDirectory() (string, error) {
 	return selection, err
 }
 
+// ConfirmOpenExternalURL shows a native confirmation dialog before opening an external URL.
+func (a *App) ConfirmOpenExternalURL(url string) (bool, error) {
+	log.Printf("external-url: confirm requested url=%s", url)
+	response, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+		Type:          runtime.QuestionDialog,
+		Title:         "External Link",
+		Message:       fmt.Sprintf("Open in your system browser?\n\n%s", url),
+		Buttons:       []string{"Cancel", "Open"},
+		DefaultButton: "Open",
+		CancelButton:  "Cancel",
+	})
+	if err != nil {
+		log.Printf("external-url: confirm failed url=%s err=%v", url, err)
+		return false, err
+	}
+
+	ok := response == "Open"
+	log.Printf("external-url: confirm response url=%s response=%s ok=%v", url, response, ok)
+	return ok, nil
+}
+
 // HandleFileDrop handles a file dropped onto the window
 func (a *App) HandleFileDrop(path string) (FileResult, error) {
 	if strings.ToLower(filepath.Ext(path)) != ".md" {
@@ -227,24 +249,62 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 
 // OpenExternalURL opens a URL in the system browser with an OS-level fallback path.
 func (a *App) OpenExternalURL(url string) error {
+	log.Printf("external-url: requested url=%s os=%s", url, goruntime.GOOS)
 	switch goruntime.GOOS {
 	case "darwin":
-		return exec.Command("open", url).Start()
+		err := exec.Command("open", url).Start()
+		if err != nil {
+			log.Printf("external-url: failed url=%s err=%v", url, err)
+			return err
+		}
+		log.Printf("external-url: launched url=%s", url)
+		return nil
 	case "windows":
-		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		err := exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		if err != nil {
+			log.Printf("external-url: failed url=%s err=%v", url, err)
+			return err
+		}
+		log.Printf("external-url: launched url=%s", url)
+		return nil
 	default:
-		return exec.Command("xdg-open", url).Start()
+		err := exec.Command("xdg-open", url).Start()
+		if err != nil {
+			log.Printf("external-url: failed url=%s err=%v", url, err)
+			return err
+		}
+		log.Printf("external-url: launched url=%s", url)
+		return nil
 	}
 }
 
 // OpenExternalPath opens a local file or directory in the system shell.
 func (a *App) OpenExternalPath(path string) error {
+	log.Printf("external-path: requested path=%s os=%s", path, goruntime.GOOS)
 	switch goruntime.GOOS {
 	case "darwin":
-		return exec.Command("open", path).Start()
+		err := exec.Command("open", path).Start()
+		if err != nil {
+			log.Printf("external-path: failed path=%s err=%v", path, err)
+			return err
+		}
+		log.Printf("external-path: launched path=%s", path)
+		return nil
 	case "windows":
-		return exec.Command("explorer", path).Start()
+		err := exec.Command("explorer", path).Start()
+		if err != nil {
+			log.Printf("external-path: failed path=%s err=%v", path, err)
+			return err
+		}
+		log.Printf("external-path: launched path=%s", path)
+		return nil
 	default:
-		return exec.Command("xdg-open", path).Start()
+		err := exec.Command("xdg-open", path).Start()
+		if err != nil {
+			log.Printf("external-path: failed path=%s err=%v", path, err)
+			return err
+		}
+		log.Printf("external-path: launched path=%s", path)
+		return nil
 	}
 }

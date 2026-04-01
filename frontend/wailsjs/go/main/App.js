@@ -6,6 +6,10 @@ export function ClearRecentFiles() {
   return window['go']['main']['App']['ClearRecentFiles']();
 }
 
+export function ConfirmOpenExternalURL(arg1) {
+  return window['go']['main']['App']['ConfirmOpenExternalURL'](arg1);
+}
+
 export function GetRecentFiles() {
   return window['go']['main']['App']['GetRecentFiles']();
 }
