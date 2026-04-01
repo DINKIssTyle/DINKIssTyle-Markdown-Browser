@@ -1,0 +1,394 @@
+:root {
+    --bg-color: #ffffff;
+    --surface-color: #f5f5f7;
+    --text-color: #1d1d1f;
+    --accent-color: #0071e3;
+    --border-color: rgba(0, 0, 0, 0.1);
+    --toolbar-bg: rgba(255, 255, 255, 0.7);
+    --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
+    --code-font: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
+    --header-height: 56px;
+    --sidebar-width: 300px;
+}
+
+html.dark {
+    --bg-color: #121212;
+    --surface-color: #1c1c1e;
+    --text-color: #f5f5f7;
+    --accent-color: #0a84ff;
+    --border-color: rgba(255, 255, 255, 0.1);
+    --toolbar-bg: rgba(28, 28, 30, 0.7);
+}
+
+* {
+    box-sizing: border-box;
+    margin: 0;
+    padding: 0;
+}
+
+body {
+    font-family: var(--font-stack);
+    background-color: var(--bg-color);
+    color: var(--text-color);
+    overflow: hidden;
+    height: 100vh;
+    transition: background-color 0.3s ease, color 0.3s ease;
+}
+
+#app {
+    display: flex;
+    flex-direction: column;
+    height: 100vh;
+}
+
+/* Toolbar */
+.toolbar {
+    height: var(--header-height);
+    background: var(--toolbar-bg);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    z-index: 100;
+    justify-content: space-between;
+}
+
+.nav-group, .action-group {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
+
+.nav-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    font-size: 18px;
+    width: 36px;
+    height: 36px;
+    border-radius: 8px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s;
+}
+
+.nav-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+html.dark .nav-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.address-bar {
+    flex: 1;
+    margin: 0 20px;
+    background: var(--surface-color);
+    height: 32px;
+    border-radius: 6px;
+    display: flex;
+    align-items: center;
+    padding: 0 12px;
+    font-size: 13px;
+    color: var(--text-color);
+    opacity: 0.8;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    border: 1px solid var(--border-color);
+}
+
+.render-toggle select {
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 4px 8px;
+    border-radius: 4px;
+    font-size: 12px;
+}
+
+/* Main Container */
+#main-container {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
+}
+
+/* Sidebar - RIGHT side */
+.sidebar {
+    width: var(--sidebar-width);
+    background: var(--surface-color);
+    border-left: 1px solid var(--border-color);  /* left border since it's on the right */
+    display: flex;
+    flex-direction: column;
+    flex-shrink: 0;
+    overflow: hidden;
+    order: 2;  /* push to right */
+}
+
+.sidebar.hidden {
+    display: none;
+}
+
+.search-header {
+    padding: 12px 16px;
+    display: flex;
+    gap: 8px;
+    border-bottom: 1px solid var(--border-color);
+    flex-shrink: 0;
+}
+
+#search-input {
+    flex: 1;
+    background: var(--bg-color);
+    border: 1px solid var(--border-color);
+    color: var(--text-color);
+    padding: 8px 12px;
+    border-radius: 6px;
+    font-size: 14px;
+    font-family: var(--font-stack);
+}
+
+.search-results {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.search-hint {
+    padding: 16px;
+    font-size: 13px;
+    opacity: 0.6;
+    text-align: center;
+}
+
+/* Content View */
+.content-view {
+    flex: 1;
+    overflow-y: auto;
+    padding: 40px;
+    display: flex;
+    flex-direction: column;
+    order: 1;  /* left of sidebar */
+    min-width: 0;  /* prevent overflow */
+}
+
+/* Home Screen */
+.home-screen {
+    max-width: 760px;
+    margin: 60px auto;
+    text-align: center;
+    width: 100%;
+}
+
+.home-screen h1 {
+    font-size: 28px;
+    margin-bottom: 8px;
+    font-weight: 700;
+}
+
+.home-subtitle {
+    font-size: 14px;
+    opacity: 0.6;
+    margin-bottom: 32px;
+}
+
+.recent-list {
+    background: var(--surface-color);
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    overflow: hidden;
+    text-align: left;
+    margin-bottom: 16px;
+}
+
+.recent-actions {
+    display: flex;
+    gap: 12px;
+    justify-content: center;
+    margin-top: 16px;
+}
+
+.action-btn {
+    padding: 10px 20px;
+    border-radius: 8px;
+    border: none;
+    font-size: 14px;
+    font-family: var(--font-stack);
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+.action-btn:hover { opacity: 0.8; }
+.action-btn.primary {
+    background: var(--accent-color);
+    color: #fff;
+}
+.action-btn.secondary {
+    background: var(--surface-color);
+    color: var(--text-color);
+    border: 1px solid var(--border-color);
+}
+
+.recent-item {
+    padding: 16px 24px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    border-bottom: 1px solid var(--border-color);
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.recent-item:last-child {
+    border-bottom: none;
+}
+
+.recent-item:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+html.dark .recent-item:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+.recent-name {
+    font-weight: 600;
+    font-size: 16px;
+}
+
+.recent-path {
+    font-size: 12px;
+    opacity: 0.6;
+    margin-top: 4px;
+}
+
+/* Markdown Rendering Styles (GitHub Flavored) */
+.markdown-container {
+    max-width: 1012px;
+    margin: 0 auto;
+    width: 100%;
+    line-height: 1.5;
+    word-wrap: break-word;
+}
+
+.markdown-container h1, .markdown-container h2 {
+    padding-bottom: 0.3em;
+    border-bottom: 1px solid var(--border-color);
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.markdown-container h3, .markdown-container h4, .markdown-container h5 {
+    margin-top: 24px;
+    margin-bottom: 16px;
+    font-weight: 600;
+}
+
+.markdown-container p, .markdown-container ul, .markdown-container ol {
+    margin-bottom: 16px;
+}
+
+.markdown-container ul, .markdown-container ol {
+    padding-left: 2em;
+}
+
+.markdown-container li + li {
+    margin-top: 0.25em;
+}
+
+/* Tables - GitHub Style */
+.markdown-container table {
+    display: block;
+    width: 100%;
+    width: max-content;
+    max-width: 100%;
+    overflow: auto;
+    border-spacing: 0;
+    border-collapse: collapse;
+    margin-bottom: 16px;
+    margin-top: 0;
+}
+
+.markdown-container table th, .markdown-container table td {
+    padding: 6px 13px;
+    border: 1px solid var(--border-color);
+}
+
+.markdown-container table tr {
+    background-color: var(--bg-color);
+    border-top: 1px solid var(--border-color);
+}
+
+.markdown-container table tr:nth-child(2n) {
+    background-color: var(--surface-color);
+}
+
+.markdown-container code {
+    font-family: var(--code-font);
+    background: rgba(175, 184, 193, 0.2);
+    padding: 0.2em 0.4em;
+    border-radius: 6px;
+    font-size: 85%;
+}
+
+.markdown-container pre {
+    background: var(--surface-color);
+    padding: 16px;
+    border-radius: 8px;
+    overflow-x: auto;
+    margin-bottom: 16px;
+    border: 1px solid var(--border-color);
+}
+
+.markdown-container pre code {
+    background: transparent;
+    padding: 0;
+    font-size: 100%;
+}
+
+.markdown-container blockquote {
+    padding: 0 1em;
+    color: var(--text-color);
+    opacity: 0.8;
+    border-left: 0.25em solid var(--border-color);
+    margin-bottom: 16px;
+}
+
+.markdown-container img {
+    max-width: 100%;
+    border-radius: 8px;
+    margin: 16px 0;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.markdown-container hr {
+    height: 0.25em;
+    padding: 0;
+    margin: 24px 0;
+    background-color: var(--border-color);
+    border: 0;
+}
+
+.markdown-container a {
+    color: var(--accent-color);
+    text-decoration: none;
+}
+
+.markdown-container a:hover { text-decoration: underline; }
+
+.hidden { display: none !important; }
+
+/* Scrollbar */
+::-webkit-scrollbar { width: 8px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 4px;
+}
+html.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }

@@ -1,0 +1,13 @@
+{
+  "$schema": "https://wails.io/schemas/config.v2.json",
+  "name": "dinkisstyle-markdown-browser",
+  "outputfilename": "DINKIssTyle-Markdown-Browser",
+  "frontend:install": "npm install",
+  "frontend:build": "npm run build",
+  "frontend:dev:watcher": "npm run dev",
+  "frontend:dev:serverUrl": "auto",
+  "author": {
+    "name": "DINKIssTyle",
+    "email": "162435433+DINKIssTyle@users.noreply.github.com"
+  }
+}
