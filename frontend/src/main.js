@@ -10,8 +10,8 @@ import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
 
-import { OpenFile, ReadFile, SearchMarkdown, GetRecentFiles, ClearRecentFiles, HandleFileDrop, GetSettings, SaveSettings } from '../wailsjs/go/main/App';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+import { OpenFile, ReadFile, ReadImageAsDataURL, SearchMarkdown, GetRecentFiles, ClearRecentFiles, HandleFileDrop, GetSettings, SaveSettings } from '../wailsjs/go/main/App';
+import { EventsOn, OnFileDrop } from '../wailsjs/runtime/runtime';
 
 // ── State ──────────────────────────────────────────────
 const HOME_SCREEN_PATH = '__home__';
@@ -33,6 +33,54 @@ let pendingKeyword   = "";   // 파일 로드 후 하이라이트할 키워드
 
 // Content scroller element (the article that overflows)
 const getScroller = () => document.getElementById('content-view');
+
+function getPathDirname(path) {
+    if (!path || path === HOME_SCREEN_PATH || path === THIRD_PARTY_NOTICES_PATH) {
+        return "";
+    }
+
+    const normalized = path.replace(/\\/g, '/');
+    const lastSlash = normalized.lastIndexOf('/');
+    return lastSlash >= 0 ? normalized.slice(0, lastSlash) : "";
+}
+
+function joinPath(base, rel) {
+    if (!rel) {
+        return base || "";
+    }
+
+    const normalizedRel = rel.replace(/\\/g, '/');
+    if (/^[A-Za-z]:\//.test(normalizedRel)) {
+        return normalizedRel;
+    }
+    if (normalizedRel.startsWith('/')) {
+        return normalizedRel;
+    }
+
+    const parts = (base || "").split('/').filter(Boolean);
+    if (/^[A-Za-z]:$/.test(parts[0])) {
+        parts[0] = `${parts[0]}/`;
+    }
+
+    for (const segment of normalizedRel.split('/')) {
+        if (!segment || segment === '.') continue;
+        if (segment === '..') {
+            if (parts.length > 1 || (parts.length === 1 && !/^[A-Za-z]:\/$/.test(parts[0]))) {
+                parts.pop();
+            }
+            continue;
+        }
+        parts.push(segment);
+    }
+
+    if (parts.length === 0) {
+        return "";
+    }
+    if (/^[A-Za-z]:\/$/.test(parts[0])) {
+        return `${parts[0]}${parts.slice(1).join('/')}`;
+    }
+    return parts.join('/');
+}
 
 // Save the current scroll position into the history entry we're leaving
 function saveCurrentScroll() {
@@ -202,7 +250,7 @@ async function loadBundledMarkdown(path) {
 
 function loadFile(path, content, pushHistory = true, setHome = false) {
     currentFilePath = path;
-    currentFolder   = path.substring(0, path.lastIndexOf('/'));
+    currentFolder   = getPathDirname(path);
 
     if (setHome && path !== THIRD_PARTY_NOTICES_PATH) {
         homeTargetPath = path;
@@ -340,8 +388,16 @@ function postProcess() {
     el.markdownContainer.querySelectorAll('img').forEach(img => {
         const src = img.getAttribute('src');
         if (src && !src.startsWith('http') && !src.startsWith('data:')) {
-            const abs = src.startsWith('/') ? src : currentFolder + '/' + src;
-            img.src = `http://wails.localhost/localfile${abs}`;
+            const abs = joinPath(currentFolder, src);
+            ReadImageAsDataURL(abs)
+                .then(dataUrl => {
+                    if (dataUrl) {
+                        img.src = dataUrl;
+                    }
+                })
+                .catch(err => {
+                    console.error(`Failed to load image: ${abs}`, err);
+                });
         }
     });
 
@@ -350,12 +406,7 @@ function postProcess() {
 
 function resolveLink(rel) {
     if (rel.startsWith('/')) { openPath(rel); return; }
-    const parts = currentFolder.split('/');
-    for (const p of rel.split('/')) {
-        if (p === '..')  { if (parts.length > 1) parts.pop(); }
-        else if (p !== '.') parts.push(p);
-    }
-    openPath(parts.join('/'));
+    openPath(joinPath(currentFolder, rel));
 }
 
 // ── Font / Theme / Search ──────────────────────────────
@@ -520,20 +571,22 @@ function setupDragAndDrop() {
     window.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
     window.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); });
 
-    EventsOn('wails:file-drop', async (x, y, files) => {
-        // Wails v2 sends files as an array. (Sometimes first arguments are coords)
-        // Correct signature for v2 is (files) or (x, y, files) depending on version
-        // Actually, in many v2 versions it's just one argument: the array of files.
-        // Let's handle both.
-        let droppedFiles = Array.isArray(x) ? x : files;
-        if (droppedFiles && droppedFiles.length > 0) {
-            const path = droppedFiles[0];
-            try {
-                const result = await HandleFileDrop(path);
-                if (result && result.path) loadFile(result.path, result.content, true, true);
-            } catch (err) { console.error(err); }
+    // Listen through the Wails runtime API so native file drops work on Windows.
+    OnFileDrop(async (_x, _y, files) => {
+        if (!Array.isArray(files) || files.length === 0) {
+            return;
         }
-    });
+
+        const path = files[0];
+        try {
+            const result = await HandleFileDrop(path);
+            if (result && result.path) {
+                loadFile(result.path, result.content, true, true);
+            }
+        } catch (err) {
+            console.error(err);
+        }
+    }, false);
 }
 
 // ── Helpers ────────────────────────────────────────────

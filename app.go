@@ -7,8 +7,10 @@ package main
 
 import (
 	"context"
+	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"mime"
 	"os"
 	"path/filepath"
 	"strings"
@@ -87,6 +89,22 @@ func (a *App) ReadFile(path string) (string, error) {
 		return "", err
 	}
 	return string(content), nil
+}
+
+// ReadImageAsDataURL reads a local image file and returns a data URL for stable rendering.
+func (a *App) ReadImageAsDataURL(path string) (string, error) {
+	data, err := os.ReadFile(path)
+	if err != nil {
+		return "", err
+	}
+
+	mimeType := mime.TypeByExtension(strings.ToLower(filepath.Ext(path)))
+	if mimeType == "" {
+		mimeType = "application/octet-stream"
+	}
+
+	encoded := base64.StdEncoding.EncodeToString(data)
+	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded), nil
 }
 
 // SearchMarkdown searches for a query in all .md files in the directory recursively

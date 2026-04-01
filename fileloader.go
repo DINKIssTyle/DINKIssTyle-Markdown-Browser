@@ -6,9 +6,9 @@
 package main
 
 import (
-	"fmt"
 	"net/http"
-	"os"
+	"net/url"
+	"path/filepath"
 	"strings"
 )
 
@@ -22,23 +22,20 @@ func NewFileLoader() *FileLoader {
 
 func (h *FileLoader) ServeHTTP(res http.ResponseWriter, req *http.Request) {
 	requestedFilename := strings.TrimPrefix(req.URL.Path, "/")
-	
+
 	// If the path starts with "localfile/", we treat it as a direct disk path
 	if strings.HasPrefix(requestedFilename, "localfile/") {
 		filePath := strings.TrimPrefix(requestedFilename, "localfile/")
-		// On Windows, the path might need adjustment if it has a drive letter
-		// For macOS/Linux, it should be an absolute path
+		if decodedPath, err := url.PathUnescape(filePath); err == nil {
+			filePath = decodedPath
+		}
+
 		if !strings.HasPrefix(filePath, "/") && !strings.Contains(filePath, ":") {
 			filePath = "/" + filePath
 		}
-		
-		fileData, err := os.ReadFile(filePath)
-		if err != nil {
-			res.WriteHeader(http.StatusNotFound)
-			res.Write([]byte(fmt.Sprintf("Could not load file %s", filePath)))
-			return
-		}
-		res.Write(fileData)
+
+		filePath = filepath.Clean(filepath.FromSlash(filePath))
+		http.ServeFile(res, req, filePath)
 		return
 	}
 

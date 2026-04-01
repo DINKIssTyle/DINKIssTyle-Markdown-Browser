@@ -3,3 +3,4 @@ frontend/dist
 frontend/node_modules
 .DS_Store
 dist/linux/DKST Markdown Browser-1.0.0-linux-amd64
+*.exe

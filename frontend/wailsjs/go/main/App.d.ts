@@ -18,6 +18,8 @@ export function OpenFile():Promise<main.FileResult>;
 
 export function ReadFile(arg1:string):Promise<string>;
 
+export function ReadImageAsDataURL(arg1:string):Promise<string>;
+
 export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 
 export function SearchMarkdown(arg1:string,arg2:string):Promise<Array<Record<string, string>>>;
