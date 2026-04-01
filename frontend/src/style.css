@@ -455,9 +455,6 @@ html.dark .recent-item:hover {
 
 .markdown-container img {
     max-width: 100%;
-    border-radius: 8px;
-    margin: 16px 0;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
 }
 
 .markdown-container hr {
