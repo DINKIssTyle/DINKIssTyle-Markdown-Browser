@@ -1,0 +1,25 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+    <!-- Allow access to files selected by the user -->
+    <key>com.apple.security.files.user-selected.read-write</key>
+    <true/>
+    <!-- Allow access to the camera (not needed now, but common) -->
+    <key>com.apple.security.device.camera</key>
+    <false/>
+    <!-- Allow access to the microphone -->
+    <key>com.apple.security.device.audio-input</key>
+    <false/>
+    <!-- Hardened Runtime entitlements -->
+    <key>com.apple.security.cs.allow-jit</key>
+    <true/>
+    <key>com.apple.security.cs.allow-unsigned-executable-memory</key>
+    <true/>
+    <key>com.apple.security.cs.disable-library-validation</key>
+    <true/>
+    <!-- Network access -->
+    <key>com.apple.security.network.client</key>
+    <true/>
+</dict>
+</plist>

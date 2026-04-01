@@ -304,7 +304,14 @@ html.dark .nav-btn:hover {
     font-size: 14px;
     font-family: var(--font-stack);
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
     transition: opacity 0.2s;
+}
+.action-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 .action-btn:hover { opacity: 0.8; }
 .action-btn.primary {
