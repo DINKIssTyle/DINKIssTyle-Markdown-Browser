@@ -11,7 +11,7 @@ import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
 
 import { OpenFile, ReadFile, ReadImageAsDataURL, SearchMarkdown, GetRecentFiles, ClearRecentFiles, HandleFileDrop, GetSettings, SaveSettings } from '../wailsjs/go/main/App';
-import { EventsOn, OnFileDrop } from '../wailsjs/runtime/runtime';
+import { BrowserOpenURL, EventsOn, OnFileDrop } from '../wailsjs/runtime/runtime';
 
 // ── State ──────────────────────────────────────────────
 const HOME_SCREEN_PATH = '__home__';
@@ -49,6 +49,7 @@ function joinPath(base, rel) {
         return base || "";
     }
 
+    const normalizedBase = (base || "").replace(/\\/g, '/');
     const normalizedRel = rel.replace(/\\/g, '/');
     if (/^[A-Za-z]:\//.test(normalizedRel)) {
         return normalizedRel;
@@ -57,7 +58,8 @@ function joinPath(base, rel) {
         return normalizedRel;
     }
 
-    const parts = (base || "").split('/').filter(Boolean);
+    const isUnixAbsolute = normalizedBase.startsWith('/');
+    const parts = normalizedBase.split('/').filter(Boolean);
     if (/^[A-Za-z]:$/.test(parts[0])) {
         parts[0] = `${parts[0]}/`;
     }
@@ -74,12 +76,13 @@ function joinPath(base, rel) {
     }
 
     if (parts.length === 0) {
-        return "";
+        return isUnixAbsolute ? '/' : "";
     }
     if (/^[A-Za-z]:\/$/.test(parts[0])) {
         return `${parts[0]}${parts.slice(1).join('/')}`;
     }
-    return parts.join('/');
+    const joined = parts.join('/');
+    return isUnixAbsolute ? `/${joined}` : joined;
 }
 
 // Save the current scroll position into the history entry we're leaving
@@ -376,12 +379,24 @@ async function renderMarkdown(content) {
 }
 
 function postProcess() {
-    // Intercept relative links
+    // Intercept links so external URLs are confirmed before opening in the system browser.
     el.markdownContainer.querySelectorAll('a').forEach(a => {
         const href = a.getAttribute('href');
-        if (href && !href.startsWith('http') && !href.startsWith('#')) {
-            a.addEventListener('click', e => { e.preventDefault(); resolveLink(href); });
-        }
+        if (!href || href.startsWith('#')) return;
+
+        a.addEventListener('click', async e => {
+            e.preventDefault();
+
+            if (isExternalURL(href)) {
+                const ok = window.confirm(`External link detected.\n\nOpen in your system browser?\n${href}`);
+                if (ok) {
+                    BrowserOpenURL(href);
+                }
+                return;
+            }
+
+            resolveLink(href);
+        });
     });
 
     // Rewrite relative image src
@@ -407,6 +422,10 @@ function postProcess() {
 function resolveLink(rel) {
     if (rel.startsWith('/')) { openPath(rel); return; }
     openPath(joinPath(currentFolder, rel));
+}
+
+function isExternalURL(href) {
+    return /^(https?:|mailto:)/i.test(href);
 }
 
 // ── Font / Theme / Search ──────────────────────────────
