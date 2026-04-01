@@ -934,7 +934,9 @@ async function confirmAndOpenExternalLink(href) {
         LogInfo(`external link confirm href=${href} ok=${ok}`);
         if (ok) {
             LogInfo(`external link dispatch href=${href}`);
-            await openExternalURL(href);
+            window.setTimeout(() => {
+                void openExternalURL(href);
+            }, 0);
         }
     } catch (error) {
         LogError(`external link confirm failed href=${href}: ${error?.message || error}`);
