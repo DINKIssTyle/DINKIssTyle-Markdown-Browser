@@ -8,6 +8,7 @@
 :root {
     --bg-color: #ffffff;
     --surface-color: #f5f5f7;
+    --surface-elevated: #fbfbfd;
     --text-color: #1d1d1f;
     --accent-color: #0071e3;
     --border-color: rgba(0, 0, 0, 0.1);
@@ -21,6 +22,7 @@
 html.dark {
     --bg-color: #121212;
     --surface-color: #1c1c1e;
+    --surface-elevated: #242428;
     --text-color: #f5f5f7;
     --accent-color: #0a84ff;
     --border-color: rgba(255, 255, 255, 0.1);
@@ -83,6 +85,102 @@ body {
     -webkit-user-select: none;
     -moz-user-select: none;
     -ms-user-select: none;
+}
+
+.tab-strip {
+    height: 50px;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 0 12px 0 14px;
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(180deg, var(--surface-elevated), var(--bg-color));
+}
+
+.tabs-list {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    scroll-behavior: smooth;
+    padding: 6px 0;
+}
+
+.tabs-list::-webkit-scrollbar {
+    height: 4px;
+}
+
+.tab-item {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    max-width: 280px;
+    height: 36px;
+    padding: 0 10px 0 14px;
+    border-radius: 18px;
+    border: 1px solid var(--border-color);
+    background: var(--surface-elevated);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+}
+
+.tab-item:hover {
+    background: rgba(0, 0, 0, 0.04);
+}
+
+html.dark .tab-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.tab-item.active {
+    background: var(--bg-color);
+    border-color: rgba(0, 113, 227, 0.28);
+    box-shadow: 0 1px 0 rgba(0, 113, 227, 0.08);
+}
+
+.tab-title {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.tab-close-btn,
+.tab-add-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.72;
+    transition: background 0.2s ease, opacity 0.2s ease;
+}
+
+.tab-close-btn:hover,
+.tab-add-btn:hover {
+    background: rgba(0, 0, 0, 0.06);
+    opacity: 1;
+}
+
+html.dark .tab-close-btn:hover,
+html.dark .tab-add-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-close-btn .material-symbols-outlined,
+.tab-add-btn .material-symbols-outlined {
+    font-size: 18px;
 }
 
 .nav-group, .action-group {
@@ -568,4 +666,127 @@ html:not(.dark) .toast {
 .toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
+}
+
+.progress-widget {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: min(320px, calc(100vw - 24px));
+    padding: 12px 14px;
+    border-radius: 14px;
+    background: rgba(255, 255, 255, 0.94);
+    border: 1px solid var(--border-color);
+    box-shadow: 0 18px 44px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    transform: translateY(12px);
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.25s ease, transform 0.25s ease;
+    z-index: 700;
+}
+
+html.dark .progress-widget {
+    background: rgba(28, 28, 30, 0.94);
+}
+
+.progress-widget.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.progress-widget-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    margin-bottom: 10px;
+}
+
+.progress-header-main {
+    min-width: 0;
+    display: flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.progress-title {
+    font-size: 12px;
+    font-weight: 700;
+}
+
+.progress-value {
+    font-size: 12px;
+    opacity: 0.7;
+}
+
+.progress-cancel-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(255, 59, 48, 0.14);
+    color: #d93025;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    flex-shrink: 0;
+    transition: background 0.2s ease, transform 0.2s ease;
+}
+
+.progress-cancel-btn:hover {
+    background: rgba(255, 59, 48, 0.22);
+    transform: scale(1.04);
+}
+
+.progress-cancel-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+html.dark .progress-cancel-btn {
+    color: #ff8a80;
+    background: rgba(255, 82, 82, 0.18);
+}
+
+.progress-track {
+    width: 100%;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.16);
+    overflow: hidden;
+}
+
+.progress-fill {
+    height: 100%;
+    width: 0%;
+    border-radius: inherit;
+    background: linear-gradient(90deg, #1f8fff, #3bb5ff);
+    transition: width 0.2s ease;
+}
+
+.progress-fill.indeterminate {
+    width: 42%;
+    animation: progress-indeterminate 1.1s ease-in-out infinite;
+}
+
+@keyframes progress-indeterminate {
+    0% {
+        transform: translateX(-100%);
+    }
+    50% {
+        transform: translateX(70%);
+    }
+    100% {
+        transform: translateX(190%);
+    }
+}
+
+@media (max-width: 900px) {
+    .progress-widget {
+        right: 14px;
+        bottom: 14px;
+        width: min(320px, calc(100vw - 28px));
+    }
 }

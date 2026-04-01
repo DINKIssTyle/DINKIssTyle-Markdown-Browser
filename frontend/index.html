@@ -57,6 +57,13 @@
             </div>
         </header>
 
+        <div id="tab-strip" class="tab-strip">
+            <div id="tabs-list" class="tabs-list"></div>
+            <button id="btn-new-tab" title="New Tab" aria-label="New Tab" class="tab-add-btn">
+                <span class="material-symbols-outlined" aria-hidden="true">add</span>
+            </button>
+        </div>
+
         <main id="main-container">
             <!-- Markdown Content -->
             <article id="content-view" class="content-view">
@@ -102,6 +109,21 @@
 
         <!-- Toast message -->
         <div id="toast" class="toast"></div>
+
+        <div id="progress-widget" class="progress-widget hidden" aria-live="polite">
+            <div class="progress-widget-header">
+                <div class="progress-header-main">
+                    <span id="progress-title" class="progress-title">Working…</span>
+                    <span id="progress-value" class="progress-value"></span>
+                </div>
+                <button id="btn-progress-cancel" class="progress-cancel-btn" aria-label="Cancel Current Task" title="Cancel Current Task">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+            </div>
+            <div class="progress-track">
+                <div id="progress-fill" class="progress-fill"></div>
+            </div>
+        </div>
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>
