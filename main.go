@@ -41,6 +41,9 @@ func main() {
 		Bind: []interface{}{
 			app,
 		},
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop: true,
+		},
 		// macOS native menu bar
 		Menu: appMenu,
 		// macOS-specific window chrome

@@ -518,14 +518,21 @@ function showToast(msg, duration = 2400) {
 // ── Drag & Drop ────────────────────────────────────────
 function setupDragAndDrop() {
     window.addEventListener('dragover', e => { e.preventDefault(); e.stopPropagation(); });
-    window.addEventListener('drop', async e => {
-        e.preventDefault(); e.stopPropagation();
-        const file = e.dataTransfer.files[0];
-        if (!file || !file.path) return;
-        try {
-            const result = await HandleFileDrop(file.path);
-            if (result && result.path) loadFile(result.path, result.content, true, true);
-        } catch (err) { console.error(err); }
+    window.addEventListener('drop', e => { e.preventDefault(); e.stopPropagation(); });
+
+    EventsOn('wails:file-drop', async (x, y, files) => {
+        // Wails v2 sends files as an array. (Sometimes first arguments are coords)
+        // Correct signature for v2 is (files) or (x, y, files) depending on version
+        // Actually, in many v2 versions it's just one argument: the array of files.
+        // Let's handle both.
+        let droppedFiles = Array.isArray(x) ? x : files;
+        if (droppedFiles && droppedFiles.length > 0) {
+            const path = droppedFiles[0];
+            try {
+                const result = await HandleFileDrop(path);
+                if (result && result.path) loadFile(result.path, result.content, true, true);
+            } catch (err) { console.error(err); }
+        }
     });
 }
 

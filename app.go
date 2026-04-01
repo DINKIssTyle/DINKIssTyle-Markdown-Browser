@@ -192,7 +192,7 @@ func (a *App) OpenDirectory() (string, error) {
 
 // HandleFileDrop handles a file dropped onto the window
 func (a *App) HandleFileDrop(path string) (FileResult, error) {
-	if filepath.Ext(path) != ".md" {
+	if strings.ToLower(filepath.Ext(path)) != ".md" {
 		return FileResult{}, fmt.Errorf("not a markdown file")
 	}
 
