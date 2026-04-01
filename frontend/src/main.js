@@ -930,13 +930,23 @@ function postProcess() {
 async function confirmAndOpenExternalLink(href) {
     LogInfo(`external link click href=${href}`);
     try {
-        const ok = await ConfirmOpenExternalURL(href);
-        LogInfo(`external link confirm href=${href} ok=${ok}`);
+        if (isMacOS()) {
+            const ok = await ConfirmOpenExternalURL(href);
+            LogInfo(`external link confirm href=${href} ok=${ok} mode=native`);
+            if (ok) {
+                LogInfo(`external link dispatch href=${href} mode=native`);
+                window.setTimeout(() => {
+                    void openExternalURL(href);
+                }, 0);
+            }
+            return;
+        }
+
+        const ok = window.confirm(`External link detected.\n\nOpen in your system browser?\n${href}`);
+        LogInfo(`external link confirm href=${href} ok=${ok} mode=browser`);
         if (ok) {
-            LogInfo(`external link dispatch href=${href}`);
-            window.setTimeout(() => {
-                void openExternalURL(href);
-            }, 0);
+            LogInfo(`external link dispatch href=${href} mode=browser`);
+            await openExternalURL(href);
         }
     } catch (error) {
         LogError(`external link confirm failed href=${href}: ${error?.message || error}`);
@@ -959,6 +969,11 @@ function resolveLink(rel, options = {}) {
 
 function isExternalURL(href) {
     return /^(https?:|mailto:)/i.test(href);
+}
+
+function isMacOS() {
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    return /mac/i.test(platform);
 }
 
 function isEditableTarget(target) {
