@@ -426,6 +426,13 @@ html.dark .nav-btn:hover {
     font-size: 28px;
     margin-bottom: 8px;
     font-weight: 700;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.home-title-icon {
+    font-size: 32px;
 }
 
 .home-subtitle {

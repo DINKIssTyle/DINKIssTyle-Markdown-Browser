@@ -880,11 +880,20 @@ async function renderMarkdown(content) {
 function postProcess() {
     el.markdownContainer.querySelectorAll('a').forEach(anchor => {
         const href = anchor.getAttribute('href');
-        if (!href || href.startsWith('#')) return;
+        if (!href) return;
 
         const handleLinkNavigation = event => {
             event.preventDefault();
             event.stopPropagation();
+
+            if (href.startsWith('#')) {
+                const { anchor: targetAnchor } = splitLinkTarget(href);
+                if (targetAnchor) {
+                    pendingAnchor = targetAnchor;
+                    scrollToAnchor(targetAnchor);
+                }
+                return;
+            }
 
             if (isExternalURL(href)) {
                 void confirmAndOpenExternalLink(href);
