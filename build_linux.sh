@@ -8,7 +8,7 @@ set -euo pipefail
 
 APP_NAME="DKST Markdown Browser"
 VERSION="1.0.0"
-ARCH="${1:-amd64}"   # amd64 | arm64 | arm (기본값 amd64)
+ARCH="${1:-amd64}"   # amd64 | arm64 | arm (default amd64)
 OUT_DIR="./dist/linux"
 
 echo "============================================================"
@@ -17,29 +17,29 @@ echo " Architecture : ${ARCH}"
 echo " Version      : ${VERSION}"
 echo "============================================================"
 
-# ── 의존성 확인 ──────────────────────────────────────────────
-command -v wails >/dev/null 2>&1 || { echo "❌ wails 가 설치되어 있지 않습니다. 'go install github.com/wailsapp/wails/v2/cmd/wails@latest' 로 설치하세요."; exit 1; }
-command -v go    >/dev/null 2>&1 || { echo "❌ Go 가 설치되어 있지 않습니다."; exit 1; }
+# ── Dependency Check ──────────────────────────────────────────────
+command -v wails >/dev/null 2>&1 || { echo "❌ wails is not installed. Install it with 'go install github.com/wailsapp/wails/v2/cmd/wails@latest'."; exit 1; }
+command -v go    >/dev/null 2>&1 || { echo "❌ Go is not installed."; exit 1; }
 
-# Linux에서 WebKit2GTK 필요 여부 안내
+# WebKit2GTK check for Linux
 if ! pkg-config --exists webkit2gtk-4.1 2>/dev/null && \
    ! pkg-config --exists webkit2gtk-4.0 2>/dev/null; then
-    echo "⚠️  WebKit2GTK 가 설치되어 있지 않습니다."
+    echo "⚠️  WebKit2GTK is not installed."
     echo "   Ubuntu/Debian : sudo apt install libwebkit2gtk-4.1-dev libgtk-3-dev"
     echo "   Fedora        : sudo dnf install webkit2gtk4.1-devel gtk3-devel"
     echo "   Arch Linux    : sudo pacman -S webkit2gtk-4.1"
     echo ""
-    echo "   계속 진행하시겠습니까? (y/N)"
+    echo "   Do you want to continue? (y/N)"
     read -r REPLY
     [[ "${REPLY}" =~ ^[Yy]$ ]] || exit 1
 fi
 
 mkdir -p "${OUT_DIR}"
 
-# ── 빌드 실행 ─────────────────────────────────────────────
+# ── Build Execution ─────────────────────────────────────────────
 case "${ARCH}" in
     amd64)
-        echo "🔨 Linux amd64 빌드 시작..."
+        echo "🔨 Starting Linux amd64 build..."
         wails build \
             -platform "linux/amd64" \
             -o "${APP_NAME}" \
@@ -47,7 +47,7 @@ case "${ARCH}" in
             -clean
         ;;
     arm64)
-        echo "🔨 Linux arm64 빌드 시작..."
+        echo "🔨 Starting Linux arm64 build..."
         wails build \
             -platform "linux/arm64" \
             -o "${APP_NAME}" \
@@ -55,7 +55,7 @@ case "${ARCH}" in
             -clean
         ;;
     arm)
-        echo "🔨 Linux arm (32-bit) 빌드 시작..."
+        echo "🔨 Starting Linux arm (32-bit) build..."
         wails build \
             -platform "linux/arm" \
             -o "${APP_NAME}" \
@@ -63,26 +63,26 @@ case "${ARCH}" in
             -clean
         ;;
     *)
-        echo "❌ 알 수 없는 아키텍처: ${ARCH}  (amd64 | arm64 | arm)"
+        echo "❌ Unknown architecture: ${ARCH}  (amd64 | arm64 | arm)"
         exit 1
         ;;
 esac
 
-# ── 결과물 복사 ─────────────────────────────────────────────
+# ── Result Copy ─────────────────────────────────────────────
 BIN_PATH="./build/bin/${APP_NAME}"
 if [ -f "${BIN_PATH}" ]; then
     OUT_BIN="${OUT_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}"
     cp "${BIN_PATH}" "${OUT_BIN}"
     chmod +x "${OUT_BIN}"
     echo ""
-    echo "✅ 빌드 완료!"
-    echo "   출력 경로 : ${OUT_BIN}"
+    echo "✅ Build completed!"
+    echo "   Output Path : ${OUT_BIN}"
     echo ""
-    echo "📦 .deb 패키지 생성 예시 (선택 사항):"
+    echo "📦 Example to create a .deb package (optional):"
     echo "   fpm -s dir -t deb -n '${APP_NAME}' -v '${VERSION}' \\"
     echo "     --prefix /usr/local/bin '${OUT_BIN}=.'"
     echo ""
-    echo "📦 AppImage 생성은 appimage-builder 또는 linuxdeploy를 사용하세요."
+    echo "📦 For AppImage creation, use appimage-builder or linuxdeploy."
 else
-    echo "⚠️  실행 파일을 찾을 수 없습니다: ${BIN_PATH}"
+    echo "⚠️  Executable not found: ${BIN_PATH}"
 fi
