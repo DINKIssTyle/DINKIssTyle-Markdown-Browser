@@ -95,6 +95,8 @@ body {
     padding: 0 12px 0 14px;
     border-bottom: 1px solid var(--border-color);
     background: linear-gradient(180deg, var(--surface-elevated), var(--bg-color));
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .tabs-list {
@@ -276,6 +278,8 @@ html.dark .nav-btn:hover {
     overflow: hidden;
     text-overflow: ellipsis;
     border: 1px solid var(--border-color);
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .render-toggle select {
@@ -305,6 +309,8 @@ html.dark .nav-btn:hover {
     flex-shrink: 0;
     overflow: hidden;
     order: 2;  /* push to right */
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .sidebar.hidden {
@@ -321,15 +327,64 @@ html.dark .nav-btn:hover {
     -webkit-user-select: none;
 }
 
-#search-input {
+.search-input-wrap {
+    position: relative;
     flex: 1;
+}
+
+#search-input {
+    width: 100%;
     background: var(--bg-color);
     border: 1px solid var(--border-color);
     color: var(--text-color);
-    padding: 8px 12px;
+    padding: 8px 38px 8px 12px;
     border-radius: 6px;
     font-size: 14px;
     font-family: var(--font-stack);
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.clear-search-btn {
+    position: absolute;
+    top: 50%;
+    right: 8px;
+    transform: translateY(-50%);
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 999px;
+    background: rgba(127, 127, 127, 0.12);
+    color: var(--muted-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: background 0.16s ease, color 0.16s ease;
+}
+
+.clear-search-btn:hover {
+    background: rgba(127, 127, 127, 0.2);
+    color: var(--text-color);
+}
+
+.clear-search-btn .material-symbols-outlined {
+    font-size: 16px;
+}
+
+.search-scope-option {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 10px 16px 0;
+    font-size: 13px;
+    color: var(--muted-color);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.search-scope-option input {
+    margin: 0;
 }
 
 .search-results {
@@ -386,6 +441,8 @@ html.dark .nav-btn:hover {
     overflow: hidden;
     text-align: left;
     margin-bottom: 16px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .recent-actions {
@@ -748,6 +805,54 @@ html.dark .progress-widget {
 html.dark .progress-cancel-btn {
     color: #ff8a80;
     background: rgba(255, 82, 82, 0.18);
+}
+
+.context-menu {
+    position: fixed;
+    min-width: 188px;
+    padding: 8px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: rgba(251, 251, 253, 0.96);
+    box-shadow: 0 18px 40px rgba(0, 0, 0, 0.2);
+    backdrop-filter: blur(18px);
+    -webkit-backdrop-filter: blur(18px);
+    z-index: 900;
+    opacity: 0;
+    transform: translateY(6px);
+    transition: opacity 0.16s ease, transform 0.16s ease;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+html.dark .context-menu {
+    background: rgba(36, 36, 40, 0.96);
+}
+
+.context-menu.show {
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.context-menu-item {
+    width: 100%;
+    padding: 9px 12px;
+    border: none;
+    background: transparent;
+    color: var(--text-color);
+    border-radius: 8px;
+    text-align: left;
+    font-size: 14px;
+    font-family: var(--font-stack);
+    cursor: pointer;
+}
+
+.context-menu-item:hover {
+    background: rgba(0, 0, 0, 0.06);
+}
+
+html.dark .context-menu-item:hover {
+    background: rgba(255, 255, 255, 0.09);
 }
 
 .progress-track {

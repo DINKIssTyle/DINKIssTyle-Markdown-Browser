@@ -14,6 +14,10 @@ export function HandleFileDrop(arg1:string):Promise<main.FileResult>;
 
 export function OpenDirectory():Promise<string>;
 
+export function OpenExternalPath(arg1:string):Promise<void>;
+
+export function OpenExternalURL(arg1:string):Promise<void>;
+
 export function OpenFile():Promise<main.FileResult>;
 
 export function ReadFile(arg1:string):Promise<string>;

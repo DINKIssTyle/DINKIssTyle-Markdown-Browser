@@ -26,6 +26,14 @@ export function OpenDirectory() {
   return window['go']['main']['App']['OpenDirectory']();
 }
 
+export function OpenExternalPath(arg1) {
+  return window['go']['main']['App']['OpenExternalPath'](arg1);
+}
+
+export function OpenExternalURL(arg1) {
+  return window['go']['main']['App']['OpenExternalURL'](arg1);
+}
+
 export function OpenFile() {
   return window['go']['main']['App']['OpenFile']();
 }

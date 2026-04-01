@@ -12,6 +12,8 @@ import remarkHtml from 'remark-html';
 
 import {
     OpenFile,
+    OpenExternalPath,
+    OpenExternalURL,
     ReadFile,
     ReadImageAsDataURL,
     SearchMarkdown,
@@ -21,7 +23,7 @@ import {
     GetSettings,
     SaveSettings,
 } from '../wailsjs/go/main/App';
-import { BrowserOpenURL, EventsOn, LogError, LogInfo, OnFileDrop } from '../wailsjs/runtime/runtime';
+import { BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, LogError, LogInfo, OnFileDrop } from '../wailsjs/runtime/runtime';
 
 const HOME_SCREEN_PATH = '__home__';
 const THIRD_PARTY_NOTICES_PATH = '/THIRD-PARTY-NOTICES.md';
@@ -45,6 +47,7 @@ let tabs = [];
 let activeTabId = "";
 let nextTabID = 1;
 let progressHideTimer = null;
+let contextMenuState = null;
 
 const getScroller = () => document.getElementById('content-view');
 const $ = id => document.getElementById(id);
@@ -58,6 +61,8 @@ const el = {
     markdownContainer: $('markdown-container'),
     searchSidebar: $('search-sidebar'),
     searchInput: $('search-input'),
+    btnClearSearch: $('btn-clear-search'),
+    searchOpenTabFolders: $('search-open-tab-folders'),
     searchResults: $('search-results'),
     selectEngine: $('select-engine'),
     btnBack: $('btn-back'),
@@ -82,6 +87,11 @@ const el = {
     progressValue: $('progress-value'),
     progressFill: $('progress-fill'),
     btnProgressCancel: $('btn-progress-cancel'),
+    contextMenu: $('context-menu'),
+    contextCopy: $('context-copy'),
+    contextSearch: $('context-search'),
+    contextOpen: $('context-open'),
+    contextOpenNewTab: $('context-open-new-tab'),
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -90,6 +100,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     bindToolbar();
     bindHomeScreen();
     bindHighlightNav();
+    bindContextMenu();
     setupDragAndDrop();
     bindMenuEvents();
 
@@ -348,7 +359,12 @@ function bindToolbar() {
         await renderActiveTab();
     };
     el.searchInput.addEventListener('input', debounce(handleSearch, 300));
+    el.searchInput.addEventListener('input', updateSearchClearButton);
+    el.searchInput.addEventListener('keydown', handleSearchInputKeydown);
+    el.btnClearSearch.onclick = clearSearchInput;
+    el.searchOpenTabFolders.addEventListener('change', () => handleSearch());
     el.btnProgressCancel.onclick = cancelCurrentTask;
+    document.addEventListener('keydown', handleGlobalKeydown);
 }
 
 function bindHomeScreen() {
@@ -396,6 +412,204 @@ function bindHighlightNav() {
     });
 
     el.btnHlClose.addEventListener('click', () => clearHighlight());
+}
+
+function bindContextMenu() {
+    document.addEventListener('contextmenu', handleContextMenu);
+    document.addEventListener('click', event => {
+        if (!event.target.closest('#context-menu')) {
+            closeContextMenu();
+        }
+    });
+    document.addEventListener('scroll', closeContextMenu, true);
+    window.addEventListener('blur', closeContextMenu);
+
+    bindContextMenuAction(el.contextCopy, async () => {
+        if (!contextMenuState?.selectionText) return;
+        await copyTextToClipboard(contextMenuState.selectionText);
+        closeContextMenu();
+        showToast('Copied selection.');
+    });
+
+    bindContextMenuAction(el.contextSearch, async () => {
+        if (!contextMenuState?.selectionText) return;
+        await searchForQuery(contextMenuState.selectionText);
+        closeContextMenu();
+    });
+
+    bindContextMenuAction(el.contextOpen, async () => {
+        if (!contextMenuState?.linkHref) return;
+        await openContextLink(contextMenuState.linkHref, false);
+        closeContextMenu();
+    });
+
+    bindContextMenuAction(el.contextOpenNewTab, async () => {
+        if (!contextMenuState?.linkHref) return;
+        await openContextLink(contextMenuState.linkHref, true);
+        closeContextMenu();
+    });
+}
+
+function bindContextMenuAction(element, action) {
+    element.addEventListener('click', async event => {
+        event.preventDefault();
+        event.stopPropagation();
+        await action();
+    });
+}
+
+function handleGlobalKeydown(event) {
+    if (isEditableTarget(event.target)) {
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c') {
+        const selectionText = window.getSelection()?.toString().trim() || "";
+        if (selectionText) {
+            event.preventDefault();
+            copyTextToClipboard(selectionText)
+                .then(() => showToast('Copied selection.'))
+                .catch(error => LogError(`keyboard copy failed: ${error?.message || error}`));
+        }
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'w') {
+        event.preventDefault();
+        const active = getActiveTab();
+        if (active) {
+            closeTab(active.id);
+        }
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && /^[1-9]$/.test(event.key)) {
+        event.preventDefault();
+        activateTabByShortcut(Number(event.key));
+        return;
+    }
+
+    if (event.key === 'Escape') {
+        closeContextMenu();
+    }
+}
+
+function handleContextMenu(event) {
+    const selectionText = window.getSelection()?.toString().trim() || "";
+    const linkNode = event.target.closest('a[href]');
+    const inMarkdown = !!event.target.closest('#markdown-container');
+
+    if (!selectionText && !linkNode) {
+        closeContextMenu();
+        return;
+    }
+
+    if (!inMarkdown && !selectionText) {
+        closeContextMenu();
+        return;
+    }
+
+    event.preventDefault();
+    const linkHref = linkNode?.getAttribute('href') || "";
+    const showLinkActions = !!linkHref;
+    const showSelectionActions = !showLinkActions && !!selectionText;
+    contextMenuState = {
+        selectionText: showSelectionActions ? selectionText : "",
+        linkHref,
+    };
+
+    el.contextCopy.classList.toggle('hidden', !showSelectionActions);
+    el.contextSearch.classList.toggle('hidden', !showSelectionActions);
+    el.contextOpen.classList.toggle('hidden', !showLinkActions);
+    el.contextOpenNewTab.classList.toggle('hidden', !showLinkActions);
+
+    positionContextMenu(event.clientX, event.clientY);
+}
+
+function positionContextMenu(x, y) {
+    el.contextMenu.classList.remove('show');
+    el.contextMenu.classList.add('hidden');
+    el.contextMenu.setAttribute('aria-hidden', 'true');
+    el.contextMenu.classList.remove('hidden');
+    el.contextMenu.setAttribute('aria-hidden', 'false');
+
+    const menuRect = el.contextMenu.getBoundingClientRect();
+    const maxX = window.innerWidth - menuRect.width - 10;
+    const maxY = window.innerHeight - menuRect.height - 10;
+    el.contextMenu.style.left = `${Math.max(10, Math.min(x, maxX))}px`;
+    el.contextMenu.style.top = `${Math.max(10, Math.min(y, maxY))}px`;
+    requestAnimationFrame(() => el.contextMenu.classList.add('show'));
+}
+
+function closeContextMenu() {
+    contextMenuState = null;
+    el.contextMenu.classList.remove('show');
+    el.contextMenu.classList.add('hidden');
+    el.contextMenu.setAttribute('aria-hidden', 'true');
+}
+
+async function copyTextToClipboard(text) {
+    try {
+        const copied = await ClipboardSetText(text);
+        if (copied) {
+            return;
+        }
+    } catch (error) {
+        LogError(`clipboard runtime copy failed: ${error?.message || error}`);
+    }
+
+    if (navigator.clipboard?.writeText) {
+        try {
+            await navigator.clipboard.writeText(text);
+            return;
+        } catch (error) {
+            LogError(`clipboard web copy failed: ${error?.message || error}`);
+        }
+    }
+
+    const textarea = document.createElement('textarea');
+    textarea.value = text;
+    textarea.setAttribute('readonly', '');
+    textarea.style.position = 'fixed';
+    textarea.style.left = '-9999px';
+    document.body.appendChild(textarea);
+    textarea.select();
+    document.execCommand('copy');
+    document.body.removeChild(textarea);
+}
+
+async function searchForQuery(query) {
+    const trimmed = query.trim();
+    if (!trimmed) return;
+    el.searchSidebar.classList.remove('hidden');
+    el.searchInput.value = trimmed;
+    await handleSearch();
+}
+
+async function openContextLink(href, newTab) {
+    if (isExternalURL(href)) {
+        await openExternalURL(href);
+        return;
+    }
+    resolveLink(href, { newTab });
+}
+
+async function openExternalPath(path) {
+    try {
+        await OpenExternalPath(path);
+    } catch (error) {
+        LogError(`external path fallback failed path=${path}: ${error?.message || error}`);
+        showToast('Failed to open path in Finder.');
+    }
+}
+
+async function openExternalURL(href) {
+    try {
+        await OpenExternalURL(href);
+    } catch (error) {
+        LogError(`external url fallback failed href=${href}: ${error?.message || error}`);
+        BrowserOpenURL(href);
+    }
 }
 
 function showProgress(title, progress = null) {
@@ -483,6 +697,10 @@ async function openPath(path, options = {}) {
     } catch (err) {
         console.error("openPath failed:", err);
         LogError(`openPath failed path=${path} anchor=${anchor}: ${err?.message || err}`);
+        if (String(err?.message || err).includes('is a directory')) {
+            await openExternalPath(path);
+            return;
+        }
         showToast(err?.message || "Failed to open file.");
     }
 }
@@ -660,10 +878,15 @@ function postProcess() {
 
         const handleLinkNavigation = event => {
             event.preventDefault();
+            event.stopPropagation();
 
             if (isExternalURL(href)) {
                 const ok = window.confirm(`External link detected.\n\nOpen in your system browser?\n${href}`);
-                if (ok) BrowserOpenURL(href);
+                if (ok) {
+                    window.setTimeout(() => {
+                        void openExternalURL(href);
+                    }, 0);
+                }
                 return;
             }
 
@@ -712,6 +935,28 @@ function isExternalURL(href) {
     return /^(https?:|mailto:)/i.test(href);
 }
 
+function isEditableTarget(target) {
+    if (!target) {
+        return false;
+    }
+    if (target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement || target instanceof HTMLSelectElement) {
+        return true;
+    }
+    return !!target.closest?.('[contenteditable="true"]');
+}
+
+function activateTabByShortcut(index) {
+    if (tabs.length === 0) {
+        return;
+    }
+
+    const targetIndex = index === 9 ? tabs.length - 1 : index - 1;
+    const tab = tabs[targetIndex];
+    if (tab) {
+        switchToTab(tab.id);
+    }
+}
+
 function changeFontSize(delta) {
     currentFontSize = Math.min(72, Math.max(10, currentFontSize + delta));
     el.markdownContainer.style.fontSize = `${currentFontSize}px`;
@@ -725,16 +970,19 @@ function toggleTheme() {
 
 function toggleSearch() {
     el.searchSidebar.classList.toggle('hidden');
+    updateSearchClearButton();
 }
 
 async function handleSearch() {
     const query = el.searchInput.value.trim();
-    if (!query || !currentFolder) {
+    const folders = getSearchFolders();
+    if (!query || folders.length === 0) {
         el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword and keep a file open.</div>';
         return;
     }
     el.searchResults.innerHTML = '<div class="search-hint">Searching...</div>';
-    const results = await SearchMarkdown(currentFolder, query);
+    const resultGroups = await Promise.all(folders.map(folder => SearchMarkdown(folder, query)));
+    const results = mergeSearchResults(resultGroups.flat());
     if (!results || results.length === 0) {
         el.searchResults.innerHTML = '<div class="search-hint">No results found</div>';
         return;
@@ -745,6 +993,109 @@ async function handleSearch() {
             <span class="recent-path">${result.path}</span>
         </div>
     `).join('');
+}
+
+function updateSearchClearButton() {
+    el.btnClearSearch.classList.toggle('hidden', !el.searchInput.value.trim());
+}
+
+function clearSearchInput() {
+    el.searchInput.value = "";
+    updateSearchClearButton();
+    el.searchResults.innerHTML = '<div class="search-hint">Open a file then type to search.</div>';
+    el.searchInput.focus();
+}
+
+async function handleSearchInputKeydown(event) {
+    if (!(event.metaKey || event.ctrlKey) || event.shiftKey || event.altKey) {
+        return;
+    }
+
+    const key = event.key.toLowerCase();
+    if (!['a', 'c', 'v', 'x'].includes(key)) {
+        return;
+    }
+
+    if (key === 'a') {
+        event.preventDefault();
+        el.searchInput.select();
+        return;
+    }
+
+    const hasSelection = el.searchInput.selectionStart !== el.searchInput.selectionEnd;
+
+    if (key === 'c') {
+        if (!hasSelection) {
+            return;
+        }
+        event.preventDefault();
+        await copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd));
+        return;
+    }
+
+    if (key === 'x') {
+        if (!hasSelection) {
+            return;
+        }
+        event.preventDefault();
+        await copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd));
+        el.searchInput.setRangeText("", el.searchInput.selectionStart, el.searchInput.selectionEnd, 'start');
+        updateSearchClearButton();
+        await handleSearch();
+        return;
+    }
+
+    if (key === 'v') {
+        event.preventDefault();
+        try {
+            const text = await ClipboardGetText();
+            if (typeof text === 'string') {
+                el.searchInput.setRangeText(text, el.searchInput.selectionStart, el.searchInput.selectionEnd, 'end');
+                updateSearchClearButton();
+                await handleSearch();
+            }
+        } catch (error) {
+            LogError(`clipboard paste failed: ${error?.message || error}`);
+        }
+    }
+}
+
+function getSearchFolders() {
+    const folders = new Set();
+
+    if (currentFolder) {
+        folders.add(currentFolder);
+    }
+
+    if (!el.searchOpenTabFolders.checked) {
+        return Array.from(folders);
+    }
+
+    tabs.forEach(tab => {
+        if (tab.kind !== 'document') {
+            return;
+        }
+        const folder = getPathDirname(tab.path);
+        if (folder) {
+            folders.add(folder);
+        }
+    });
+
+    return Array.from(folders);
+}
+
+function mergeSearchResults(results) {
+    const seen = new Set();
+    return results
+        .filter(result => result?.path)
+        .filter(result => {
+            if (seen.has(result.path)) {
+                return false;
+            }
+            seen.add(result.path);
+            return true;
+        })
+        .sort((a, b) => a.path.localeCompare(b.path));
 }
 
 function escapeAttr(str) {

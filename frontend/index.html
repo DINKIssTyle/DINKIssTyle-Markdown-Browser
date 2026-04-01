@@ -91,8 +91,17 @@
             <!-- Sidebar (Search) - on the RIGHT -->
             <aside id="search-sidebar" class="sidebar hidden">
                 <div class="search-header">
-                    <input type="text" id="search-input" placeholder="Search keyword..." />
+                    <div class="search-input-wrap">
+                        <input type="text" id="search-input" placeholder="Search keyword..." />
+                        <button id="btn-clear-search" class="clear-search-btn hidden" type="button" aria-label="Clear search">
+                            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                        </button>
+                    </div>
                 </div>
+                <label class="search-scope-option">
+                    <input type="checkbox" id="search-open-tab-folders" />
+                    <span>Search open tab folders too</span>
+                </label>
                 <div id="search-results" class="search-results">
                     <div class="search-hint">Open a file then type to search.</div>
                 </div>
@@ -123,6 +132,13 @@
             <div class="progress-track">
                 <div id="progress-fill" class="progress-fill"></div>
             </div>
+        </div>
+
+        <div id="context-menu" class="context-menu hidden" role="menu" aria-hidden="true">
+            <button id="context-copy" class="context-menu-item" type="button" role="menuitem">Copy</button>
+            <button id="context-search" class="context-menu-item" type="button" role="menuitem">Search</button>
+            <button id="context-open" class="context-menu-item" type="button" role="menuitem">Open</button>
+            <button id="context-open-new-tab" class="context-menu-item" type="button" role="menuitem">Open In New Tab</button>
         </div>
     </div>
     <script src="./src/main.js" type="module"></script>

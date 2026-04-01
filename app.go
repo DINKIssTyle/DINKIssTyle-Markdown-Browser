@@ -12,7 +12,9 @@ import (
 	"fmt"
 	"mime"
 	"os"
+	"os/exec"
 	"path/filepath"
+	goruntime "runtime"
 	"strings"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -221,4 +223,28 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 
 	a.saveRecentFile(path)
 	return FileResult{Path: path, Content: content}, nil
+}
+
+// OpenExternalURL opens a URL in the system browser with an OS-level fallback path.
+func (a *App) OpenExternalURL(url string) error {
+	switch goruntime.GOOS {
+	case "darwin":
+		return exec.Command("open", url).Start()
+	case "windows":
+		return exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+	default:
+		return exec.Command("xdg-open", url).Start()
+	}
+}
+
+// OpenExternalPath opens a local file or directory in the system shell.
+func (a *App) OpenExternalPath(path string) error {
+	switch goruntime.GOOS {
+	case "darwin":
+		return exec.Command("open", path).Start()
+	case "windows":
+		return exec.Command("explorer", path).Start()
+	default:
+		return exec.Command("xdg-open", path).Start()
+	}
 }
