@@ -588,6 +588,12 @@ function handleGlobalKeydown(event) {
         return;
     }
 
+    if ((event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 'h') {
+        event.preventDefault();
+        goHome();
+        return;
+    }
+
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && /^[1-9]$/.test(event.key)) {
         event.preventDefault();
         activateTabByShortcut(Number(event.key));
@@ -916,6 +922,29 @@ async function openIncomingFiles(paths) {
     }
 }
 
+function normalizeFileURLPath(path) {
+    if (!path || !/^file:/i.test(path)) {
+        return path;
+    }
+
+    try {
+        const url = new URL(path);
+        if (url.protocol !== 'file:') {
+            return path;
+        }
+
+        const decodedPath = decodeURIComponent(url.pathname || "");
+        if (!decodedPath) {
+            return path;
+        }
+
+        // Windows file URLs may start with /C:/...
+        return decodedPath.replace(/^\/([A-Za-z]:\/)/, '$1');
+    } catch {
+        return path;
+    }
+}
+
 async function openPath(path, options = {}) {
     const {
         pushHistory = true,
@@ -926,6 +955,7 @@ async function openPath(path, options = {}) {
         anchor = "",
         tabId = activeTabId,
     } = options;
+    path = normalizeFileURLPath(path);
 
     if (newTab) {
         await createAndSwitchToNewTab(path, { pushHistory: false, setHome, content, keyword, anchor });
@@ -1260,11 +1290,13 @@ function wireHTMLDocumentLinks(doc) {
     bindHistoryMouseNavigation(doc);
 
     doc.querySelectorAll('a[href]').forEach(anchor => {
-        const href = anchor.getAttribute('href');
-        if (!href) return;
+        const rawHref = anchor.getAttribute('href');
+        if (!rawHref) return;
 
         anchor.addEventListener('click', event => {
-            if (href.startsWith('#')) {
+            const href = anchor.href || rawHref;
+
+            if (rawHref.startsWith('#')) {
                 return;
             }
 
@@ -1281,6 +1313,7 @@ function wireHTMLDocumentLinks(doc) {
         });
 
         anchor.addEventListener('auxclick', event => {
+            const href = anchor.href || rawHref;
             if (event.button === 1) {
                 event.preventDefault();
                 event.stopPropagation();
@@ -1460,7 +1493,8 @@ function resolveLink(rel, options = {}) {
     }
 
     const normalizedPathPart = normalizeAppLocalFileHref(pathPart) || pathPart;
-    const resolvedPath = normalizedPathPart.startsWith('/') ? normalizedPathPart : joinPath(currentFolder, normalizedPathPart);
+    const fileURLPath = normalizeFileURLPath(normalizedPathPart);
+    const resolvedPath = fileURLPath.startsWith('/') ? fileURLPath : joinPath(currentFolder, fileURLPath);
     LogInfo(`markdown link href=${rel} resolved=${resolvedPath} anchor=${anchor || ""} newTab=${!!options.newTab}`);
     openPath(resolvedPath, { ...options, anchor });
 }
@@ -1814,6 +1848,7 @@ function scrollToAnchor(anchor) {
 
 function bindMenuEvents() {
     EventsOn('menu:new-window', () => createAndSwitchToNewTab());
+    EventsOn('menu:home', () => goHome());
     EventsOn('menu:back', () => goBack());
     EventsOn('menu:forward', () => goForward());
     EventsOn('menu:open-file', () => handleOpenFile());

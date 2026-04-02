@@ -47,6 +47,10 @@ func buildAppMenu(app *App) *menu.Menu {
 
 	// ── View menu ──────────────────────────────────────────────────────
 	viewMenu := appMenu.AddSubmenu("View")
+	viewMenu.AddText("Home", keys.Combo("h", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:home")
+	})
+	viewMenu.AddSeparator()
 	viewMenu.AddText("Back", keys.CmdOrCtrl("["), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:back")
 	})
@@ -84,7 +88,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
 			Type:    runtime.InfoDialog,
 			Title:   "Help",
-			Message: "• Open File: ⌘O or 📂 button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘T or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
+			Message: "• Open File: ⌘O or 📂 button\n• Home: ⇧⌘H or ⌂ button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘T or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
 		})
 	})
 
