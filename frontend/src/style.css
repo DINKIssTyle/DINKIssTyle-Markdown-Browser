@@ -452,6 +452,49 @@ html.dark .nav-btn:hover {
     -webkit-user-select: none;
 }
 
+.recent-list.empty {
+    background: transparent;
+    border: none;
+    overflow: visible;
+}
+
+.empty-state {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    padding: 28px 22px;
+    border-radius: 18px;
+    border: 1px dashed rgba(127, 127, 127, 0.35);
+    background:
+        radial-gradient(circle at top, rgba(0, 122, 255, 0.08), transparent 54%),
+        rgba(255, 255, 255, 0.62);
+    text-align: center;
+}
+
+html.dark .empty-state {
+    background:
+        radial-gradient(circle at top, rgba(90, 170, 255, 0.12), transparent 54%),
+        rgba(255, 255, 255, 0.03);
+}
+
+.empty-state-icon {
+    font-size: 28px;
+    opacity: 0.75;
+}
+
+.empty-state-title {
+    font-size: 18px;
+    font-weight: 700;
+}
+
+.empty-state-copy {
+    max-width: 420px;
+    font-size: 13px;
+    line-height: 1.55;
+    opacity: 0.68;
+}
+
 .recent-actions {
     display: flex;
     gap: 12px;
@@ -517,6 +560,7 @@ html.dark .recent-item:hover {
     font-size: 12px;
     opacity: 0.6;
     margin-top: 4px;
+    word-break: break-all;
 }
 
 /* Markdown Rendering Styles (GitHub Flavored) */

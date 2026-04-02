@@ -21,6 +21,9 @@
                 <button id="btn-home" title="Home" aria-label="Home" class="nav-btn icon-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">home</span>
                 </button>
+                <button id="btn-refresh" title="Refresh" aria-label="Refresh" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                </button>
                 <button id="btn-open" title="Open File" aria-label="Open File" class="nav-btn icon-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">folder_open</span>
                 </button>
@@ -72,7 +75,11 @@
                     <h1><span class="material-symbols-outlined home-title-icon" aria-hidden="true">markdown</span> <span>DKST Markdown Browser</span></h1>
                     <p class="home-subtitle">Open or drag a Markdown file here.</p>
                     <div id="recent-files-list" class="recent-list">
-                        <div class="empty-state">No recently opened files.</div>
+                        <div class="empty-state">
+                            <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
+                            <div class="empty-state-title">No recent documents yet</div>
+                            <div class="empty-state-copy">Open a Markdown file and it will appear here for quick access.</div>
+                        </div>
                     </div>
                     <div class="recent-actions">
                         <button id="btn-open-home" class="action-btn primary">

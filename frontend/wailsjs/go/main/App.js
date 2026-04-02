@@ -10,6 +10,10 @@ export function ConfirmOpenExternalURL(arg1) {
   return window['go']['main']['App']['ConfirmOpenExternalURL'](arg1);
 }
 
+export function FrontendReady() {
+  return window['go']['main']['App']['FrontendReady']();
+}
+
 export function GetRecentFiles() {
   return window['go']['main']['App']['GetRecentFiles']();
 }
@@ -24,6 +28,14 @@ export function GetSystemTheme() {
 
 export function HandleFileDrop(arg1) {
   return window['go']['main']['App']['HandleFileDrop'](arg1);
+}
+
+export function HandleSecondInstanceLaunch(arg1) {
+  return window['go']['main']['App']['HandleSecondInstanceLaunch'](arg1);
+}
+
+export function HandleSystemOpenFile(arg1) {
+  return window['go']['main']['App']['HandleSystemOpenFile'](arg1);
 }
 
 export function OpenDirectory() {

@@ -13,6 +13,7 @@ import remarkHtml from 'remark-html';
 import {
     OpenFile,
     ConfirmOpenExternalURL,
+    FrontendReady,
     OpenExternalPath,
     OpenExternalURL,
     ReadFile,
@@ -69,6 +70,7 @@ const el = {
     btnBack: $('btn-back'),
     btnForward: $('btn-forward'),
     btnHome: $('btn-home'),
+    btnRefresh: $('btn-refresh'),
     btnOpen: $('btn-open'),
     btnOpenHome: $('btn-open-home'),
     btnClearRecent: $('btn-clear-recent'),
@@ -112,6 +114,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     renderTabs();
     await renderActiveTab();
     updateNavButtons();
+    await consumeStartupOpenFiles();
 });
 
 function getPathDirname(path) {
@@ -332,9 +335,17 @@ async function persist() {
 async function renderRecentFiles() {
     recentFilesCache = await GetRecentFiles();
     if (!recentFilesCache || recentFilesCache.length === 0) {
-        el.recentList.innerHTML = '<div class="empty-state">No recently opened files.</div>';
+        el.recentList.classList.add('empty');
+        el.recentList.innerHTML = `
+            <div class="empty-state">
+                <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
+                <div class="empty-state-title">No recent documents yet</div>
+                <div class="empty-state-copy">Open a Markdown file and it will appear here for quick access.</div>
+            </div>
+        `;
         return;
     }
+    el.recentList.classList.remove('empty');
     el.recentList.innerHTML = recentFilesCache.map(f => `
         <div class="recent-item" data-path="${f.path}">
             <span class="recent-name">${f.name}</span>
@@ -348,6 +359,7 @@ function bindToolbar() {
     el.btnBack.onclick = goBack;
     el.btnForward.onclick = goForward;
     el.btnHome.onclick = goHome;
+    el.btnRefresh.onclick = reloadCurrent;
     el.btnInfo.onclick = () => openThirdPartyNotices(true);
     el.btnFontMinus.onclick = () => changeFontSize(-2);
     el.btnFontPlus.onclick = () => changeFontSize(2);
@@ -481,6 +493,12 @@ function handleGlobalKeydown(event) {
         if (active) {
             closeTab(active.id);
         }
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'r') {
+        event.preventDefault();
+        reloadCurrent().catch(error => LogError(`keyboard refresh failed: ${error?.message || error}`));
         return;
     }
 
@@ -643,6 +661,10 @@ function hideProgress() {
     }, 400);
 }
 
+function updateProgress(title, progress = null) {
+    showProgress(title, progress);
+}
+
 async function cancelCurrentTask() {
     hideProgress();
 }
@@ -651,6 +673,28 @@ async function handleOpenFile() {
     const result = await OpenFile();
     if (result && result.path) {
         await openPath(result.path, { pushHistory: true, setHome: true, content: result.content });
+    }
+}
+
+async function consumeStartupOpenFiles() {
+    const paths = await FrontendReady();
+    await openIncomingFiles(paths);
+}
+
+async function openIncomingFiles(paths) {
+    if (!Array.isArray(paths) || paths.length === 0) {
+        return;
+    }
+
+    for (let index = 0; index < paths.length; index++) {
+        const path = paths[index];
+        if (!path) continue;
+
+        await openPath(path, {
+            pushHistory: true,
+            setHome: true,
+            newTab: index > 0,
+        });
     }
 }
 
@@ -679,7 +723,13 @@ async function openPath(path, options = {}) {
     const tab = getActiveTab();
     if (!tab) return;
 
+    const shouldShowProgress = path !== HOME_SCREEN_PATH;
+
     try {
+        if (shouldShowProgress) {
+            updateProgress('Loading document', 18);
+        }
+
         if (path === HOME_SCREEN_PATH) {
             if (pushHistory) pushCurrentHistory(path);
             currentFilePath = HOME_SCREEN_PATH;
@@ -693,12 +743,16 @@ async function openPath(path, options = {}) {
         }
 
         if (path === THIRD_PARTY_NOTICES_PATH) {
+            updateProgress('Loading bundled document', 42);
             const bundled = await loadBundledMarkdown(path);
+            updateProgress('Rendering document', 82);
             await loadFile(path, bundled, pushHistory, false);
             return;
         }
 
+        updateProgress('Reading markdown file', 42);
         const fileContent = content ?? await ReadFile(path);
+        updateProgress('Rendering document', 82);
         await loadFile(path, fileContent, pushHistory, setHome);
     } catch (err) {
         console.error("openPath failed:", err);
@@ -708,6 +762,11 @@ async function openPath(path, options = {}) {
             return;
         }
         showToast(err?.message || "Failed to open file.");
+    } finally {
+        if (shouldShowProgress) {
+            updateProgress('Done', 100);
+            hideProgress();
+        }
     }
 }
 
@@ -761,15 +820,30 @@ async function reloadCurrent() {
         await renderActiveTab();
         return;
     }
-    if (currentFilePath === THIRD_PARTY_NOTICES_PATH) {
-        currentMarkdownSource = await loadBundledMarkdown(currentFilePath);
+
+    try {
+        updateProgress('Refreshing document', 24);
+        if (currentFilePath === THIRD_PARTY_NOTICES_PATH) {
+            updateProgress('Loading bundled document', 48);
+            currentMarkdownSource = await loadBundledMarkdown(currentFilePath);
+            syncTabFromGlobals(tab);
+            updateProgress('Rendering document', 82);
+            await renderActiveTab();
+            return;
+        }
+
+        updateProgress('Reading markdown file', 48);
+        currentMarkdownSource = await ReadFile(currentFilePath);
         syncTabFromGlobals(tab);
+        updateProgress('Rendering document', 82);
         await renderActiveTab();
-        return;
+    } catch (error) {
+        LogError(`reloadCurrent failed path=${currentFilePath}: ${error?.message || error}`);
+        showToast(error?.message || 'Failed to refresh file.');
+    } finally {
+        updateProgress('Done', 100);
+        hideProgress();
     }
-    currentMarkdownSource = await ReadFile(currentFilePath);
-    syncTabFromGlobals(tab);
-    await renderActiveTab();
 }
 
 function goBack() {
@@ -1289,6 +1363,8 @@ function scrollToAnchor(anchor) {
 
 function bindMenuEvents() {
     EventsOn('menu:open-file', () => handleOpenFile());
+    EventsOn('menu:refresh', () => reloadCurrent());
+    EventsOn('system:open-file', async path => openIncomingFiles([path]));
     EventsOn('menu:toggle-search', () => toggleSearch());
     EventsOn('menu:toggle-theme', () => toggleTheme());
     EventsOn('menu:font-up', () => changeFontSize(2));

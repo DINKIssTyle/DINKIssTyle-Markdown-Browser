@@ -17,7 +17,9 @@ import (
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
+	"sync"
 
+	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
@@ -42,9 +44,12 @@ type AppSettings struct {
 
 // App struct
 type App struct {
-	ctx          context.Context
-	settingsPath string
-	recentPath   string
+	ctx              context.Context
+	settingsPath     string
+	recentPath       string
+	mu               sync.Mutex
+	frontendReady    bool
+	pendingOpenFiles []string
 }
 
 // NewApp creates a new App application struct
@@ -62,6 +67,18 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+	a.queueOpenRequests(os.Args[1:], "")
+}
+
+// FrontendReady marks the UI as ready to receive open-file events and returns queued paths.
+func (a *App) FrontendReady() []string {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.frontendReady = true
+	paths := append([]string(nil), a.pendingOpenFiles...)
+	a.pendingOpenFiles = nil
+	return paths
 }
 
 // OpenFile opens a file dialog and returns the file path and content
@@ -69,7 +86,7 @@ func (a *App) OpenFile() (FileResult, error) {
 	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
 		Title: "Open Markdown File",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "Markdown Files (*.md)", Pattern: "*.md"},
+			{DisplayName: "Markdown Files (*.md;*.markdown)", Pattern: "*.md;*.markdown"},
 		},
 	})
 	if err != nil || selection == "" {
@@ -119,7 +136,7 @@ func (a *App) SearchMarkdown(dir string, query string) ([]map[string]string, err
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && filepath.Ext(path) == ".md" {
+		if !info.IsDir() && isMarkdownPath(path) {
 			content, err := os.ReadFile(path)
 			if err != nil {
 				return nil // Skip files that can't be read
@@ -161,9 +178,9 @@ func (a *App) saveRecentFile(path string) {
 		}
 	}
 
-	// Limit to 5
-	if len(newRecent) > 5 {
-		newRecent = newRecent[:5]
+	// Limit to 8
+	if len(newRecent) > 8 {
+		newRecent = newRecent[:8]
 	}
 
 	data, _ := json.Marshal(newRecent)
@@ -234,7 +251,7 @@ func (a *App) ConfirmOpenExternalURL(url string) (bool, error) {
 
 // HandleFileDrop handles a file dropped onto the window
 func (a *App) HandleFileDrop(path string) (FileResult, error) {
-	if strings.ToLower(filepath.Ext(path)) != ".md" {
+	if !isMarkdownPath(path) {
 		return FileResult{}, fmt.Errorf("not a markdown file")
 	}
 
@@ -245,6 +262,66 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 
 	a.saveRecentFile(path)
 	return FileResult{Path: path, Content: content}, nil
+}
+
+func (a *App) HandleSystemOpenFile(path string) {
+	a.queueOpenRequests([]string{path}, "")
+}
+
+func (a *App) HandleSecondInstanceLaunch(data options.SecondInstanceData) {
+	log.Printf("second-instance: cwd=%s args=%v", data.WorkingDirectory, data.Args)
+	a.queueOpenRequests(data.Args, data.WorkingDirectory)
+	if a.ctx != nil {
+		runtime.WindowUnminimise(a.ctx)
+		runtime.Show(a.ctx)
+	}
+}
+
+func (a *App) queueOpenRequests(args []string, workingDir string) {
+	for _, arg := range args {
+		resolvedPath, ok := normalizeMarkdownPath(arg, workingDir)
+		if !ok {
+			continue
+		}
+
+		a.mu.Lock()
+		ready := a.frontendReady
+		if !ready && !containsPath(a.pendingOpenFiles, resolvedPath) {
+			a.pendingOpenFiles = append(a.pendingOpenFiles, resolvedPath)
+		}
+		a.mu.Unlock()
+
+		log.Printf("system-open-file: queued path=%s ready=%v", resolvedPath, ready)
+		if ready && a.ctx != nil {
+			runtime.EventsEmit(a.ctx, "system:open-file", resolvedPath)
+		}
+	}
+}
+
+func isMarkdownPath(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".md" || ext == ".markdown"
+}
+
+func normalizeMarkdownPath(path string, workingDir string) (string, bool) {
+	if !isMarkdownPath(path) {
+		return "", false
+	}
+
+	if !filepath.IsAbs(path) && workingDir != "" {
+		path = filepath.Join(workingDir, path)
+	}
+
+	return filepath.Clean(path), true
+}
+
+func containsPath(paths []string, target string) bool {
+	for _, path := range paths {
+		if path == target {
+			return true
+		}
+	}
+	return false
 }
 
 // OpenExternalURL opens a URL in the system browser with an OS-level fallback path.

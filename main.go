@@ -38,6 +38,10 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 18, G: 18, B: 18, A: 1}, // Sleek dark
 		OnStartup:        app.startup,
+		SingleInstanceLock: &options.SingleInstanceLock{
+			UniqueId:               "com.dinkisstyle.mdbrowser",
+			OnSecondInstanceLaunch: app.HandleSecondInstanceLaunch,
+		},
 		Bind: []interface{}{
 			app,
 		},
@@ -56,6 +60,7 @@ func main() {
 				Title:   "DKST Markdown Browser",
 				Message: "Version 1.0.0\nCopyright (C) 2026 DINKI'ssTyle.\nAll rights reserved.",
 			},
+			OnFileOpen: app.HandleSystemOpenFile,
 		},
 	})
 

@@ -58,6 +58,10 @@ func buildAppMenu(app *App) *menu.Menu {
 
 	// ── View menu ──────────────────────────────────────────────────────
 	viewMenu := appMenu.AddSubmenu("View")
+	viewMenu.AddText("Refresh", keys.CmdOrCtrl("r"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:refresh")
+	})
+	viewMenu.AddSeparator()
 	viewMenu.AddText("Toggle Search Panel", keys.CmdOrCtrl("f"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-search")
 	})
@@ -88,7 +92,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
 			Type:    runtime.InfoDialog,
 			Title:   "Help",
-			Message: "• Open File: ⌘O or 📂 button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘T or 🌓 button\n• History: ← → buttons\n• Font Size: ⌘+/⌘-",
+			Message: "• Open File: ⌘O or 📂 button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘T or 🌓 button\n• History: ← → buttons\n• Font Size: ⌘+/⌘-",
 		})
 	})
 

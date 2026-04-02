@@ -7,3 +7,5 @@ dist/linux/DKST Markdown Browser-1.0.0-linux-amd64
 /dist
 .DS_Store
 frontend/package.json.md5
+dinkisstyle-markdown-browser
+.DS_Store
