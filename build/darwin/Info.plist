@@ -45,6 +45,24 @@
                     <string>public.plain-text</string>
                 </array>
             </dict>
+            <dict>
+                <key>CFBundleTypeExtensions</key>
+                <array>
+                    <string>html</string>
+                    <string>htm</string>
+                </array>
+                <key>CFBundleTypeName</key>
+                <string>HTML Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Viewer</string>
+                <key>CFBundleTypeIconFile</key>
+                <string>iconfile</string>
+                <key>LSItemContentTypes</key>
+                <array>
+                    <string>public.html</string>
+                    <string>public.xhtml</string>
+                </array>
+            </dict>
         </array>
 
         <!-- 사용자 선택 파일/폴더 접근 권한 (macOS 10.15+) -->
@@ -66,26 +84,6 @@
             <key>NSAllowsLocalNetworking</key>
             <true/>
         </dict>
-
-        {{if .Info.FileAssociations}}
-        <key>CFBundleDocumentTypes</key>
-        <array>
-          {{range .Info.FileAssociations}}
-          <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-              <string>{{.Ext}}</string>
-            </array>
-            <key>CFBundleTypeName</key>
-            <string>{{.Name}}</string>
-            <key>CFBundleTypeRole</key>
-            <string>{{.Role}}</string>
-            <key>CFBundleTypeIconFile</key>
-            <string>{{.IconName}}</string>
-          </dict>
-          {{end}}
-        </array>
-        {{end}}
 
         {{if .Info.Protocols}}
         <key>CFBundleURLTypes</key>

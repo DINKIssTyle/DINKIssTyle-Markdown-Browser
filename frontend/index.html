@@ -38,6 +38,7 @@
                     <select id="select-engine">
                         <option value="marked">Marked</option>
                         <option value="remark">Remark</option>
+                        <option value="html">HTML</option>
                     </select>
                 </div>
                 <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
@@ -73,12 +74,12 @@
                 <!-- Home Screen (Recent Files) -->
                 <div id="home-screen" class="home-screen">
                     <h1><span class="material-symbols-outlined home-title-icon" aria-hidden="true">markdown</span> <span>DKST Markdown Browser</span></h1>
-                    <p class="home-subtitle">Open or drag a Markdown file here.</p>
+                    <p class="home-subtitle">Open or drag a Markdown or HTML file here.</p>
                     <div id="recent-files-list" class="recent-list">
                         <div class="empty-state">
                             <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
                             <div class="empty-state-title">No recent documents yet</div>
-                            <div class="empty-state-copy">Open a Markdown file and it will appear here for quick access.</div>
+                            <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here for quick access.</div>
                         </div>
                     </div>
                     <div class="recent-actions">
@@ -93,6 +94,7 @@
                     </div>
                 </div>
                 <div id="markdown-container" class="markdown-container hidden"></div>
+                <iframe id="html-frame" class="html-frame hidden" title="HTML Document Viewer"></iframe>
             </article>
 
             <!-- Sidebar (Search) - on the RIGHT -->

@@ -6,6 +6,41 @@
   "frontend:build": "npm run build",
   "frontend:dev:watcher": "npm run dev",
   "frontend:dev:serverUrl": "auto",
+  "info": {
+    "productName": "DKST Markdown Browser",
+    "productVersion": "1.0.0",
+    "comments": "An elegant cross-platform viewer for Markdown and HTML files.",
+    "fileAssociations": [
+      {
+        "ext": "md",
+        "name": "DKSTDocument",
+        "description": "Markdown Document",
+        "iconName": "appicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "markdown",
+        "name": "DKSTDocument",
+        "description": "Markdown Document",
+        "iconName": "appicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "html",
+        "name": "DKSTHTMLDocument",
+        "description": "HTML Document",
+        "iconName": "appicon",
+        "role": "Viewer"
+      },
+      {
+        "ext": "htm",
+        "name": "DKSTHTMLDocument",
+        "description": "HTML Document",
+        "iconName": "appicon",
+        "role": "Viewer"
+      }
+    ]
+  },
   "author": {
     "name": "DINKIssTyle",
     "email": "162435433+DINKIssTyle@users.noreply.github.com"

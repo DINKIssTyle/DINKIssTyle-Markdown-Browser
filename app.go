@@ -84,9 +84,9 @@ func (a *App) FrontendReady() []string {
 // OpenFile opens a file dialog and returns the file path and content
 func (a *App) OpenFile() (FileResult, error) {
 	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Open Markdown File",
+		Title: "Open Document",
 		Filters: []runtime.FileFilter{
-			{DisplayName: "Markdown Files (*.md;*.markdown)", Pattern: "*.md;*.markdown"},
+			{DisplayName: "Document Files (*.md;*.markdown;*.html;*.htm)", Pattern: "*.md;*.markdown;*.html;*.htm"},
 		},
 	})
 	if err != nil || selection == "" {
@@ -251,8 +251,8 @@ func (a *App) ConfirmOpenExternalURL(url string) (bool, error) {
 
 // HandleFileDrop handles a file dropped onto the window
 func (a *App) HandleFileDrop(path string) (FileResult, error) {
-	if !isMarkdownPath(path) {
-		return FileResult{}, fmt.Errorf("not a markdown file")
+	if !isSupportedDocumentPath(path) {
+		return FileResult{}, fmt.Errorf("not a supported document file")
 	}
 
 	content, err := a.ReadFile(path)
@@ -279,7 +279,7 @@ func (a *App) HandleSecondInstanceLaunch(data options.SecondInstanceData) {
 
 func (a *App) queueOpenRequests(args []string, workingDir string) {
 	for _, arg := range args {
-		resolvedPath, ok := normalizeMarkdownPath(arg, workingDir)
+		resolvedPath, ok := normalizeDocumentPath(arg, workingDir)
 		if !ok {
 			continue
 		}
@@ -303,8 +303,17 @@ func isMarkdownPath(path string) bool {
 	return ext == ".md" || ext == ".markdown"
 }
 
-func normalizeMarkdownPath(path string, workingDir string) (string, bool) {
-	if !isMarkdownPath(path) {
+func isHTMLPath(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	return ext == ".html" || ext == ".htm"
+}
+
+func isSupportedDocumentPath(path string) bool {
+	return isMarkdownPath(path) || isHTMLPath(path)
+}
+
+func normalizeDocumentPath(path string, workingDir string) (string, bool) {
+	if !isSupportedDocumentPath(path) {
 		return "", false
 	}
 

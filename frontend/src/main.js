@@ -37,6 +37,8 @@ let navIndex = -1;
 let homeTargetPath = HOME_SCREEN_PATH;
 let currentFontSize = 16;
 let currentEngine = "marked";
+let currentMarkdownEngine = "marked";
+let currentDocumentType = "markdown";
 let currentMarkdownSource = "";
 
 let hlMatches = [];
@@ -50,6 +52,10 @@ let activeTabId = "";
 let nextTabID = 1;
 let progressHideTimer = null;
 let contextMenuState = null;
+let htmlFrameResizeObserver = null;
+let activeProgressTaskId = 0;
+let draggedTabId = "";
+let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
 
 const getScroller = () => document.getElementById('content-view');
 const $ = id => document.getElementById(id);
@@ -61,6 +67,7 @@ const el = {
     homeScreen: $('home-screen'),
     recentList: $('recent-files-list'),
     markdownContainer: $('markdown-container'),
+    htmlFrame: $('html-frame'),
     searchSidebar: $('search-sidebar'),
     searchInput: $('search-input'),
     btnClearSearch: $('btn-clear-search'),
@@ -178,11 +185,18 @@ function kindFromPath(path) {
     return 'document';
 }
 
+function documentTypeFromPath(path) {
+    if (path === HOME_SCREEN_PATH) return 'home';
+    if (path === THIRD_PARTY_NOTICES_PATH) return 'markdown';
+    return /\.html?$/i.test(path) ? 'html' : 'markdown';
+}
+
 function createTab({ path = HOME_SCREEN_PATH, title = 'New Tab' } = {}) {
     return {
         id: `tab-${nextTabID++}`,
         path,
         kind: kindFromPath(path),
+        documentType: documentTypeFromPath(path),
         title,
         navHistory: [{ path, scroll: 0 }],
         navIndex: 0,
@@ -202,6 +216,7 @@ function syncTabFromGlobals(tab) {
     if (!tab) return;
     tab.path = currentFilePath;
     tab.kind = kindFromPath(currentFilePath);
+    tab.documentType = currentDocumentType;
     tab.currentFolder = currentFolder;
     tab.currentMarkdownSource = currentMarkdownSource;
     tab.navHistory = navHistory.map(item => ({ ...item }));
@@ -214,6 +229,7 @@ function syncTabFromGlobals(tab) {
 function syncGlobalsFromTab(tab) {
     if (!tab) return;
     currentFilePath = tab.path;
+    currentDocumentType = tab.documentType || documentTypeFromPath(tab.path);
     currentFolder = tab.currentFolder || getPathDirname(tab.path);
     currentMarkdownSource = tab.currentMarkdownSource || "";
     navHistory = (tab.navHistory || [{ path: tab.path, scroll: 0 }]).map(item => ({ ...item }));
@@ -221,6 +237,7 @@ function syncGlobalsFromTab(tab) {
     homeTargetPath = tab.homeTargetPath || HOME_SCREEN_PATH;
     pendingKeyword = tab.pendingKeyword || "";
     pendingAnchor = tab.pendingAnchor || "";
+    syncEngineSelector();
 }
 
 function saveCurrentScroll() {
@@ -246,7 +263,7 @@ async function switchToTab(tabID) {
 
 function renderTabs() {
     el.tabsList.innerHTML = tabs.map(tab => `
-        <div class="tab-item ${tab.id === activeTabId ? 'active' : ''}" data-tab-id="${tab.id}">
+        <div class="tab-item ${tab.id === activeTabId ? 'active' : ''}" data-tab-id="${tab.id}" draggable="true">
             <span class="tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
             <button class="tab-close-btn" data-close-tab="${tab.id}" aria-label="Close Tab">
                 <span class="material-symbols-outlined" aria-hidden="true">close</span>
@@ -261,6 +278,36 @@ function renderTabs() {
             }
             await switchToTab(tabNode.dataset.tabId);
         });
+
+        tabNode.addEventListener('dragstart', event => {
+            if (event.target.closest('[data-close-tab]')) {
+                event.preventDefault();
+                return;
+            }
+
+            draggedTabId = tabNode.dataset.tabId;
+            tabNode.classList.add('dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedTabId);
+        });
+
+        tabNode.addEventListener('dragover', event => {
+            if (!draggedTabId || draggedTabId === tabNode.dataset.tabId) {
+                return;
+            }
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+        });
+
+        tabNode.addEventListener('drop', event => {
+            event.preventDefault();
+            moveTab(draggedTabId, tabNode.dataset.tabId);
+        });
+
+        tabNode.addEventListener('dragend', () => {
+            draggedTabId = "";
+            el.tabsList.querySelectorAll('.tab-item.dragging').forEach(node => node.classList.remove('dragging'));
+        });
     });
 
     el.tabsList.querySelectorAll('[data-close-tab]').forEach(button => {
@@ -271,6 +318,22 @@ function renderTabs() {
     });
 
     el.tabsList.querySelector('.tab-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function moveTab(sourceTabID, targetTabID) {
+    if (!sourceTabID || !targetTabID || sourceTabID === targetTabID) {
+        return;
+    }
+
+    const sourceIndex = tabs.findIndex(tab => tab.id === sourceTabID);
+    const targetIndex = tabs.findIndex(tab => tab.id === targetTabID);
+    if (sourceIndex === -1 || targetIndex === -1) {
+        return;
+    }
+
+    const [movedTab] = tabs.splice(sourceIndex, 1);
+    tabs.splice(targetIndex, 0, movedTab);
+    renderTabs();
 }
 
 function closeTab(tabID) {
@@ -318,18 +381,32 @@ async function createAndSwitchToNewTab(path = HOME_SCREEN_PATH, options = {}) {
 async function loadSettings() {
     const s = await GetSettings();
     currentFontSize = s.fontSize || 16;
-    currentEngine = s.engine || "marked";
+    currentMarkdownEngine = s.engine || "marked";
+    currentEngine = currentMarkdownEngine;
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
-    el.selectEngine.value = currentEngine;
+    syncEngineSelector();
 }
 
 async function persist() {
     await SaveSettings({
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
         fontSize: currentFontSize,
-        engine: currentEngine,
+        engine: currentMarkdownEngine,
     });
+}
+
+function syncEngineSelector() {
+    if (currentDocumentType === 'html') {
+        currentEngine = 'html';
+        el.selectEngine.value = 'html';
+        el.selectEngine.disabled = true;
+        return;
+    }
+
+    currentEngine = currentMarkdownEngine;
+    el.selectEngine.value = currentMarkdownEngine;
+    el.selectEngine.disabled = false;
 }
 
 async function renderRecentFiles() {
@@ -340,7 +417,7 @@ async function renderRecentFiles() {
             <div class="empty-state">
                 <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
                 <div class="empty-state-title">No recent documents yet</div>
-                <div class="empty-state-copy">Open a Markdown file and it will appear here for quick access.</div>
+                <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here for quick access.</div>
             </div>
         `;
         return;
@@ -367,9 +444,17 @@ function bindToolbar() {
     el.btnSearchToggle.onclick = toggleSearch;
     el.btnNewTab.onclick = () => createAndSwitchToNewTab();
     el.selectEngine.onchange = async event => {
-        currentEngine = event.target.value;
+        if (event.target.value === 'html') {
+            syncEngineSelector();
+            return;
+        }
+
+        currentMarkdownEngine = event.target.value;
+        currentEngine = currentMarkdownEngine;
         await persist();
-        await renderActiveTab();
+        if (currentDocumentType !== 'html') {
+            await renderActiveTab();
+        }
     };
     el.searchInput.addEventListener('input', debounce(handleSearch, 300));
     el.searchInput.addEventListener('input', updateSearchClearButton);
@@ -378,6 +463,7 @@ function bindToolbar() {
     el.searchOpenTabFolders.addEventListener('change', () => handleSearch());
     el.btnProgressCancel.onclick = cancelCurrentTask;
     document.addEventListener('keydown', handleGlobalKeydown);
+    bindHistoryMouseNavigation(document);
 }
 
 function bindHomeScreen() {
@@ -508,9 +594,86 @@ function handleGlobalKeydown(event) {
         return;
     }
 
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key === '[') {
+        event.preventDefault();
+        goBack();
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key === ']') {
+        event.preventDefault();
+        goForward();
+        return;
+    }
+
     if (event.key === 'Escape') {
         closeContextMenu();
     }
+}
+
+function bindHistoryMouseNavigation(target) {
+    ['mousedown', 'mouseup', 'pointerup'].forEach(type => {
+        target.addEventListener(type, handleGlobalHistoryMouseEvent, true);
+    });
+}
+
+function handleHistoryMouseButton(event) {
+    if (isEditableTarget(event.target)) {
+        return false;
+    }
+
+    const historyButton = getHistoryMouseButton(event);
+    if (!historyButton) {
+        return false;
+    }
+
+    // macOS에서는 Native Bridge가 이 버튼들을 처리하므로 프런트엔드 직접 감지는 건너뜁니다.
+    // (WebKit Webview는 이 버튼들을 신뢰성 있게 전달하지 못하기 때문입니다)
+    if (isMacOS() && (historyButton === 3 || historyButton === 4)) {
+        return false;
+    }
+
+    if (lastHistoryMouseTrigger.button === historyButton && Math.abs(event.timeStamp - lastHistoryMouseTrigger.timeStamp) < 250) {
+        event.preventDefault();
+        event.stopPropagation();
+        return true;
+    }
+    lastHistoryMouseTrigger = {
+        button: historyButton,
+        timeStamp: event.timeStamp,
+    };
+
+    event.preventDefault();
+    event.stopPropagation();
+
+    if (historyButton === 3) {
+        goBack();
+        return true;
+    }
+
+    goForward();
+    return true;
+}
+
+function getHistoryMouseButton(event) {
+    if (event.button === 3 || event.button === 4) {
+        return event.button;
+    }
+
+    if (typeof event.buttons === 'number') {
+        if (event.buttons & 8) {
+            return 3;
+        }
+        if (event.buttons & 16) {
+            return 4;
+        }
+    }
+
+    return 0;
+}
+
+function handleGlobalHistoryMouseEvent(event) {
+    handleHistoryMouseButton(event);
 }
 
 function handleContextMenu(event) {
@@ -639,6 +802,7 @@ async function openExternalURL(href) {
 function showProgress(title, progress = null) {
     clearTimeout(progressHideTimer);
     el.progressTitle.textContent = title;
+    el.progressTitle.classList.toggle('shimmering', /rendering document/i.test(title));
     if (typeof progress === 'number') {
         const clamped = Math.max(0, Math.min(100, progress));
         el.progressValue.textContent = `${clamped}%`;
@@ -655,6 +819,7 @@ function showProgress(title, progress = null) {
 
 function hideProgress() {
     clearTimeout(progressHideTimer);
+    el.progressTitle.classList.remove('shimmering');
     progressHideTimer = setTimeout(() => {
         el.progressWidget.classList.remove('show');
         setTimeout(() => el.progressWidget.classList.add('hidden'), 250);
@@ -665,8 +830,61 @@ function updateProgress(title, progress = null) {
     showProgress(title, progress);
 }
 
-async function cancelCurrentTask() {
+function beginProgressTask(title, progress = null) {
+    activeProgressTaskId += 1;
+    const taskId = activeProgressTaskId;
+    showProgress(title, progress);
+    return taskId;
+}
+
+function isProgressTaskActive(taskId) {
+    return taskId !== 0 && taskId === activeProgressTaskId;
+}
+
+function createCancelledTaskError() {
+    const error = new Error('Task cancelled');
+    error.name = 'TaskCancelledError';
+    return error;
+}
+
+function throwIfTaskCancelled(taskId) {
+    if (!isProgressTaskActive(taskId)) {
+        throw createCancelledTaskError();
+    }
+}
+
+function finishProgressTask(taskId) {
+    if (!isProgressTaskActive(taskId)) {
+        return;
+    }
+
+    updateProgress('Done', 100);
     hideProgress();
+}
+
+function cancelProgressTask(taskId) {
+    if (!isProgressTaskActive(taskId)) {
+        return false;
+    }
+
+    activeProgressTaskId += 1;
+    cleanupHTMLFrame({ resetSource: true });
+    hideProgress();
+    return true;
+}
+
+function isCancelledTaskError(error) {
+    return error?.name === 'TaskCancelledError';
+}
+
+async function yieldToUI() {
+    await new Promise(resolve => requestAnimationFrame(() => resolve()));
+}
+
+async function cancelCurrentTask() {
+    if (cancelProgressTask(activeProgressTaskId)) {
+        showToast('Loading cancelled.');
+    }
 }
 
 async function handleOpenFile() {
@@ -724,12 +942,9 @@ async function openPath(path, options = {}) {
     if (!tab) return;
 
     const shouldShowProgress = path !== HOME_SCREEN_PATH;
+    const taskId = shouldShowProgress ? beginProgressTask('Loading document', 18) : 0;
 
     try {
-        if (shouldShowProgress) {
-            updateProgress('Loading document', 18);
-        }
-
         if (path === HOME_SCREEN_PATH) {
             if (pushHistory) pushCurrentHistory(path);
             currentFilePath = HOME_SCREEN_PATH;
@@ -745,16 +960,25 @@ async function openPath(path, options = {}) {
         if (path === THIRD_PARTY_NOTICES_PATH) {
             updateProgress('Loading bundled document', 42);
             const bundled = await loadBundledMarkdown(path);
+            throwIfTaskCancelled(taskId);
             updateProgress('Rendering document', 82);
+            await yieldToUI();
+            throwIfTaskCancelled(taskId);
             await loadFile(path, bundled, pushHistory, false);
             return;
         }
 
         updateProgress('Reading markdown file', 42);
         const fileContent = content ?? await ReadFile(path);
+        throwIfTaskCancelled(taskId);
         updateProgress('Rendering document', 82);
+        await yieldToUI();
+        throwIfTaskCancelled(taskId);
         await loadFile(path, fileContent, pushHistory, setHome);
     } catch (err) {
+        if (isCancelledTaskError(err)) {
+            return;
+        }
         console.error("openPath failed:", err);
         LogError(`openPath failed path=${path} anchor=${anchor}: ${err?.message || err}`);
         if (String(err?.message || err).includes('is a directory')) {
@@ -764,8 +988,7 @@ async function openPath(path, options = {}) {
         showToast(err?.message || "Failed to open file.");
     } finally {
         if (shouldShowProgress) {
-            updateProgress('Done', 100);
-            hideProgress();
+            finishProgressTask(taskId);
         }
     }
 }
@@ -792,8 +1015,10 @@ async function loadBundledMarkdown(path) {
 
 async function loadFile(path, content, pushHistory = true, setHome = false) {
     currentFilePath = path;
+    currentDocumentType = documentTypeFromPath(path);
     currentFolder = getPathDirname(path);
     currentMarkdownSource = content;
+    syncEngineSelector();
 
     if (setHome && path !== THIRD_PARTY_NOTICES_PATH) {
         homeTargetPath = path;
@@ -821,28 +1046,37 @@ async function reloadCurrent() {
         return;
     }
 
+    const taskId = beginProgressTask('Refreshing document', 24);
+
     try {
-        updateProgress('Refreshing document', 24);
         if (currentFilePath === THIRD_PARTY_NOTICES_PATH) {
             updateProgress('Loading bundled document', 48);
             currentMarkdownSource = await loadBundledMarkdown(currentFilePath);
+            throwIfTaskCancelled(taskId);
             syncTabFromGlobals(tab);
             updateProgress('Rendering document', 82);
+            await yieldToUI();
+            throwIfTaskCancelled(taskId);
             await renderActiveTab();
             return;
         }
 
         updateProgress('Reading markdown file', 48);
         currentMarkdownSource = await ReadFile(currentFilePath);
+        throwIfTaskCancelled(taskId);
         syncTabFromGlobals(tab);
         updateProgress('Rendering document', 82);
+        await yieldToUI();
+        throwIfTaskCancelled(taskId);
         await renderActiveTab();
     } catch (error) {
+        if (isCancelledTaskError(error)) {
+            return;
+        }
         LogError(`reloadCurrent failed path=${currentFilePath}: ${error?.message || error}`);
         showToast(error?.message || 'Failed to refresh file.');
     } finally {
-        updateProgress('Done', 100);
-        hideProgress();
+        finishProgressTask(taskId);
     }
 }
 
@@ -883,6 +1117,7 @@ async function renderActiveTab() {
     const tab = getActiveTab();
     if (!tab) return;
 
+    syncEngineSelector();
     el.currentPath.innerText = formatDisplayPath(currentFilePath);
     updateNavButtons();
 
@@ -892,8 +1127,14 @@ async function renderActiveTab() {
     }
 
     el.homeScreen.classList.add('hidden');
-    el.markdownContainer.classList.remove('hidden');
-    await renderMarkdown(currentMarkdownSource);
+    getScroller().classList.toggle('html-mode', currentDocumentType === 'html');
+    if (currentDocumentType === 'html') {
+        await renderHTMLDocument(currentFilePath);
+    } else {
+        el.htmlFrame.classList.add('hidden');
+        el.markdownContainer.classList.remove('hidden');
+        await renderMarkdown(currentMarkdownSource);
+    }
 
     const saved = navHistory[navIndex]?.scroll ?? 0;
     getScroller().scrollTop = saved;
@@ -902,6 +1143,11 @@ async function renderActiveTab() {
         scrollToAnchor(pendingAnchor);
         pendingAnchor = "";
         tab.pendingAnchor = "";
+    }
+
+    if (currentDocumentType === 'html') {
+        clearHighlight();
+        return;
     }
 
     if (pendingKeyword) {
@@ -916,8 +1162,11 @@ async function renderActiveTab() {
 
 async function renderHomeScreen() {
     await renderRecentFiles();
+    cleanupHTMLFrame();
     clearHighlight();
+    getScroller().classList.remove('html-mode');
     el.markdownContainer.classList.add('hidden');
+    el.htmlFrame.classList.add('hidden');
     el.homeScreen.classList.remove('hidden');
     getScroller().scrollTop = navHistory[navIndex]?.scroll ?? 0;
 }
@@ -925,6 +1174,11 @@ async function renderHomeScreen() {
 function deriveTabTitle(path, content) {
     if (path === HOME_SCREEN_PATH) return 'Start';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
+    if (documentTypeFromPath(path) === 'html') {
+        const doc = new DOMParser().parseFromString(content, 'text/html');
+        const title = doc.querySelector('title')?.textContent?.trim();
+        return title || basename(path);
+    }
 
     const heading = content.match(/^#\s+(.+)$/m)?.[1]?.trim();
     if (heading) return heading;
@@ -949,6 +1203,175 @@ async function renderMarkdown(content) {
     }
     el.markdownContainer.innerHTML = html;
     postProcess();
+}
+
+function cleanupHTMLFrame(options = {}) {
+    const { resetSource = false } = options;
+    if (htmlFrameResizeObserver) {
+        htmlFrameResizeObserver.disconnect();
+        htmlFrameResizeObserver = null;
+    }
+    el.htmlFrame.onload = null;
+    if (resetSource) {
+        el.htmlFrame.src = 'about:blank';
+    }
+}
+
+function getLocalFileURL(path) {
+    const normalized = path.replace(/\\/g, '/');
+    const encodedPath = normalized
+        .split('/')
+        .map(segment => encodeURIComponent(segment))
+        .join('/');
+    return `/localfile/${encodedPath}?t=${Date.now()}`;
+}
+
+function resizeHTMLFrame() {
+    try {
+        const doc = el.htmlFrame.contentDocument;
+        if (!doc) return;
+        const bodyHeight = doc.body ? doc.body.scrollHeight : 0;
+        const rootHeight = doc.documentElement ? doc.documentElement.scrollHeight : 0;
+        el.htmlFrame.style.height = `${Math.max(bodyHeight, rootHeight, 720)}px`;
+    } catch (error) {
+        LogError(`html frame resize failed: ${error?.message || error}`);
+    }
+}
+
+function applyHTMLZoom() {
+    try {
+        const doc = el.htmlFrame.contentDocument;
+        if (!doc || currentDocumentType !== 'html') {
+            return;
+        }
+
+        const zoom = Math.max(0.625, currentFontSize / 16);
+        doc.documentElement.style.zoom = String(zoom);
+        if (doc.body) {
+            doc.body.style.zoom = String(zoom);
+        }
+        resizeHTMLFrame();
+    } catch (error) {
+        LogError(`html zoom failed: ${error?.message || error}`);
+    }
+}
+
+function wireHTMLDocumentLinks(doc) {
+    bindHistoryMouseNavigation(doc);
+
+    doc.querySelectorAll('a[href]').forEach(anchor => {
+        const href = anchor.getAttribute('href');
+        if (!href) return;
+
+        anchor.addEventListener('click', event => {
+            if (href.startsWith('#')) {
+                return;
+            }
+
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (isExternalURL(href)) {
+                void confirmAndOpenExternalLink(href);
+                return;
+            }
+
+            const wantsNewTab = event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1;
+            resolveLink(href, { newTab: wantsNewTab });
+        });
+
+        anchor.addEventListener('auxclick', event => {
+            if (event.button === 1) {
+                event.preventDefault();
+                event.stopPropagation();
+
+                if (isExternalURL(href)) {
+                    void confirmAndOpenExternalLink(href);
+                    return;
+                }
+
+                resolveLink(href, { newTab: true });
+            }
+        });
+    });
+}
+
+async function renderHTMLDocument(path) {
+    cleanupHTMLFrame();
+    clearHighlight();
+    el.markdownContainer.classList.add('hidden');
+    el.htmlFrame.classList.remove('hidden');
+
+    await new Promise((resolve, reject) => {
+        let settled = false;
+
+        const settle = callback => {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            window.clearTimeout(loadTimeout);
+            window.clearInterval(readyStatePoll);
+            callback();
+        };
+
+        const tryResolveFromDocument = () => {
+            try {
+                const doc = el.htmlFrame.contentDocument;
+                if (!doc) {
+                    return false;
+                }
+
+                const href = el.htmlFrame.contentWindow?.location?.href || "";
+                const hasNavigated = href && href !== 'about:blank';
+                const hasRenderableRoot = !!(doc.documentElement && (doc.body || doc.documentElement.children.length > 0));
+                if (!hasNavigated || !hasRenderableRoot) {
+                    return false;
+                }
+
+                wireHTMLDocumentLinks(doc);
+                applyHTMLZoom();
+                resizeHTMLFrame();
+
+                htmlFrameResizeObserver = new ResizeObserver(() => resizeHTMLFrame());
+                if (doc.body) htmlFrameResizeObserver.observe(doc.body);
+                if (doc.documentElement) htmlFrameResizeObserver.observe(doc.documentElement);
+                return true;
+            } catch (error) {
+                settle(() => reject(error));
+                return false;
+            }
+        };
+
+        const loadTimeout = window.setTimeout(() => {
+            if (tryResolveFromDocument()) {
+                settle(resolve);
+                return;
+            }
+            const doc = el.htmlFrame.contentDocument;
+            if (doc?.documentElement) {
+                LogInfo(`html frame timeout fallback path=${path}`);
+                settle(resolve);
+                return;
+            }
+            cleanupHTMLFrame({ resetSource: true });
+            settle(() => reject(new Error('Timed out while loading the HTML document.')));
+        }, 12000);
+
+        const readyStatePoll = window.setInterval(() => {
+            if (tryResolveFromDocument()) {
+                settle(resolve);
+            }
+        }, 120);
+
+        el.htmlFrame.onload = () => {
+            if (tryResolveFromDocument()) {
+                settle(resolve);
+            }
+        };
+
+        el.htmlFrame.src = getLocalFileURL(path);
+    });
 }
 
 function postProcess() {
@@ -1036,13 +1459,37 @@ function resolveLink(rel, options = {}) {
         return;
     }
 
-    const resolvedPath = pathPart.startsWith('/') ? pathPart : joinPath(currentFolder, pathPart);
+    const normalizedPathPart = normalizeAppLocalFileHref(pathPart) || pathPart;
+    const resolvedPath = normalizedPathPart.startsWith('/') ? normalizedPathPart : joinPath(currentFolder, normalizedPathPart);
     LogInfo(`markdown link href=${rel} resolved=${resolvedPath} anchor=${anchor || ""} newTab=${!!options.newTab}`);
     openPath(resolvedPath, { ...options, anchor });
 }
 
 function isExternalURL(href) {
     return /^(https?:|mailto:)/i.test(href);
+}
+
+function normalizeAppLocalFileHref(href) {
+    if (!href) {
+        return "";
+    }
+
+    try {
+        const url = new URL(href);
+        const isAppLocal =
+            (url.protocol === 'wails:' || url.protocol === 'http:' || url.protocol === 'https:') &&
+            /(^|\.)wails\.localhost$/i.test(url.hostname) &&
+            url.pathname.startsWith('/localfile/');
+
+        if (!isAppLocal) {
+            return "";
+        }
+
+        const localPath = decodeURIComponent(url.pathname.slice('/localfile/'.length));
+        return localPath.startsWith('/') ? localPath : `/${localPath}`;
+    } catch {
+        return "";
+    }
 }
 
 function isMacOS() {
@@ -1075,6 +1522,7 @@ function activateTabByShortcut(index) {
 function changeFontSize(delta) {
     currentFontSize = Math.min(72, Math.max(10, currentFontSize + delta));
     el.markdownContainer.style.fontSize = `${currentFontSize}px`;
+    applyHTMLZoom();
     persist();
 }
 
@@ -1353,7 +1801,10 @@ function splitLinkTarget(href) {
 
 function scrollToAnchor(anchor) {
     if (!anchor) return;
-    const target = el.markdownContainer.querySelector(`#${CSS.escape(anchor)}, a[name="${CSS.escape(anchor)}"]`);
+    const scope = currentDocumentType === 'html'
+        ? el.htmlFrame.contentDocument
+        : el.markdownContainer;
+    const target = scope?.querySelector?.(`#${CSS.escape(anchor)}, a[name="${CSS.escape(anchor)}"]`);
     if (target) {
         target.scrollIntoView({ behavior: 'smooth', block: 'start' });
     } else {
@@ -1362,6 +1813,9 @@ function scrollToAnchor(anchor) {
 }
 
 function bindMenuEvents() {
+    EventsOn('menu:new-window', () => createAndSwitchToNewTab());
+    EventsOn('menu:back', () => goBack());
+    EventsOn('menu:forward', () => goForward());
     EventsOn('menu:open-file', () => handleOpenFile());
     EventsOn('menu:refresh', () => reloadCurrent());
     EventsOn('system:open-file', async path => openIncomingFiles([path]));

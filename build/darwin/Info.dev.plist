@@ -24,6 +24,36 @@
         <key>NSHumanReadableCopyright</key>
         <string>Copyright (C) 2026 DINKI'ssTyle. All rights reserved.</string>
 
+        <key>CFBundleDocumentTypes</key>
+        <array>
+            <dict>
+                <key>CFBundleTypeExtensions</key>
+                <array>
+                    <string>md</string>
+                    <string>markdown</string>
+                </array>
+                <key>CFBundleTypeName</key>
+                <string>Markdown Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Viewer</string>
+                <key>CFBundleTypeIconFile</key>
+                <string>iconfile</string>
+            </dict>
+            <dict>
+                <key>CFBundleTypeExtensions</key>
+                <array>
+                    <string>html</string>
+                    <string>htm</string>
+                </array>
+                <key>CFBundleTypeName</key>
+                <string>HTML Document</string>
+                <key>CFBundleTypeRole</key>
+                <string>Viewer</string>
+                <key>CFBundleTypeIconFile</key>
+                <string>iconfile</string>
+            </dict>
+        </array>
+
         <!-- 사용자 선택 파일/폴더 접근 권한 (macOS 10.15+) -->
         <key>com.apple.security.files.user-selected.read-only</key>
         <true/>
@@ -34,26 +64,6 @@
             <key>NSAllowsLocalNetworking</key>
             <true/>
         </dict>
-
-        {{if .Info.FileAssociations}}
-        <key>CFBundleDocumentTypes</key>
-        <array>
-          {{range .Info.FileAssociations}}
-          <dict>
-            <key>CFBundleTypeExtensions</key>
-            <array>
-              <string>{{.Ext}}</string>
-            </array>
-            <key>CFBundleTypeName</key>
-            <string>{{.Name}}</string>
-            <key>CFBundleTypeRole</key>
-            <string>{{.Role}}</string>
-            <key>CFBundleTypeIconFile</key>
-            <string>{{.IconName}}</string>
-          </dict>
-          {{end}}
-        </array>
-        {{end}}
 
         {{if .Info.Protocols}}
         <key>CFBundleURLTypes</key>
