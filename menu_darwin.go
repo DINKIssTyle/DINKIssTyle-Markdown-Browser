@@ -36,14 +36,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.Quit(app.ctx)
 	})
 
-	// ── Edit menu (기본 텍스트 편집 단축키 제공) ───────────────────────
-	editMenu := appMenu.AddSubmenu("Edit")
-	editMenu.AddText("Undo", keys.CmdOrCtrl("z"), nil)
-	editMenu.AddSeparator()
-	editMenu.AddText("Cut", keys.CmdOrCtrl("x"), nil)
-	editMenu.AddText("Copy", keys.CmdOrCtrl("c"), nil)
-	editMenu.AddText("Paste", keys.CmdOrCtrl("v"), nil)
-	editMenu.AddText("Select All", keys.CmdOrCtrl("a"), nil)
+	// editMenu.AddText("Select All", keys.CmdOrCtrl("a"), nil)
 
 	// ── View menu ──────────────────────────────────────────────────────
 	viewMenu := appMenu.AddSubmenu("View")

@@ -122,6 +122,11 @@ window.addEventListener('DOMContentLoaded', async () => {
     await renderActiveTab();
     updateNavButtons();
     await consumeStartupOpenFiles();
+    
+    // 네이티브 복사 이벤트 리스너: 사용자의 복사 동작을 방해하지 않고 알림만 표시
+    document.addEventListener('copy', () => {
+        showToast('Copied to clipboard.');
+    });
 });
 
 function getPathDirname(path) {
@@ -527,7 +532,7 @@ function bindContextMenu() {
         if (!contextMenuState?.selectionText) return;
         await copyTextToClipboard(contextMenuState.selectionText);
         closeContextMenu();
-        showToast('Copied selection.');
+        showToast('Copied selection. 📋');
     });
 
     bindContextMenuAction(el.contextSearch, async () => {
@@ -562,12 +567,13 @@ function handleGlobalKeydown(event) {
         return;
     }
 
+    // Cmd+C 단축키 지원 (유니코드 무결성 유지를 위해 trim() 없이 처리)
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c') {
-        const selectionText = window.getSelection()?.toString().trim() || "";
+        const selectionText = window.getSelection()?.toString() || "";
         if (selectionText) {
             event.preventDefault();
             copyTextToClipboard(selectionText)
-                .then(() => showToast('Copied selection.'))
+                .then(() => showToast('Copied selection. 📋'))
                 .catch(error => LogError(`keyboard copy failed: ${error?.message || error}`));
         }
         return;
@@ -683,7 +689,7 @@ function handleGlobalHistoryMouseEvent(event) {
 }
 
 function handleContextMenu(event) {
-    const selectionText = window.getSelection()?.toString().trim() || "";
+    const selectionText = window.getSelection()?.toString() || "";
     const linkNode = event.target.closest('a[href]');
     const inMarkdown = !!event.target.closest('#markdown-container');
 
@@ -1621,24 +1627,21 @@ async function handleSearchInputKeydown(event) {
 
     const hasSelection = el.searchInput.selectionStart !== el.searchInput.selectionEnd;
 
-    if (key === 'c') {
-        if (!hasSelection) {
-            return;
-        }
+    // 검색창 내부 Cmd+C/X 단축키 지원 복원
+    if (key === 'c' && hasSelection) {
         event.preventDefault();
-        await copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd));
+        copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd))
+            .then(() => showToast('Copied selection. 📋'));
         return;
     }
 
-    if (key === 'x') {
-        if (!hasSelection) {
-            return;
-        }
+    if (key === 'x' && hasSelection) {
         event.preventDefault();
-        await copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd));
+        copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd))
+            .then(() => showToast('Cut selection. ✂️'));
         el.searchInput.setRangeText("", el.searchInput.selectionStart, el.searchInput.selectionEnd, 'start');
         updateSearchClearButton();
-        await handleSearch();
+        handleSearch();
         return;
     }
 
