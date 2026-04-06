@@ -105,8 +105,9 @@ const el = {
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
-    await loadSettings();
-    await renderRecentFiles();
+    // Step 1: Parallelize initial data fetching from Go backend
+    await Promise.all([loadSettings(), renderRecentFiles()]);
+
     bindToolbar();
     bindHomeScreen();
     bindHighlightNav();
@@ -114,16 +115,33 @@ window.addEventListener('DOMContentLoaded', async () => {
     setupDragAndDrop();
     bindMenuEvents();
 
-    const initialTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
+    // Step 2: Check for pending startup files BEFORE rendering the first tab
+    const startupPaths = await FrontendReady();
+    const hasStartupFiles = (startupPaths && startupPaths.length > 0);
+    const initialPath = hasStartupFiles ? startupPaths[0] : HOME_SCREEN_PATH;
+    
+    const initialTab = createTab({ 
+        path: initialPath, 
+        title: hasStartupFiles ? 'Loading...' : 'Start' 
+    });
     tabs = [initialTab];
     activeTabId = initialTab.id;
     syncGlobalsFromTab(initialTab);
     renderTabs();
-    await renderActiveTab();
-    updateNavButtons();
-    await consumeStartupOpenFiles();
+
+    if (hasStartupFiles) {
+        // Step 3: Directly open the first startup file (skip redundant Home Screen render)
+        await openPath(startupPaths[0], { pushHistory: true, setHome: true });
+        if (startupPaths.length > 1) {
+            await openIncomingFiles(startupPaths.slice(1));
+        }
+    } else {
+        // No startup files, proceed to Home Screen
+        await renderActiveTab();
+    }
     
-    // 네이티브 복사 이벤트 리스너: 사용자의 복사 동작을 방해하지 않고 알림만 표시
+    updateNavButtons();
+    
     document.addEventListener('copy', () => {
         showToast('Copied to clipboard.');
     });
@@ -907,8 +925,7 @@ async function handleOpenFile() {
 }
 
 async function consumeStartupOpenFiles() {
-    const paths = await FrontendReady();
-    await openIncomingFiles(paths);
+    // This function is now handled directly in DOMContentLoaded for better performance.
 }
 
 async function openIncomingFiles(paths) {

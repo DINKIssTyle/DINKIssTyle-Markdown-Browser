@@ -266,6 +266,10 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 
 func (a *App) HandleSystemOpenFile(path string) {
 	a.queueOpenRequests([]string{path}, "")
+	if a.ctx != nil {
+		runtime.WindowUnminimise(a.ctx)
+		runtime.Show(a.ctx)
+	}
 }
 
 func (a *App) HandleSecondInstanceLaunch(data options.SecondInstanceData) {
