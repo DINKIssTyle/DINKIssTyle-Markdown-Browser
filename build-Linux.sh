@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# build_linux.sh — DINKIssTyle Markdown Browser Linux Build
+# build-Linux.sh — DINKIssTyle Markdown Browser Linux Build
 # Created by DINKIssTyle on 2026.
 # Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 # ============================================================

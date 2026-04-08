@@ -1,6 +1,6 @@
 #!/usr/bin/env bash
 # ============================================================
-# build_macos.sh — DKST Markdown Browser macOS Build
+# build-macOS.sh — DKST Markdown Browser macOS Build
 # Created by DINKIssTyle on 2026.
 # Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 # ============================================================

@@ -111,21 +111,21 @@ xdg-mime default dkst-markdown-browser.desktop text/markdown
 ### macOS
 The macOS build script generates a universal binary (if chosen) and handles the application bundle (`.app`).
 ```bash
-chmod +x build_macos.sh
-./build_macos.sh [arm64 | amd64 | universal]
+chmod +x build-macOS.sh
+./build-macOS.sh [arm64 | amd64 | universal]
 ```
 
 ### Windows
 The Windows build script generates the executable (`.exe`) with embedded icons.
 ```cmd
-build_windows.bat [amd64 | arm64 | 386]
+build-Windows.bat [amd64 | arm64 | 386]
 ```
 
 ### Linux
 The Linux build script generates the binary for your specific architecture.
 ```bash
-chmod +x build_linux.sh
-./build_linux.sh [amd64 | arm64 | arm]
+chmod +x build-Linux.sh
+./build-Linux.sh [amd64 | arm64 | arm]
 ```
 
 ## Folder Structure

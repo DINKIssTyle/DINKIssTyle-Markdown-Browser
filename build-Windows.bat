@@ -1,6 +1,6 @@
 @echo off
 REM ============================================================
-REM build_windows.bat — DINKIssTyle Markdown Browser Windows Build
+REM build-Windows.bat — DINKIssTyle Markdown Browser Windows Build
 REM Created by DINKIssTyle on 2026.
 REM Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
 REM ============================================================

@@ -55,7 +55,7 @@ type App struct {
 // NewApp creates a new App application struct
 func NewApp() *App {
 	configDir, _ := os.UserConfigDir()
-	appDir := filepath.Join(configDir, "dkst-markdown-browser")
+	appDir := filepath.Join(configDir, "DKST Markdown Browser")
 	os.MkdirAll(appDir, 0755)
 
 	return &App{
