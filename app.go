@@ -11,10 +11,10 @@ import (
 	"encoding/base64"
 	"encoding/json"
 	"fmt"
+	"io"
 	"log"
 	"mime"
 	"net/http"
-	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -39,15 +39,25 @@ type FileResult struct {
 	Content string `json:"content"`
 }
 
+type AIModelInfo struct {
+	ID                    string `json:"id"`
+	DisplayName           string `json:"displayName"`
+	IsLoaded              bool   `json:"isLoaded"`
+	StateLabel            string `json:"stateLabel"`
+	PrimaryLoadedInstance string `json:"primaryLoadedInstanceId"`
+}
+
 // AppSettings represents the application settings
 type AppSettings struct {
 	Theme             string  `json:"theme"`
 	FontSize          int     `json:"fontSize"`
 	Engine            string  `json:"engine"`
+	AIGeneralEnabled  bool    `json:"aiGeneralEnabled"`
 	AIGeneralEndpoint string  `json:"aiGeneralEndpoint"`
 	AIGeneralModel    string  `json:"aiGeneralModel"`
 	AIGeneralKey      string  `json:"aiGeneralKey"`
 	AIGeneralTemp     float64 `json:"aiGeneralTemp"`
+	AIFIMEnabled      bool    `json:"aiFimEnabled"`
 	AIFIMEndpoint     string  `json:"aiFimEndpoint"`
 	AIFIMModel        string  `json:"aiFimModel"`
 	AIFIMKey          string  `json:"aiFimKey"`
@@ -66,6 +76,14 @@ type App struct {
 	frontendReady    bool
 	pendingOpenFiles []string
 	showWhatsNew     bool
+	editorState      EditorSessionState
+}
+
+type EditorSessionState struct {
+	IsEditing   bool
+	HasUnsaved  bool
+	CurrentPath string
+	Content     string
 }
 
 // NewApp creates a new App application struct
@@ -93,6 +111,56 @@ func (a *App) startup(ctx context.Context) {
 	}
 
 	a.queueOpenRequests(os.Args[1:], "")
+}
+
+func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath string, content string) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.editorState = EditorSessionState{
+		IsEditing:   isEditing,
+		HasUnsaved:  hasUnsaved,
+		CurrentPath: strings.TrimSpace(currentPath),
+		Content:     content,
+	}
+}
+
+func (a *App) onBeforeClose(ctx context.Context) bool {
+	a.mu.Lock()
+	editorState := a.editorState
+	a.mu.Unlock()
+
+	if !editorState.IsEditing || !editorState.HasUnsaved {
+		return false
+	}
+
+	response := a.AskSaveDiscardCancel("Unsaved Changes", "The document has been modified. Do you want to save changes before quitting?")
+	switch response {
+	case "Save":
+		if strings.TrimSpace(editorState.CurrentPath) == "" {
+			runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+				Type:    runtime.ErrorDialog,
+				Title:   "Save Failed",
+				Message: "This document does not have a save path yet. Save it manually before quitting.",
+				Buttons: []string{"OK"},
+			})
+			return true
+		}
+		if err := a.SaveFile(editorState.CurrentPath, editorState.Content); err != nil {
+			runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
+				Type:    runtime.ErrorDialog,
+				Title:   "Save Failed",
+				Message: fmt.Sprintf("Failed to save changes before quitting.\n\n%s", err),
+				Buttons: []string{"OK"},
+			})
+			return true
+		}
+		return false
+	case "Discard":
+		return false
+	default:
+		return true
+	}
 }
 
 // FrontendReady marks the UI as ready to receive open-file events and returns queued paths.
@@ -186,7 +254,6 @@ func (a *App) GetRelativePath(basePath string, targetPath string) (string, error
 	}
 	return filepath.ToSlash(rel), nil
 }
-
 
 // ReadFile reads the content of a file
 func (a *App) ReadFile(path string) (string, error) {
@@ -290,8 +357,10 @@ func (a *App) GetSettings() AppSettings {
 	settings.Theme = "dark"
 	settings.FontSize = 16
 	settings.Engine = "marked"
+	settings.AIGeneralEnabled = true
 	settings.AIGeneralProvider = "openai"
 	settings.AIGeneralTemp = 0.0
+	settings.AIFIMEnabled = true
 	settings.AIFIMTemp = 0.0
 
 	data, err := os.ReadFile(a.settingsPath)
@@ -553,7 +622,349 @@ func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body str
 
 	return string(respBody), nil
 }
-	
+
+// GetAIModelList fetches available model IDs from an OpenAI-compatible /v1/models endpoint.
+func (a *App) GetAIModelList(endpoint string, headers map[string]string) ([]string, error) {
+	respBody, err := fetchAIEndpointJSON(endpoint, headers, []string{"/api/v1/models", "/v1/models"})
+	if err != nil {
+		return nil, err
+	}
+
+	rawModels, err := extractRawModelEntries(respBody)
+	if err != nil {
+		return nil, err
+	}
+
+	models := make([]string, 0, len(rawModels))
+	for _, raw := range rawModels {
+		if model, ok := normalizeAIModelInfo(raw); ok && strings.TrimSpace(model.ID) != "" {
+			models = append(models, model.ID)
+			continue
+		}
+
+		var directID string
+		if err := json.Unmarshal(raw, &directID); err == nil && strings.TrimSpace(directID) != "" {
+			models = append(models, strings.TrimSpace(directID))
+		}
+	}
+	return models, nil
+}
+
+func (a *App) GetAIModelCatalog(endpoint string, headers map[string]string) ([]AIModelInfo, error) {
+	respBody, err := fetchAIEndpointJSON(endpoint, headers, []string{"/api/v1/models", "/v1/models"})
+	if err != nil {
+		return nil, err
+	}
+
+	rawModels, err := extractRawModelEntries(respBody)
+	if err != nil {
+		return nil, err
+	}
+
+	models := make([]AIModelInfo, 0, len(rawModels))
+	for _, raw := range rawModels {
+		model, ok := normalizeAIModelInfo(raw)
+		if ok {
+			models = append(models, model)
+		}
+	}
+
+	return models, nil
+}
+
+func (a *App) UnloadAIModel(endpoint string, headers map[string]string, instanceID string) error {
+	instanceID = strings.TrimSpace(instanceID)
+	if instanceID == "" {
+		return fmt.Errorf("instance_id is required")
+	}
+
+	body, err := json.Marshal(map[string]string{
+		"instance_id": instanceID,
+	})
+	if err != nil {
+		return err
+	}
+
+	_, err = doAIEndpointRequest("POST", endpoint, headers, []string{"/api/v1/models/unload", "/v1/models/unload"}, string(body))
+	return err
+}
+
+func fetchAIEndpointJSON(endpoint string, headers map[string]string, paths []string) ([]byte, error) {
+	return doAIEndpointRequest("GET", endpoint, headers, paths, "")
+}
+
+func doAIEndpointRequest(method string, endpoint string, headers map[string]string, paths []string, body string) ([]byte, error) {
+	base := normalizeAIEndpointBase(endpoint)
+	var lastErr error
+
+	for _, requestURL := range candidateAIURLs(base, endpoint, paths) {
+		req, err := http.NewRequest(method, requestURL, strings.NewReader(body))
+		if err != nil {
+			lastErr = err
+			continue
+		}
+		for k, v := range headers {
+			req.Header.Set(k, v)
+		}
+		if method != http.MethodGet {
+			req.Header.Set("Content-Type", "application/json")
+		}
+
+		client := &http.Client{Timeout: 20 * time.Second}
+		resp, err := client.Do(req)
+		if err != nil {
+			lastErr = err
+			continue
+		}
+
+		respBody, readErr := io.ReadAll(resp.Body)
+		resp.Body.Close()
+		if readErr != nil {
+			lastErr = readErr
+			continue
+		}
+		if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+			lastErr = fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+			continue
+		}
+		return respBody, nil
+	}
+
+	if lastErr == nil {
+		lastErr = fmt.Errorf("request failed")
+	}
+	return nil, lastErr
+}
+
+func candidateAIURLs(base string, original string, paths []string) []string {
+	seen := map[string]bool{}
+	urls := make([]string, 0, len(paths)+1)
+	trimmedOriginal := strings.TrimSpace(original)
+
+	if strings.HasPrefix(trimmedOriginal, "http://") || strings.HasPrefix(trimmedOriginal, "https://") {
+		normalizedOriginal := strings.TrimRight(trimmedOriginal, "/")
+		if looksLikeDirectAIEndpoint(normalizedOriginal) {
+			seen[normalizedOriginal] = true
+			urls = append(urls, normalizedOriginal)
+		}
+	}
+
+	for _, path := range paths {
+		candidate := strings.TrimRight(base, "/") + path
+		if candidate == "" || seen[candidate] {
+			continue
+		}
+		seen[candidate] = true
+		urls = append(urls, candidate)
+	}
+	return urls
+}
+
+func normalizeAIEndpointBase(endpoint string) string {
+	endpoint = strings.TrimSpace(endpoint)
+	if endpoint == "" {
+		return ""
+	}
+	if !strings.HasPrefix(endpoint, "http://") && !strings.HasPrefix(endpoint, "https://") {
+		endpoint = "http://" + endpoint
+	}
+	endpoint = strings.TrimRight(endpoint, "/")
+	suffixes := []string{
+		"/api/v1/models/unload",
+		"/v1/models/unload",
+		"/api/v1/models",
+		"/v1/models",
+		"/api/v1/chat",
+		"/v1/chat/completions",
+		"/api/v1",
+		"/v1",
+	}
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(endpoint, suffix) {
+			return strings.TrimSuffix(endpoint, suffix)
+		}
+	}
+	return endpoint
+}
+
+func looksLikeDirectAIEndpoint(endpoint string) bool {
+	suffixes := []string{
+		"/api/v1/models",
+		"/v1/models",
+		"/api/v1/models/unload",
+		"/v1/models/unload",
+	}
+	for _, suffix := range suffixes {
+		if strings.HasSuffix(endpoint, suffix) {
+			return true
+		}
+	}
+	return false
+}
+
+func extractRawModelEntries(respBody []byte) ([]json.RawMessage, error) {
+	var direct []json.RawMessage
+	if err := json.Unmarshal(respBody, &direct); err == nil && len(direct) > 0 {
+		return direct, nil
+	}
+
+	var payload map[string]json.RawMessage
+	if err := json.Unmarshal(respBody, &payload); err != nil {
+		return nil, err
+	}
+	for _, key := range []string{"data", "Data", "models", "Models", "items", "Items"} {
+		if raw, ok := payload[key]; ok {
+			var nested []json.RawMessage
+			if err := json.Unmarshal(raw, &nested); err == nil && len(nested) > 0 {
+				return nested, nil
+			}
+		}
+	}
+	for _, raw := range payload {
+		var nested []json.RawMessage
+		if err := json.Unmarshal(raw, &nested); err == nil && len(nested) > 0 {
+			return nested, nil
+		}
+	}
+	return nil, nil
+}
+
+func normalizeAIModelInfo(raw json.RawMessage) (AIModelInfo, bool) {
+	var item map[string]any
+	if err := json.Unmarshal(raw, &item); err != nil {
+		return AIModelInfo{}, false
+	}
+
+	modelType := strings.ToLower(strings.TrimSpace(firstNonEmptyString(
+		stringFromAny(item["type"]),
+		nestedString(item, "metadata", "type"),
+		nestedString(item, "model_info", "type"),
+	)))
+	if modelType != "" && modelType != "llm" {
+		return AIModelInfo{}, false
+	}
+
+	id := firstNonEmptyString(
+		stringFromAny(item["id"]),
+		stringFromAny(item["key"]),
+		stringFromAny(item["model"]),
+		stringFromAny(item["name"]),
+		stringFromAny(item["model_id"]),
+	)
+	if id == "" {
+		return AIModelInfo{}, false
+	}
+
+	displayName := firstNonEmptyString(
+		stringFromAny(item["display_name"]),
+		stringFromAny(item["displayName"]),
+		stringFromAny(item["name"]),
+		stringFromAny(item["key"]),
+		id,
+	)
+
+	loadedInstances := rawMapSlice(item["loaded_instances"])
+	primaryInstanceID := ""
+	for _, instance := range loadedInstances {
+		primaryInstanceID = firstNonEmptyString(
+			stringFromAny(instance["instance_id"]),
+			stringFromAny(instance["id"]),
+		)
+		if primaryInstanceID != "" {
+			break
+		}
+	}
+
+	stateLabel := strings.ToLower(strings.TrimSpace(firstNonEmptyString(
+		stringFromAny(item["state"]),
+		stringFromAny(item["status"]),
+		stringFromAny(item["load_state"]),
+		nestedString(item, "metadata", "state"),
+		nestedString(item, "model_info", "state"),
+	)))
+	rawLoaded := boolFromAny(item["loaded"]) ||
+		boolFromAny(item["is_loaded"]) ||
+		boolFromAny(item["currently_loaded"]) ||
+		nestedBool(item, "metadata", "loaded") ||
+		nestedBool(item, "model_info", "loaded")
+
+	isLoaded := len(loadedInstances) > 0 || rawLoaded || containsString([]string{"loaded", "active", "ready", "resident"}, stateLabel)
+
+	return AIModelInfo{
+		ID:                    id,
+		DisplayName:           displayName,
+		IsLoaded:              isLoaded,
+		StateLabel:            stateLabel,
+		PrimaryLoadedInstance: primaryInstanceID,
+	}, true
+}
+
+func firstNonEmptyString(values ...string) string {
+	for _, value := range values {
+		value = strings.TrimSpace(value)
+		if value != "" {
+			return value
+		}
+	}
+	return ""
+}
+
+func stringFromAny(value any) string {
+	switch v := value.(type) {
+	case string:
+		return v
+	case fmt.Stringer:
+		return v.String()
+	default:
+		return ""
+	}
+}
+
+func boolFromAny(value any) bool {
+	v, ok := value.(bool)
+	return ok && v
+}
+
+func rawMapSlice(value any) []map[string]any {
+	items, ok := value.([]any)
+	if !ok {
+		return nil
+	}
+	result := make([]map[string]any, 0, len(items))
+	for _, item := range items {
+		m, ok := item.(map[string]any)
+		if ok {
+			result = append(result, m)
+		}
+	}
+	return result
+}
+
+func nestedString(item map[string]any, parent string, key string) string {
+	parentMap, ok := item[parent].(map[string]any)
+	if !ok {
+		return ""
+	}
+	return stringFromAny(parentMap[key])
+}
+
+func nestedBool(item map[string]any, parent string, key string) bool {
+	parentMap, ok := item[parent].(map[string]any)
+	if !ok {
+		return false
+	}
+	return boolFromAny(parentMap[key])
+}
+
+func containsString(values []string, target string) bool {
+	for _, value := range values {
+		if value == target {
+			return true
+		}
+	}
+	return false
+}
+
 // MakeLMStudioRequest handles LM Studio native streaming and progress reporting
 func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, body string) (string, error) {
 	// Add "store": false to the body if it's a JSON object
@@ -589,13 +1000,13 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 	var fullResponse strings.Builder
 	reader := bufio.NewReader(resp.Body)
 	var eventData []string
-	
+
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil && err != io.EOF {
 			break
 		}
-		
+
 		trimmed := strings.TrimSpace(line)
 		if strings.HasPrefix(trimmed, "data:") {
 			data := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
@@ -606,7 +1017,7 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 			// End of event block, process joined data
 			joined := strings.Join(eventData, "\n")
 			eventData = nil
-			
+
 			var raw map[string]any
 			if err := json.Unmarshal([]byte(joined), &raw); err == nil {
 				// Handle events
@@ -633,7 +1044,7 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 					})
 				case "message.start":
 					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
-						"label":    "처리 내용 받는 중...",
+						"label":    "Receiving processing...",
 						"progress": 100,
 						"loading":  true,
 					})
@@ -643,7 +1054,7 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 					}
 				case "chat.end":
 					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
-						"label":    "완료 ✨",
+						"label":    "Completed ✨",
 						"progress": 100,
 						"loading":  false,
 					})
@@ -658,6 +1069,7 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 
 	return fullResponse.String(), nil
 }
+
 // GetVersion returns the application version
 func (a *App) GetVersion() string {
 	return AppVersion

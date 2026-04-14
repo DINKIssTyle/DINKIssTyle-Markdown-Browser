@@ -9,10 +9,10 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { exitEditMode } from './main-editor.js';
+import { exitEditMode, hasUnsavedEditorChanges, saveCurrentDocument } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
-import { AskSaveDiscardCancel, SaveFile } from '../wailsjs/go/main/App';
+import { AskSaveDiscardCancel } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────
@@ -179,18 +179,15 @@ function moveTab(sourceTabID, targetTabID) {
 export async function closeTab(tabID) {
     // Check for unsaved changes if editing this tab
     if (state.isEditing && tabID === state.activeTabId) {
-        if (el.markdownEditor.value !== state.editorOriginalContent) {
+        if (hasUnsavedEditorChanges()) {
             const response = await AskSaveDiscardCancel("Unsaved Changes", "The document has been modified. Do you want to save changes?");
             
             if (response === "Cancel") return;
             
             if (response === "Save") {
-                try {
-                    await SaveFile(state.currentFilePath, el.markdownEditor.value);
-                    showToast("File saved successfully. ✅");
-                } catch (error) {
-                    LogError(`Auto-save on close failed: ${error}`);
-                    showToast("Failed to save file. ❌");
+                const saved = await saveCurrentDocument({ confirm: false, exitAfterSave: false });
+                if (!saved) {
+                    LogError(`Auto-save on close failed: ${state.currentFilePath}`);
                     return; // Don't close tab if save failed
                 }
             }

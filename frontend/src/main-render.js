@@ -10,8 +10,9 @@ import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
 
 import {
-    state, el, getScroller, HOME_SCREEN_PATH, THIRD_PARTY_NOTICES_PATH,
+    state, el, getScroller, HOME_SCREEN_PATH,
     joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector,
+    isBundledDocumentPath,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode } from './main-editor.js';
@@ -112,7 +113,7 @@ export async function renderActiveTab() {
     // Update edit button state
     const isMarkdown = state.currentDocumentType === 'markdown' && 
                        state.currentFilePath !== HOME_SCREEN_PATH && 
-                       state.currentFilePath !== THIRD_PARTY_NOTICES_PATH;
+                       !isBundledDocumentPath(state.currentFilePath);
     el.btnEdit.disabled = !isMarkdown;
 
     if (state.isEditing && !isMarkdown) {

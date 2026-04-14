@@ -13,11 +13,12 @@ import {
 } from './main-tabs.js';
 import {
     handleOpenFile, openPath, openIncomingFiles, openThirdPartyNotices,
+    openWhatsNew,
     goBack, goForward, goHome, reloadCurrent, updateNavButtons,
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -111,11 +112,13 @@ async function persist() {
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
+        aiGeneralEnabled: window.aiState?.generalEnabled ?? true,
         aiGeneralProvider: window.aiState?.generalProvider || "openai",
         aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
         aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
         aiGeneralKey: window.aiState?.generalKey || "",
         aiGeneralTemp: window.aiState?.generalTemp || 0,
+        aiFimEnabled: window.aiState?.fimAvailable ?? true,
         aiFimEndpoint: window.aiState?.fimEndpoint || "",
         aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
         aiFimKey: window.aiState?.fimKey || "",
@@ -205,7 +208,7 @@ function bindHomeScreen() {
     if (el.footerWhatsNew) {
         el.footerWhatsNew.onclick = async (e) => {
             e.preventDefault();
-            await openPath('./WHATS-NEW.md', { newTab: true });
+            await openWhatsNew(true);
         };
     }
 }
@@ -257,7 +260,7 @@ function bindMenuEvents() {
         console.log(`New version detected: ${version}. Opening What's New...`);
         // Wait a bit to ensure the initial tab is rendered
         setTimeout(async () => {
-            await openPath('./WHATS-NEW.md', { newTab: true });
+            await openWhatsNew(true);
         }, 500);
     });
 }
@@ -271,10 +274,19 @@ async function handleGlobalKeydown(event) {
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
-        const isGlobalKey = (event.metaKey || event.ctrlKey) && ['w'].includes(event.key.toLowerCase());
+        const isGlobalKey = (event.metaKey || event.ctrlKey) && ['w', 's'].includes(event.key.toLowerCase());
         if (!isGlobalKey) {
             return;
         }
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 's') {
+        if (!state.isEditing) {
+            return;
+        }
+        event.preventDefault();
+        await saveCurrentDocument({ confirm: false, exitAfterSave: false });
+        return;
     }
 
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'w') {

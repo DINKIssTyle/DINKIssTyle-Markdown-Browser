@@ -44,7 +44,8 @@
                 <button id="btn-new-doc" title="New Document" aria-label="New Document" class="nav-btn icon-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">add_notes</span>
                 </button>
-                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn" disabled>
+                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn"
+                    disabled>
                     <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                 </button>
                 <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
@@ -272,49 +273,99 @@
         <div id="ai-settings-modal" class="modal-overlay hidden">
             <div class="modal-content ai-settings-content">
                 <h3>AI Settings</h3>
-                <div class="ai-setting-group">
-                    <h4>General AI</h4>
-                    <label>Provider:
-                        <select id="ai-general-provider">
-                            <option value="openai">OpenAI (Compatible)</option>
-                            <option value="lmstudio">LM Studio (Native)</option>
-                        </select>
-                    </label>
-                    <label>Endpoint (address:port):
-                        <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
-                    </label>
-                    <label>Model:
-                        <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
-                    </label>
-                    <label>API Key (Optional):
-                        <input type="password" id="ai-general-key" placeholder="Bearer Token" />
-                    </label>
-                    <label>Temperature (0 = default):
-                        <input type="number" id="ai-general-temp" min="0" max="1" step="0.1" value="0" />
-                    </label>
+                <div class="ai-settings-panels">
+                    <section class="ai-setting-group ai-setting-panel">
+                        <div class="ai-setting-header">
+                            <h4>General AI</h4>
+                            <label class="ai-enable-toggle" for="ai-general-enabled">
+                                <input type="checkbox" id="ai-general-enabled" />
+                                <span>Enable</span>
+                            </label>
+                        </div>
+                        <div class="ai-setting-lead">
+                            <label class="ai-setting-field">Provider
+                                <select id="ai-general-provider">
+                                    <option value="openai">OpenAI (Compatible)</option>
+                                    <option value="lmstudio">LM Studio (Native)</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="ai-setting-grid">
+                            <label class="ai-setting-field">Endpoint
+                                <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
+                            </label>
+                            <label class="ai-setting-field">Model
+                                <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
+                                <div id="ai-general-model-picker" class="ai-model-picker hidden">
+                                    <button type="button" id="ai-general-model-trigger" class="ai-model-trigger" aria-haspopup="dialog" aria-expanded="false">
+                                        <span id="ai-general-model-trigger-label" class="ai-model-trigger-label">Choose a model...</span>
+                                        <span class="ai-model-trigger-caret">▾</span>
+                                    </button>
+                                    <div id="ai-general-model-popover" class="ai-model-popover hidden">
+                                        <div id="ai-general-model-status" class="ai-model-popover-status">Loading models...</div>
+                                        <div id="ai-general-model-list" class="ai-model-popover-list"></div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="ai-setting-field">API Key
+                                <input type="password" id="ai-general-key" placeholder="Bearer Token" />
+                            </label>
+                            <label class="ai-setting-field">Temperature
+                                <input type="number" id="ai-general-temp" min="0" max="1" step="0.1" value="0" />
+                            </label>
+                        </div>
+                    </section>
+                    <section class="ai-setting-group ai-setting-panel">
+                        <div class="ai-setting-header">
+                            <h4>FIM (Ghost Text)</h4>
+                            <label class="ai-enable-toggle" for="ai-fim-enabled">
+                                <input type="checkbox" id="ai-fim-enabled" />
+                                <span>Enable</span>
+                            </label>
+                        </div>
+                        <div class="ai-setting-lead">
+                            <div class="ai-setting-note">
+                                Real-time, context-aware code autocomplete. For a seamless typing experience with zero
+                                latency, we highly recommend using a fast, small Instruct model.
+                            </div>
+                        </div>
+                        <div class="ai-setting-grid">
+                            <label class="ai-setting-field">Endpoint
+                                <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
+                            </label>
+                            <label class="ai-setting-field">Model
+                                <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
+                                <div id="ai-fim-model-picker" class="ai-model-picker hidden">
+                                    <button type="button" id="ai-fim-model-trigger" class="ai-model-trigger" aria-haspopup="dialog" aria-expanded="false">
+                                        <span id="ai-fim-model-trigger-label" class="ai-model-trigger-label">Choose a model...</span>
+                                        <span class="ai-model-trigger-caret">▾</span>
+                                    </button>
+                                    <div id="ai-fim-model-popover" class="ai-model-popover hidden">
+                                        <div id="ai-fim-model-status" class="ai-model-popover-status">Loading models...</div>
+                                        <div id="ai-fim-model-list" class="ai-model-popover-list"></div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="ai-setting-field">API Key
+                                <input type="password" id="ai-fim-key" placeholder="Bearer Token" />
+                            </label>
+                            <label class="ai-setting-field">Temperature
+                                <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
+                            </label>
+                        </div>
+                    </section>
                 </div>
-                <div class="ai-setting-group">
-                    <h4>FIM (Ghost Text)</h4>
-                    <label>Endpoint (address:port):
-                        <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
-                    </label>
-                    <label>Model:
-                        <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
-                    </label>
-                    <label>API Key (Optional):
-                        <input type="password" id="ai-fim-key" placeholder="Bearer Token" />
-                    </label>
-                    <label>Temperature (0 = default):
-                        <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
-                    </label>
-                </div>
-                <div class="ai-setting-group">
-                    <h4>Editor Fixes</h4>
-                    <label class="checkbox-label">
-                        <input type="checkbox" id="ai-toggle-ime-fix" />
-                        <span>Enable Korean IME Enter Fix</span>
-                    </label>
-                </div>
+                <section class="ai-setting-group ai-setting-group-editor">
+                    <div class="ai-setting-header ai-setting-header-tight">
+                        <h4>Editor Fixes</h4>
+                    </div>
+                    <div class="ai-setting-grid ai-setting-grid-single-row">
+                        <label class="ai-setting-checkbox-row" for="ai-toggle-ime-fix">
+                            <input type="checkbox" id="ai-toggle-ime-fix" />
+                            <span>Korean IME Enter Fix</span>
+                        </label>
+                    </div>
+                </section>
                 <div class="modal-actions">
                     <button id="ai-settings-cancel" class="modal-btn secondary">Cancel</button>
                     <button id="ai-settings-save" class="modal-btn primary">Save</button>
@@ -326,7 +377,7 @@
         <button id="ai-floating-btn" class="ai-floating-btn hidden" title="AI Request" aria-label="AI Request">
             <span class="material-symbols-outlined">wand_stars</span>
         </button>
-        
+
         <div id="ai-prompt-box" class="ai-prompt-box hidden">
             <input type="text" id="ai-prompt-input" placeholder="Ask AI (e.g. Improve this)..." autocomplete="off" />
             <button id="ai-prompt-send" title="Send" aria-label="Send to AI">

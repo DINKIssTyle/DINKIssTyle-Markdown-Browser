@@ -22,6 +22,14 @@ export function FrontendReady() {
   return window['go']['main']['App']['FrontendReady']();
 }
 
+export function GetAIModelCatalog(arg1, arg2) {
+  return window['go']['main']['App']['GetAIModelCatalog'](arg1, arg2);
+}
+
+export function GetAIModelList(arg1, arg2) {
+  return window['go']['main']['App']['GetAIModelList'](arg1, arg2);
+}
+
 export function GetRecentFiles() {
   return window['go']['main']['App']['GetRecentFiles']();
 }
@@ -108,4 +116,12 @@ export function SelectImage() {
 
 export function ShowSaveFileDialog(arg1) {
   return window['go']['main']['App']['ShowSaveFileDialog'](arg1);
+}
+
+export function SyncEditorState(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SyncEditorState'](arg1, arg2, arg3, arg4);
+}
+
+export function UnloadAIModel(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UnloadAIModel'](arg1, arg2, arg3);
 }

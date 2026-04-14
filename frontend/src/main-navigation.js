@@ -4,11 +4,11 @@
  */
 
 import {
-    state, el, HOME_SCREEN_PATH, THIRD_PARTY_NOTICES_PATH,
+    state, el, HOME_SCREEN_PATH, THIRD_PARTY_NOTICES_PATH, WHATS_NEW_PATH,
     getPathDirname, normalizeFileURLPath, normalizeAppLocalFileHref,
     documentTypeFromPath, splitLinkTarget, isExternalURL,
     joinPath, getScroller, syncEngineSelector, deriveTabTitle,
-    isMacOS, isEditableTarget,
+    isMacOS, isEditableTarget, isBundledDocumentPath,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab } from './main-render.js';
@@ -93,7 +93,7 @@ export async function openPath(path, options = {}) {
             return;
         }
 
-        if (path === THIRD_PARTY_NOTICES_PATH) {
+        if (isBundledDocumentPath(path)) {
             updateProgress('Loading bundled document', 42);
             const bundled = await loadBundledMarkdown(path);
             throwIfTaskCancelled(taskId);
@@ -214,7 +214,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false) {
     state.currentMarkdownSource = content;
     syncEngineSelector();
 
-    if (setHome && path !== THIRD_PARTY_NOTICES_PATH) {
+    if (setHome && !isBundledDocumentPath(path)) {
         state.homeTargetPath = path;
     }
 
@@ -243,7 +243,7 @@ export async function reloadCurrent() {
     const taskId = beginProgressTask('Refreshing document', 24);
 
     try {
-        if (state.currentFilePath === THIRD_PARTY_NOTICES_PATH) {
+        if (isBundledDocumentPath(state.currentFilePath)) {
             updateProgress('Loading bundled document', 48);
             state.currentMarkdownSource = await loadBundledMarkdown(state.currentFilePath);
             throwIfTaskCancelled(taskId);
@@ -278,6 +278,10 @@ export async function reloadCurrent() {
 
 export async function openThirdPartyNotices(newTab = false) {
     await openPath(THIRD_PARTY_NOTICES_PATH, { newTab });
+}
+
+export async function openWhatsNew(newTab = false) {
+    await openPath(WHATS_NEW_PATH, { newTab });
 }
 
 async function loadBundledMarkdown(path) {

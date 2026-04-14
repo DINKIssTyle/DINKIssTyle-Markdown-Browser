@@ -1,13 +1,35 @@
 export namespace main {
 	
+	export class AIModelInfo {
+	    id: string;
+	    displayName: string;
+	    isLoaded: boolean;
+	    stateLabel: string;
+	    primaryLoadedInstanceId: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIModelInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.displayName = source["displayName"];
+	        this.isLoaded = source["isLoaded"];
+	        this.stateLabel = source["stateLabel"];
+	        this.primaryLoadedInstanceId = source["primaryLoadedInstanceId"];
+	    }
+	}
 	export class AppSettings {
 	    theme: string;
 	    fontSize: number;
 	    engine: string;
+	    aiGeneralEnabled: boolean;
 	    aiGeneralEndpoint: string;
 	    aiGeneralModel: string;
 	    aiGeneralKey: string;
 	    aiGeneralTemp: number;
+	    aiFimEnabled: boolean;
 	    aiFimEndpoint: string;
 	    aiFimModel: string;
 	    aiFimKey: string;
@@ -25,10 +47,12 @@ export namespace main {
 	        this.theme = source["theme"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
+	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
 	        this.aiGeneralEndpoint = source["aiGeneralEndpoint"];
 	        this.aiGeneralModel = source["aiGeneralModel"];
 	        this.aiGeneralKey = source["aiGeneralKey"];
 	        this.aiGeneralTemp = source["aiGeneralTemp"];
+	        this.aiFimEnabled = source["aiFimEnabled"];
 	        this.aiFimEndpoint = source["aiFimEndpoint"];
 	        this.aiFimModel = source["aiFimModel"];
 	        this.aiFimKey = source["aiFimKey"];

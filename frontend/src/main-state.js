@@ -6,6 +6,7 @@
 // ── Constants ──────────────────────────────────────────────
 export const HOME_SCREEN_PATH = '__home__';
 export const THIRD_PARTY_NOTICES_PATH = '/THIRD-PARTY-NOTICES.md';
+export const WHATS_NEW_PATH = '/WHATS-NEW.md';
 
 // ── DOM Helpers ────────────────────────────────────────────
 export const $ = id => document.getElementById(id);
@@ -87,13 +88,27 @@ export const el = {
     edFim: $('ed-fim'),
     edSettings: $('ed-settings'),
     aiSettingsModal: $('ai-settings-modal'),
+    aiGeneralEnabled: $('ai-general-enabled'),
     aiGeneralProvider: $('ai-general-provider'),
     aiGeneralEndpoint: $('ai-general-endpoint'),
     aiGeneralModel: $('ai-general-model'),
+    aiGeneralModelPicker: $('ai-general-model-picker'),
+    aiGeneralModelTrigger: $('ai-general-model-trigger'),
+    aiGeneralModelTriggerLabel: $('ai-general-model-trigger-label'),
+    aiGeneralModelPopover: $('ai-general-model-popover'),
+    aiGeneralModelStatus: $('ai-general-model-status'),
+    aiGeneralModelList: $('ai-general-model-list'),
     aiGeneralKey: $('ai-general-key'),
     aiGeneralTemp: $('ai-general-temp'),
+    aiFimEnabled: $('ai-fim-enabled'),
     aiFimEndpoint: $('ai-fim-endpoint'),
     aiFimModel: $('ai-fim-model'),
+    aiFimModelPicker: $('ai-fim-model-picker'),
+    aiFimModelTrigger: $('ai-fim-model-trigger'),
+    aiFimModelTriggerLabel: $('ai-fim-model-trigger-label'),
+    aiFimModelPopover: $('ai-fim-model-popover'),
+    aiFimModelStatus: $('ai-fim-model-status'),
+    aiFimModelList: $('ai-fim-model-list'),
     aiFimKey: $('ai-fim-key'),
     aiFimTemp: $('ai-fim-temp'),
     aiSettingsCancel: $('ai-settings-cancel'),
@@ -147,7 +162,7 @@ export const state = {
 // ── Pure Utility Functions ─────────────────────────────────
 
 export function getPathDirname(path) {
-    if (!path || path === HOME_SCREEN_PATH || path === THIRD_PARTY_NOTICES_PATH) {
+    if (!path || path === HOME_SCREEN_PATH || isBundledDocumentPath(path)) {
         return "";
     }
 
@@ -203,13 +218,13 @@ export function basename(path) {
 
 export function kindFromPath(path) {
     if (path === HOME_SCREEN_PATH) return 'home';
-    if (path === THIRD_PARTY_NOTICES_PATH) return 'bundled';
+    if (isBundledDocumentPath(path)) return 'bundled';
     return 'document';
 }
 
 export function documentTypeFromPath(path) {
     if (path === HOME_SCREEN_PATH) return 'home';
-    if (path === THIRD_PARTY_NOTICES_PATH) return 'markdown';
+    if (isBundledDocumentPath(path)) return 'markdown';
     return /\.html?$/i.test(path) ? 'html' : 'markdown';
 }
 
@@ -281,12 +296,14 @@ export function isExternalURL(href) {
 export function formatDisplayPath(path) {
     if (path === HOME_SCREEN_PATH) return 'DKST Markdown Browser';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'THIRD-PARTY-NOTICES.md';
+    if (path === WHATS_NEW_PATH) return 'WHATS-NEW.md';
     return path;
 }
 
 export function deriveTabTitle(path, content) {
     if (path === HOME_SCREEN_PATH) return 'Start';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
+    if (path === WHATS_NEW_PATH) return "What's New";
     if (documentTypeFromPath(path) === 'html') {
         const doc = new DOMParser().parseFromString(content, 'text/html');
         const title = doc.querySelector('title')?.textContent?.trim();
@@ -340,6 +357,10 @@ export function debounce(fn, ms) {
         clearTimeout(timer);
         timer = setTimeout(() => fn(...args), ms);
     };
+}
+
+export function isBundledDocumentPath(path) {
+    return path === THIRD_PARTY_NOTICES_PATH || path === WHATS_NEW_PATH;
 }
 
 // ── Engine Selector Sync ───────────────────────────────────

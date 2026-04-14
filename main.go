@@ -39,6 +39,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 18, G: 18, B: 18, A: 1}, // Sleek dark
 		OnStartup:        app.startup,
+		OnBeforeClose:    app.onBeforeClose,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "com.dinkisstyle.mdbrowser",
 			OnSecondInstanceLaunch: app.HandleSecondInstanceLaunch,

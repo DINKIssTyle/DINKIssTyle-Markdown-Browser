@@ -13,6 +13,10 @@ export function ConfirmOpenExternalURL(arg1:string):Promise<boolean>;
 
 export function FrontendReady():Promise<Array<string>>;
 
+export function GetAIModelCatalog(arg1:string,arg2:Record<string, string>):Promise<Array<main.AIModelInfo>>;
+
+export function GetAIModelList(arg1:string,arg2:Record<string, string>):Promise<Array<string>>;
+
 export function GetRecentFiles():Promise<Array<main.RecentFile>>;
 
 export function GetRelativePath(arg1:string,arg2:string):Promise<string>;
@@ -56,3 +60,7 @@ export function SelectDocument():Promise<string>;
 export function SelectImage():Promise<string>;
 
 export function ShowSaveFileDialog(arg1:string):Promise<string>;
+
+export function SyncEditorState(arg1:boolean,arg2:boolean,arg3:string,arg4:string):Promise<void>;
+
+export function UnloadAIModel(arg1:string,arg2:Record<string, string>,arg3:string):Promise<void>;

@@ -8,7 +8,7 @@ import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown } from './main-render.js';
 import { showToast } from './main-ui.js';
-import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog } from '../wailsjs/go/main/App';
+import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
@@ -24,6 +24,21 @@ let lastLineCount = 0;
 let currentEditorFontSize = 15;
 export let cmView = null;
 export const themeCompartment = new Compartment();
+
+function getCurrentEditorText() {
+    if (cmView) {
+        return cmView.state.doc.toString();
+    }
+    return state.currentMarkdownSource || "";
+}
+
+function syncEditorStateToBackend() {
+    const content = getCurrentEditorText();
+    const hasUnsaved = state.isEditing && content !== state.editorOriginalContent;
+    SyncEditorState(state.isEditing, hasUnsaved, state.currentFilePath || "", content).catch((error) => {
+        LogError(`SyncEditorState failed: ${error}`);
+    });
+}
 
 // 한글 IME 엔터 중복 입력 방지 익스텐션 (v2: Transaction Filter 방식)
 const setImeState = StateEffect.define();
@@ -153,6 +168,7 @@ export function initCodeMirror() {
                     state.currentMarkdownSource = val;
                     const tab = getActiveTab();
                     if (tab) tab.currentMarkdownSource = val;
+                    syncEditorStateToBackend();
                     
                     // Use a small delay for rendering to avoid UI stutter
                     clearTimeout(window._renderTimer);
@@ -244,6 +260,7 @@ export function enterEditMode() {
     if (window.aiState) window.aiState.ghostText = "";
     cmView.focus();
     updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
+    syncEditorStateToBackend();
 }
 
 export async function exitEditMode(didSave = false) {
@@ -269,26 +286,49 @@ export async function exitEditMode(didSave = false) {
         if (tab) tab.currentMarkdownSource = state.editorOriginalContent;
         await renderActiveTab();
     }
+    syncEditorStateToBackend();
 }
 
-async function handleSave() {
+export function hasUnsavedEditorChanges() {
+    return state.isEditing && getCurrentEditorText() !== state.editorOriginalContent;
+}
+
+export async function saveCurrentDocument({ confirm = true, exitAfterSave = true } = {}) {
     if (!cmView) return;
     const contentToSave = cmView.state.doc.toString();
-    const ok = await AskConfirm("Save Changes", "Do you want to save changes to the file?", "Save", "Cancel");
-    if (!ok) return;
+    if (confirm) {
+        const ok = await AskConfirm("Save Changes", "Do you want to save changes to the file?", "Save", "Cancel");
+        if (!ok) return false;
+    }
     
     try {
         await SaveFile(state.currentFilePath, contentToSave);
         showToast("File saved successfully. ✅");
-        await exitEditMode(true);
+        state.editorOriginalContent = contentToSave;
+        state.currentMarkdownSource = contentToSave;
+        const tab = getActiveTab();
+        if (tab) {
+            tab.currentMarkdownSource = contentToSave;
+            tab.editorOriginalContent = contentToSave;
+        }
+        syncEditorStateToBackend();
+        if (exitAfterSave) {
+            await exitEditMode(true);
+        }
+        return true;
     } catch (error) {
         LogError(`Save failed: ${error}`);
         showToast("Failed to save file. ❌");
+        return false;
     }
 }
 
+async function handleSave() {
+    await saveCurrentDocument({ confirm: true, exitAfterSave: true });
+}
+
 async function handleCancel() {
-    if (cmView && cmView.state.doc.toString() !== state.editorOriginalContent) {
+    if (hasUnsavedEditorChanges()) {
         const ok = await AskConfirm("Unsaved Changes", "You have unsaved changes. Discard them?", "Discard", "Cancel");
         if (!ok) return;
     }
@@ -307,6 +347,16 @@ export function insertTextAtCursor(prefix, suffix) {
     cmView.dispatch({
         changes: { from: selection.from, to: selection.to, insert: insertText },
         selection: { anchor: selection.from + prefix.length, head: selection.from + prefix.length + text.length }
+    });
+    cmView.focus();
+}
+
+export function insertPlainTextAtCursor(text) {
+    if (!cmView || !text) return;
+    const selection = cmView.state.selection.main;
+    cmView.dispatch({
+        changes: { from: selection.from, to: selection.to, insert: text },
+        selection: { anchor: selection.from + text.length }
     });
     cmView.focus();
 }
