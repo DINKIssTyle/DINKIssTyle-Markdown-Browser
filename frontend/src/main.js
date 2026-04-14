@@ -131,6 +131,7 @@ const el = {
     edEmoji: $('ed-emoji'),
     edCancel: $('ed-cancel'),
     edSave: $('ed-save'),
+    contentView: $('content-view'),
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -253,8 +254,9 @@ function createTab({ path = HOME_SCREEN_PATH, title = 'New Tab' } = {}) {
         navHistory: [{ path, scroll: 0 }],
         navIndex: 0,
         homeTargetPath: path === HOME_SCREEN_PATH ? HOME_SCREEN_PATH : path,
-        currentFolder: getPathDirname(path),
         currentMarkdownSource: "",
+        isEditing: false,
+        editorOriginalContent: "",
         pendingKeyword: "",
         pendingAnchor: "",
     };
@@ -271,6 +273,8 @@ function syncTabFromGlobals(tab) {
     tab.documentType = currentDocumentType;
     tab.currentFolder = currentFolder;
     tab.currentMarkdownSource = currentMarkdownSource;
+    tab.isEditing = isEditing;
+    tab.editorOriginalContent = editorOriginalContent;
     tab.navHistory = navHistory.map(item => ({ ...item }));
     tab.navIndex = navIndex;
     tab.homeTargetPath = homeTargetPath;
@@ -284,6 +288,8 @@ function syncGlobalsFromTab(tab) {
     currentDocumentType = tab.documentType || documentTypeFromPath(tab.path);
     currentFolder = tab.currentFolder || getPathDirname(tab.path);
     currentMarkdownSource = tab.currentMarkdownSource || "";
+    isEditing = !!tab.isEditing;
+    editorOriginalContent = tab.editorOriginalContent || "";
     navHistory = (tab.navHistory || [{ path: tab.path, scroll: 0 }]).map(item => ({ ...item }));
     navIndex = typeof tab.navIndex === "number" ? tab.navIndex : navHistory.length - 1;
     homeTargetPath = tab.homeTargetPath || HOME_SCREEN_PATH;
@@ -603,12 +609,15 @@ function bindEditorEvents() {
     el.edSave.onclick = handleSave;
     
     el.markdownEditor.oninput = (e) => {
+        const val = el.markdownEditor.value;
+        // 글로벌 변수와 현재 탭의 데이터를 즉시 동기화
+        currentMarkdownSource = val;
         const tab = getActiveTab();
-        if (tab) tab.currentMarkdownSource = el.markdownEditor.value;
+        if (tab) tab.currentMarkdownSource = val;
         
         // Update preview if it's a newline or always (user asked for newline specifically)
-        if (e.inputType === 'insertLineBreak' || el.markdownEditor.value.endsWith('\n')) {
-            renderMarkdown(el.markdownEditor.value);
+        if (e.inputType === 'insertLineBreak' || val.endsWith('\n')) {
+            renderMarkdown(val);
         }
     };
     
@@ -700,9 +709,14 @@ function insertTextAtCursor(prefix, suffix) {
     textarea.selectionStart = start + prefix.length;
     textarea.selectionEnd = start + prefix.length + selection.length;
     textarea.focus();
-    
-    // Force inpur event to update tab state
-    textarea.dispatchEvent(new Event('input'));
+
+    // 동기화: 툴바 버튼 클릭 시에도 글로벌 및 탭 상태 업데이트
+    currentMarkdownSource = textarea.value;
+    const tab = getActiveTab();
+    if (tab) tab.currentMarkdownSource = currentMarkdownSource;
+
+    // Trigger preview update
+    renderMarkdown(textarea.value);
 }
 
 function bindHomeScreen() {
@@ -1399,7 +1413,8 @@ async function renderActiveTab() {
     el.btnEdit.disabled = !isMarkdown;
 
     if (isEditing && !isMarkdown) {
-        await exitEditMode(false);
+        isEditing = false;
+        editorOriginalContent = "";
     }
 
     if (currentFilePath === HOME_SCREEN_PATH) {
@@ -1408,6 +1423,25 @@ async function renderActiveTab() {
     }
 
     el.homeScreen.classList.add('hidden');
+    
+    if (isEditing) {
+        el.markdownEditor.value = currentMarkdownSource;
+        el.editToolbar.classList.remove('hidden');
+        el.editorView.classList.remove('hidden');
+        el.mainContainer.classList.add('is-editing');
+        el.btnEdit.classList.add('active');
+        el.contentView.classList.remove('hidden'); 
+        el.btnSearchToggle.disabled = true;
+        el.selectEngine.disabled = true;
+    } else {
+        el.editToolbar.classList.add('hidden');
+        el.editorView.classList.add('hidden');
+        el.mainContainer.classList.remove('is-editing');
+        el.btnEdit.classList.remove('active');
+        el.btnSearchToggle.disabled = false;
+        el.selectEngine.disabled = false;
+    }
+
     getScroller().classList.toggle('html-mode', currentDocumentType === 'html');
     if (currentDocumentType === 'html') {
         await renderHTMLDocument(currentFilePath);
