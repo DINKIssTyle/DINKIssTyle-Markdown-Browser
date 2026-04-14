@@ -192,6 +192,22 @@
             <button id="context-open" class="context-menu-item" type="button" role="menuitem">Open</button>
             <button id="context-open-new-tab" class="context-menu-item" type="button" role="menuitem">Open In New Tab</button>
         </div>
+
+        <!-- Custom Modal for Prompts -->
+        <div id="modal-overlay" class="modal-overlay hidden">
+            <div id="modal-content" class="modal-content">
+                <h3 id="modal-title">Prompt</h3>
+                <p id="modal-message"></p>
+                <div id="modal-input-group" class="modal-input-group">
+                    <input type="text" id="modal-input" />
+                </div>
+                <div id="modal-emoji-grid" class="modal-emoji-grid hidden"></div>
+                <div class="modal-actions">
+                    <button id="modal-btn-cancel" class="modal-btn secondary">Cancel</button>
+                    <button id="modal-btn-ok" class="modal-btn primary">OK</button>
+                </div>
+            </div>
+        </div>
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>

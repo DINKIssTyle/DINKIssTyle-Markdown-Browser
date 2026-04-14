@@ -132,7 +132,17 @@ const el = {
     edCancel: $('ed-cancel'),
     edSave: $('ed-save'),
     contentView: $('content-view'),
+    modalOverlay: $('modal-overlay'),
+    modalTitle: $('modal-title'),
+    modalMessage: $('modal-message'),
+    modalInputGroup: $('modal-input-group'),
+    modalInput: $('modal-input'),
+    modalEmojiGrid: $('modal-emoji-grid'),
+    modalBtnOk: $('modal-btn-ok'),
+    modalBtnCancel: $('modal-btn-cancel'),
 };
+
+let lastLineCount = 0;
 
 window.addEventListener('DOMContentLoaded', async () => {
     // Step 1: Parallelize initial data fetching from Go backend
@@ -560,24 +570,28 @@ function bindEditorEvents() {
     el.edOl.onclick = () => insertTextAtCursor('\n1. ', '');
     el.edHr.onclick = () => insertTextAtCursor('\n---\n', '');
     
-    el.edLink.onclick = () => {
-        const url = window.prompt("Enter link URL:", "https://");
+    el.edLink.onclick = async () => {
+        const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
         if (url) insertTextAtCursor('[', `](${url})`);
     };
     
-    el.edImage.onclick = () => {
-        const url = window.prompt("Enter image URL or path:", "https://");
+    el.edImage.onclick = async () => {
+        const url = await showCustomPrompt("Insert Image", "Enter image URL or local path:", "https://");
         if (url) insertTextAtCursor('![', `](${url})`);
     };
     
     el.edCode.onclick = () => {
-        const lang = window.prompt("Enter language (optional):", "javascript");
-        insertTextAtCursor(`\n\`\`\`${lang || ''}\n`, '\n\`\`\`\n');
+        insertTextAtCursor('\n\`\`\`\n', '\n\`\`\`\n');
     };
     
-    el.edTable.onclick = () => {
-        const rows = parseInt(window.prompt("Number of rows:", "3") || "0");
-        const cols = parseInt(window.prompt("Number of columns:", "3") || "0");
+    el.edTable.onclick = async () => {
+        const rowStr = await showCustomPrompt("Insert Table", "Number of rows:", "3");
+        if (!rowStr) return;
+        const colStr = await showCustomPrompt("Insert Table", "Number of columns:", "3");
+        if (!colStr) return;
+
+        const rows = parseInt(rowStr || "0");
+        const cols = parseInt(colStr || "0");
         if (rows > 0 && cols > 0) {
             let table = '\n|';
             for (let c = 0; c < cols; c++) table += ` Header ${c+1} |`;
@@ -593,15 +607,14 @@ function bindEditorEvents() {
     };
     
     el.edTask.onclick = () => insertTextAtCursor('\n- [ ] ', '');
-    el.edLatex.onclick = () => {
-        const block = window.confirm("Use block math ($$)?\n(Cancel for inline math $)");
+    el.edLatex.onclick = async () => {
+        const block = await AskConfirm("LaTeX Math", "Use block math ($$)?\n(Cancel for inline math $)", "Block ($$)", "Inline ($)");
         const tag = block ? '$$' : '$';
         insertTextAtCursor(tag, tag);
     };
     
-    el.edEmoji.onclick = () => {
-        const emojis = ['😀', '🚀', '🔥', '✅', '❌', '📝', '📂', '💡', '⚠️', '⭐'];
-        const choice = window.prompt(`Common emojis:\n${emojis.join(' ')}\nOr enter any emoji:`, '😀');
+    el.edEmoji.onclick = async () => {
+        const choice = await showEmojiPicker();
         if (choice) insertTextAtCursor(choice, '');
     };
     
@@ -610,22 +623,63 @@ function bindEditorEvents() {
     
     el.markdownEditor.oninput = (e) => {
         const val = el.markdownEditor.value;
-        // 글로벌 변수와 현재 탭의 데이터를 즉시 동기화
         currentMarkdownSource = val;
         const tab = getActiveTab();
         if (tab) tab.currentMarkdownSource = val;
         
-        // Update preview if it's a newline or always (user asked for newline specifically)
-        if (e.inputType === 'insertLineBreak' || val.endsWith('\n')) {
+        // 줄바꿈이 발생했거나 (추가/삭제), 특정 주요 변경 시 실시간 반영
+        const currentLineCount = val.split('\n').length;
+        if (currentLineCount !== lastLineCount || e.inputType === 'insertLineBreak' || val.endsWith('\n')) {
             renderMarkdown(val);
+            lastLineCount = currentLineCount;
         }
     };
     
-    // Support Tab key in textarea
+    // Support Tab key and Smart Lists in textarea
     el.markdownEditor.onkeydown = (e) => {
         if (e.key === 'Tab') {
             e.preventDefault();
             insertTextAtCursor('    ', '');
+            return;
+        }
+
+        if (e.key === 'Enter') {
+            const textarea = e.target;
+            const start = textarea.selectionStart;
+            const text = textarea.value;
+            const before = text.substring(0, start);
+            const lines = before.split('\n');
+            const lastLine = lines[lines.length - 1];
+            
+            // List and Task pattern: Indent + (Bullet/Number) + (Task) + Content
+            const listRegex = /^(\s*)([*-]|\d+\.)(\s+\[([ x])\])?\s+(.*)$/;
+            const match = lastLine.match(listRegex);
+            
+            if (match) {
+                const indent = match[1];
+                const bullet = match[2];
+                const taskFull = match[3] || "";
+                const content = match[5].trim();
+                
+                if (content === "") {
+                    // Empty list item -> Stop listing by deleting the automatic prefix
+                    e.preventDefault();
+                    const newBefore = before.substring(0, start - lastLine.length);
+                    textarea.value = newBefore + text.substring(textarea.selectionEnd);
+                    textarea.selectionStart = textarea.selectionEnd = newBefore.length;
+                    textarea.dispatchEvent(new Event('input'));
+                } else {
+                    // Continue listing automatically
+                    e.preventDefault();
+                    let nextBullet = bullet;
+                    if (/^\d+\.$/.test(bullet)) {
+                        const num = parseInt(bullet);
+                        nextBullet = (num + 1) + ".";
+                    }
+                    const nextPrefix = `\n${indent}${nextBullet}${taskFull ? (taskFull.includes('[') ? ' [ ]' : '') : ''} `;
+                    insertTextAtCursor(nextPrefix, '');
+                }
+            }
         }
     };
 }
@@ -2133,5 +2187,103 @@ function bindMenuEvents() {
         currentFontSize = 16;
         el.markdownContainer.style.fontSize = `${currentFontSize}px`;
         persist();
+    });
+}
+
+/**
+ * MacOS 브라우저 환경에서 window.prompt가 비정상 작동하는 문제를 해결하기 위한 커스텀 모달
+ */
+function showCustomPrompt(title, message, defaultValue = "") {
+    return new Promise((resolve) => {
+        el.modalTitle.textContent = title;
+        el.modalMessage.textContent = message;
+        el.modalInput.value = defaultValue;
+        el.modalOverlay.classList.remove('hidden');
+        
+        // 입력 필드 자동 포커스
+        setTimeout(() => el.modalInput.focus(), 50);
+
+        const handleOk = () => {
+            const val = el.modalInput.value;
+            cleanup();
+            resolve(val);
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const handleKey = (e) => {
+            if (e.key === 'Enter') handleOk();
+            if (e.key === 'Escape') handleCancel();
+        };
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalBtnOk.removeEventListener('click', handleOk);
+            el.modalBtnCancel.removeEventListener('click', handleCancel);
+            el.modalInput.removeEventListener('keydown', handleKey);
+        };
+
+        el.modalBtnOk.addEventListener('click', handleOk);
+        el.modalBtnCancel.addEventListener('click', handleCancel);
+        el.modalInput.addEventListener('keydown', handleKey);
+        
+        // Ensure input is visible
+        el.modalInputGroup.classList.remove('hidden');
+        el.modalEmojiGrid.classList.add('hidden');
+    });
+}
+
+/**
+ * Emoji Picker Modal
+ */
+function showEmojiPicker() {
+    return new Promise((resolve) => {
+        el.modalTitle.textContent = "Select Emoji";
+        el.modalMessage.textContent = "Click an emoji to insert it.";
+        el.modalInputGroup.classList.add('hidden');
+        el.modalEmojiGrid.classList.remove('hidden');
+        el.modalOverlay.classList.remove('hidden');
+        
+        const emojiList = [
+            '😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '🙃', '😉', 
+            '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '😜', '🤪',
+            '🤫', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥',
+            '😮', '🤐', '😯', '😪', '😫', '🥱', '😴', '😌', '🤓', '😎',
+            '🥳', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
+            '🚀', '🔥', '✅', '❌', '📝', '📂', '💡', '⚠️', '⭐', '✨',
+            '❤️', '🎉', '👍', '👎', '🙌', '👏', '🤝', '🙏', '💻', '📷'
+        ];
+
+        el.modalEmojiGrid.innerHTML = emojiList.map(emoji => `
+            <div class="emoji-item" data-emoji="${emoji}">${emoji}</div>
+        `).join('');
+
+        const handleEmojiClick = (e) => {
+            const item = e.target.closest('.emoji-item');
+            if (item) {
+                const emoji = item.dataset.emoji;
+                cleanup();
+                resolve(emoji);
+            }
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalEmojiGrid.removeEventListener('click', handleEmojiClick);
+            el.modalBtnCancel.removeEventListener('click', handleCancel);
+            el.modalBtnOk.classList.remove('hidden');
+        };
+
+        el.modalBtnOk.classList.add('hidden'); // Hide OK button as clicking emoji is enough
+        el.modalEmojiGrid.addEventListener('click', handleEmojiClick);
+        el.modalBtnCancel.addEventListener('click', handleCancel);
     });
 }
