@@ -1,23 +1,20 @@
-# What's New in Version 1.5.0
+# What's New in Version 2.0
 
-DKST Markdown Browser가 한층 더 강력해졌습니다! 이번 버젼에서 추가된 주요 기능을 확인해 보세요.
+DKST Markdown Browser has become even more powerful! Check out the major features added in this version.
 
-## 🚀 주요 변경 사항
+<div style="display: block; margin: 0 auto; text-align: center; width: 100%; font-size: 1.5em;">
+Now you can create or edit markdown documents.
+</div>
 
-### 1. AI 기능 강화
-- **LM Studio와의 네이티브 통합**: 커스텀 엔드포인트를 통해 LM Studio를 직접 사용하여 강력한 로컬 AI 어시스턴트를 경험하세요.
-- **FIM (Fill-In-the-Middle)**: 고스트 텍스트 기능을 통해 코드나 문장을 실시간으로 자동 완성할 수 있습니다.
-- **스트리밍 응답**: AI의 답변을 기다릴 필요 없이 실시간으로 생성되는 내용을 바로 확인할 수 있습니다.
+## 🚀 Key Changes
 
-### 2. 향상된 에디터 경험
-- **CodeMirror 6 전환**: 더욱 빠르고 안정적인 최신 에디터 엔진으로 교체되었습니다.
-- **한국어 IME 입력 개선**: 한국어 입력 시 발생하던 엔터 키 문제를 해결하여 더욱 쾌적한 타이핑이 가능합니다.
-- **실시간 렌더링 최적화**: 대용량 마크다운 파일도 끊김 없이 부드럽게 렌더링됩니다.
+### 1. Create or Edit Markdown Documents
+![](img/200_new_edit.png)
 
-### 3. 사용자 인터페이스 개선
-- **세련된 다크 모드**: 시력 보호를 위한 더욱 깊이 있는 다크 모드 색상을 적용했습니다.
-- **탭 관리 개선**: 수많은 탭을 열어도 가독성이 유지되도록 탭 디자인을 개선했습니다.
-- **전용 풋터 추가**: 스타트 페이지 하단에서 버젼 정보를 한눈에 확인할 수 있습니다.
+### 2. AI Assists You!
+   - Select the desired section and ask AI!
+   - Easily modify the desired sections.
+
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

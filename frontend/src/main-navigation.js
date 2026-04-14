@@ -17,7 +17,7 @@ import {
     showToast, beginProgressTask, updateProgress,
     finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
 } from './main-ui.js';
-import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm } from '../wailsjs/go/main/App';
+import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../wailsjs/go/main/App';
 import { BrowserOpenURL, LogError, LogInfo } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────
@@ -214,6 +214,12 @@ async function loadFile(path, content, pushHistory = true, setHome = false) {
     state.currentFolder = getPathDirname(path);
     state.currentMarkdownSource = content;
     syncEngineSelector();
+
+    if (!isBundledDocumentPath(path)) {
+        TouchRecentFile(path).catch(error => {
+            LogError(`TouchRecentFile failed path=${path}: ${error?.message || error}`);
+        });
+    }
 
     if (setHome && !isBundledDocumentPath(path)) {
         state.homeTargetPath = path;

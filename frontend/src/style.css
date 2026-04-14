@@ -420,7 +420,7 @@ html.dark .nav-btn:hover {
 .content-view {
     flex: 1;
     overflow-y: auto;
-    padding: 40px;
+    padding: 20px;
     display: flex;
     flex-direction: column;
     order: 1;
@@ -1378,6 +1378,66 @@ html.dark .context-menu-item:hover {
 
 .modal-input-group {
     margin-bottom: 24px;
+}
+
+.modal-option-grid {
+    display: grid;
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: 10px;
+    margin-bottom: 24px;
+}
+
+.modal-option-cell {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-height: 72px;
+    padding: 10px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
+    background: rgba(255, 255, 255, 0.04);
+    color: var(--text-color);
+    cursor: pointer;
+    transition: transform 0.16s ease, border-color 0.16s ease, background 0.16s ease, box-shadow 0.16s ease;
+}
+
+.modal-option-cell:hover {
+    transform: translateY(-1px);
+    border-color: rgba(0, 113, 227, 0.45);
+    background: rgba(0, 113, 227, 0.08);
+}
+
+.modal-option-cell.active {
+    border-color: var(--accent-color);
+    background: rgba(0, 113, 227, 0.14);
+    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.16);
+}
+
+.modal-option-cell:focus-visible {
+    outline: 2px solid rgba(0, 113, 227, 0.4);
+    outline-offset: 2px;
+}
+
+.modal-option-preview {
+    width: 100%;
+    min-height: 48px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(3, 1fr);
+    gap: 4px;
+}
+
+.modal-option-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 999px;
+    background: rgba(148, 163, 184, 0.26);
+    place-self: center;
+}
+
+.modal-option-dot.is-target {
+    background: linear-gradient(135deg, #1f8fff, #3bb5ff);
+    box-shadow: 0 0 0 3px rgba(31, 143, 255, 0.14);
 }
 
 .modal-input-group input {

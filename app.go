@@ -345,6 +345,15 @@ func (a *App) saveRecentFile(path string) {
 	os.WriteFile(a.recentPath, data, 0644)
 }
 
+// TouchRecentFile moves a file to the top of the recent list.
+func (a *App) TouchRecentFile(path string) {
+	cleanPath := strings.TrimSpace(path)
+	if cleanPath == "" {
+		return
+	}
+	a.saveRecentFile(cleanPath)
+}
+
 // ClearRecentFiles clears the list of recently opened files
 func (a *App) ClearRecentFiles() {
 	os.WriteFile(a.recentPath, []byte("[]"), 0644)

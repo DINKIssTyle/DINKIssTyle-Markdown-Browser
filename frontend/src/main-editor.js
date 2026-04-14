@@ -401,6 +401,7 @@ export function showCustomPrompt(title, message, defaultValue = "") {
         el.modalMessage.textContent = message;
         el.modalInput.value = defaultValue;
         el.modalOverlay.classList.remove('hidden');
+        el.modalBtnOk.classList.remove('hidden');
         
         setTimeout(() => el.modalInput.focus(), 50);
 
@@ -432,7 +433,127 @@ export function showCustomPrompt(title, message, defaultValue = "") {
         el.modalInput.addEventListener('keydown', handleKey);
         
         el.modalInputGroup.classList.remove('hidden');
+        el.modalOptionGrid.classList.add('hidden');
         el.modalEmojiGrid.classList.add('hidden');
+    });
+}
+
+export function showOptionGridPrompt(title, message, options, defaultValue = "") {
+    return new Promise((resolve) => {
+        const normalizedOptions = Array.isArray(options) ? options.filter(Boolean) : [];
+        if (normalizedOptions.length === 0) {
+            resolve(null);
+            return;
+        }
+
+        let selectedIndex = Math.max(0, normalizedOptions.findIndex(option => option.value === defaultValue));
+
+        const renderOptionCell = (option, index) => {
+            const targetIndex = Math.max(0, Math.min(8, Number(option.previewIndex) || 4));
+            const dots = Array.from({ length: 9 }, (_, dotIndex) => `
+                <span class="modal-option-dot ${dotIndex === targetIndex ? 'is-target' : ''}"></span>
+            `).join('');
+            return `
+                <button
+                    type="button"
+                    class="modal-option-cell ${index === selectedIndex ? 'active' : ''}"
+                    data-option-index="${index}"
+                    aria-label="${option.label}"
+                >
+                    <span class="modal-option-preview" aria-hidden="true">${dots}</span>
+                </button>
+            `;
+        };
+
+        const syncActiveState = () => {
+            el.modalOptionGrid.querySelectorAll('.modal-option-cell').forEach((node, index) => {
+                node.classList.toggle('active', index === selectedIndex);
+            });
+        };
+
+        const moveSelection = (deltaRow, deltaCol) => {
+            const row = Math.floor(selectedIndex / 3);
+            const col = selectedIndex % 3;
+            const nextRow = Math.max(0, Math.min(2, row + deltaRow));
+            const nextCol = Math.max(0, Math.min(2, col + deltaCol));
+            selectedIndex = nextRow * 3 + nextCol;
+            syncActiveState();
+        };
+
+        const confirmSelection = () => {
+            const selected = normalizedOptions[selectedIndex];
+            cleanup();
+            resolve(selected?.value ?? null);
+        };
+
+        const cancelSelection = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const handleGridClick = event => {
+            const button = event.target.closest('.modal-option-cell');
+            if (!button) return;
+            selectedIndex = Number(button.dataset.optionIndex) || 0;
+            confirmSelection();
+        };
+
+        const handleKey = event => {
+            if (event.key === 'ArrowUp') {
+                event.preventDefault();
+                moveSelection(-1, 0);
+                return;
+            }
+            if (event.key === 'ArrowDown') {
+                event.preventDefault();
+                moveSelection(1, 0);
+                return;
+            }
+            if (event.key === 'ArrowLeft') {
+                event.preventDefault();
+                moveSelection(0, -1);
+                return;
+            }
+            if (event.key === 'ArrowRight') {
+                event.preventDefault();
+                moveSelection(0, 1);
+                return;
+            }
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                confirmSelection();
+                return;
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                cancelSelection();
+            }
+        };
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalOptionGrid.removeEventListener('click', handleGridClick);
+            document.removeEventListener('keydown', handleKey, true);
+            el.modalBtnOk.removeEventListener('click', confirmSelection);
+            el.modalBtnCancel.removeEventListener('click', cancelSelection);
+            el.modalBtnOk.classList.remove('hidden');
+        };
+
+        el.modalTitle.textContent = title;
+        el.modalMessage.textContent = message;
+        el.modalOptionGrid.innerHTML = normalizedOptions.map(renderOptionCell).join('');
+        el.modalOverlay.classList.remove('hidden');
+        el.modalInputGroup.classList.add('hidden');
+        el.modalOptionGrid.classList.remove('hidden');
+        el.modalEmojiGrid.classList.add('hidden');
+        el.modalBtnOk.classList.remove('hidden');
+
+        syncActiveState();
+
+        el.modalOptionGrid.addEventListener('click', handleGridClick);
+        document.addEventListener('keydown', handleKey, true);
+        el.modalBtnOk.addEventListener('click', confirmSelection);
+        el.modalBtnCancel.addEventListener('click', cancelSelection);
     });
 }
 
@@ -441,6 +562,7 @@ export function showEmojiPicker() {
         el.modalTitle.textContent = "Select Emoji";
         el.modalMessage.textContent = "Click an emoji to insert it.";
         el.modalInputGroup.classList.add('hidden');
+        el.modalOptionGrid.classList.add('hidden');
         el.modalEmojiGrid.classList.remove('hidden');
         el.modalOverlay.classList.remove('hidden');
         
@@ -529,9 +651,9 @@ export function bindEditorEvents() {
     };
     
     el.edTable.onclick = async () => {
-        const rowStr = await showCustomPrompt("Insert Table", "Number of rows:", "3");
+        const rowStr = await showCustomPrompt("Insert Table", "Rows (행 수):", "3");
         if (!rowStr) return;
-        const colStr = await showCustomPrompt("Insert Table", "Number of columns:", "3");
+        const colStr = await showCustomPrompt("Insert Table", "Columns (열 수):", "3");
         if (!colStr) return;
 
         const rows = parseInt(rowStr || "0");
@@ -563,19 +685,35 @@ export function bindEditorEvents() {
     };
 
     el.edDiv.onclick = async () => {
-        const align = await showCustomPrompt("DIV Wrapper", "Alignment (left/center/right):", "center");
+        const align = await showOptionGridPrompt("DIV Wrapper", "Choose alignment with arrow keys, then press Enter.", [
+            { value: 'top-left', label: 'Top left', previewIndex: 0 },
+            { value: 'top-center', label: 'Top center', previewIndex: 1 },
+            { value: 'top-right', label: 'Top right', previewIndex: 2 },
+            { value: 'center-left', label: 'Center left', previewIndex: 3 },
+            { value: 'center', label: 'Center', previewIndex: 4 },
+            { value: 'center-right', label: 'Center right', previewIndex: 5 },
+            { value: 'bottom-left', label: 'Bottom left', previewIndex: 6 },
+            { value: 'bottom-center', label: 'Bottom center', previewIndex: 7 },
+            { value: 'bottom-right', label: 'Bottom right', previewIndex: 8 },
+        ], 'center');
         if (!align) return;
         const width = await showCustomPrompt("DIV Wrapper", "Width (e.g. 100%, 400px):", "100%");
         if (!width) return;
 
-        let style = "";
-        if (align === "center") {
-            style = `display: block; margin: 0 auto; text-align: center; width: ${width};`;
-        } else if (align === "right") {
-            style = `display: block; margin-left: auto; text-align: right; width: ${width};`;
-        } else {
-            style = `text-align: left; width: ${width};`;
-        }
+        const alignMap = {
+            'top-left': { placeItems: 'start start', textAlign: 'left' },
+            'top-center': { placeItems: 'start center', textAlign: 'center' },
+            'top-right': { placeItems: 'start end', textAlign: 'right' },
+            'center-left': { placeItems: 'center start', textAlign: 'left' },
+            'center': { placeItems: 'center center', textAlign: 'center' },
+            'center-right': { placeItems: 'center end', textAlign: 'right' },
+            'bottom-left': { placeItems: 'end start', textAlign: 'left' },
+            'bottom-center': { placeItems: 'end center', textAlign: 'center' },
+            'bottom-right': { placeItems: 'end end', textAlign: 'right' },
+        };
+
+        const selectedAlign = alignMap[align] || alignMap.center;
+        const style = `display: grid; width: ${width}; place-items: ${selectedAlign.placeItems}; text-align: ${selectedAlign.textAlign};`;
 
         insertTextAtCursor(`<div style="${style}">\n`, '\n</div>');
     };

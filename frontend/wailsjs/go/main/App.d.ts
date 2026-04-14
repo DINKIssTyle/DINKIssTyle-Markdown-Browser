@@ -63,4 +63,6 @@ export function ShowSaveFileDialog(arg1:string):Promise<string>;
 
 export function SyncEditorState(arg1:boolean,arg2:boolean,arg3:string,arg4:string):Promise<void>;
 
+export function TouchRecentFile(arg1:string):Promise<void>;
+
 export function UnloadAIModel(arg1:string,arg2:Record<string, string>,arg3:string):Promise<void>;

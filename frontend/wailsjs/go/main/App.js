@@ -122,6 +122,10 @@ export function SyncEditorState(arg1, arg2, arg3, arg4) {
   return window['go']['main']['App']['SyncEditorState'](arg1, arg2, arg3, arg4);
 }
 
+export function TouchRecentFile(arg1) {
+  return window['go']['main']['App']['TouchRecentFile'](arg1);
+}
+
 export function UnloadAIModel(arg1, arg2, arg3) {
   return window['go']['main']['App']['UnloadAIModel'](arg1, arg2, arg3);
 }
