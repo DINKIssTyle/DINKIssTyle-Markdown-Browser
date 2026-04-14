@@ -402,6 +402,32 @@ export function bindContextMenu() {
         showToast('Copied selection. 📋');
     });
 
+    bindContextMenuAction(el.contextPaste, async () => {
+        if (contextMenuState?.isEditor) {
+            try {
+                const text = await ClipboardGetText();
+                if (typeof text === 'string') {
+                    const mod = await import('./main-editor.js');
+                    // 포커스를 잃었을 수 있으므로 다시 포커스
+                    contextMenuState.targetElement.focus();
+                    mod.insertTextAtCursor(text, '');
+                    showToast('Pasted. 📋');
+                }
+            } catch (error) {
+                LogError(`clipboard paste failed: ${error?.message || error}`);
+            }
+        }
+        closeContextMenu();
+    });
+
+    bindContextMenuAction(el.contextSelectAll, async () => {
+        if (contextMenuState?.targetElement) {
+            contextMenuState.targetElement.focus();
+            contextMenuState.targetElement.select();
+        }
+        closeContextMenu();
+    });
+
     bindContextMenuAction(el.contextSearch, async () => {
         if (!contextMenuState?.selectionText) return;
         await searchForQuery(contextMenuState.selectionText);
@@ -430,33 +456,53 @@ function bindContextMenuAction(element, action) {
 }
 
 function handleContextMenu(event) {
-    const selectionText = window.getSelection()?.toString() || "";
+    const isEditor = event.target.id === 'markdown-editor';
+    const selectionText = isEditor 
+        ? event.target.value.substring(event.target.selectionStart, event.target.selectionEnd)
+        : window.getSelection()?.toString() || "";
+        
     const linkNode = event.target.closest('a[href]');
     const inMarkdown = !!event.target.closest('#markdown-container');
 
-    if (!selectionText && !linkNode) {
-        closeContextMenu();
-        return;
-    }
+    if (!isEditor) {
+        if (!selectionText && !linkNode) {
+            closeContextMenu();
+            return;
+        }
 
-    if (!inMarkdown && !selectionText) {
-        closeContextMenu();
-        return;
+        if (!inMarkdown && !selectionText) {
+            closeContextMenu();
+            return;
+        }
     }
 
     event.preventDefault();
     const linkHref = linkNode?.getAttribute('href') || "";
     const showLinkActions = !!linkHref;
     const showSelectionActions = !showLinkActions && !!selectionText;
+    
     contextMenuState = {
         selectionText: showSelectionActions ? selectionText : "",
         linkHref,
+        isEditor,
+        targetElement: event.target
     };
 
     el.contextCopy.classList.toggle('hidden', !showSelectionActions);
-    el.contextSearch.classList.toggle('hidden', !showSelectionActions);
-    el.contextOpen.classList.toggle('hidden', !showLinkActions);
-    el.contextOpenNewTab.classList.toggle('hidden', !showLinkActions);
+    
+    if (isEditor) {
+        el.contextPaste.classList.remove('hidden');
+        el.contextSelectAll.classList.remove('hidden');
+        el.contextSearch.classList.add('hidden');
+        el.contextOpen.classList.add('hidden');
+        el.contextOpenNewTab.classList.add('hidden');
+    } else {
+        el.contextPaste.classList.add('hidden');
+        el.contextSelectAll.classList.add('hidden');
+        el.contextSearch.classList.toggle('hidden', !showSelectionActions);
+        el.contextOpen.classList.toggle('hidden', !showLinkActions);
+        el.contextOpenNewTab.classList.toggle('hidden', !showLinkActions);
+    }
 
     positionContextMenu(event.clientX, event.clientY);
 }

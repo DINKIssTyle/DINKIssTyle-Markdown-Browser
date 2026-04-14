@@ -51,6 +51,8 @@ export const el = {
     btnProgressCancel: $('btn-progress-cancel'),
     contextMenu: $('context-menu'),
     contextCopy: $('context-copy'),
+    contextPaste: $('context-paste'),
+    contextSelectAll: $('context-select-all'),
     contextSearch: $('context-search'),
     contextOpen: $('context-open'),
     contextOpenNewTab: $('context-open-new-tab'),

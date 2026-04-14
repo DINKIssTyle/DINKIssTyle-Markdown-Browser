@@ -225,7 +225,29 @@ function bindMenuEvents() {
 async function handleGlobalKeydown(event) {
     const isEditingShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w';
     
-    if (isEditableTarget(event.target) && !isEditingShortcut) {
+    // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
+    // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
+    // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
+    if (isEditableTarget(event.target)) {
+        const isGlobalKey = (event.metaKey || event.ctrlKey) && ['w', 'a', 'c'].includes(event.key.toLowerCase());
+        if (!isGlobalKey) {
+            return;
+        }
+    }
+
+    // Cmd+A 단축키 지원 (전체 선택)
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'a') {
+        event.preventDefault();
+        if (isEditableTarget(event.target) && typeof event.target.select === 'function') {
+            event.target.select();
+        } else {
+            const selection = window.getSelection();
+            const range = document.createRange();
+            const container = document.getElementById('content-view') || document.body;
+            range.selectNodeContents(container);
+            selection.removeAllRanges();
+            selection.addRange(range);
+        }
         return;
     }
 
