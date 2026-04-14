@@ -99,8 +99,15 @@ export async function renderActiveTab() {
     el.currentPath.innerText = formatDisplayPath(state.currentFilePath);
 
     // Update nav buttons
-    el.btnBack.disabled = state.navIndex <= 0;
-    el.btnForward.disabled = state.navIndex >= state.navHistory.length - 1;
+    if (state.isEditing) {
+        el.btnBack.disabled = true;
+        el.btnForward.disabled = true;
+        el.btnHome.disabled = true;
+    } else {
+        el.btnBack.disabled = state.navIndex <= 0;
+        el.btnForward.disabled = state.navIndex >= state.navHistory.length - 1;
+        el.btnHome.disabled = false;
+    }
 
     // Update edit button state
     const isMarkdown = state.currentDocumentType === 'markdown' && 
@@ -173,6 +180,13 @@ export async function renderActiveTab() {
 
 async function renderHomeScreen() {
     if (state.isEditing) await exitEditMode(false);
+    // 다른 탭에서 편집 중이었을 때 남아있는 에디터 DOM 정리
+    el.editToolbar.classList.add('hidden');
+    el.editorView.classList.add('hidden');
+    el.mainContainer.classList.remove('is-editing');
+    el.btnEdit.classList.remove('active');
+    el.btnSearchToggle.disabled = false;
+    el.selectEngine.disabled = false;
     await renderRecentFiles();
     cleanupHTMLFrame();
     clearHighlight();

@@ -230,6 +230,11 @@ export async function closeTab(tabID) {
 // ── New Tab ────────────────────────────────────────────────
 
 export async function createAndSwitchToNewTab(path = HOME_SCREEN_PATH, options = {}) {
+    // 편집 중인 탭의 상태를 보존
+    const currentTab = getActiveTab();
+    if (currentTab) {
+        syncTabFromGlobals(currentTab);
+    }
     saveCurrentScroll();
     const tab = createTab({
         path,

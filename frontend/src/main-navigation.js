@@ -27,7 +27,9 @@ let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
 export async function handleOpenFile() {
     const result = await OpenFile();
     if (result && result.path) {
-        await openPath(result.path, { pushHistory: true, setHome: true, content: result.content });
+        // 스타트 페이지가 아닌 탭에서는 항상 새 탭으로 열기
+        const forceNewTab = state.currentFilePath !== HOME_SCREEN_PATH;
+        await openPath(result.path, { pushHistory: true, setHome: true, content: result.content, newTab: forceNewTab });
     }
 }
 
@@ -140,8 +142,15 @@ function pushCurrentHistory(path) {
 }
 
 export function updateNavButtons() {
+    if (state.isEditing) {
+        el.btnBack.disabled = true;
+        el.btnForward.disabled = true;
+        el.btnHome.disabled = true;
+        return;
+    }
     el.btnBack.disabled = state.navIndex <= 0;
     el.btnForward.disabled = state.navIndex >= state.navHistory.length - 1;
+    el.btnHome.disabled = false;
 }
 
 export function goBack() {

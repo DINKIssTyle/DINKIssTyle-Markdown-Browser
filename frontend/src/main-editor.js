@@ -17,7 +17,11 @@ let currentEditorFontSize = 16;
 // ── Editor Mode ────────────────────────────────────────────
 
 export function enterEditMode() {
-    if (state.isEditing || state.currentDocumentType !== 'markdown') return;
+    if (state.isEditing) {
+        handleCancel();
+        return;
+    }
+    if (state.currentDocumentType !== 'markdown') return;
     
     state.isEditing = true;
     state.editorOriginalContent = state.currentMarkdownSource;
