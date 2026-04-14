@@ -65,6 +65,7 @@ export const el = {
     markdownEditor: $('markdown-editor'),
     edBold: $('ed-bold'),
     edItalic: $('ed-italic'),
+    edUnderline: $('ed-underline'),
     edStrike: $('ed-strike'),
     edQuote: $('ed-quote'),
     edH1: $('ed-h1'),
@@ -80,6 +81,7 @@ export const el = {
     edTask: $('ed-task'),
     edLatex: $('ed-latex'),
     edEmoji: $('ed-emoji'),
+    edRenderMode: $('ed-render-mode'),
     edFontMinus: $('ed-font-minus'),
     edFontPlus: $('ed-font-plus'),
     edCancel: $('ed-cancel'),
@@ -114,6 +116,7 @@ export const el = {
     aiPromptSend: $('ai-prompt-send'),
     aiPromptClose: $('ai-prompt-close'),
     contentView: $('content-view'),
+    editorSlashMenu: $('editor-slash-menu'),
     modalOverlay: $('modal-overlay'),
     modalTitle: $('modal-title'),
     modalMessage: $('modal-message'),
@@ -156,6 +159,7 @@ export const state = {
     editingSourceFolder: "",
     editingPreviewPath: "",
     editingPreviewFolder: "",
+    currentEditorRenderMode: "realtime",
     koreanImeFixEnabled: false,
 };
 

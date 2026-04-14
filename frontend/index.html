@@ -83,6 +83,8 @@
                         class="material-symbols-outlined">format_bold</span></button>
                 <button id="ed-italic" title="Italic (*)" class="tool-btn"><span
                         class="material-symbols-outlined">format_italic</span></button>
+                <button id="ed-underline" title="Underline (&lt;u&gt;)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_underlined</span></button>
                 <button id="ed-strike" title="Strikethrough (~~)" class="tool-btn"><span
                         class="material-symbols-outlined">strikethrough_s</span></button>
                 <button id="ed-quote" title="Blockquote (>)" class="tool-btn"><span
@@ -121,6 +123,14 @@
                         class="material-symbols-outlined">functions</span></button>
                 <button id="ed-emoji" title="Emoji" class="tool-btn"><span
                         class="material-symbols-outlined">mood</span></button>
+            </div>
+            <div class="edit-separator"></div>
+            <div class="edit-tool-group">
+                <label for="ed-render-mode" class="edit-inline-label">Update:</label>
+                <select id="ed-render-mode" class="edit-select">
+                    <option value="realtime">Real Time</option>
+                    <option value="cursor-line-change">Cursor line change</option>
+                </select>
             </div>
             <div class="edit-separator"></div>
             <div class="edit-tool-group">
@@ -197,6 +207,8 @@
             <article id="editor-view" class="editor-view hidden">
                 <textarea id="markdown-editor" spellcheck="false"
                     placeholder="Enter markdown content here..."></textarea>
+                <div id="editor-slash-menu" class="editor-slash-menu hidden" role="listbox"
+                    aria-label="Editor slash commands"></div>
             </article>
 
             <!-- Sidebar (Search) - on the RIGHT -->

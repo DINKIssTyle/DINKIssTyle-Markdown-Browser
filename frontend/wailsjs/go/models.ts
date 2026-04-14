@@ -24,6 +24,7 @@ export namespace main {
 	    theme: string;
 	    fontSize: number;
 	    engine: string;
+	    editorRenderMode: string;
 	    aiGeneralEnabled: boolean;
 	    aiGeneralEndpoint: string;
 	    aiGeneralModel: string;
@@ -47,6 +48,7 @@ export namespace main {
 	        this.theme = source["theme"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
+	        this.editorRenderMode = source["editorRenderMode"];
 	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
 	        this.aiGeneralEndpoint = source["aiGeneralEndpoint"];
 	        this.aiGeneralModel = source["aiGeneralModel"];

@@ -52,6 +52,7 @@ type AppSettings struct {
 	Theme             string  `json:"theme"`
 	FontSize          int     `json:"fontSize"`
 	Engine            string  `json:"engine"`
+	EditorRenderMode  string  `json:"editorRenderMode"`
 	AIGeneralEnabled  bool    `json:"aiGeneralEnabled"`
 	AIGeneralEndpoint string  `json:"aiGeneralEndpoint"`
 	AIGeneralModel    string  `json:"aiGeneralModel"`
@@ -366,6 +367,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.Theme = "dark"
 	settings.FontSize = 16
 	settings.Engine = "marked"
+	settings.EditorRenderMode = "realtime"
 	settings.AIGeneralEnabled = true
 	settings.AIGeneralProvider = "openai"
 	settings.AIGeneralTemp = 0.0

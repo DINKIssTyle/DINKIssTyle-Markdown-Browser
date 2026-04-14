@@ -92,9 +92,13 @@ async function loadSettings() {
     state.currentFontSize = s.fontSize || 16;
     state.currentMarkdownEngine = s.engine || "marked";
     state.currentEngine = state.currentMarkdownEngine;
+    state.currentEditorRenderMode = s.editorRenderMode || "realtime";
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
     syncEngineSelector();
+    if (el.edRenderMode) {
+        el.edRenderMode.value = state.currentEditorRenderMode;
+    }
 
     // Update footer version
     try {
@@ -112,6 +116,7 @@ async function persist() {
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
+        editorRenderMode: state.currentEditorRenderMode,
         aiGeneralEnabled: window.aiState?.generalEnabled ?? true,
         aiGeneralProvider: window.aiState?.generalProvider || "openai",
         aiGeneralEndpoint: window.aiState?.generalEndpoint || "",

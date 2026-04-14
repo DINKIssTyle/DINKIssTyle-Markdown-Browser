@@ -7,5 +7,5 @@ package main
 
 const (
 	AppName    = "DKST Markdown Browser"
-	AppVersion = "1.5.0"
+	AppVersion = "2.0.0"
 )

@@ -146,6 +146,7 @@ export function bindAIEvents() {
             theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
             fontSize: state.currentFontSize,
             engine: state.currentMarkdownEngine,
+            editorRenderMode: state.currentEditorRenderMode,
             aiGeneralEnabled: window.aiState.generalEnabled,
             aiGeneralProvider: window.aiState.generalProvider,
             aiGeneralEndpoint: window.aiState.generalEndpoint,
@@ -351,6 +352,32 @@ function showPromptBox() {
     el.aiPromptBox.style.transform = 'none';
     el.aiPromptBox.classList.remove('hidden');
     el.aiPromptInput.focus();
+}
+
+export function showPromptBoxAtSelection() {
+    if (!state.isEditing || !cmView || !window.aiState?.generalEnabled) {
+        return false;
+    }
+
+    const selection = cmView.state.selection.main;
+    if (selection.empty) {
+        return false;
+    }
+
+    const rect = cmView.coordsAtPos(selection.to);
+    if (!rect) {
+        return false;
+    }
+
+    el.aiFloatingBtn.classList.add('hidden');
+    el.aiPromptBox.style.left = `${rect.right + 10}px`;
+    el.aiPromptBox.style.top = `${rect.bottom + 10}px`;
+    el.aiPromptBox.style.bottom = 'auto';
+    el.aiPromptBox.style.transform = 'none';
+    el.aiPromptBox.classList.remove('hidden');
+    el.aiPromptInput.focus();
+    el.aiPromptInput.select();
+    return true;
 }
 
 function hidePromptBox() {

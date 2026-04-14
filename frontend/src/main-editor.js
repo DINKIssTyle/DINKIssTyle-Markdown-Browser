@@ -8,7 +8,7 @@ import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown } from './main-render.js';
 import { showToast } from './main-ui.js';
-import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
+import { SaveFile, SaveSettings, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
@@ -17,11 +17,15 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoD
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { ghostTextField } from './main-ai.js';
+import { ghostTextField, showPromptBoxAtSelection } from './main-ai.js';
 
 // ── Module-level State ─────────────────────────────────────
 let lastLineCount = 0;
 let currentEditorFontSize = 15;
+let slashMenuState = null;
+let slashMenuEventsBound = false;
+let lastPreviewCursorLine = 1;
+let lastRenderedPreviewContent = "";
 export let cmView = null;
 export const themeCompartment = new Compartment();
 
@@ -39,6 +43,131 @@ function syncEditorStateToBackend() {
         LogError(`SyncEditorState failed: ${error}`);
     });
 }
+
+async function persistEditorPreferences() {
+    await SaveSettings({
+        theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
+        fontSize: state.currentFontSize,
+        engine: state.currentMarkdownEngine,
+        editorRenderMode: state.currentEditorRenderMode,
+        aiGeneralEnabled: window.aiState?.generalEnabled ?? true,
+        aiGeneralProvider: window.aiState?.generalProvider || "openai",
+        aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
+        aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
+        aiGeneralKey: window.aiState?.generalKey || "",
+        aiGeneralTemp: window.aiState?.generalTemp || 0,
+        aiFimEnabled: window.aiState?.fimAvailable ?? true,
+        aiFimEndpoint: window.aiState?.fimEndpoint || "",
+        aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
+        aiFimKey: window.aiState?.fimKey || "",
+        aiFimTemp: window.aiState?.fimTemp || 0,
+        koreanImeEnterFix: state.koreanImeFixEnabled,
+    });
+}
+
+function getCursorLineNumber(editorState = cmView?.state) {
+    if (!editorState) return 1;
+    return editorState.doc.lineAt(editorState.selection.main.head).number;
+}
+
+function schedulePreviewRender(content, delay = 100) {
+    clearTimeout(window._renderTimer);
+    window._renderTimer = setTimeout(() => {
+        if (content === lastRenderedPreviewContent) return;
+        renderMarkdown(content);
+        lastRenderedPreviewContent = content;
+        lastLineCount = cmView?.state.doc.lines ?? lastLineCount;
+    }, delay);
+}
+
+function updatePreviewForEditorChange(update) {
+    const nextDocText = update.state.doc.toString();
+    const nextCursorLine = getCursorLineNumber(update.state);
+
+    if (state.currentEditorRenderMode === 'realtime') {
+        if (update.docChanged) {
+            schedulePreviewRender(nextDocText, 100);
+        }
+        lastPreviewCursorLine = nextCursorLine;
+        return;
+    }
+
+    if (update.selectionSet && nextCursorLine !== lastPreviewCursorLine) {
+        schedulePreviewRender(nextDocText, 0);
+    }
+    lastPreviewCursorLine = nextCursorLine;
+}
+
+function getSlashCommands() {
+    return [
+        { id: 'bold', label: 'Bold', token: '**', keywords: 'bold strong', run: () => applyInlineWrap('**', '**') },
+        { id: 'italic', label: 'Italic', token: '*', keywords: 'italic emphasis', run: () => applyInlineWrap('*', '*') },
+        { id: 'underline', label: 'Underline', token: '<u>', keywords: 'underline', run: () => applyInlineWrap('<u>', '</u>') },
+        { id: 'strike', label: 'Strikethrough', token: '~~', keywords: 'strike strikethrough', run: () => applyInlineWrap('~~', '~~') },
+        { id: 'quote', label: 'Blockquote', token: '>', keywords: 'quote blockquote', run: () => applyBlockMarker('quote') },
+        { id: 'h1', label: 'Heading 1', token: '#', keywords: 'h1 heading title', run: () => applyBlockMarker('h1') },
+        { id: 'h2', label: 'Heading 2', token: '##', keywords: 'h2 heading', run: () => applyBlockMarker('h2') },
+        { id: 'h3', label: 'Heading 3', token: '###', keywords: 'h3 heading', run: () => applyBlockMarker('h3') },
+        { id: 'ul', label: 'Bullet List', token: '- ', keywords: 'unordered list bullet ul', run: () => applyBlockMarker('ul') },
+        { id: 'ol', label: 'Numbered List', token: '1. ', keywords: 'ordered list number ol', run: () => applyBlockMarker('ol') },
+        { id: 'hr', label: 'Horizontal Rule', token: '---', keywords: 'rule divider hr', run: () => insertHorizontalRule() },
+        { id: 'link', label: 'Link', token: '[ ]( )', keywords: 'link url', run: () => insertLink() },
+        { id: 'image', label: 'Image', token: '![ ]( )', keywords: 'image img photo', run: () => insertImage() },
+        { id: 'code', label: 'Code Block', token: '```', keywords: 'code block fence', run: () => insertCodeBlock() },
+        { id: 'table', label: 'Table', token: '| |', keywords: 'table grid', run: () => insertTable() },
+        { id: 'div', label: 'DIV Wrapper', token: '<div>', keywords: 'div wrapper align', run: () => insertDivWrapper() },
+        { id: 'task', label: 'Task List', token: '- [ ]', keywords: 'task checklist todo', run: () => applyBlockMarker('task') },
+        { id: 'latex', label: 'LaTeX', token: '$$', keywords: 'latex math equation', run: () => insertLatex() },
+        { id: 'emoji', label: 'Emoji', token: ':)', keywords: 'emoji emoticon smile', run: () => insertEmoji() },
+    ];
+}
+
+function filterSlashCommands(query = "") {
+    const normalized = query.trim().toLowerCase();
+    const commands = getSlashCommands();
+    if (!normalized) return commands;
+    return commands.filter(command => {
+        const haystack = `${command.label} ${command.keywords} ${command.token}`.toLowerCase();
+        return haystack.includes(normalized);
+    });
+}
+
+const slashMenuKeymap = Prec.highest(keymap.of([
+    {
+        key: 'ArrowDown',
+        run: () => {
+            if (!slashMenuState) return false;
+            moveSlashSelection(1);
+            return true;
+        }
+    },
+    {
+        key: 'ArrowUp',
+        run: () => {
+            if (!slashMenuState) return false;
+            moveSlashSelection(-1);
+            return true;
+        }
+    },
+    {
+        key: 'Enter',
+        run: () => {
+            if (!slashMenuState) return false;
+            const command = slashMenuState.commands[slashMenuState.selectedIndex];
+            if (!command) return true;
+            executeSlashCommand(command.id);
+            return true;
+        }
+    },
+    {
+        key: 'Escape',
+        run: () => {
+            if (!slashMenuState) return false;
+            closeSlashMenu();
+            return true;
+        }
+    }
+]));
 
 // 한글 IME 엔터 중복 입력 방지 익스텐션 (v2: Transaction Filter 방식)
 const setImeState = StateEffect.define();
@@ -148,9 +277,40 @@ export function initCodeMirror() {
         doc: state.currentMarkdownSource || "",
         extensions: [
             Prec.highest(koreanImeEnterFix),
+            slashMenuKeymap,
             lineNumbers(),
             history(),
             keymap.of([
+                {
+                    key: '/',
+                    run: () => {
+                        if (!cmView) return false;
+                        const selection = cmView.state.selection.main;
+                        if (selection.empty) return false;
+                        return showPromptBoxAtSelection();
+                    }
+                },
+                {
+                    key: 'Mod-b',
+                    run: () => {
+                        applyInlineWrap('**', '**');
+                        return true;
+                    }
+                },
+                {
+                    key: 'Mod-i',
+                    run: () => {
+                        applyInlineWrap('*', '*');
+                        return true;
+                    }
+                },
+                {
+                    key: 'Mod-u',
+                    run: () => {
+                        applyInlineWrap('<u>', '</u>');
+                        return true;
+                    }
+                },
                 ...defaultKeymap,
                 ...historyKeymap,
                 indentWithTab
@@ -162,6 +322,12 @@ export function initCodeMirror() {
             drawSelection(),
             dropCursor(),
             EditorView.lineWrapping,
+            EditorView.domEventHandlers({
+                blur() {
+                    closeSlashMenu();
+                    return false;
+                }
+            }),
             EditorView.updateListener.of((update) => {
                 if (update.docChanged) {
                     const val = update.state.doc.toString();
@@ -169,21 +335,16 @@ export function initCodeMirror() {
                     const tab = getActiveTab();
                     if (tab) tab.currentMarkdownSource = val;
                     syncEditorStateToBackend();
-                    
-                    // Use a small delay for rendering to avoid UI stutter
-                    clearTimeout(window._renderTimer);
-                    window._renderTimer = setTimeout(() => {
-                        const currentLineCount = update.state.doc.lines;
-                        if (currentLineCount !== lastLineCount || val.endsWith('\n')) {
-                            renderMarkdown(val);
-                            lastLineCount = currentLineCount;
-                        }
-                    }, 100);
+                }
+
+                if (update.docChanged || update.selectionSet) {
+                    updatePreviewForEditorChange(update);
                 }
 
                 // 문서 내용이 바뀌거나 선택 영역이 바뀌어도 undo/redo 활성화 상태가 바뀔 수 있으므로 갱신
                 if (update.docChanged || update.selectionSet) {
                     updateNavButtons();
+                    updateSlashMenu();
                 }
             })
         ]
@@ -244,6 +405,10 @@ export function enterEditMode() {
     cmView.dispatch({
         changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource }
     });
+    lastPreviewCursorLine = getCursorLineNumber(cmView.state);
+    if (el.edRenderMode) {
+        el.edRenderMode.value = state.currentEditorRenderMode;
+    }
     
     el.editToolbar.classList.remove('hidden');
     el.editorView.classList.remove('hidden');
@@ -262,6 +427,7 @@ export function enterEditMode() {
     
     // Also dispatch an empty ghost text just in case
     if (window.aiState) window.aiState.ghostText = "";
+    updateSlashMenu();
     cmView.focus();
     updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
     syncEditorStateToBackend();
@@ -269,6 +435,8 @@ export function enterEditMode() {
 
 export async function exitEditMode(didSave = false) {
     if (!state.isEditing) return;
+    closeSlashMenu();
+    clearTimeout(window._renderTimer);
     
     state.isEditing = false;
     state.editingSourcePath = "";
@@ -346,6 +514,118 @@ async function handleCancel() {
     exitEditMode(false);
 }
 
+function applyInlineWrap(prefix, suffix = prefix) {
+    if (!cmView) return;
+    const selection = cmView.state.selection.main;
+    const text = cmView.state.sliceDoc(selection.from, selection.to);
+
+    if (!text) {
+        const insertText = prefix + suffix;
+        cmView.dispatch({
+            changes: { from: selection.from, to: selection.to, insert: insertText },
+            selection: { anchor: selection.from + prefix.length }
+        });
+        cmView.focus();
+        return;
+    }
+
+    cmView.dispatch({
+        changes: { from: selection.from, to: selection.to, insert: `${prefix}${text}${suffix}` },
+        selection: {
+            anchor: selection.from + prefix.length,
+            head: selection.from + prefix.length + text.length
+        }
+    });
+    cmView.focus();
+}
+
+function getLineRangeForSelection(range) {
+    const startLine = cmView.state.doc.lineAt(range.from);
+    const endAnchor = range.empty ? range.to : Math.max(range.from, range.to - 1);
+    const endLine = cmView.state.doc.lineAt(endAnchor);
+    return { startLine, endLine };
+}
+
+function normalizeBlockLine(text) {
+    const match = text.match(/^(\s*)(#{1,6}\s+|>\s?|-\s\[\s\]\s+|\d+\.\s+|[-*+]\s+)?(.*)$/);
+    return {
+        indent: match?.[1] ?? "",
+        content: match?.[3] ?? text
+    };
+}
+
+function buildBlockLine(text, marker) {
+    const { indent, content } = normalizeBlockLine(text);
+    return `${indent}${marker}${content}`;
+}
+
+function applyBlockMarker(type) {
+    if (!cmView) return;
+    const selection = cmView.state.selection.main;
+    const { startLine, endLine } = getLineRangeForSelection(selection);
+    const lines = [];
+
+    for (let lineNumber = startLine.number; lineNumber <= endLine.number; lineNumber += 1) {
+        const line = cmView.state.doc.line(lineNumber);
+        if (type === 'hr') {
+            lines.push('---');
+            continue;
+        }
+
+        switch (type) {
+            case 'quote':
+                lines.push(buildBlockLine(line.text, '> '));
+                break;
+            case 'h1':
+                lines.push(buildBlockLine(line.text, '# '));
+                break;
+            case 'h2':
+                lines.push(buildBlockLine(line.text, '## '));
+                break;
+            case 'h3':
+                lines.push(buildBlockLine(line.text, '### '));
+                break;
+            case 'ul':
+                lines.push(buildBlockLine(line.text, '- '));
+                break;
+            case 'ol':
+                lines.push(buildBlockLine(line.text, '1. '));
+                break;
+            case 'task':
+                lines.push(buildBlockLine(line.text, '- [ ] '));
+                break;
+            default:
+                lines.push(line.text);
+        }
+    }
+
+    const from = startLine.from;
+    const to = endLine.to;
+    const replacement = lines.join('\n');
+    const firstLineMarkerEnd = from + (lines[0].length - normalizeBlockLine(startLine.text).content.length);
+    cmView.dispatch({
+        changes: { from, to, insert: replacement },
+        selection: selection.empty
+            ? { anchor: firstLineMarkerEnd }
+            : { anchor: from, head: from + replacement.length }
+    });
+    cmView.focus();
+}
+
+function insertHorizontalRule() {
+    if (!cmView) return;
+    const selection = cmView.state.selection.main;
+    const line = cmView.state.doc.lineAt(selection.from);
+    const prefix = selection.from > line.from ? '\n' : '';
+    const suffix = selection.from < line.to ? '\n' : '';
+    const insert = `${prefix}---${suffix}`;
+    cmView.dispatch({
+        changes: { from: selection.from, to: selection.to, insert },
+        selection: { anchor: selection.from + insert.length }
+    });
+    cmView.focus();
+}
+
 // ── Text Insert ────────────────────────────────────────────
 
 export function insertTextAtCursor(prefix, suffix) {
@@ -372,6 +652,157 @@ export function insertPlainTextAtCursor(text) {
     cmView.focus();
 }
 
+function closeSlashMenu() {
+    slashMenuState = null;
+    if (el.editorSlashMenu) {
+        el.editorSlashMenu.classList.add('hidden');
+        el.editorSlashMenu.innerHTML = '';
+    }
+}
+
+function renderSlashMenu() {
+    if (!el.editorSlashMenu || !slashMenuState) {
+        closeSlashMenu();
+        return;
+    }
+
+    const { commands, selectedIndex, anchorTop, anchorBottom, anchorLeft } = slashMenuState;
+    if (!commands.length) {
+        el.editorSlashMenu.innerHTML = '<div class="editor-slash-empty">No matching commands.</div>';
+    } else {
+        el.editorSlashMenu.innerHTML = commands.map((command, index) => `
+            <button
+                type="button"
+                class="editor-slash-item ${index === selectedIndex ? 'active' : ''}"
+                data-command-id="${command.id}"
+                role="option"
+                aria-selected="${index === selectedIndex ? 'true' : 'false'}"
+            >
+                <span>
+                    <span class="editor-slash-label">${command.label}</span>
+                    <span class="editor-slash-meta">${command.keywords}</span>
+                </span>
+                <span class="editor-slash-token">${command.token}</span>
+            </button>
+        `).join('');
+    }
+
+    el.editorSlashMenu.classList.remove('hidden');
+
+    const hostRect = el.editorView?.getBoundingClientRect();
+    const menuRect = el.editorSlashMenu.getBoundingClientRect();
+    if (!hostRect) return;
+
+    const horizontalPadding = 12;
+    const verticalPadding = 12;
+    const maxLeft = Math.max(horizontalPadding, hostRect.width - menuRect.width - horizontalPadding);
+    const left = Math.max(horizontalPadding, Math.min(anchorLeft, maxLeft));
+
+    const belowTop = anchorBottom + 10;
+    const aboveTop = anchorTop - menuRect.height - 10;
+    const maxTop = Math.max(verticalPadding, hostRect.height - menuRect.height - verticalPadding);
+    const top = belowTop + menuRect.height <= hostRect.height - verticalPadding
+        ? belowTop
+        : Math.max(verticalPadding, Math.min(aboveTop, maxTop));
+
+    el.editorSlashMenu.style.left = `${left}px`;
+    el.editorSlashMenu.style.top = `${top}px`;
+
+    const activeItem = el.editorSlashMenu.querySelector('.editor-slash-item.active');
+    if (activeItem) {
+        activeItem.scrollIntoView({ block: 'nearest' });
+    }
+}
+
+function updateSlashMenu() {
+    if (!cmView || !state.isEditing) {
+        closeSlashMenu();
+        return;
+    }
+
+    const selection = cmView.state.selection.main;
+    if (!selection.empty) {
+        closeSlashMenu();
+        return;
+    }
+
+    const line = cmView.state.doc.lineAt(selection.from);
+    const beforeCursor = line.text.slice(0, selection.from - line.from);
+    const match = beforeCursor.match(/(^|\s)\/([^\s/]*)$/);
+    if (!match) {
+        closeSlashMenu();
+        return;
+    }
+
+    const query = match[2] || '';
+    const commandStart = selection.from - query.length - 1;
+    const commands = filterSlashCommands(query);
+    const coords = cmView.coordsAtPos(selection.from);
+    const hostRect = el.editorView?.getBoundingClientRect();
+    if (!coords || !hostRect) {
+        closeSlashMenu();
+        return;
+    }
+
+    slashMenuState = {
+        from: commandStart,
+        to: selection.from,
+        query,
+        commands,
+        selectedIndex: Math.min(slashMenuState?.selectedIndex ?? 0, Math.max(commands.length - 1, 0)),
+        anchorTop: coords.top - hostRect.top,
+        anchorBottom: coords.bottom - hostRect.top,
+        anchorLeft: coords.left - hostRect.left,
+    };
+    renderSlashMenu();
+}
+
+function moveSlashSelection(delta) {
+    if (!slashMenuState || slashMenuState.commands.length === 0) return;
+    const count = slashMenuState.commands.length;
+    slashMenuState.selectedIndex = (slashMenuState.selectedIndex + delta + count) % count;
+    renderSlashMenu();
+}
+
+async function executeSlashCommand(commandId) {
+    if (!cmView || !slashMenuState) return;
+    const command = slashMenuState.commands.find(item => item.id === commandId);
+    const commandRange = { from: slashMenuState.from, to: slashMenuState.to };
+    closeSlashMenu();
+    if (!command) return;
+
+    cmView.dispatch({
+        changes: { from: commandRange.from, to: commandRange.to, insert: '' },
+        selection: { anchor: commandRange.from }
+    });
+
+    await command.run();
+}
+
+function bindSlashMenuEvents() {
+    if (!el.editorSlashMenu || slashMenuEventsBound) return;
+    slashMenuEventsBound = true;
+
+    el.editorSlashMenu.addEventListener('mousedown', event => {
+        event.preventDefault();
+    });
+
+    el.editorSlashMenu.addEventListener('mousemove', event => {
+        const button = event.target.closest('.editor-slash-item');
+        if (!button || !slashMenuState) return;
+        const index = slashMenuState.commands.findIndex(command => command.id === button.dataset.commandId);
+        if (index < 0 || index === slashMenuState.selectedIndex) return;
+        slashMenuState.selectedIndex = index;
+        renderSlashMenu();
+    });
+
+    el.editorSlashMenu.addEventListener('click', event => {
+        const button = event.target.closest('.editor-slash-item');
+        if (!button) return;
+        executeSlashCommand(button.dataset.commandId);
+    });
+}
+
 // ── Undo / Redo Actions ─────────────────────────────────────
 
 export function undoAction() {
@@ -392,6 +823,107 @@ export function getUndoDepth() {
 export function getRedoDepth() {
     if (!cmView) return 0;
     return redoDepth(cmView.state);
+}
+
+async function insertLink() {
+    const choice = await AskConfirm("Insert Link", "Would you like to enter a URL manually or select a local file?", "Local File", "Manual URL");
+    if (choice) {
+        const absPath = await SelectDocument();
+        if (absPath) {
+            const relPath = await GetRelativePath(state.currentFilePath, absPath);
+            insertTextAtCursor('[', `](${relPath})`);
+        }
+        return;
+    }
+
+    const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
+    if (url) insertTextAtCursor('[', `](${url})`);
+}
+
+async function insertImage() {
+    const choice = await AskConfirm("Insert Image", "Would you like to enter an image URL manually or select a local image?", "Local File", "Manual URL");
+    if (choice) {
+        const absPath = await SelectImage();
+        if (absPath) {
+            const relPath = await GetRelativePath(state.currentFilePath, absPath);
+            insertTextAtCursor('![', `](${relPath})`);
+        }
+        return;
+    }
+
+    const url = await showCustomPrompt("Insert Image", "Enter image URL:", "https://");
+    if (url) insertTextAtCursor('![', `](${url})`);
+}
+
+function insertCodeBlock() {
+    insertTextAtCursor('\n\`\`\`\n', '\n\`\`\`\n');
+}
+
+async function insertTable() {
+    const rowStr = await showCustomPrompt("Insert Table", "Rows (행 수):", "3");
+    if (!rowStr) return;
+    const colStr = await showCustomPrompt("Insert Table", "Columns (열 수):", "3");
+    if (!colStr) return;
+
+    const rows = parseInt(rowStr || "0");
+    const cols = parseInt(colStr || "0");
+    if (rows > 0 && cols > 0) {
+        let table = '\n|';
+        for (let c = 0; c < cols; c++) table += ` Header ${c + 1} |`;
+        table += '\n|';
+        for (let c = 0; c < cols; c++) table += ' --- |';
+        for (let r = 0; r < rows; r++) {
+            table += '\n|';
+            for (let c = 0; c < cols; c++) table += ' Cell |';
+        }
+        table += '\n';
+        insertTextAtCursor(table, '');
+    }
+}
+
+async function insertLatex() {
+    const block = await AskConfirm("LaTeX Math", "Use block math ($$)?\n(Cancel for inline math $)", "Block ($$)", "Inline ($)");
+    const tag = block ? '$$' : '$';
+    insertTextAtCursor(tag, tag);
+}
+
+async function insertEmoji() {
+    const choice = await showEmojiPicker();
+    if (choice) insertTextAtCursor(choice, '');
+}
+
+async function insertDivWrapper() {
+    const align = await showOptionGridPrompt("DIV Wrapper", "Choose alignment with arrow keys, then press Enter.", [
+        { value: 'top-left', label: 'Top left', previewIndex: 0 },
+        { value: 'top-center', label: 'Top center', previewIndex: 1 },
+        { value: 'top-right', label: 'Top right', previewIndex: 2 },
+        { value: 'center-left', label: 'Center left', previewIndex: 3 },
+        { value: 'center', label: 'Center', previewIndex: 4 },
+        { value: 'center-right', label: 'Center right', previewIndex: 5 },
+        { value: 'bottom-left', label: 'Bottom left', previewIndex: 6 },
+        { value: 'bottom-center', label: 'Bottom center', previewIndex: 7 },
+        { value: 'bottom-right', label: 'Bottom right', previewIndex: 8 },
+    ], 'center');
+    if (!align) return;
+    const width = await showCustomPrompt("DIV Wrapper", "Width (e.g. 100%, 400px):", "100%");
+    if (!width) return;
+
+    const alignMap = {
+        'top-left': { placeItems: 'start start', textAlign: 'left' },
+        'top-center': { placeItems: 'start center', textAlign: 'center' },
+        'top-right': { placeItems: 'start end', textAlign: 'right' },
+        'center-left': { placeItems: 'center start', textAlign: 'left' },
+        'center': { placeItems: 'center center', textAlign: 'center' },
+        'center-right': { placeItems: 'center end', textAlign: 'right' },
+        'bottom-left': { placeItems: 'end start', textAlign: 'left' },
+        'bottom-center': { placeItems: 'end center', textAlign: 'center' },
+        'bottom-right': { placeItems: 'end end', textAlign: 'right' },
+    };
+
+    const selectedAlign = alignMap[align] || alignMap.center;
+    const style = `display: grid; width: ${width}; place-items: ${selectedAlign.placeItems}; text-align: ${selectedAlign.textAlign};`;
+
+    insertTextAtCursor(`<div style="${style}">\n`, '\n</div>');
 }
 
 // ── Custom Prompt Modal ────────────────────────────────────
@@ -607,115 +1139,35 @@ export function showEmojiPicker() {
 // ── Editor Event Bindings ──────────────────────────────────
 
 export function bindEditorEvents() {
-    el.edBold.onclick = () => insertTextAtCursor('**', '**');
-    el.edItalic.onclick = () => insertTextAtCursor('*', '*');
-    el.edStrike.onclick = () => insertTextAtCursor('~~', '~~');
-    el.edQuote.onclick = () => insertTextAtCursor('\n> ', '');
-    el.edH1.onclick = () => insertTextAtCursor('\n# ', '');
-    el.edH2.onclick = () => insertTextAtCursor('\n## ', '');
-    el.edH3.onclick = () => insertTextAtCursor('\n### ', '');
-    el.edUl.onclick = () => insertTextAtCursor('\n- ', '');
-    el.edOl.onclick = () => insertTextAtCursor('\n1. ', '');
-    el.edHr.onclick = () => insertTextAtCursor('\n---\n', '');
+    bindSlashMenuEvents();
+    el.edBold.onclick = () => applyInlineWrap('**', '**');
+    el.edItalic.onclick = () => applyInlineWrap('*', '*');
+    el.edUnderline.onclick = () => applyInlineWrap('<u>', '</u>');
+    el.edStrike.onclick = () => applyInlineWrap('~~', '~~');
+    el.edQuote.onclick = () => applyBlockMarker('quote');
+    el.edH1.onclick = () => applyBlockMarker('h1');
+    el.edH2.onclick = () => applyBlockMarker('h2');
+    el.edH3.onclick = () => applyBlockMarker('h3');
+    el.edUl.onclick = () => applyBlockMarker('ul');
+    el.edOl.onclick = () => applyBlockMarker('ol');
+    el.edHr.onclick = () => insertHorizontalRule();
     
-    el.edLink.onclick = async () => {
-        const choice = await AskConfirm("Insert Link", "Would you like to enter a URL manually or select a local file?", "Local File", "Manual URL");
-        if (choice) {
-            const absPath = await SelectDocument();
-            if (absPath) {
-                const relPath = await GetRelativePath(state.currentFilePath, absPath);
-                insertTextAtCursor('[', `](${relPath})`);
-            }
-        } else {
-            const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
-            if (url) insertTextAtCursor('[', `](${url})`);
-        }
-    };
+    el.edLink.onclick = insertLink;
+    el.edImage.onclick = insertImage;
+    el.edCode.onclick = insertCodeBlock;
+    el.edTable.onclick = insertTable;
     
-    el.edImage.onclick = async () => {
-        const choice = await AskConfirm("Insert Image", "Would you like to enter an image URL manually or select a local image?", "Local File", "Manual URL");
-        if (choice) {
-            const absPath = await SelectImage();
-            if (absPath) {
-                const relPath = await GetRelativePath(state.currentFilePath, absPath);
-                insertTextAtCursor('![', `](${relPath})`);
-            }
-        } else {
-            const url = await showCustomPrompt("Insert Image", "Enter image URL:", "https://");
-            if (url) insertTextAtCursor('![', `](${url})`);
-        }
-    };
+    el.edTask.onclick = () => applyBlockMarker('task');
+    el.edLatex.onclick = insertLatex;
     
-    el.edCode.onclick = () => {
-        insertTextAtCursor('\n\`\`\`\n', '\n\`\`\`\n');
-    };
-    
-    el.edTable.onclick = async () => {
-        const rowStr = await showCustomPrompt("Insert Table", "Rows (행 수):", "3");
-        if (!rowStr) return;
-        const colStr = await showCustomPrompt("Insert Table", "Columns (열 수):", "3");
-        if (!colStr) return;
+    el.edEmoji.onclick = insertEmoji;
 
-        const rows = parseInt(rowStr || "0");
-        const cols = parseInt(colStr || "0");
-        if (rows > 0 && cols > 0) {
-            let table = '\n|';
-            for (let c = 0; c < cols; c++) table += ` Header ${c+1} |`;
-            table += '\n|';
-            for (let c = 0; c < cols; c++) table += ' --- |';
-            for (let r = 0; r < rows; r++) {
-                table += '\n|';
-                for (let c = 0; c < cols; c++) table += ` Cell |`;
-            }
-            table += '\n';
-            insertTextAtCursor(table, '');
-        }
-    };
-    
-    el.edTask.onclick = () => insertTextAtCursor('\n- [ ] ', '');
-    el.edLatex.onclick = async () => {
-        const block = await AskConfirm("LaTeX Math", "Use block math ($$)?\n(Cancel for inline math $)", "Block ($$)", "Inline ($)");
-        const tag = block ? '$$' : '$';
-        insertTextAtCursor(tag, tag);
-    };
-    
-    el.edEmoji.onclick = async () => {
-        const choice = await showEmojiPicker();
-        if (choice) insertTextAtCursor(choice, '');
-    };
-
-    el.edDiv.onclick = async () => {
-        const align = await showOptionGridPrompt("DIV Wrapper", "Choose alignment with arrow keys, then press Enter.", [
-            { value: 'top-left', label: 'Top left', previewIndex: 0 },
-            { value: 'top-center', label: 'Top center', previewIndex: 1 },
-            { value: 'top-right', label: 'Top right', previewIndex: 2 },
-            { value: 'center-left', label: 'Center left', previewIndex: 3 },
-            { value: 'center', label: 'Center', previewIndex: 4 },
-            { value: 'center-right', label: 'Center right', previewIndex: 5 },
-            { value: 'bottom-left', label: 'Bottom left', previewIndex: 6 },
-            { value: 'bottom-center', label: 'Bottom center', previewIndex: 7 },
-            { value: 'bottom-right', label: 'Bottom right', previewIndex: 8 },
-        ], 'center');
-        if (!align) return;
-        const width = await showCustomPrompt("DIV Wrapper", "Width (e.g. 100%, 400px):", "100%");
-        if (!width) return;
-
-        const alignMap = {
-            'top-left': { placeItems: 'start start', textAlign: 'left' },
-            'top-center': { placeItems: 'start center', textAlign: 'center' },
-            'top-right': { placeItems: 'start end', textAlign: 'right' },
-            'center-left': { placeItems: 'center start', textAlign: 'left' },
-            'center': { placeItems: 'center center', textAlign: 'center' },
-            'center-right': { placeItems: 'center end', textAlign: 'right' },
-            'bottom-left': { placeItems: 'end start', textAlign: 'left' },
-            'bottom-center': { placeItems: 'end center', textAlign: 'center' },
-            'bottom-right': { placeItems: 'end end', textAlign: 'right' },
-        };
-
-        const selectedAlign = alignMap[align] || alignMap.center;
-        const style = `display: grid; width: ${width}; place-items: ${selectedAlign.placeItems}; text-align: ${selectedAlign.textAlign};`;
-
-        insertTextAtCursor(`<div style="${style}">\n`, '\n</div>');
+    el.edDiv.onclick = insertDivWrapper;
+    el.edRenderMode.onchange = async event => {
+        state.currentEditorRenderMode = event.target.value || 'realtime';
+        lastPreviewCursorLine = getCursorLineNumber(cmView?.state);
+        schedulePreviewRender(getCurrentEditorText(), 0);
+        await persistEditorPreferences();
     };
 
     el.edFontMinus.onclick = () => {
