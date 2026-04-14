@@ -8,7 +8,7 @@ import {
     getPathDirname, normalizeFileURLPath, normalizeAppLocalFileHref,
     documentTypeFromPath, splitLinkTarget, isExternalURL,
     joinPath, getScroller, syncEngineSelector, deriveTabTitle,
-    isMacOS, isEditableTarget, isBundledDocumentPath,
+    isMacOS, isEditableTarget, isBundledDocumentPath, isActiveMarkdownEditTab,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab } from './main-render.js';
@@ -145,8 +145,9 @@ function pushCurrentHistory(path) {
 export function updateNavButtons() {
     const backBtnIcon = el.btnBack.querySelector('.material-symbols-outlined');
     const forwardBtnIcon = el.btnForward.querySelector('.material-symbols-outlined');
+    const isEditNavMode = isActiveMarkdownEditTab();
 
-    if (state.isEditing) {
+    if (isEditNavMode) {
         // Change to Undo/Redo
         if (backBtnIcon) backBtnIcon.textContent = 'undo';
         if (forwardBtnIcon) forwardBtnIcon.textContent = 'redo';
@@ -175,7 +176,7 @@ export function updateNavButtons() {
 }
 
 export function goBack() {
-    if (state.isEditing) {
+    if (isActiveMarkdownEditTab()) {
         undoAction();
         return;
     }
@@ -188,7 +189,7 @@ export function goBack() {
 }
 
 export function goForward() {
-    if (state.isEditing) {
+    if (isActiveMarkdownEditTab()) {
         redoAction();
         return;
     }
@@ -201,7 +202,7 @@ export function goForward() {
 }
 
 export function goHome() {
-    if (state.isEditing) return;
+    if (isActiveMarkdownEditTab()) return;
     openPath(state.homeTargetPath);
 }
 

@@ -25,7 +25,7 @@ let currentEditorFontSize = 15;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 
-function getCurrentEditorText() {
+export function getCurrentEditorText() {
     if (cmView) {
         return cmView.state.doc.toString();
     }
@@ -236,6 +236,10 @@ export function enterEditMode() {
 
     state.isEditing = true;
     state.editorOriginalContent = state.currentMarkdownSource;
+    state.editingSourcePath = state.currentFilePath;
+    state.editingSourceFolder = state.currentFolder;
+    state.editingPreviewPath = state.currentFilePath;
+    state.editingPreviewFolder = state.currentFolder;
     
     cmView.dispatch({
         changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource }
@@ -267,6 +271,10 @@ export async function exitEditMode(didSave = false) {
     if (!state.isEditing) return;
     
     state.isEditing = false;
+    state.editingSourcePath = "";
+    state.editingSourceFolder = "";
+    state.editingPreviewPath = "";
+    state.editingPreviewFolder = "";
     el.editToolbar.classList.add('hidden');
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
@@ -296,16 +304,19 @@ export function hasUnsavedEditorChanges() {
 export async function saveCurrentDocument({ confirm = true, exitAfterSave = true } = {}) {
     if (!cmView) return;
     const contentToSave = cmView.state.doc.toString();
+    const targetPath = state.editingSourcePath || state.currentFilePath;
     if (confirm) {
         const ok = await AskConfirm("Save Changes", "Do you want to save changes to the file?", "Save", "Cancel");
         if (!ok) return false;
     }
     
     try {
-        await SaveFile(state.currentFilePath, contentToSave);
+        await SaveFile(targetPath, contentToSave);
         showToast("File saved successfully. ✅");
         state.editorOriginalContent = contentToSave;
         state.currentMarkdownSource = contentToSave;
+        state.editingPreviewPath = state.editingSourcePath || targetPath;
+        state.editingPreviewFolder = state.editingSourceFolder || getPathDirname(targetPath);
         const tab = getActiveTab();
         if (tab) {
             tab.currentMarkdownSource = contentToSave;

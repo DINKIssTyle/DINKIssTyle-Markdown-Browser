@@ -961,6 +961,48 @@ html.dark ::-webkit-scrollbar-thumb {
     border-left: none;
 }
 
+.edit-preview-return {
+    position: absolute;
+    left: 75%;
+    bottom: 28px;
+    transform: translateX(-50%);
+    z-index: 8;
+    width: 38px;
+    height: 38px;
+    border: 1px solid rgba(217, 45, 32, 0.16);
+    border-radius: 999px;
+    background: rgba(254, 243, 242, 0.96);
+    color: #d92d20;
+    box-shadow: 0 10px 24px rgba(217, 45, 32, 0.12);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+}
+
+#main-container:not(.is-editing) .edit-preview-return {
+    display: none;
+}
+
+.edit-preview-return:hover {
+    transform: translateX(-50%) translateY(-1px);
+    box-shadow: 0 14px 28px rgba(217, 45, 32, 0.18);
+    background: rgba(254, 228, 226, 0.98);
+    border-color: rgba(217, 45, 32, 0.24);
+}
+
+.edit-preview-return .material-symbols-outlined {
+    font-size: 21px;
+}
+
+html.dark .edit-preview-return {
+    border-color: rgba(253, 162, 155, 0.24);
+    background: rgba(69, 10, 10, 0.42);
+    color: #fda29b;
+    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.34);
+}
+
 #main-container.is-editing .markdown-container {
     max-width: 100%;
 }
@@ -1464,30 +1506,36 @@ html.dark .context-menu-item:hover {
     max-width: 860px;
     padding: 20px;
 }
-.ai-settings-content > h3 {
+
+.ai-settings-content>h3 {
     margin: 0 0 12px 0;
 }
+
 .ai-settings-panels {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 12px;
     margin-bottom: 12px;
 }
+
 .ai-settings-content .ai-setting-group {
     background: rgba(0, 0, 0, 0.1);
     border-radius: 10px;
     padding: 12px;
     margin-bottom: 0;
 }
+
 html.dark .ai-settings-content .ai-setting-group {
     background: rgba(255, 255, 255, 0.05);
 }
+
 .ai-settings-content .ai-setting-group h4 {
     margin: 0;
     font-size: 13px;
     font-weight: 700;
     color: var(--accent-color);
 }
+
 .ai-settings-content .ai-setting-header {
     display: flex;
     align-items: center;
@@ -1495,26 +1543,32 @@ html.dark .ai-settings-content .ai-setting-group {
     gap: 12px;
     margin-bottom: 10px;
 }
+
 .ai-settings-content .ai-setting-lead {
     min-height: 72px;
     margin-bottom: 12px;
 }
+
 .ai-setting-header-tight {
     margin-bottom: 8px;
 }
+
 .ai-settings-content .ai-setting-grid {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px 12px;
 }
+
 .ai-setting-grid-single-row {
     grid-template-columns: 1fr;
 }
+
 .ai-settings-content .ai-setting-group label {
     margin-bottom: 0;
     font-size: 12px;
     color: var(--text-color);
 }
+
 .ai-settings-content .ai-setting-field {
     display: flex;
     flex-direction: column;
@@ -1522,15 +1576,18 @@ html.dark .ai-settings-content .ai-setting-group {
     font-weight: 600;
     line-height: 1.2;
 }
+
 .ai-settings-content .ai-setting-note {
     font-size: 11px;
     line-height: 1.45;
     color: rgba(31, 41, 55, 0.72);
     padding-top: 2px;
 }
+
 html.dark .ai-settings-content .ai-setting-note {
     color: rgba(226, 232, 240, 0.72);
 }
+
 .ai-settings-content .ai-setting-group input:not([type="checkbox"]),
 .ai-settings-content .ai-setting-group select {
     width: 100%;
@@ -1546,9 +1603,11 @@ html.dark .ai-settings-content .ai-setting-note {
     -webkit-appearance: none;
     box-sizing: border-box;
 }
+
 .ai-settings-content .ai-model-picker {
     position: relative;
 }
+
 .ai-settings-content .ai-model-trigger {
     display: flex;
     align-items: center;
@@ -1565,9 +1624,11 @@ html.dark .ai-settings-content .ai-setting-note {
     cursor: pointer;
     box-sizing: border-box;
 }
+
 .ai-settings-content .ai-model-trigger.is-placeholder {
     color: rgba(31, 41, 55, 0.58);
 }
+
 .ai-settings-content .ai-model-trigger-label {
     min-width: 0;
     overflow: hidden;
@@ -1575,20 +1636,24 @@ html.dark .ai-settings-content .ai-setting-note {
     text-overflow: ellipsis;
     text-align: left;
 }
+
 .ai-settings-content .ai-model-trigger-caret {
     flex: 0 0 auto;
     color: rgba(31, 41, 55, 0.55);
     font-size: 11px;
 }
+
 .ai-settings-content .ai-model-trigger:focus {
     outline: none;
     border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.14);
 }
+
 .ai-settings-content .ai-model-trigger:disabled {
     cursor: not-allowed;
     opacity: 0.55;
 }
+
 .ai-settings-content .ai-model-popover {
     position: absolute;
     top: calc(100% + 6px);
@@ -1604,16 +1669,19 @@ html.dark .ai-settings-content .ai-setting-note {
     box-shadow: 0 16px 32px rgba(15, 23, 42, 0.16);
     backdrop-filter: blur(10px);
 }
+
 .ai-settings-content .ai-model-popover-status {
     padding: 10px 8px;
     font-size: 12px;
     color: rgba(31, 41, 55, 0.7);
 }
+
 .ai-settings-content .ai-model-popover-list {
     display: flex;
     flex-direction: column;
     gap: 6px;
 }
+
 .ai-settings-content .ai-model-item {
     display: flex;
     align-items: center;
@@ -1623,10 +1691,12 @@ html.dark .ai-settings-content .ai-setting-note {
     border-radius: 8px;
     background: rgba(255, 255, 255, 0.82);
 }
+
 .ai-settings-content .ai-model-item.is-selected {
     border-color: rgba(0, 113, 227, 0.28);
     background: rgba(0, 113, 227, 0.08);
 }
+
 .ai-settings-content .ai-model-main {
     display: flex;
     flex: 1;
@@ -1641,6 +1711,7 @@ html.dark .ai-settings-content .ai-setting-note {
     text-align: left;
     cursor: pointer;
 }
+
 .ai-settings-content .ai-model-name {
     width: 100%;
     overflow: hidden;
@@ -1650,12 +1721,14 @@ html.dark .ai-settings-content .ai-setting-note {
     font-weight: 600;
     color: #1f2937;
 }
+
 .ai-settings-content .ai-model-meta {
     display: flex;
     align-items: center;
     gap: 6px;
     flex-wrap: wrap;
 }
+
 .ai-settings-content .ai-model-badge,
 .ai-settings-content .ai-model-state {
     display: inline-flex;
@@ -1665,15 +1738,18 @@ html.dark .ai-settings-content .ai-setting-note {
     font-size: 10px;
     font-weight: 700;
 }
+
 .ai-settings-content .ai-model-badge.is-loaded {
     color: #0f5132;
     background: rgba(25, 135, 84, 0.18);
 }
+
 .ai-settings-content .ai-model-state {
     color: rgba(31, 41, 55, 0.64);
     background: rgba(15, 23, 42, 0.06);
     text-transform: capitalize;
 }
+
 .ai-settings-content .ai-model-unload-btn {
     flex: 0 0 auto;
     height: 28px;
@@ -1686,62 +1762,77 @@ html.dark .ai-settings-content .ai-setting-note {
     font-weight: 700;
     cursor: pointer;
 }
+
 .ai-settings-content .ai-model-unload-btn:disabled {
     cursor: not-allowed;
     opacity: 0.55;
 }
+
 .ai-settings-content .ai-setting-group .hidden {
     display: none !important;
 }
+
 .ai-settings-content .ai-setting-group input:not([type="checkbox"])::placeholder {
     color: rgba(31, 41, 55, 0.45);
 }
+
 html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"]),
 html.dark .ai-settings-content .ai-setting-group select {
     background: rgba(15, 23, 42, 0.72);
     color: #e5eefc;
     border-color: rgba(148, 163, 184, 0.28);
 }
+
 html.dark .ai-settings-content .ai-model-trigger {
     background: rgba(15, 23, 42, 0.72);
     color: #e5eefc;
     border-color: rgba(148, 163, 184, 0.28);
 }
+
 html.dark .ai-settings-content .ai-model-trigger.is-placeholder,
 html.dark .ai-settings-content .ai-model-trigger-caret {
     color: rgba(229, 238, 252, 0.56);
 }
+
 html.dark .ai-settings-content .ai-model-popover {
     border-color: rgba(148, 163, 184, 0.22);
     background: rgba(15, 23, 42, 0.98);
     box-shadow: 0 20px 36px rgba(2, 6, 23, 0.42);
 }
+
 html.dark .ai-settings-content .ai-model-popover-status {
     color: rgba(226, 232, 240, 0.72);
 }
+
 html.dark .ai-settings-content .ai-model-item {
     border-color: rgba(148, 163, 184, 0.12);
     background: rgba(30, 41, 59, 0.82);
 }
+
 html.dark .ai-settings-content .ai-model-item.is-selected {
     border-color: rgba(96, 165, 250, 0.34);
     background: rgba(59, 130, 246, 0.14);
 }
+
 html.dark .ai-settings-content .ai-model-name {
     color: #e5eefc;
 }
+
 html.dark .ai-settings-content .ai-model-state {
     color: rgba(226, 232, 240, 0.74);
     background: rgba(148, 163, 184, 0.14);
 }
+
 html.dark .ai-settings-content .ai-model-unload-btn {
     background: rgba(15, 23, 42, 0.92);
     border-color: rgba(248, 113, 113, 0.24);
     color: #fda29b;
 }
+
 html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::placeholder {
     color: rgba(229, 238, 252, 0.4);
 }
+
 .ai-settings-content .ai-setting-group input:not([type="checkbox"]):focus,
 .ai-settings-content .ai-setting-group select:focus,
 .ai-settings-content .ai-model-main:focus {
@@ -1749,6 +1840,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     border-color: var(--accent-color);
     box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.14);
 }
+
 .ai-enable-toggle {
     display: inline-flex;
     align-items: center;
@@ -1761,15 +1853,18 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     white-space: nowrap;
     cursor: pointer;
 }
+
 .ai-enable-toggle span {
     line-height: 1;
 }
+
 .ai-enable-toggle input[type="checkbox"] {
     margin: 0;
     width: 14px;
     height: 14px;
     flex: 0 0 auto;
 }
+
 .ai-setting-checkbox-row {
     display: inline-flex;
     align-items: center;
@@ -1779,25 +1874,31 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     font-weight: 600;
     cursor: pointer;
 }
+
 .ai-setting-checkbox-row input[type="checkbox"] {
     width: 14px;
     height: 14px;
     margin: 0;
     flex: 0 0 auto;
 }
+
 .ai-setting-group-editor {
     margin-bottom: 12px;
 }
+
 @media (max-width: 720px) {
     .ai-settings-content {
         max-width: 92vw;
     }
+
     .ai-settings-panels {
         grid-template-columns: 1fr;
     }
+
     .ai-setting-grid {
         grid-template-columns: 1fr;
     }
+
     .ai-setting-header {
         align-items: flex-start;
         flex-direction: column;
@@ -1817,14 +1918,16 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     justify-content: center;
     border: none;
     cursor: pointer;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 800;
     transition: transform 0.2s, box-shadow 0.2s;
 }
+
 .ai-floating-btn:hover {
     transform: scale(1.1);
-    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
+
 .ai-prompt-box {
     position: absolute;
     background: var(--surface-color);
@@ -1834,12 +1937,13 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     display: flex;
     align-items: center;
     gap: 8px;
-    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.3);
     z-index: 801;
     min-width: 300px;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
 }
+
 .ai-prompt-box input {
     flex: 1;
     background: transparent;
@@ -1848,6 +1952,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     outline: none;
     font-size: 14px;
 }
+
 .ai-prompt-box button {
     background: transparent;
     color: var(--text-color);
@@ -1860,9 +1965,12 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     width: 28px;
     height: 28px;
 }
+
 .ai-prompt-box button:first-of-type {
-    color: var(--accent-color); /* Send button */
+    color: var(--accent-color);
+    /* Send button */
 }
+
 .ai-prompt-box button:hover {
     background: rgba(128, 128, 128, 0.1);
 }
@@ -1871,6 +1979,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     background: rgba(143, 0, 255, 0.15) !important;
     color: #b055ff !important;
 }
+
 /* ── FIM Ghost Text Decoration ────────────────────── */
 .cm-ghost-text {
     color: #888888;
@@ -1887,19 +1996,23 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     width: 100%;
     background: transparent;
 }
+
 .cm-editor.cm-focused {
     outline: none !important;
 }
+
 .cm-scroller {
     overflow: auto;
     padding: 16px 16px 16px 0;
 }
+
 .cm-content {
     font-family: var(--code-font);
     line-height: 1.6;
     max-width: 1012px;
     margin: 0 auto;
 }
+
 /* AI Progress Overlay */
 #ai-progress-overlay {
     position: fixed;
@@ -1911,7 +2024,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     border-radius: 12px;
     padding: 12px 16px;
     min-width: 280px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
     z-index: 1000;
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
@@ -1965,8 +2078,13 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 @keyframes ai-spin {
-    0% { transform: rotate(0deg); }
-    100% { transform: rotate(360deg); }
+    0% {
+        transform: rotate(0deg);
+    }
+
+    100% {
+        transform: rotate(360deg);
+    }
 }
 
 #ai-progress-overlay.loading .ai-progress-spinner {
@@ -1974,7 +2092,8 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 #ai-progress-overlay.loading .ai-progress-bar-container {
-    opacity: 0.5; /* Fade bar during indeterminate loading */
+    opacity: 0.5;
+    /* Fade bar during indeterminate loading */
 }
 
 .ai-progress-label-wrap {

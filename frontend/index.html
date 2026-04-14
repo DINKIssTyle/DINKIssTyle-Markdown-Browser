@@ -151,6 +151,10 @@
         </div>
 
         <main id="main-container">
+            <button id="edit-preview-return" class="edit-preview-return hidden" type="button"
+                title="Return to editing preview" aria-label="Return to editing preview">
+                <span class="material-symbols-outlined" aria-hidden="true">arrow_back_ios_new</span>
+            </button>
             <!-- Markdown Content -->
             <article id="content-view" class="content-view">
                 <!-- Home Screen (Recent Files) -->
@@ -297,12 +301,15 @@
                             <label class="ai-setting-field">Model
                                 <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
                                 <div id="ai-general-model-picker" class="ai-model-picker hidden">
-                                    <button type="button" id="ai-general-model-trigger" class="ai-model-trigger" aria-haspopup="dialog" aria-expanded="false">
-                                        <span id="ai-general-model-trigger-label" class="ai-model-trigger-label">Choose a model...</span>
+                                    <button type="button" id="ai-general-model-trigger" class="ai-model-trigger"
+                                        aria-haspopup="dialog" aria-expanded="false">
+                                        <span id="ai-general-model-trigger-label" class="ai-model-trigger-label">Choose
+                                            a model...</span>
                                         <span class="ai-model-trigger-caret">▾</span>
                                     </button>
                                     <div id="ai-general-model-popover" class="ai-model-popover hidden">
-                                        <div id="ai-general-model-status" class="ai-model-popover-status">Loading models...</div>
+                                        <div id="ai-general-model-status" class="ai-model-popover-status">Loading
+                                            models...</div>
                                         <div id="ai-general-model-list" class="ai-model-popover-list"></div>
                                     </div>
                                 </div>
@@ -335,16 +342,6 @@
                             </label>
                             <label class="ai-setting-field">Model
                                 <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
-                                <div id="ai-fim-model-picker" class="ai-model-picker hidden">
-                                    <button type="button" id="ai-fim-model-trigger" class="ai-model-trigger" aria-haspopup="dialog" aria-expanded="false">
-                                        <span id="ai-fim-model-trigger-label" class="ai-model-trigger-label">Choose a model...</span>
-                                        <span class="ai-model-trigger-caret">▾</span>
-                                    </button>
-                                    <div id="ai-fim-model-popover" class="ai-model-popover hidden">
-                                        <div id="ai-fim-model-status" class="ai-model-popover-status">Loading models...</div>
-                                        <div id="ai-fim-model-list" class="ai-model-popover-list"></div>
-                                    </div>
-                                </div>
                             </label>
                             <label class="ai-setting-field">API Key
                                 <input type="password" id="ai-fim-key" placeholder="Bearer Token" />

@@ -60,10 +60,6 @@ let lmStudioModels = [];
 let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
 let unloadingInstanceId = "";
-let fimModels = [];
-let fimModelsLoading = false;
-let fimModelsError = "";
-let fimUnloadingInstanceId = "";
 
 export async function initAI() {
     const s = await GetSettings();
@@ -103,8 +99,6 @@ export async function initAI() {
     syncAIControls();
     syncGeneralModelControl();
     updateGeneralModelTrigger();
-    syncFimModelControl();
-    updateFimModelTrigger();
 
     return aiState;
 }
@@ -119,12 +113,6 @@ export function bindAIEvents() {
     el.aiGeneralKey.addEventListener('blur', handleGeneralEndpointChange);
     el.aiGeneralModelTrigger.addEventListener('click', handleGeneralModelTriggerClick);
     el.aiGeneralModelList.addEventListener('click', handleGeneralModelListClick);
-    el.aiFimEndpoint.addEventListener('change', handleFimEndpointChange);
-    el.aiFimEndpoint.addEventListener('blur', handleFimEndpointChange);
-    el.aiFimKey.addEventListener('change', handleFimEndpointChange);
-    el.aiFimKey.addEventListener('blur', handleFimEndpointChange);
-    el.aiFimModelTrigger.addEventListener('click', handleFimModelTriggerClick);
-    el.aiFimModelList.addEventListener('click', handleFimModelListClick);
     document.addEventListener('click', handleDocumentClickForModelPopover);
     document.addEventListener('keydown', handleDocumentKeydownForModelPopover);
 
@@ -132,16 +120,13 @@ export function bindAIEvents() {
     el.edSettings.onclick = () => {
         syncAISettingsSections();
         syncGeneralModelControl();
-        syncFimModelControl();
         if (el.aiGeneralProvider.value === 'lmstudio') {
             refreshLMStudioModels({ keepOpen: false });
         }
-        refreshFIMModels({ keepOpen: false });
         el.aiSettingsModal.classList.remove('hidden');
     };
     el.aiSettingsCancel.onclick = () => {
         closeGeneralModelPopover();
-        closeFimModelPopover();
         el.aiSettingsModal.classList.add('hidden');
     };
     el.aiSettingsSave.onclick = async () => {
@@ -179,7 +164,6 @@ export function bindAIEvents() {
         syncAIControls();
 
         closeGeneralModelPopover();
-        closeFimModelPopover();
         el.aiSettingsModal.classList.add('hidden');
         showToast("AI Settings Saved.");
     };
@@ -611,7 +595,6 @@ function syncAISettingsSections() {
     setSectionInputsEnabled('ai-fim-enabled', [
         el.aiFimEndpoint,
         el.aiFimModel,
-        el.aiFimModelTrigger,
         el.aiFimKey,
         el.aiFimTemp,
     ]);
@@ -672,52 +655,6 @@ async function refreshLMStudioModels({ keepOpen = false } = {}) {
     }
 }
 
-function handleFimEndpointChange() {
-    refreshFIMModels({ keepOpen: isFimModelPopoverOpen() });
-}
-
-function syncFimModelControl() {
-    const usePicker = fimModelsLoading || fimModels.length > 0;
-    el.aiFimModel.classList.toggle('hidden', usePicker);
-    el.aiFimModelPicker.classList.toggle('hidden', !usePicker);
-    updateFimModelTrigger();
-    if (!usePicker) {
-        closeFimModelPopover();
-    }
-}
-
-async function refreshFIMModels({ keepOpen = false } = {}) {
-    const endpointValue = el.aiFimEndpoint.value.trim();
-    if (!endpointValue) {
-        fimModels = [];
-        fimModelsLoading = false;
-        fimModelsError = "";
-        renderFimModelPicker();
-        syncFimModelControl();
-        return;
-    }
-    fimModelsLoading = true;
-    fimModelsError = "";
-    renderFimModelPicker();
-    syncFimModelControl();
-
-    try {
-        fimModels = await fetchModelCatalogWithFallback(endpointValue, getFimAIHeaders());
-    } catch (err) {
-        console.error("FIM model list error", err);
-        fimModels = [];
-        fimModelsError = err?.message || "Failed to load models.";
-    } finally {
-        fimModelsLoading = false;
-        renderFimModelPicker();
-        updateFimModelTrigger();
-        syncFimModelControl();
-        if (!keepOpen) {
-            closeFimModelPopover();
-        }
-    }
-}
-
 function renderLMStudioModelPicker() {
     const currentValue = el.aiGeneralModel.value || window.aiState?.generalModel || "";
     if (lmStudioModelsLoading) {
@@ -760,48 +697,6 @@ function renderLMStudioModelPicker() {
     }).join('');
 }
 
-function renderFimModelPicker() {
-    const currentValue = el.aiFimModel.value || window.aiState?.fimModel || "";
-    if (fimModelsLoading) {
-        el.aiFimModelStatus.textContent = "Loading models...";
-        el.aiFimModelStatus.classList.remove('hidden');
-        el.aiFimModelList.innerHTML = "";
-        return;
-    }
-    if (fimModelsError) {
-        el.aiFimModelStatus.textContent = fimModelsError;
-        el.aiFimModelStatus.classList.remove('hidden');
-        el.aiFimModelList.innerHTML = "";
-        return;
-    }
-    if (!fimModels.length) {
-        el.aiFimModelStatus.textContent = "No FIM models found.";
-        el.aiFimModelStatus.classList.remove('hidden');
-        el.aiFimModelList.innerHTML = "";
-        return;
-    }
-    el.aiFimModelStatus.classList.add('hidden');
-    el.aiFimModelList.innerHTML = fimModels.map((model) => {
-        const selected = model.id === currentValue;
-        const loadedBadge = model.isLoaded ? `<span class="ai-model-badge is-loaded">Loaded</span>` : '';
-        const stateLabel = model.stateLabel ? `<span class="ai-model-state">${escapeHTMLAttr(model.stateLabel)}</span>` : '';
-        const unloadDisabled = !model.primaryLoadedInstanceId || fimUnloadingInstanceId === model.primaryLoadedInstanceId;
-        const unloadLabel = fimUnloadingInstanceId === model.primaryLoadedInstanceId ? 'Unloading...' : 'Unload';
-        const unloadButton = model.isLoaded
-            ? `<button type="button" class="ai-model-unload-btn" data-action="unload" data-instance-id="${escapeHTMLAttr(model.primaryLoadedInstanceId || '')}" ${unloadDisabled ? 'disabled' : ''}>${escapeHTMLAttr(unloadLabel)}</button>`
-            : '';
-        return `
-            <div class="ai-model-item${selected ? ' is-selected' : ''}">
-                <button type="button" class="ai-model-main" data-action="select" data-model-id="${escapeHTMLAttr(model.id)}">
-                    <span class="ai-model-name">${escapeHTMLAttr(model.displayName || model.id)}</span>
-                    <span class="ai-model-meta">${loadedBadge}${stateLabel}</span>
-                </button>
-                ${unloadButton}
-            </div>
-        `;
-    }).join('');
-}
-
 function escapeHTMLAttr(value) {
     return String(value)
         .replace(/&/g, '&amp;')
@@ -828,29 +723,12 @@ function getGeneralAIHeaders() {
     return headers;
 }
 
-function getFimAIHeaders() {
-    const headers = {};
-    const key = el.aiFimKey.value.trim();
-    if (key) {
-        headers.Authorization = `Bearer ${key}`;
-    }
-    return headers;
-}
-
 function updateGeneralModelTrigger() {
     if (!el.aiGeneralModelTriggerLabel) return;
     const currentValue = el.aiGeneralModel.value || window.aiState?.generalModel || "";
     const selectedModel = lmStudioModels.find((model) => model.id === currentValue);
     el.aiGeneralModelTriggerLabel.textContent = selectedModel?.displayName || currentValue || "Choose a model...";
     el.aiGeneralModelTrigger.classList.toggle('is-placeholder', !currentValue);
-}
-
-function updateFimModelTrigger() {
-    if (!el.aiFimModelTriggerLabel) return;
-    const currentValue = el.aiFimModel.value || window.aiState?.fimModel || "";
-    const selectedModel = fimModels.find((model) => model.id === currentValue);
-    el.aiFimModelTriggerLabel.textContent = selectedModel?.displayName || currentValue || "Choose a model...";
-    el.aiFimModelTrigger.classList.toggle('is-placeholder', !currentValue);
 }
 
 function handleGeneralModelTriggerClick(event) {
@@ -882,47 +760,15 @@ function isGeneralModelPopoverOpen() {
     return !el.aiGeneralModelPopover.classList.contains('hidden');
 }
 
-function handleFimModelTriggerClick(event) {
-    event.preventDefault();
-    event.stopPropagation();
-    if (el.aiFimModelTrigger.disabled) return;
-    if (isFimModelPopoverOpen()) {
-        closeFimModelPopover();
-        return;
-    }
-    openFimModelPopover();
-    if (!fimModels.length && !fimModelsLoading) {
-        refreshFIMModels({ keepOpen: true });
-    }
-}
-
-function openFimModelPopover() {
-    el.aiFimModelPopover.classList.remove('hidden');
-    el.aiFimModelTrigger.setAttribute('aria-expanded', 'true');
-}
-
-function closeFimModelPopover() {
-    el.aiFimModelPopover.classList.add('hidden');
-    el.aiFimModelTrigger.setAttribute('aria-expanded', 'false');
-}
-
-function isFimModelPopoverOpen() {
-    return !el.aiFimModelPopover.classList.contains('hidden');
-}
-
 function handleDocumentClickForModelPopover(event) {
     if (isGeneralModelPopoverOpen() && !el.aiGeneralModelPicker.contains(event.target)) {
         closeGeneralModelPopover();
-    }
-    if (isFimModelPopoverOpen() && !el.aiFimModelPicker.contains(event.target)) {
-        closeFimModelPopover();
     }
 }
 
 function handleDocumentKeydownForModelPopover(event) {
     if (event.key === 'Escape') {
         if (isGeneralModelPopoverOpen()) closeGeneralModelPopover();
-        if (isFimModelPopoverOpen()) closeFimModelPopover();
     }
 }
 
@@ -950,30 +796,6 @@ function handleGeneralModelListClick(event) {
     }
 }
 
-function handleFimModelListClick(event) {
-    const actionTarget = event.target.closest('[data-action]');
-    if (!actionTarget) return;
-    event.preventDefault();
-    event.stopPropagation();
-
-    const action = actionTarget.dataset.action;
-    if (action === 'select') {
-        const modelID = actionTarget.dataset.modelId || "";
-        if (!modelID) return;
-        el.aiFimModel.value = modelID;
-        updateFimModelTrigger();
-        renderFimModelPicker();
-        closeFimModelPopover();
-        return;
-    }
-
-    if (action === 'unload') {
-        const instanceID = actionTarget.dataset.instanceId || "";
-        if (!instanceID || fimUnloadingInstanceId) return;
-        unloadFimModelInstance(instanceID);
-    }
-}
-
 async function unloadGeneralModelInstance(instanceID) {
     try {
         unloadingInstanceId = instanceID;
@@ -987,22 +809,6 @@ async function unloadGeneralModelInstance(instanceID) {
     } finally {
         unloadingInstanceId = "";
         renderLMStudioModelPicker();
-    }
-}
-
-async function unloadFimModelInstance(instanceID) {
-    try {
-        fimUnloadingInstanceId = instanceID;
-        renderFimModelPicker();
-        await UnloadAIModel(el.aiFimEndpoint.value.trim(), getFimAIHeaders(), instanceID);
-        showToast("FIM model unloaded.");
-        await refreshFIMModels({ keepOpen: true });
-    } catch (err) {
-        console.error("FIM unload error", err);
-        showToast(`Unload failed: ${err?.message || err}`);
-    } finally {
-        fimUnloadingInstanceId = "";
-        renderFimModelPicker();
     }
 }
 

@@ -11,18 +11,26 @@ import mermaid from 'mermaid';
 
 import {
     state, el, getScroller, HOME_SCREEN_PATH,
-    joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector,
-    isBundledDocumentPath,
+    joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector, getPathDirname,
+    isBundledDocumentPath, normalizeAppLocalFileHref, normalizeFileURLPath, isActiveMarkdownEditTab,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
-import { exitEditMode } from './main-editor.js';
+import { exitEditMode, getCurrentEditorText } from './main-editor.js';
 import { applyHighlight, clearHighlight } from './main-ui.js';
-import { GetRecentFiles, ReadImageAsDataURL } from '../wailsjs/go/main/App';
+import { GetRecentFiles, ReadFile, ReadImageAsDataURL } from '../wailsjs/go/main/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────
 let recentFilesCache = [];
 let htmlFrameResizeObserver = null;
+
+function syncEditingPreviewReturnButton() {
+    const shouldShow = state.isEditing &&
+        !!state.editingSourcePath &&
+        !!state.editingPreviewPath &&
+        state.editingPreviewPath !== state.editingSourcePath;
+    el.editPreviewReturn.classList.toggle('hidden', !shouldShow);
+}
 
 // ── Mermaid Configuration ──────────────────────────────────
 
@@ -64,6 +72,7 @@ export async function renderMarkdown(content) {
     }
     el.markdownContainer.innerHTML = html;
     await postProcess();
+    syncEditingPreviewReturnButton();
 }
 
 // ── Recent Files Rendering ─────────────────────────────────
@@ -99,17 +108,6 @@ export async function renderActiveTab() {
     syncEngineSelector();
     el.currentPath.innerText = formatDisplayPath(state.currentFilePath);
 
-    // Update nav buttons
-    if (state.isEditing) {
-        el.btnBack.disabled = true;
-        el.btnForward.disabled = true;
-        el.btnHome.disabled = true;
-    } else {
-        el.btnBack.disabled = state.navIndex <= 0;
-        el.btnForward.disabled = state.navIndex >= state.navHistory.length - 1;
-        el.btnHome.disabled = false;
-    }
-
     // Update edit button state
     const isMarkdown = state.currentDocumentType === 'markdown' && 
                        state.currentFilePath !== HOME_SCREEN_PATH && 
@@ -120,6 +118,9 @@ export async function renderActiveTab() {
         state.isEditing = false;
         state.editorOriginalContent = "";
     }
+
+    const { updateNavButtons } = await import('./main-navigation.js');
+    updateNavButtons();
 
     if (state.currentFilePath === HOME_SCREEN_PATH) {
         await renderHomeScreen();
@@ -151,6 +152,10 @@ export async function renderActiveTab() {
     } else {
         el.htmlFrame.classList.add('hidden');
         el.markdownContainer.classList.remove('hidden');
+        if (state.isEditing && !state.editingPreviewPath) {
+            state.editingPreviewPath = state.editingSourcePath || state.currentFilePath;
+            state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
+        }
         await renderMarkdown(state.currentMarkdownSource);
     }
 
@@ -195,6 +200,10 @@ async function renderHomeScreen() {
     el.htmlFrame.classList.add('hidden');
     el.homeScreen.classList.remove('hidden');
     getScroller().scrollTop = state.navHistory[state.navIndex]?.scroll ?? 0;
+    syncEditingPreviewReturnButton();
+
+    const { updateNavButtons } = await import('./main-navigation.js');
+    updateNavButtons();
 }
 
 // ── Post Processing ────────────────────────────────────────
@@ -223,6 +232,10 @@ async function postProcess() {
             }
 
             const wantsNewTab = event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1;
+            if (state.isEditing && !wantsNewTab) {
+                previewEditingLinkTarget(href);
+                return;
+            }
             import('./main-navigation.js').then(mod => mod.resolveLink(href, { newTab: wantsNewTab }));
         };
 
@@ -237,7 +250,10 @@ async function postProcess() {
     el.markdownContainer.querySelectorAll('img').forEach(img => {
         const src = img.getAttribute('src');
         if (src && !src.startsWith('http') && !src.startsWith('data:')) {
-            const abs = joinPath(state.currentFolder, src);
+            const imageBaseFolder = state.isEditing
+                ? (state.editingPreviewFolder || state.editingSourceFolder || state.currentFolder)
+                : state.currentFolder;
+            const abs = joinPath(imageBaseFolder, src);
             ReadImageAsDataURL(abs)
                 .then(dataUrl => {
                     if (dataUrl) img.src = dataUrl;
@@ -250,6 +266,51 @@ async function postProcess() {
 
     // Mermaid 다이어그램 렌더링 (병렬 실행 방지 위해 await)
     await renderMermaidSub();
+}
+
+export async function previewEditingLinkTarget(rel) {
+    const { pathPart, anchor } = splitLinkTarget(rel);
+
+    if (!pathPart && anchor) {
+        scrollToAnchor(anchor);
+        return;
+    }
+
+    const previewBaseFolder = state.editingPreviewFolder || state.editingSourceFolder || state.currentFolder;
+    const normalizedPathPart = normalizeAppLocalFileHref(pathPart) || pathPart;
+    const fileURLPath = normalizeFileURLPath(normalizedPathPart);
+    const resolvedPath = fileURLPath.startsWith('/') ? fileURLPath : joinPath(previewBaseFolder, fileURLPath);
+
+    if (resolvedPath === state.editingSourcePath) {
+        await restoreEditingPreview();
+        if (anchor) {
+            scrollToAnchor(anchor);
+        }
+        return;
+    }
+
+    let previewContent = "";
+    if (isBundledDocumentPath(resolvedPath)) {
+        previewContent = await loadBundledMarkdown(resolvedPath);
+    } else {
+        previewContent = await ReadFile(resolvedPath);
+    }
+
+    state.editingPreviewPath = resolvedPath;
+    state.editingPreviewFolder = isBundledDocumentPath(resolvedPath) ? "" : getPathDirname(resolvedPath);
+    el.markdownContainer.classList.remove('hidden');
+    el.htmlFrame.classList.add('hidden');
+    await renderMarkdown(previewContent);
+    if (anchor) {
+        scrollToAnchor(anchor);
+    }
+}
+
+export async function restoreEditingPreview() {
+    if (!state.isEditing) return;
+    state.editingPreviewPath = state.editingSourcePath || state.currentFilePath;
+    state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
+    await renderMarkdown(getCurrentEditorText());
 }
 
 // ── Mermaid Rendering ──────────────────────────────────────

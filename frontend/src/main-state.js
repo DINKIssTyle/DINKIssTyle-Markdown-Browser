@@ -20,6 +20,7 @@ export const el = {
     homeScreen: $('home-screen'),
     recentList: $('recent-files-list'),
     markdownContainer: $('markdown-container'),
+    editPreviewReturn: $('edit-preview-return'),
     htmlFrame: $('html-frame'),
     searchSidebar: $('search-sidebar'),
     searchInput: $('search-input'),
@@ -103,12 +104,6 @@ export const el = {
     aiFimEnabled: $('ai-fim-enabled'),
     aiFimEndpoint: $('ai-fim-endpoint'),
     aiFimModel: $('ai-fim-model'),
-    aiFimModelPicker: $('ai-fim-model-picker'),
-    aiFimModelTrigger: $('ai-fim-model-trigger'),
-    aiFimModelTriggerLabel: $('ai-fim-model-trigger-label'),
-    aiFimModelPopover: $('ai-fim-model-popover'),
-    aiFimModelStatus: $('ai-fim-model-status'),
-    aiFimModelList: $('ai-fim-model-list'),
     aiFimKey: $('ai-fim-key'),
     aiFimTemp: $('ai-fim-temp'),
     aiSettingsCancel: $('ai-settings-cancel'),
@@ -156,6 +151,10 @@ export const state = {
     nextTabID: 1,
     isEditing: false,
     editorOriginalContent: "",
+    editingSourcePath: "",
+    editingSourceFolder: "",
+    editingPreviewPath: "",
+    editingPreviewFolder: "",
     koreanImeFixEnabled: false,
 };
 
@@ -361,6 +360,13 @@ export function debounce(fn, ms) {
 
 export function isBundledDocumentPath(path) {
     return path === THIRD_PARTY_NOTICES_PATH || path === WHATS_NEW_PATH;
+}
+
+export function isActiveMarkdownEditTab() {
+    return state.isEditing &&
+        state.currentDocumentType === 'markdown' &&
+        state.currentFilePath !== HOME_SCREEN_PATH &&
+        !isBundledDocumentPath(state.currentFilePath);
 }
 
 // ── Engine Selector Sync ───────────────────────────────────
