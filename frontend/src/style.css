@@ -191,7 +191,8 @@ html.dark .tab-add-btn:hover {
     font-size: 18px;
 }
 
-.nav-group, .action-group {
+.nav-group,
+.action-group {
     display: flex;
     align-items: center;
     gap: 8px;
@@ -315,12 +316,14 @@ html.dark .nav-btn:hover {
 .sidebar {
     width: var(--sidebar-width);
     background: var(--surface-color);
-    border-left: 1px solid var(--border-color);  /* left border since it's on the right */
+    border-left: 1px solid var(--border-color);
+    /* left border since it's on the right */
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
     overflow: hidden;
-    order: 2;  /* push to right */
+    order: 2;
+    /* push to right */
     user-select: none;
     -webkit-user-select: none;
 }
@@ -420,8 +423,10 @@ html.dark .nav-btn:hover {
     padding: 40px;
     display: flex;
     flex-direction: column;
-    order: 1;  /* left of sidebar */
-    min-width: 0;  /* prevent overflow */
+    order: 1;
+    /* left of sidebar */
+    min-width: 0;
+    /* prevent overflow */
 }
 
 .content-view.html-mode {
@@ -532,14 +537,20 @@ html.dark .empty-state {
     gap: 8px;
     transition: opacity 0.2s;
 }
+
 .action-btn .material-symbols-outlined {
     font-size: 18px;
 }
-.action-btn:hover { opacity: 0.8; }
+
+.action-btn:hover {
+    opacity: 0.8;
+}
+
 .action-btn.primary {
     background: var(--accent-color);
     color: #fff;
 }
+
 .action-btn.secondary {
     background: var(--surface-color);
     color: var(--text-color);
@@ -605,7 +616,8 @@ html.dark .html-frame {
     background: transparent;
 }
 
-.markdown-container h1, .markdown-container h2 {
+.markdown-container h1,
+.markdown-container h2 {
     padding-bottom: 0.3em;
     border-bottom: 1px solid var(--border-color);
     margin-top: 24px;
@@ -613,21 +625,26 @@ html.dark .html-frame {
     font-weight: 600;
 }
 
-.markdown-container h3, .markdown-container h4, .markdown-container h5 {
+.markdown-container h3,
+.markdown-container h4,
+.markdown-container h5 {
     margin-top: 24px;
     margin-bottom: 16px;
     font-weight: 600;
 }
 
-.markdown-container p, .markdown-container ul, .markdown-container ol {
+.markdown-container p,
+.markdown-container ul,
+.markdown-container ol {
     margin-bottom: 16px;
 }
 
-.markdown-container ul, .markdown-container ol {
+.markdown-container ul,
+.markdown-container ol {
     padding-left: 2em;
 }
 
-.markdown-container li + li {
+.markdown-container li+li {
     margin-top: 0.25em;
 }
 
@@ -644,7 +661,8 @@ html.dark .html-frame {
     margin-top: 0;
 }
 
-.markdown-container table th, .markdown-container table td {
+.markdown-container table th,
+.markdown-container table td {
     padding: 6px 13px;
     border: 1px solid var(--border-color);
 }
@@ -706,18 +724,31 @@ html.dark .html-frame {
     text-decoration: none;
 }
 
-.markdown-container a:hover { text-decoration: underline; }
+.markdown-container a:hover {
+    text-decoration: underline;
+}
 
-.hidden { display: none !important; }
+.hidden {
+    display: none !important;
+}
 
 /* Scrollbar */
-::-webkit-scrollbar { width: 8px; }
-::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
 ::-webkit-scrollbar-thumb {
     background: rgba(0, 0, 0, 0.1);
     border-radius: 4px;
 }
-html.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+
+html.dark ::-webkit-scrollbar-thumb {
+    background: rgba(255, 255, 255, 0.1);
+}
 
 /* ── Edit Toolbar ─────────────────────────────────────── */
 .edit-toolbar {
@@ -828,13 +859,13 @@ html.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
 #main-container.is-editing {
     flex-direction: row;
 }
- 
+
 #main-container.is-editing .editor-view {
     border-right: 1px solid var(--border-color);
     width: 50%;
     max-width: 50%;
 }
- 
+
 #main-container.is-editing .content-view {
     display: flex !important;
     width: 50%;
@@ -857,16 +888,19 @@ html.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
     padding: 0 1px;
     transition: background 0.2s;
 }
+
 .search-highlight.active {
     background: #ff8800;
     color: #fff;
     outline: 2px solid #ff8800;
     outline-offset: 1px;
 }
+
 html.dark .search-highlight {
     background: #5a4a00;
     color: #ffe566;
 }
+
 html.dark .search-highlight.active {
     background: #cc6600;
     color: #fff;
@@ -888,12 +922,13 @@ html.dark .search-highlight.active {
     display: flex;
     align-items: center;
     gap: 10px;
-    box-shadow: 0 6px 24px rgba(0,0,0,0.25);
+    box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
     z-index: 500;
     font-size: 13px;
     color: var(--text-color);
     user-select: none;
 }
+
 .highlight-nav button {
     background: transparent;
     border: none;
@@ -908,8 +943,16 @@ html.dark .search-highlight.active {
     justify-content: center;
     transition: background 0.15s;
 }
-.highlight-nav button:hover { background: rgba(128,128,128,0.2); }
-#hl-counter { min-width: 48px; text-align: center; font-weight: 600; }
+
+.highlight-nav button:hover {
+    background: rgba(128, 128, 128, 0.2);
+}
+
+#hl-counter {
+    min-width: 48px;
+    text-align: center;
+    font-weight: 600;
+}
 
 /* ── Toast ─────────────────────────────────────────────── */
 .toast {
@@ -928,9 +971,11 @@ html.dark .search-highlight.active {
     z-index: 600;
     white-space: nowrap;
 }
+
 html:not(.dark) .toast {
     background: rgba(50, 50, 50, 0.88);
 }
+
 .toast.show {
     opacity: 1;
     transform: translateX(-50%) translateY(0);
@@ -987,14 +1032,12 @@ html.dark .progress-widget {
 
 .progress-title.shimmering {
     display: inline-block;
-    background: linear-gradient(
-        110deg,
-        rgba(17, 17, 17, 0.92) 0%,
-        rgba(17, 17, 17, 0.92) 36%,
-        rgba(255, 255, 255, 0.98) 50%,
-        rgba(17, 17, 17, 0.92) 64%,
-        rgba(17, 17, 17, 0.92) 100%
-    );
+    background: linear-gradient(110deg,
+            rgba(17, 17, 17, 0.92) 0%,
+            rgba(17, 17, 17, 0.92) 36%,
+            rgba(255, 255, 255, 0.98) 50%,
+            rgba(17, 17, 17, 0.92) 64%,
+            rgba(17, 17, 17, 0.92) 100%);
     background-size: 220% 100%;
     background-position: 120% 0;
     -webkit-background-clip: text;
@@ -1004,14 +1047,12 @@ html.dark .progress-widget {
 }
 
 html.dark .progress-title.shimmering {
-    background: linear-gradient(
-        110deg,
-        rgba(255, 255, 255, 0.88) 0%,
-        rgba(255, 255, 255, 0.88) 36%,
-        rgba(255, 255, 255, 1) 50%,
-        rgba(255, 255, 255, 0.88) 64%,
-        rgba(255, 255, 255, 0.88) 100%
-    );
+    background: linear-gradient(110deg,
+            rgba(255, 255, 255, 0.88) 0%,
+            rgba(255, 255, 255, 0.88) 36%,
+            rgba(255, 255, 255, 1) 50%,
+            rgba(255, 255, 255, 0.88) 64%,
+            rgba(255, 255, 255, 0.88) 100%);
     background-size: 220% 100%;
     background-position: 120% 0;
 }
@@ -1127,6 +1168,7 @@ html.dark .context-menu-item:hover {
     0% {
         background-position: 120% 0;
     }
+
     100% {
         background-position: -120% 0;
     }
@@ -1136,9 +1178,11 @@ html.dark .context-menu-item:hover {
     0% {
         transform: translateX(-100%);
     }
+
     50% {
         transform: translateX(70%);
     }
+
     100% {
         transform: translateX(190%);
     }
@@ -1151,6 +1195,7 @@ html.dark .context-menu-item:hover {
         width: min(320px, calc(100vw - 28px));
     }
 }
+
 /* ── Modal Overlay & Content ─────────────────────────── */
 .modal-overlay {
     position: fixed;
@@ -1299,6 +1344,10 @@ html.dark .context-menu-item:hover {
     margin: 1.5rem 0;
     width: 100%;
     overflow-x: auto;
+    background: var(--surface-color);
+    padding: 24px;
+    border-radius: 12px;
+    border: 1px solid var(--border-color);
 }
 
 .mermaid-rendered svg {

@@ -11,12 +11,29 @@ import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
 
-// Mermaid 초기화
-mermaid.initialize({
-    startOnLoad: false,
-    theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
-    securityLevel: 'loose',
-});
+// Mermaid 초기화 함수 정의 (앱 테마와 동기화)
+function getMermaidConfig() {
+    const isDark = document.documentElement.classList.contains('dark');
+    return {
+        startOnLoad: false,
+        theme: isDark ? 'dark' : 'default',
+        securityLevel: 'loose',
+        fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif',
+        themeVariables: {
+            // 앱의 포인트 컬러(Accent)를 기본 색상으로 적용
+            primaryColor: isDark ? '#0a84ff' : '#0071e3',
+            primaryTextColor: isDark ? '#ffffff' : '#ffffff',
+            primaryBorderColor: isDark ? '#0a84ff' : '#0071e3',
+            lineColor: isDark ? '#8e8e93' : '#636366',
+            secondaryColor: isDark ? '#1c1c1e' : '#f5f5f7',
+            tertiaryColor: isDark ? '#2c2c2e' : '#e5e5ea',
+            fontSize: '14px',
+        }
+    };
+}
+
+// 초기 로드시 설정 적용
+mermaid.initialize(getMermaidConfig());
 
 import {
     OpenFile,
@@ -1843,8 +1860,11 @@ async function renderMermaidSub() {
             const id = `mermaid_graph_${Date.now()}_${i}`;
             
             try {
-                // 개별 블록을 직접 렌더링하여 SVG 획득
-                const { svg } = await mermaid.render(id, content);
+            // 렌더링 직전 테마를 한 번 더 동기화 (다크 모드 전환 대응)
+            mermaid.initialize(getMermaidConfig());
+
+            // 개별 블록을 직접 렌더링하여 SVG 획득
+            const { svg } = await mermaid.render(id, content);
                 const container = document.createElement('div');
                 container.className = 'mermaid-rendered';
                 container.innerHTML = svg;
