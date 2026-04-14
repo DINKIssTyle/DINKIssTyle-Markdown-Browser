@@ -9,6 +9,14 @@ import { marked } from 'marked';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
+import mermaid from 'mermaid';
+
+// Mermaid 초기화
+mermaid.initialize({
+    startOnLoad: false,
+    theme: document.documentElement.classList.contains('dark') ? 'dark' : 'default',
+    securityLevel: 'loose',
+});
 
 import {
     OpenFile,
@@ -1568,11 +1576,14 @@ async function renderMarkdown(content) {
     if (currentEngine === "marked") {
         html = marked.parse(content);
     } else {
-        const vf = await unified().use(remarkParse).use(remarkHtml).process(content);
+        const vf = await unified()
+            .use(remarkParse)
+            .use(remarkHtml, { sanitize: false })
+            .process(content);
         html = String(vf);
     }
     el.markdownContainer.innerHTML = html;
-    postProcess();
+    await postProcess();
 }
 
 function cleanupHTMLFrame(options = {}) {
@@ -1747,7 +1758,7 @@ async function renderHTMLDocument(path) {
     });
 }
 
-function postProcess() {
+async function postProcess() {
     el.markdownContainer.querySelectorAll('a').forEach(anchor => {
         const href = anchor.getAttribute('href');
         if (!href) return;
@@ -1795,6 +1806,61 @@ function postProcess() {
     });
 
     el.markdownContainer.style.fontSize = `${currentFontSize}px`;
+
+    // Mermaid 다이어그램 렌더링 (병렬 실행 방지 위해 await)
+    await renderMermaidSub();
+}
+
+/**
+ * Mermaid 블록을 찾아 렌더링 가능한 div로 변환하고 mermaid 실행
+ */
+async function renderMermaidSub() {
+    // 1. 명시적인 mermaid 클래스가 있는 블록과 모든 코드 블록을 탐색
+    const codeBlocks = el.markdownContainer.querySelectorAll('pre code');
+    if (codeBlocks.length === 0) return;
+
+    const mermaidKeywords = [
+        'graph', 'flowchart', 'sequenceDiagram', 'gantt', 'classDiagram', 
+        'stateDiagram', 'erDiagram', 'journey', 'pie', 'gitGraph', 
+        'requirementDiagram', 'mindmap', 'timeline'
+    ];
+
+    for (let i = 0; i < codeBlocks.length; i++) {
+        const codeBlock = codeBlocks[i];
+        const pre = codeBlock.parentElement;
+        if (!pre || pre.tagName !== 'PRE') continue;
+
+        const content = codeBlock.textContent.trim();
+        if (!content) continue;
+
+        // Mermaid 여부 확인: 클래스명에 포함되어 있거나, 첫 번째 단어가 키워드인 경우
+        const hasMermaidClass = codeBlock.className.includes('mermaid') || pre.className.includes('mermaid');
+        const firstWord = content.split(/[ \n]/)[0];
+        const isMermaidKeyword = mermaidKeywords.includes(firstWord);
+
+        if (hasMermaidClass || isMermaidKeyword) {
+            // 고유 ID 생성 (Mermaid 렌더링용)
+            const id = `mermaid_graph_${Date.now()}_${i}`;
+            
+            try {
+                // 개별 블록을 직접 렌더링하여 SVG 획득
+                const { svg } = await mermaid.render(id, content);
+                const container = document.createElement('div');
+                container.className = 'mermaid-rendered';
+                container.innerHTML = svg;
+                
+                // 기존 pre 블록을 결과 SVG로 교체
+                pre.replaceWith(container);
+            } catch (err) {
+                console.error(`Mermaid render failed [${id}]:`, err);
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'mermaid-error';
+                errorDiv.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">warning</span> Mermaid Syntax Error`;
+                errorDiv.title = err.message;
+                pre.appendChild(errorDiv);
+            }
+        }
+    }
 }
 
 async function confirmAndOpenExternalLink(href) {
