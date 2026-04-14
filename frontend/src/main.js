@@ -64,6 +64,7 @@ let navHistory = [];
 let navIndex = -1;
 let homeTargetPath = HOME_SCREEN_PATH;
 let currentFontSize = 16;
+let currentEditorFontSize = 16;
 let currentEngine = "marked";
 let currentMarkdownEngine = "marked";
 let currentDocumentType = "markdown";
@@ -154,6 +155,8 @@ const el = {
     edTask: $('ed-task'),
     edLatex: $('ed-latex'),
     edEmoji: $('ed-emoji'),
+    edFontMinus: $('ed-font-minus'),
+    edFontPlus: $('ed-font-plus'),
     edCancel: $('ed-cancel'),
     edSave: $('ed-save'),
     contentView: $('content-view'),
@@ -641,6 +644,16 @@ function bindEditorEvents() {
     el.edEmoji.onclick = async () => {
         const choice = await showEmojiPicker();
         if (choice) insertTextAtCursor(choice, '');
+    };
+
+    el.edFontMinus.onclick = () => {
+        currentEditorFontSize = Math.max(8, currentEditorFontSize - 1);
+        el.markdownEditor.style.fontSize = `${currentEditorFontSize}px`;
+    };
+
+    el.edFontPlus.onclick = () => {
+        currentEditorFontSize = Math.min(72, currentEditorFontSize + 1);
+        el.markdownEditor.style.fontSize = `${currentEditorFontSize}px`;
     };
     
     el.edCancel.onclick = handleCancel;
