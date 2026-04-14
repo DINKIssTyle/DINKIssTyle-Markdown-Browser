@@ -41,8 +41,10 @@
                         <option value="html">HTML</option>
                     </select>
                 </div>
-                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn"
-                    disabled>
+                <button id="btn-new-doc" title="New Document" aria-label="New Document" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">add_notes</span>
+                </button>
+                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn" disabled>
                     <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                 </button>
                 <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
@@ -107,6 +109,8 @@
                         class="material-symbols-outlined">code</span></button>
                 <button id="ed-table" title="Table" class="tool-btn"><span
                         class="material-symbols-outlined">table_chart</span></button>
+                <button id="ed-div" title="DIV Wrapper" class="tool-btn"><span
+                        class="material-symbols-outlined">border_inner</span></button>
             </div>
             <div class="edit-separator"></div>
             <div class="edit-tool-group">
@@ -126,6 +130,14 @@
                 <button id="ed-font-plus" title="Increase Editor Font Size" class="tool-btn">
                     <span class="material-symbols-outlined">text_increase</span>
                     <!-- <span class="font-adjust-label">+</span> -->
+                </button>
+            </div>
+            <div class="edit-tool-group">
+                <button id="ed-fim" title="Toggle FIM (AI Autocomplete)" class="tool-btn">
+                    <span class="material-symbols-outlined">flash_auto</span>
+                </button>
+                <button id="ed-settings" title="AI Settings" class="tool-btn">
+                    <span class="material-symbols-outlined">settings</span>
                 </button>
             </div>
             <div class="spacer"></div>
@@ -247,6 +259,63 @@
                 </div>
             </div>
         </div>
+
+        <!-- AI Settings Modal -->
+        <div id="ai-settings-modal" class="modal-overlay hidden">
+            <div class="modal-content ai-settings-content">
+                <h3>AI Settings</h3>
+                <div class="ai-setting-group">
+                    <h4>General AI</h4>
+                    <label>Endpoint (address:port):
+                        <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
+                    </label>
+                    <label>Model:
+                        <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
+                    </label>
+                    <label>API Key (Optional):
+                        <input type="password" id="ai-general-key" placeholder="Bearer Token" />
+                    </label>
+                    <label>Temperature (0 = default):
+                        <input type="number" id="ai-general-temp" min="0" max="1" step="0.1" value="0" />
+                    </label>
+                </div>
+                <div class="ai-setting-group">
+                    <h4>FIM (Ghost Text)</h4>
+                    <label>Endpoint (address:port):
+                        <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
+                    </label>
+                    <label>Model:
+                        <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
+                    </label>
+                    <label>API Key (Optional):
+                        <input type="password" id="ai-fim-key" placeholder="Bearer Token" />
+                    </label>
+                    <label>Temperature (0 = default):
+                        <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
+                    </label>
+                </div>
+                <div class="modal-actions">
+                    <button id="ai-settings-cancel" class="modal-btn secondary">Cancel</button>
+                    <button id="ai-settings-save" class="modal-btn primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Floating Interface -->
+        <button id="ai-floating-btn" class="ai-floating-btn hidden" title="AI Request" aria-label="AI Request">
+            <span class="material-symbols-outlined">wand_stars</span>
+        </button>
+        
+        <div id="ai-prompt-box" class="ai-prompt-box hidden">
+            <input type="text" id="ai-prompt-input" placeholder="Ask AI (e.g. Improve this)..." autocomplete="off" />
+            <button id="ai-prompt-send" title="Send" aria-label="Send to AI">
+                <span class="material-symbols-outlined">send</span>
+            </button>
+            <button id="ai-prompt-close" title="Close" aria-label="Close AI Prompt">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>

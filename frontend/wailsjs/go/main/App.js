@@ -26,6 +26,10 @@ export function GetRecentFiles() {
   return window['go']['main']['App']['GetRecentFiles']();
 }
 
+export function GetRelativePath(arg1, arg2) {
+  return window['go']['main']['App']['GetRelativePath'](arg1, arg2);
+}
+
 export function GetSettings() {
   return window['go']['main']['App']['GetSettings']();
 }
@@ -44,6 +48,10 @@ export function HandleSecondInstanceLaunch(arg1) {
 
 export function HandleSystemOpenFile(arg1) {
   return window['go']['main']['App']['HandleSystemOpenFile'](arg1);
+}
+
+export function MakeAIRequest(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MakeAIRequest'](arg1, arg2, arg3);
 }
 
 export function OpenDirectory() {
@@ -80,4 +88,16 @@ export function SaveSettings(arg1) {
 
 export function SearchMarkdown(arg1, arg2) {
   return window['go']['main']['App']['SearchMarkdown'](arg1, arg2);
+}
+
+export function SelectDocument() {
+  return window['go']['main']['App']['SelectDocument']();
+}
+
+export function SelectImage() {
+  return window['go']['main']['App']['SelectImage']();
+}
+
+export function ShowSaveFileDialog(arg1) {
+  return window['go']['main']['App']['ShowSaveFileDialog'](arg1);
 }

@@ -4,6 +4,14 @@ export namespace main {
 	    theme: string;
 	    fontSize: number;
 	    engine: string;
+	    aiGeneralEndpoint: string;
+	    aiGeneralModel: string;
+	    aiGeneralKey: string;
+	    aiGeneralTemp: number;
+	    aiFimEndpoint: string;
+	    aiFimModel: string;
+	    aiFimKey: string;
+	    aiFimTemp: number;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -14,6 +22,14 @@ export namespace main {
 	        this.theme = source["theme"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
+	        this.aiGeneralEndpoint = source["aiGeneralEndpoint"];
+	        this.aiGeneralModel = source["aiGeneralModel"];
+	        this.aiGeneralKey = source["aiGeneralKey"];
+	        this.aiGeneralTemp = source["aiGeneralTemp"];
+	        this.aiFimEndpoint = source["aiFimEndpoint"];
+	        this.aiFimModel = source["aiFimModel"];
+	        this.aiFimKey = source["aiFimKey"];
+	        this.aiFimTemp = source["aiFimTemp"];
 	    }
 	}
 	export class FileResult {

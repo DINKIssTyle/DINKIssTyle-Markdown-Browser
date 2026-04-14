@@ -17,12 +17,13 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom } from './main-render.js';
-import { enterEditMode, bindEditorEvents } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
+import { initAI, bindAIEvents } from './main-ai.js';
 
 import {
     FrontendReady,
@@ -45,6 +46,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     bindContextMenu();
     setupDragAndDrop();
     bindMenuEvents();
+    
+    // AI Init
+    window.aiState = await initAI();
+    bindAIEvents();
 
     // Step 2: Check for pending startup files BEFORE rendering the first tab
     const startupPaths = await FrontendReady();
@@ -95,6 +100,14 @@ async function persist() {
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
+        aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
+        aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
+        aiGeneralKey: window.aiState?.generalKey || "",
+        aiGeneralTemp: window.aiState?.generalTemp || 0,
+        aiFimEndpoint: window.aiState?.fimEndpoint || "",
+        aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
+        aiFimKey: window.aiState?.fimKey || "",
+        aiFimTemp: window.aiState?.fimTemp || 0,
     });
 }
 
@@ -106,7 +119,8 @@ function changeFontSize(delta) {
 }
 
 function toggleTheme() {
-    document.documentElement.classList.toggle('dark');
+    const isDark = document.documentElement.classList.toggle('dark');
+    setEditorTheme(isDark);
     persist();
 }
 
@@ -124,6 +138,7 @@ function bindToolbar() {
     el.btnThemeToggle.onclick = toggleTheme;
     el.btnSearchToggle.onclick = toggleSearch;
     el.btnNewTab.onclick = () => createAndSwitchToNewTab();
+    el.btnNewDoc.onclick = createNewDocument;
     el.btnEdit.onclick = enterEditMode;
     el.selectEngine.onchange = async event => {
         if (event.target.value === 'html') {

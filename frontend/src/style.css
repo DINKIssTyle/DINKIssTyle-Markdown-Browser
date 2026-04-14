@@ -1363,3 +1363,129 @@ html.dark .context-menu-item:hover {
     border-radius: 4px;
     margin-top: 8px;
 }
+
+/* ── AI Settings Modal ──────────────────────────── */
+.ai-settings-content {
+    max-width: 500px;
+}
+.ai-setting-group {
+    background: rgba(0, 0, 0, 0.1);
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 16px;
+}
+html.dark .ai-setting-group {
+    background: rgba(255, 255, 255, 0.05);
+}
+.ai-setting-group h4 {
+    margin: 0 0 12px 0;
+    font-size: 14px;
+    color: var(--accent-color);
+}
+.ai-setting-group label {
+    display: block;
+    margin-bottom: 10px;
+    font-size: 13px;
+    color: var(--text-color);
+}
+.ai-setting-group input {
+    margin-top: 6px;
+    display: block;
+}
+
+/* ── AI Floating Button & Prompt ──────────────────── */
+.ai-floating-btn {
+    position: absolute;
+    background: linear-gradient(135deg, #1f8fff, #8f00ff);
+    color: #fff;
+    width: 36px;
+    height: 36px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border: none;
+    cursor: pointer;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+    z-index: 800;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+.ai-floating-btn:hover {
+    transform: scale(1.1);
+    box-shadow: 0 6px 16px rgba(0,0,0,0.4);
+}
+.ai-prompt-box {
+    position: absolute;
+    background: var(--surface-color);
+    border: 1px solid var(--border-color);
+    border-radius: 20px;
+    padding: 8px 12px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    box-shadow: 0 8px 24px rgba(0,0,0,0.3);
+    z-index: 801;
+    min-width: 300px;
+    backdrop-filter: blur(10px);
+    -webkit-backdrop-filter: blur(10px);
+}
+.ai-prompt-box input {
+    flex: 1;
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    outline: none;
+    font-size: 14px;
+}
+.ai-prompt-box button {
+    background: transparent;
+    color: var(--text-color);
+    border: none;
+    cursor: pointer;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 28px;
+    height: 28px;
+}
+.ai-prompt-box button:first-of-type {
+    color: var(--accent-color); /* Send button */
+}
+.ai-prompt-box button:hover {
+    background: rgba(128, 128, 128, 0.1);
+}
+
+.tool-btn.active-fim {
+    background: rgba(143, 0, 255, 0.15) !important;
+    color: #b055ff !important;
+}
+/* ── FIM Ghost Text Decoration ────────────────────── */
+.cm-ghost-text {
+    color: #888888;
+    background-color: transparent;
+    pointer-events: none;
+    user-select: none;
+}
+
+/* ── CodeMirror Overrides ──────────────────────────────── */
+.cm-editor {
+    flex: 1;
+    height: 100%;
+    min-height: 0;
+    width: 100%;
+    background: transparent;
+}
+.cm-editor.cm-focused {
+    outline: none !important;
+}
+.cm-scroller {
+    overflow: auto;
+    padding: 32px 40px;
+}
+.cm-content {
+    font-family: var(--code-font);
+    line-height: 1.6;
+    max-width: 1012px;
+    margin: 0 auto;
+}

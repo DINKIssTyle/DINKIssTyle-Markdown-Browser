@@ -12,12 +12,15 @@ import (
 	"fmt"
 	"log"
 	"mime"
+	"net/http"
+	"io"
 	"os"
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
 	"strings"
 	"sync"
+	"time"
 
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
@@ -37,9 +40,17 @@ type FileResult struct {
 
 // AppSettings represents the application settings
 type AppSettings struct {
-	Theme    string `json:"theme"`
-	FontSize int    `json:"fontSize"`
-	Engine   string `json:"engine"`
+	Theme             string  `json:"theme"`
+	FontSize          int     `json:"fontSize"`
+	Engine            string  `json:"engine"`
+	AIGeneralEndpoint string  `json:"aiGeneralEndpoint"`
+	AIGeneralModel    string  `json:"aiGeneralModel"`
+	AIGeneralKey      string  `json:"aiGeneralKey"`
+	AIGeneralTemp     float64 `json:"aiGeneralTemp"`
+	AIFIMEndpoint     string  `json:"aiFimEndpoint"`
+	AIFIMModel        string  `json:"aiFimModel"`
+	AIFIMKey          string  `json:"aiFimKey"`
+	AIFIMTemp         float64 `json:"aiFimTemp"`
 }
 
 // App struct
@@ -101,6 +112,61 @@ func (a *App) OpenFile() (FileResult, error) {
 	a.saveRecentFile(selection)
 	return FileResult{Path: selection, Content: content}, nil
 }
+
+// SelectDocument opens a file dialog to select a document for insertion
+func (a *App) SelectDocument() (string, error) {
+	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Document",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Document Files", Pattern: "*.md;*.markdown;*.html;*.htm"},
+		},
+	})
+	return selection, err
+}
+
+// SelectImage opens a file dialog to select an image for insertion
+func (a *App) SelectImage() (string, error) {
+	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+		Title: "Select Image",
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Image Files", Pattern: "*.png;*.jpg;*.jpeg;*.gif;*.webp;*.svg;*.bmp;*.ico"},
+		},
+	})
+	return selection, err
+}
+
+// ShowSaveFileDialog opens a dialog to save a new file
+func (a *App) ShowSaveFileDialog(defaultName string) (string, error) {
+	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+		Title:           "Save File",
+		DefaultFilename: defaultName,
+		Filters: []runtime.FileFilter{
+			{DisplayName: "Markdown Files", Pattern: "*.md;*.markdown"},
+		},
+	})
+	return selection, err
+}
+
+// GetRelativePath calculates the relative path from base to target
+func (a *App) GetRelativePath(basePath string, targetPath string) (string, error) {
+	if basePath == "" {
+		return targetPath, nil // No base path defined (unsaved file), use absolute
+	}
+
+	info, err := os.Stat(basePath)
+	if err == nil && !info.IsDir() {
+		basePath = filepath.Dir(basePath)
+	} else if err != nil {
+		basePath = filepath.Dir(basePath)
+	}
+
+	rel, err := filepath.Rel(basePath, targetPath)
+	if err != nil {
+		return "", err
+	}
+	return filepath.ToSlash(rel), nil
+}
+
 
 // ReadFile reads the content of a file
 func (a *App) ReadFile(path string) (string, error) {
@@ -204,6 +270,8 @@ func (a *App) GetSettings() AppSettings {
 	settings.Theme = "dark"
 	settings.FontSize = 16
 	settings.Engine = "marked"
+	settings.AIGeneralTemp = 0.0
+	settings.AIFIMTemp = 0.0
 
 	data, err := os.ReadFile(a.settingsPath)
 	if err == nil {
@@ -434,4 +502,33 @@ func (a *App) OpenExternalPath(path string) error {
 		log.Printf("external-path: launched path=%s", path)
 		return nil
 	}
+}
+
+// MakeAIRequest proxies a POST request to avoid CORS issues caused by local AI servers
+func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body string) (string, error) {
+	req, err := http.NewRequest("POST", endpoint, strings.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+
+	client := &http.Client{Timeout: 120 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	respBody, err := io.ReadAll(resp.Body)
+	if err != nil {
+		return "", err
+	}
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		return string(respBody), fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	return string(respBody), nil
 }

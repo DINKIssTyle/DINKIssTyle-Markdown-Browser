@@ -3,19 +3,99 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { state, el } from './main-state.js';
-import { updateNavButtons } from './main-navigation.js';
+import { state, el, getPathDirname } from './main-state.js';
+import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown } from './main-render.js';
 import { showToast } from './main-ui.js';
-import { SaveFile, AskConfirm } from '../wailsjs/go/main/App';
+import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
+
+import { EditorState, Compartment } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, placeholder } from '@codemirror/view';
+import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
+import { languages } from '@codemirror/language-data';
+import { oneDark } from '@codemirror/theme-one-dark';
+import { ghostTextField } from './main-ai.js';
 
 // ── Module-level State ─────────────────────────────────────
 let lastLineCount = 0;
 let currentEditorFontSize = 15;
+export let cmView = null;
+export const themeCompartment = new Compartment();
 
 // ── Editor Mode ────────────────────────────────────────────
+
+export function initCodeMirror() {
+    if (cmView) return;
+    
+    // Create new CodeMirror view
+    const startState = EditorState.create({
+        doc: state.currentMarkdownSource || "",
+        extensions: [
+            lineNumbers(),
+            history(),
+            keymap.of([
+                ...defaultKeymap,
+                ...historyKeymap,
+                indentWithTab
+            ]),
+            markdown({ base: markdownLanguage, codeLanguages: languages }),
+            themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
+            ghostTextField,
+            EditorView.updateListener.of((update) => {
+                if (update.docChanged) {
+                    const val = update.state.doc.toString();
+                    state.currentMarkdownSource = val;
+                    const tab = getActiveTab();
+                    if (tab) tab.currentMarkdownSource = val;
+                    
+                    const currentLineCount = update.state.doc.lines;
+                    if (currentLineCount !== lastLineCount || val.endsWith('\n')) {
+                        renderMarkdown(val);
+                        lastLineCount = currentLineCount;
+                    }
+                }
+            })
+        ]
+    });
+
+    cmView = new EditorView({
+        state: startState,
+        parent: el.editorView
+    });
+    
+    // hide old textarea
+    if (el.markdownEditor) el.markdownEditor.style.display = 'none';
+
+    // Apply font size
+    cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
+    cmView.contentDOM.style.fontFamily = 'var(--code-font)';
+}
+
+export function setEditorTheme(isDark) {
+    if (cmView) {
+        cmView.dispatch({
+            effects: themeCompartment.reconfigure(isDark ? oneDark : [])
+        });
+    }
+}
+
+export async function createNewDocument() {
+    const defaultName = "Untitiled.md";
+    try {
+        const selectedPath = await ShowSaveFileDialog(defaultName);
+        if (selectedPath) {
+            await SaveFile(selectedPath, ""); 
+            await openPath(selectedPath, { pushHistory: true, setHome: true, newTab: true });
+            enterEditMode();
+            showToast("New document created.");
+        }
+    } catch (e) {
+        console.error("Failed to create new document:", e);
+    }
+}
 
 export function enterEditMode() {
     if (state.isEditing) {
@@ -24,28 +104,33 @@ export function enterEditMode() {
     }
     if (state.currentDocumentType !== 'markdown') return;
     
+    initCodeMirror();
+
     state.isEditing = true;
     state.editorOriginalContent = state.currentMarkdownSource;
-    el.markdownEditor.value = state.currentMarkdownSource;
+    
+    cmView.dispatch({
+        changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource }
+    });
     
     el.editToolbar.classList.remove('hidden');
     el.editorView.classList.remove('hidden');
     el.mainContainer.classList.add('is-editing');
     el.btnEdit.classList.add('active');
     
-    // Ensure content view is visible for preview
     el.contentView.classList.remove('hidden'); 
     
-    // Hide other non-editor UI
     el.btnSearchToggle.disabled = true;
     el.selectEngine.disabled = true;
     
-    // 편집 중 네비게이션 버튼 비활성화
+    
     el.btnBack.disabled = true;
     el.btnForward.disabled = true;
     el.btnHome.disabled = true;
     
-    el.markdownEditor.focus();
+    // Also dispatch an empty ghost text just in case
+    if (window.aiState) window.aiState.ghostText = "";
+    cmView.focus();
 }
 
 export async function exitEditMode(didSave = false) {
@@ -60,7 +145,6 @@ export async function exitEditMode(didSave = false) {
     el.btnSearchToggle.disabled = false;
     el.selectEngine.disabled = false;
     
-    // 네비게이션 버튼 상태 복원
     updateNavButtons();
     
     if (didSave) {
@@ -75,11 +159,13 @@ export async function exitEditMode(didSave = false) {
 }
 
 async function handleSave() {
+    if (!cmView) return;
+    const contentToSave = cmView.state.doc.toString();
     const ok = await AskConfirm("Save Changes", "Do you want to save changes to the file?", "Save", "Cancel");
     if (!ok) return;
     
     try {
-        await SaveFile(state.currentFilePath, el.markdownEditor.value);
+        await SaveFile(state.currentFilePath, contentToSave);
         showToast("File saved successfully. ✅");
         await exitEditMode(true);
     } catch (error) {
@@ -89,7 +175,7 @@ async function handleSave() {
 }
 
 async function handleCancel() {
-    if (el.markdownEditor.value !== state.editorOriginalContent) {
+    if (cmView && cmView.state.doc.toString() !== state.editorOriginalContent) {
         const ok = await AskConfirm("Unsaved Changes", "You have unsaved changes. Discard them?", "Discard", "Cancel");
         if (!ok) return;
     }
@@ -99,32 +185,20 @@ async function handleCancel() {
 // ── Text Insert ────────────────────────────────────────────
 
 export function insertTextAtCursor(prefix, suffix) {
-    const textarea = el.markdownEditor;
-    const start = textarea.selectionStart;
-    const end = textarea.selectionEnd;
-    const text = textarea.value;
-    const selection = text.substring(start, end);
-    const before = text.substring(0, start);
-    const after = text.substring(end);
+    if (!cmView) return;
+    const stateObj = cmView.state;
+    const selection = stateObj.selection.main;
+    const text = stateObj.sliceDoc(selection.from, selection.to);
     
-    textarea.value = before + prefix + selection + suffix + after;
-    textarea.selectionStart = start + prefix.length;
-    textarea.selectionEnd = start + prefix.length + selection.length;
-    textarea.focus();
-
-    // 동기화: 툴바 버튼 클릭 시에도 글로벌 및 탭 상태 업데이트
-    state.currentMarkdownSource = textarea.value;
-    const tab = getActiveTab();
-    if (tab) tab.currentMarkdownSource = state.currentMarkdownSource;
-
-    // Trigger preview update
-    renderMarkdown(textarea.value);
+    const insertText = prefix + text + suffix;
+    cmView.dispatch({
+        changes: { from: selection.from, to: selection.to, insert: insertText },
+        selection: { anchor: selection.from + prefix.length, head: selection.from + prefix.length + text.length }
+    });
+    cmView.focus();
 }
 
 // ── Custom Prompt Modal ────────────────────────────────────
-/**
- * MacOS 브라우저 환경에서 window.prompt가 비정상 작동하는 문제를 해결하기 위한 커스텀 모달
- */
 export function showCustomPrompt(title, message, defaultValue = "") {
     return new Promise((resolve) => {
         el.modalTitle.textContent = title;
@@ -132,7 +206,6 @@ export function showCustomPrompt(title, message, defaultValue = "") {
         el.modalInput.value = defaultValue;
         el.modalOverlay.classList.remove('hidden');
         
-        // 입력 필드 자동 포커스
         setTimeout(() => el.modalInput.focus(), 50);
 
         const handleOk = () => {
@@ -162,16 +235,11 @@ export function showCustomPrompt(title, message, defaultValue = "") {
         el.modalBtnCancel.addEventListener('click', handleCancel);
         el.modalInput.addEventListener('keydown', handleKey);
         
-        // Ensure input is visible
         el.modalInputGroup.classList.remove('hidden');
         el.modalEmojiGrid.classList.add('hidden');
     });
 }
 
-// ── Emoji Picker ───────────────────────────────────────────
-/**
- * Emoji Picker Modal
- */
 export function showEmojiPicker() {
     return new Promise((resolve) => {
         el.modalTitle.textContent = "Select Emoji";
@@ -183,9 +251,6 @@ export function showEmojiPicker() {
         const emojiList = [
             '😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '🙃', '😉', 
             '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '😜', '🤪',
-            '🤫', '🤔', '🤨', '😐', '😑', '😶', '🙄', '😏', '😣', '😥',
-            '😮', '🤐', '😯', '😪', '😫', '🥱', '😴', '😌', '🤓', '😎',
-            '🥳', '😺', '😸', '😹', '😻', '😼', '😽', '🙀', '😿', '😾',
             '🚀', '🔥', '✅', '❌', '📝', '📂', '💡', '⚠️', '⭐', '✨',
             '❤️', '🎉', '👍', '👎', '🙌', '👏', '🤝', '🙏', '💻', '📷'
         ];
@@ -215,7 +280,7 @@ export function showEmojiPicker() {
             el.modalBtnOk.classList.remove('hidden');
         };
 
-        el.modalBtnOk.classList.add('hidden'); // Hide OK button as clicking emoji is enough
+        el.modalBtnOk.classList.add('hidden');
         el.modalEmojiGrid.addEventListener('click', handleEmojiClick);
         el.modalBtnCancel.addEventListener('click', handleCancelClick);
     });
@@ -236,13 +301,31 @@ export function bindEditorEvents() {
     el.edHr.onclick = () => insertTextAtCursor('\n---\n', '');
     
     el.edLink.onclick = async () => {
-        const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
-        if (url) insertTextAtCursor('[', `](${url})`);
+        const choice = await AskConfirm("Insert Link", "Would you like to enter a URL manually or select a local file?", "Local File", "Manual URL");
+        if (choice) {
+            const absPath = await SelectDocument();
+            if (absPath) {
+                const relPath = await GetRelativePath(state.currentFilePath, absPath);
+                insertTextAtCursor('[', `](${relPath})`);
+            }
+        } else {
+            const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
+            if (url) insertTextAtCursor('[', `](${url})`);
+        }
     };
     
     el.edImage.onclick = async () => {
-        const url = await showCustomPrompt("Insert Image", "Enter image URL or local path:", "https://");
-        if (url) insertTextAtCursor('![', `](${url})`);
+        const choice = await AskConfirm("Insert Image", "Would you like to enter an image URL manually or select a local image?", "Local File", "Manual URL");
+        if (choice) {
+            const absPath = await SelectImage();
+            if (absPath) {
+                const relPath = await GetRelativePath(state.currentFilePath, absPath);
+                insertTextAtCursor('![', `](${relPath})`);
+            }
+        } else {
+            const url = await showCustomPrompt("Insert Image", "Enter image URL:", "https://");
+            if (url) insertTextAtCursor('![', `](${url})`);
+        }
     };
     
     el.edCode.onclick = () => {
@@ -283,78 +366,36 @@ export function bindEditorEvents() {
         if (choice) insertTextAtCursor(choice, '');
     };
 
+    el.edDiv.onclick = async () => {
+        const align = await showCustomPrompt("DIV Wrapper", "Alignment (left/center/right):", "center");
+        if (!align) return;
+        const width = await showCustomPrompt("DIV Wrapper", "Width (e.g. 100%, 400px):", "100%");
+        if (!width) return;
+
+        let style = "";
+        if (align === "center") {
+            style = `display: block; margin: 0 auto; text-align: center; width: ${width};`;
+        } else if (align === "right") {
+            style = `display: block; margin-left: auto; text-align: right; width: ${width};`;
+        } else {
+            style = `text-align: left; width: ${width};`;
+        }
+
+        insertTextAtCursor(`<div style="${style}">\n`, '\n</div>');
+    };
+
     el.edFontMinus.onclick = () => {
+        if (!cmView) return;
         currentEditorFontSize = Math.max(8, currentEditorFontSize - 1);
-        el.markdownEditor.style.fontSize = `${currentEditorFontSize}px`;
+        cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
     };
 
     el.edFontPlus.onclick = () => {
+        if (!cmView) return;
         currentEditorFontSize = Math.min(72, currentEditorFontSize + 1);
-        el.markdownEditor.style.fontSize = `${currentEditorFontSize}px`;
+        cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
     };
     
     el.edCancel.onclick = handleCancel;
     el.edSave.onclick = handleSave;
-    
-    el.markdownEditor.oninput = (e) => {
-        const val = el.markdownEditor.value;
-        state.currentMarkdownSource = val;
-        const tab = getActiveTab();
-        if (tab) tab.currentMarkdownSource = val;
-        
-        // 줄바꿈이 발생했거나 (추가/삭제), 특정 주요 변경 시 실시간 반영
-        const currentLineCount = val.split('\n').length;
-        if (currentLineCount !== lastLineCount || e.inputType === 'insertLineBreak' || val.endsWith('\n')) {
-            renderMarkdown(val);
-            lastLineCount = currentLineCount;
-        }
-    };
-    
-    // Support Tab key and Smart Lists in textarea
-    el.markdownEditor.onkeydown = (e) => {
-        if (e.key === 'Tab') {
-            e.preventDefault();
-            insertTextAtCursor('    ', '');
-            return;
-        }
-
-        if (e.key === 'Enter') {
-            const textarea = e.target;
-            const start = textarea.selectionStart;
-            const text = textarea.value;
-            const before = text.substring(0, start);
-            const lines = before.split('\n');
-            const lastLine = lines[lines.length - 1];
-            
-            // List and Task pattern: Indent + (Bullet/Number) + (Task) + Content
-            const listRegex = /^(\s*)([*-]|\d+\.)(\s+\[([ x])\])?\s+(.*)$/;
-            const match = lastLine.match(listRegex);
-            
-            if (match) {
-                const indent = match[1];
-                const bullet = match[2];
-                const taskFull = match[3] || "";
-                const content = match[5].trim();
-                
-                if (content === "") {
-                    // Empty list item -> Stop listing by deleting the automatic prefix
-                    e.preventDefault();
-                    const newBefore = before.substring(0, start - lastLine.length);
-                    textarea.value = newBefore + text.substring(textarea.selectionEnd);
-                    textarea.selectionStart = textarea.selectionEnd = newBefore.length;
-                    textarea.dispatchEvent(new Event('input'));
-                } else {
-                    // Continue listing automatically
-                    e.preventDefault();
-                    let nextBullet = bullet;
-                    if (/^\d+\.$/.test(bullet)) {
-                        const num = parseInt(bullet);
-                        nextBullet = (num + 1) + ".";
-                    }
-                    const nextPrefix = `\n${indent}${nextBullet}${taskFull ? (taskFull.includes('[') ? ' [ ]' : '') : ''} `;
-                    insertTextAtCursor(nextPrefix, '');
-                }
-            }
-        }
-    };
 }
