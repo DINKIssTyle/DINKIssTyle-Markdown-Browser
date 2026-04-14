@@ -54,11 +54,13 @@ type AppSettings struct {
 	Engine            string  `json:"engine"`
 	EditorRenderMode  string  `json:"editorRenderMode"`
 	AIGeneralEnabled  bool    `json:"aiGeneralEnabled"`
+	AIGeneralToolbarEnabled bool `json:"aiGeneralToolbarEnabled"`
 	AIGeneralEndpoint string  `json:"aiGeneralEndpoint"`
 	AIGeneralModel    string  `json:"aiGeneralModel"`
 	AIGeneralKey      string  `json:"aiGeneralKey"`
 	AIGeneralTemp     float64 `json:"aiGeneralTemp"`
 	AIFIMEnabled      bool    `json:"aiFimEnabled"`
+	AIFIMToolbarEnabled bool  `json:"aiFimToolbarEnabled"`
 	AIFIMEndpoint     string  `json:"aiFimEndpoint"`
 	AIFIMModel        string  `json:"aiFimModel"`
 	AIFIMKey          string  `json:"aiFimKey"`
@@ -369,9 +371,11 @@ func (a *App) GetSettings() AppSettings {
 	settings.Engine = "marked"
 	settings.EditorRenderMode = "realtime"
 	settings.AIGeneralEnabled = true
+	settings.AIGeneralToolbarEnabled = true
 	settings.AIGeneralProvider = "openai"
 	settings.AIGeneralTemp = 0.0
 	settings.AIFIMEnabled = true
+	settings.AIFIMToolbarEnabled = false
 	settings.AIFIMTemp = 0.0
 
 	data, err := os.ReadFile(a.settingsPath)

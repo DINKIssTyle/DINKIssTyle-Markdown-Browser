@@ -61,10 +61,38 @@ let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
 let unloadingInstanceId = "";
 
+function isGeneralAIActive() {
+    return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
+}
+
+async function persistAISettings() {
+    await SaveSettings({
+        theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
+        fontSize: state.currentFontSize,
+        engine: state.currentMarkdownEngine,
+        editorRenderMode: state.currentEditorRenderMode,
+        aiGeneralEnabled: window.aiState.generalAvailable,
+        aiGeneralToolbarEnabled: window.aiState.generalToolbarEnabled,
+        aiGeneralProvider: window.aiState.generalProvider,
+        aiGeneralEndpoint: window.aiState.generalEndpoint,
+        aiGeneralModel: window.aiState.generalModel,
+        aiGeneralKey: window.aiState.generalKey,
+        aiGeneralTemp: window.aiState.generalTemp,
+        aiFimEnabled: window.aiState.fimAvailable,
+        aiFimToolbarEnabled: window.aiState.fimEnabled,
+        aiFimEndpoint: window.aiState.fimEndpoint,
+        aiFimModel: window.aiState.fimModel,
+        aiFimKey: window.aiState.fimKey,
+        aiFimTemp: window.aiState.fimTemp,
+        koreanImeEnterFix: el.aiToggleImeFix.checked,
+    });
+}
+
 export async function initAI() {
     const s = await GetSettings();
     const aiState = {
-        generalEnabled: s.aiGeneralEnabled !== false,
+        generalAvailable: s.aiGeneralEnabled !== false,
+        generalToolbarEnabled: s.aiGeneralToolbarEnabled !== false,
         generalProvider: s.aiGeneralProvider || "openai",
         generalEndpoint: s.aiGeneralEndpoint || "",
         generalModel: s.aiGeneralModel || "gemma-4-e4b-it",
@@ -81,7 +109,7 @@ export async function initAI() {
     };
 
     // UI Load
-    el.aiGeneralEnabled.checked = aiState.generalEnabled;
+    el.aiGeneralEnabled.checked = aiState.generalAvailable;
     el.aiGeneralProvider.value = aiState.generalProvider;
     el.aiGeneralEndpoint.value = aiState.generalEndpoint;
     el.aiGeneralModel.value = aiState.generalModel;
@@ -94,6 +122,12 @@ export async function initAI() {
     el.aiFimTemp.value = aiState.fimTemp;
     el.aiToggleImeFix.checked = s.koreanImeEnterFix || false;
     state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
+    if (!aiState.generalAvailable) {
+        aiState.generalToolbarEnabled = false;
+    }
+    if (!aiState.fimAvailable) {
+        aiState.fimEnabled = false;
+    }
     window.aiState = aiState;
     syncAISettingsSections();
     syncAIControls();
@@ -130,7 +164,7 @@ export function bindAIEvents() {
         el.aiSettingsModal.classList.add('hidden');
     };
     el.aiSettingsSave.onclick = async () => {
-        window.aiState.generalEnabled = el.aiGeneralEnabled.checked;
+        window.aiState.generalAvailable = el.aiGeneralEnabled.checked;
         window.aiState.generalProvider = el.aiGeneralProvider.value;
         window.aiState.generalEndpoint = el.aiGeneralEndpoint.value;
         window.aiState.generalModel = el.aiGeneralModel.value || "gemma-4-e4b-it";
@@ -141,25 +175,14 @@ export function bindAIEvents() {
         window.aiState.fimModel = el.aiFimModel.value || "qwen2.5-coder-0.5b-instruct-mlx";
         window.aiState.fimKey = el.aiFimKey.value;
         window.aiState.fimTemp = parseFloat(el.aiFimTemp.value) || 0;
+        if (!window.aiState.generalAvailable) {
+            window.aiState.generalToolbarEnabled = false;
+        }
+        if (!window.aiState.fimAvailable) {
+            window.aiState.fimEnabled = false;
+        }
 
-        await SaveSettings({
-            theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
-            fontSize: state.currentFontSize,
-            engine: state.currentMarkdownEngine,
-            editorRenderMode: state.currentEditorRenderMode,
-            aiGeneralEnabled: window.aiState.generalEnabled,
-            aiGeneralProvider: window.aiState.generalProvider,
-            aiGeneralEndpoint: window.aiState.generalEndpoint,
-            aiGeneralModel: window.aiState.generalModel,
-            aiGeneralKey: window.aiState.generalKey,
-            aiGeneralTemp: window.aiState.generalTemp,
-            aiFimEnabled: window.aiState.fimAvailable,
-            aiFimEndpoint: window.aiState.fimEndpoint,
-            aiFimModel: window.aiState.fimModel,
-            aiFimKey: window.aiState.fimKey,
-            aiFimTemp: window.aiState.fimTemp,
-            koreanImeEnterFix: el.aiToggleImeFix.checked,
-        });
+        await persistAISettings();
 
         state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
         syncAIControls();
@@ -205,7 +228,20 @@ export function bindAIEvents() {
     });
 
     // FIM Toggle
-    el.edFim.onclick = () => {
+    el.edGeneralAi.onclick = async () => {
+        if (!window.aiState.generalAvailable) {
+            window.aiState.generalToolbarEnabled = false;
+            syncAIControls();
+            showToast("General AI is disabled in AI Settings.");
+            return;
+        }
+        window.aiState.generalToolbarEnabled = !window.aiState.generalToolbarEnabled;
+        syncAIControls();
+        await persistAISettings();
+        showToast(window.aiState.generalToolbarEnabled ? "General AI Enabled" : "General AI Disabled");
+    };
+
+    el.edFim.onclick = async () => {
         if (!window.aiState.fimAvailable) {
             window.aiState.fimEnabled = false;
             syncAIControls();
@@ -214,6 +250,7 @@ export function bindAIEvents() {
         }
         window.aiState.fimEnabled = !window.aiState.fimEnabled;
         syncAIControls();
+        await persistAISettings();
         showToast(window.aiState.fimEnabled ? "AI FIM Enabled" : "AI FIM Disabled");
     };
 
@@ -292,7 +329,7 @@ function handleEditorKeydown(e) {
 }
 
 function handleSelectionChange() {
-    if (!state.isEditing || !cmView || !window.aiState.generalEnabled) {
+    if (!state.isEditing || !cmView || !isGeneralAIActive()) {
         el.aiFloatingBtn.classList.add('hidden');
         if (!el.aiPromptBox.classList.contains('hidden')) {
             hidePromptBox();
@@ -355,7 +392,7 @@ function showPromptBox() {
 }
 
 export function showPromptBoxAtSelection() {
-    if (!state.isEditing || !cmView || !window.aiState?.generalEnabled) {
+    if (!state.isEditing || !cmView || !isGeneralAIActive()) {
         return false;
     }
 
@@ -493,7 +530,7 @@ function sanitizeGhostText(text, suffix = "") {
 }
 
 async function sendPrompt() {
-    if (!window.aiState.generalEnabled) {
+    if (!isGeneralAIActive()) {
         hidePromptBox();
         showToast("General AI is disabled in AI Settings.");
         return;
@@ -583,13 +620,28 @@ async function sendPrompt() {
 }
 
 function syncAIControls() {
-    const generalEnabled = !!window.aiState?.generalEnabled;
+    const generalAvailable = !!window.aiState?.generalAvailable;
+    const generalToolbarEnabled = !!window.aiState?.generalToolbarEnabled && generalAvailable;
     const fimAvailable = !!window.aiState?.fimAvailable;
+    const generalDisabledMessage = "General AI is disabled in AI Settings.";
     const fimDisabledMessage = "FIM is disabled in AI Settings.";
 
     if (!fimAvailable) {
         window.aiState.fimEnabled = false;
         clearGhostText();
+    }
+    if (!generalAvailable) {
+        window.aiState.generalToolbarEnabled = false;
+    }
+
+    el.edGeneralAi.classList.toggle('active-ai', generalToolbarEnabled);
+    el.edGeneralAi.classList.toggle('disabled', !generalAvailable);
+    el.edGeneralAi.setAttribute('aria-disabled', String(!generalAvailable));
+    el.edGeneralAi.title = generalAvailable ? "Toggle General AI" : generalDisabledMessage;
+    if (generalAvailable) {
+        el.edGeneralAi.removeAttribute('data-tooltip');
+    } else {
+        el.edGeneralAi.setAttribute('data-tooltip', generalDisabledMessage);
     }
 
     el.edFim.classList.toggle('active-fim', !!window.aiState?.fimEnabled && fimAvailable);
@@ -602,7 +654,7 @@ function syncAIControls() {
         el.edFim.setAttribute('data-tooltip', fimDisabledMessage);
     }
 
-    if (!generalEnabled) {
+    if (!generalToolbarEnabled) {
         el.aiFloatingBtn.classList.add('hidden');
         if (!el.aiPromptBox.classList.contains('hidden')) {
             hidePromptBox();

@@ -26,11 +26,13 @@ export namespace main {
 	    engine: string;
 	    editorRenderMode: string;
 	    aiGeneralEnabled: boolean;
+	    aiGeneralToolbarEnabled: boolean;
 	    aiGeneralEndpoint: string;
 	    aiGeneralModel: string;
 	    aiGeneralKey: string;
 	    aiGeneralTemp: number;
 	    aiFimEnabled: boolean;
+	    aiFimToolbarEnabled: boolean;
 	    aiFimEndpoint: string;
 	    aiFimModel: string;
 	    aiFimKey: string;
@@ -50,11 +52,13 @@ export namespace main {
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];
 	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
+	        this.aiGeneralToolbarEnabled = source["aiGeneralToolbarEnabled"];
 	        this.aiGeneralEndpoint = source["aiGeneralEndpoint"];
 	        this.aiGeneralModel = source["aiGeneralModel"];
 	        this.aiGeneralKey = source["aiGeneralKey"];
 	        this.aiGeneralTemp = source["aiGeneralTemp"];
 	        this.aiFimEnabled = source["aiFimEnabled"];
+	        this.aiFimToolbarEnabled = source["aiFimToolbarEnabled"];
 	        this.aiFimEndpoint = source["aiFimEndpoint"];
 	        this.aiFimModel = source["aiFimModel"];
 	        this.aiFimKey = source["aiFimKey"];

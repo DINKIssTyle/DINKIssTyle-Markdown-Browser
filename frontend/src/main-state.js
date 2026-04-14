@@ -88,6 +88,7 @@ export const el = {
     edSave: $('ed-save'),
     btnNewDoc: $('btn-new-doc'),
     edDiv: $('ed-div'),
+    edGeneralAi: $('ed-general-ai'),
     edFim: $('ed-fim'),
     edSettings: $('ed-settings'),
     aiSettingsModal: $('ai-settings-modal'),

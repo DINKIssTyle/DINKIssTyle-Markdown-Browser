@@ -126,10 +126,12 @@
             </div>
             <div class="edit-separator"></div>
             <div class="edit-tool-group">
-                <label for="ed-render-mode" class="edit-inline-label">Update:</label>
+                <!-- <label for="ed-render-mode" class="edit-inline-label">Update:</label> -->
+                <span class="material-symbols-outlined">update</span><label for="ed-render-mode"
+                    class="edit-inline-label">:</label>
                 <select id="ed-render-mode" class="edit-select">
-                    <option value="realtime">Real Time</option>
-                    <option value="cursor-line-change">Cursor line change</option>
+                    <option value="realtime">Realtime</option>
+                    <option value="cursor-line-change">Line change</option>
                 </select>
             </div>
             <div class="edit-separator"></div>
@@ -144,6 +146,9 @@
                 </button>
             </div>
             <div class="edit-tool-group">
+                <button id="ed-general-ai" title="Toggle General AI" class="tool-btn">
+                    <span class="material-symbols-outlined">wand_stars</span>
+                </button>
                 <button id="ed-fim" title="Toggle FIM (AI Autocomplete)" class="tool-btn">
                     <span class="material-symbols-outlined">flash_auto</span>
                 </button>

@@ -2129,6 +2129,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     background: rgba(128, 128, 128, 0.1);
 }
 
+.tool-btn.active-ai,
 .tool-btn.active-fim {
     background: rgba(143, 0, 255, 0.15) !important;
     color: #b055ff !important;
