@@ -117,6 +117,8 @@ export const el = {
     aiProgressPercent: $('ai-progress-percent'),
     aiProgressBarFill: $('ai-progress-bar-fill'),
     aiToggleImeFix: $('ai-toggle-ime-fix'),
+    appVersionFooter: $('app-version-footer'),
+    footerWhatsNew: $('footer-whats-new'),
 };
 
 // ── Shared Mutable State ───────────────────────────────────

@@ -12,6 +12,7 @@ import {
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab } from './main-render.js';
+import { undoAction, redoAction, getUndoDepth, getRedoDepth } from './main-editor.js';
 import {
     showToast, beginProgressTask, updateProgress,
     finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
@@ -142,19 +143,42 @@ function pushCurrentHistory(path) {
 }
 
 export function updateNavButtons() {
+    const backBtnIcon = el.btnBack.querySelector('.material-symbols-outlined');
+    const forwardBtnIcon = el.btnForward.querySelector('.material-symbols-outlined');
+
     if (state.isEditing) {
-        el.btnBack.disabled = true;
-        el.btnForward.disabled = true;
+        // Change to Undo/Redo
+        if (backBtnIcon) backBtnIcon.textContent = 'undo';
+        if (forwardBtnIcon) forwardBtnIcon.textContent = 'redo';
+
+        const undoKey = isMacOS() ? '⌘Z' : 'Ctrl+Z';
+        const redoKey = isMacOS() ? '⌘⇧Z' : 'Ctrl+Y';
+        el.btnBack.title = `Undo (${undoKey})`;
+        el.btnForward.title = `Redo (${redoKey})`;
+
+        el.btnBack.disabled = getUndoDepth() === 0;
+        el.btnForward.disabled = getRedoDepth() === 0;
         el.btnHome.disabled = true;
         return;
     }
+
+    // Restore to Back/Forward
+    if (backBtnIcon) backBtnIcon.textContent = 'arrow_back';
+    if (forwardBtnIcon) forwardBtnIcon.textContent = 'arrow_forward';
+
+    el.btnBack.title = 'Back';
+    el.btnForward.title = 'Forward';
+
     el.btnBack.disabled = state.navIndex <= 0;
     el.btnForward.disabled = state.navIndex >= state.navHistory.length - 1;
     el.btnHome.disabled = false;
 }
 
 export function goBack() {
-    if (state.isEditing) return;
+    if (state.isEditing) {
+        undoAction();
+        return;
+    }
     if (state.navIndex > 0) {
         saveCurrentScroll();
         state.navIndex--;
@@ -164,7 +188,10 @@ export function goBack() {
 }
 
 export function goForward() {
-    if (state.isEditing) return;
+    if (state.isEditing) {
+        redoAction();
+        return;
+    }
     if (state.navIndex < state.navHistory.length - 1) {
         saveCurrentScroll();
         state.navIndex++;

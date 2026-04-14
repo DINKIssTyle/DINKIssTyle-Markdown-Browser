@@ -14,6 +14,7 @@ export namespace main {
 	    aiFimTemp: number;
 	    aiGeneralProvider: string;
 	    koreanImeEnterFix: boolean;
+	    lastVersion: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -34,6 +35,7 @@ export namespace main {
 	        this.aiFimTemp = source["aiFimTemp"];
 	        this.aiGeneralProvider = source["aiGeneralProvider"];
 	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
+	        this.lastVersion = source["lastVersion"];
 	    }
 	}
 	export class FileResult {

@@ -31,6 +31,7 @@ import {
     SaveSettings,
     ClearRecentFiles,
     HandleFileDrop,
+    GetVersion,
 } from '../wailsjs/go/main/App';
 import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
 
@@ -93,6 +94,16 @@ async function loadSettings() {
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
     syncEngineSelector();
+
+    // Update footer version
+    try {
+        const currentVersion = await GetVersion();
+        if (el.appVersionFooter) {
+            el.appVersionFooter.textContent = `Version ${currentVersion}`;
+        }
+    } catch (err) {
+        console.error("Failed to get version:", err);
+    }
 }
 
 async function persist() {
@@ -190,6 +201,13 @@ function bindHomeScreen() {
             newTab: event.metaKey || event.ctrlKey,
         });
     });
+
+    if (el.footerWhatsNew) {
+        el.footerWhatsNew.onclick = async (e) => {
+            e.preventDefault();
+            await openPath('./WHATS-NEW.md', { newTab: true });
+        };
+    }
 }
 
 // ── Drag and Drop ──────────────────────────────────────────
@@ -233,6 +251,14 @@ function bindMenuEvents() {
         state.currentFontSize = 16;
         el.markdownContainer.style.fontSize = `${state.currentFontSize}px`;
         persist();
+    });
+
+    EventsOn('app:show-whats-new', async (version) => {
+        console.log(`New version detected: ${version}. Opening What's New...`);
+        // Wait a bit to ensure the initial tab is rendered
+        setTimeout(async () => {
+            await openPath('./WHATS-NEW.md', { newTab: true });
+        }, 500);
     });
 }
 

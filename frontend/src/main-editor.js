@@ -13,7 +13,7 @@ import { LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
-import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
+import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
@@ -164,6 +164,11 @@ export function initCodeMirror() {
                         }
                     }, 100);
                 }
+
+                // 문서 내용이 바뀌거나 선택 영역이 바뀌어도 undo/redo 활성화 상태가 바뀔 수 있으므로 갱신
+                if (update.docChanged || update.selectionSet) {
+                    updateNavButtons();
+                }
             })
         ]
     });
@@ -238,6 +243,7 @@ export function enterEditMode() {
     // Also dispatch an empty ghost text just in case
     if (window.aiState) window.aiState.ghostText = "";
     cmView.focus();
+    updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
 }
 
 export async function exitEditMode(didSave = false) {
@@ -303,6 +309,28 @@ export function insertTextAtCursor(prefix, suffix) {
         selection: { anchor: selection.from + prefix.length, head: selection.from + prefix.length + text.length }
     });
     cmView.focus();
+}
+
+// ── Undo / Redo Actions ─────────────────────────────────────
+
+export function undoAction() {
+    if (!cmView) return;
+    undo(cmView);
+}
+
+export function redoAction() {
+    if (!cmView) return;
+    redo(cmView);
+}
+
+export function getUndoDepth() {
+    if (!cmView) return 0;
+    return undoDepth(cmView.state);
+}
+
+export function getRedoDepth() {
+    if (!cmView) return 0;
+    return redoDepth(cmView.state);
 }
 
 // ── Custom Prompt Modal ────────────────────────────────────

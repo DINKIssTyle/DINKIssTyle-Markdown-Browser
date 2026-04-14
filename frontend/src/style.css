@@ -524,6 +524,43 @@ html.dark .empty-state {
     margin-top: 16px;
 }
 
+.home-footer {
+    margin-top: 48px;
+    padding-top: 32px;
+    border-top: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    font-size: 13px;
+    color: var(--text-color);
+}
+
+.home-footer span {
+    opacity: 0.5;
+}
+
+.footer-link {
+    color: var(--accent-color);
+    text-decoration: none;
+    font-weight: 600;
+    opacity: 0.65;
+    transition: opacity 0.2s ease, text-decoration 0.2s ease;
+}
+
+.footer-link:hover {
+    opacity: 1;
+    text-decoration: underline;
+}
+
+.footer-dot {
+    opacity: 0.4;
+}
+
+.footer-copyright {
+    font-weight: 500;
+}
+
 .action-btn {
     padding: 10px 20px;
     border-radius: 8px;

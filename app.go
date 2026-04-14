@@ -54,6 +54,7 @@ type AppSettings struct {
 	AIFIMTemp         float64 `json:"aiFimTemp"`
 	AIGeneralProvider string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
 	KoreanImeEnterFix bool    `json:"koreanImeEnterFix"`
+	LastVersion       string  `json:"lastVersion"`
 }
 
 // App struct
@@ -64,6 +65,7 @@ type App struct {
 	mu               sync.Mutex
 	frontendReady    bool
 	pendingOpenFiles []string
+	showWhatsNew     bool
 }
 
 // NewApp creates a new App application struct
@@ -81,6 +83,15 @@ func NewApp() *App {
 // startup is called when the app starts. The context is saved
 func (a *App) startup(ctx context.Context) {
 	a.ctx = ctx
+
+	// Check version for "What's New"
+	settings := a.GetSettings()
+	if settings.LastVersion != AppVersion {
+		a.showWhatsNew = true
+		settings.LastVersion = AppVersion
+		a.SaveSettings(settings)
+	}
+
 	a.queueOpenRequests(os.Args[1:], "")
 }
 
@@ -90,6 +101,12 @@ func (a *App) FrontendReady() []string {
 	defer a.mu.Unlock()
 
 	a.frontendReady = true
+
+	if a.showWhatsNew {
+		runtime.EventsEmit(a.ctx, "app:show-whats-new", AppVersion)
+		a.showWhatsNew = false
+	}
+
 	paths := append([]string(nil), a.pendingOpenFiles...)
 	a.pendingOpenFiles = nil
 	return paths
