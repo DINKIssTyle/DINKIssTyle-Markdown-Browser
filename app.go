@@ -10,6 +10,7 @@ import (
 	"context"
 	"encoding/base64"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"io"
 	"log"
@@ -49,37 +50,39 @@ type AIModelInfo struct {
 
 // AppSettings represents the application settings
 type AppSettings struct {
-	Theme             string  `json:"theme"`
-	FontSize          int     `json:"fontSize"`
-	Engine            string  `json:"engine"`
-	EditorRenderMode  string  `json:"editorRenderMode"`
-	AIGeneralEnabled  bool    `json:"aiGeneralEnabled"`
-	AIGeneralToolbarEnabled bool `json:"aiGeneralToolbarEnabled"`
-	AIGeneralEndpoint string  `json:"aiGeneralEndpoint"`
-	AIGeneralModel    string  `json:"aiGeneralModel"`
-	AIGeneralKey      string  `json:"aiGeneralKey"`
-	AIGeneralTemp     float64 `json:"aiGeneralTemp"`
-	AIFIMEnabled      bool    `json:"aiFimEnabled"`
-	AIFIMToolbarEnabled bool  `json:"aiFimToolbarEnabled"`
-	AIFIMEndpoint     string  `json:"aiFimEndpoint"`
-	AIFIMModel        string  `json:"aiFimModel"`
-	AIFIMKey          string  `json:"aiFimKey"`
-	AIFIMTemp         float64 `json:"aiFimTemp"`
-	AIGeneralProvider string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
-	KoreanImeEnterFix bool    `json:"koreanImeEnterFix"`
-	LastVersion       string  `json:"lastVersion"`
+	Theme                   string  `json:"theme"`
+	FontSize                int     `json:"fontSize"`
+	Engine                  string  `json:"engine"`
+	EditorRenderMode        string  `json:"editorRenderMode"`
+	AIGeneralEnabled        bool    `json:"aiGeneralEnabled"`
+	AIGeneralToolbarEnabled bool    `json:"aiGeneralToolbarEnabled"`
+	AIGeneralEndpoint       string  `json:"aiGeneralEndpoint"`
+	AIGeneralModel          string  `json:"aiGeneralModel"`
+	AIGeneralKey            string  `json:"aiGeneralKey"`
+	AIGeneralTemp           float64 `json:"aiGeneralTemp"`
+	AIFIMEnabled            bool    `json:"aiFimEnabled"`
+	AIFIMToolbarEnabled     bool    `json:"aiFimToolbarEnabled"`
+	AIFIMEndpoint           string  `json:"aiFimEndpoint"`
+	AIFIMModel              string  `json:"aiFimModel"`
+	AIFIMKey                string  `json:"aiFimKey"`
+	AIFIMTemp               float64 `json:"aiFimTemp"`
+	AIGeneralProvider       string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
+	KoreanImeEnterFix       bool    `json:"koreanImeEnterFix"`
+	LastVersion             string  `json:"lastVersion"`
 }
 
 // App struct
 type App struct {
-	ctx              context.Context
-	settingsPath     string
-	recentPath       string
-	mu               sync.Mutex
-	frontendReady    bool
-	pendingOpenFiles []string
-	showWhatsNew     bool
-	editorState      EditorSessionState
+	ctx               context.Context
+	settingsPath      string
+	recentPath        string
+	mu                sync.Mutex
+	activeAIRequestID int64
+	activeAICancel    context.CancelFunc
+	frontendReady     bool
+	pendingOpenFiles  []string
+	showWhatsNew      bool
+	editorState       EditorSessionState
 }
 
 type EditorSessionState struct {
@@ -87,6 +90,43 @@ type EditorSessionState struct {
 	HasUnsaved  bool
 	CurrentPath string
 	Content     string
+}
+
+func (a *App) beginAIRequest() (context.Context, context.CancelFunc, int64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.activeAICancel != nil {
+		a.activeAICancel()
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
+	a.activeAIRequestID++
+	requestID := a.activeAIRequestID
+	a.activeAICancel = cancel
+	return ctx, cancel, requestID
+}
+
+func (a *App) finishAIRequest(requestID int64) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	if a.activeAIRequestID != requestID {
+		return
+	}
+	a.activeAICancel = nil
+}
+
+func (a *App) CancelAIRequest() {
+	a.mu.Lock()
+	cancel := a.activeAICancel
+	a.activeAICancel = nil
+	a.activeAIRequestID++
+	a.mu.Unlock()
+
+	if cancel != nil {
+		cancel()
+	}
 }
 
 // NewApp creates a new App application struct
@@ -611,7 +651,11 @@ func (a *App) OpenExternalPath(path string) error {
 
 // MakeAIRequest proxies a POST request to avoid CORS issues caused by local AI servers
 func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body string) (string, error) {
-	req, err := http.NewRequest("POST", endpoint, strings.NewReader(body))
+	ctx, cancel, requestID := a.beginAIRequest()
+	defer cancel()
+	defer a.finishAIRequest(requestID)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -622,6 +666,9 @@ func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body str
 	client := &http.Client{Timeout: 120 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return "", context.Canceled
+		}
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -990,7 +1037,11 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 		body = string(newBody)
 	}
 
-	req, err := http.NewRequest("POST", endpoint, strings.NewReader(body))
+	ctx, cancel, requestID := a.beginAIRequest()
+	defer cancel()
+	defer a.finishAIRequest(requestID)
+
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, strings.NewReader(body))
 	if err != nil {
 		return "", err
 	}
@@ -1003,6 +1054,9 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 	client := &http.Client{Timeout: 300 * time.Second}
 	resp, err := client.Do(req)
 	if err != nil {
+		if errors.Is(err, context.Canceled) {
+			return "", context.Canceled
+		}
 		return "", err
 	}
 	defer resp.Body.Close()
@@ -1019,6 +1073,9 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 	for {
 		line, err := reader.ReadString('\n')
 		if err != nil && err != io.EOF {
+			if errors.Is(err, context.Canceled) {
+				return "", context.Canceled
+			}
 			break
 		}
 
@@ -1069,9 +1126,10 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 					}
 				case "chat.end":
 					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
-						"label":    "Completed ✨",
-						"progress": 100,
-						"loading":  false,
+						"label":     "Completed ✨",
+						"progress":  100,
+						"loading":   false,
+						"completed": true,
 					})
 				}
 			}
@@ -1080,6 +1138,10 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 		if err == io.EOF {
 			break
 		}
+	}
+
+	if ctx.Err() != nil {
+		return "", ctx.Err()
 	}
 
 	return fullResponse.String(), nil

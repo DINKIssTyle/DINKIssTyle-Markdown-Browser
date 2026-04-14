@@ -4,7 +4,7 @@
  */
 
 import { state, el } from './main-state.js';
-import { GetSettings, SaveSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel } from '../wailsjs/go/main/App';
+import { GetSettings, SaveSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { cmView, insertPlainTextAtCursor } from './main-editor.js';
 import { showToast } from './main-ui.js';
@@ -60,9 +60,157 @@ let lmStudioModels = [];
 let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
 let unloadingInstanceId = "";
+let aiProgressHideTimer = null;
+let aiRequestInFlight = false;
+let aiFloatingHideTimer = null;
+let aiPromptHideTimer = null;
+let aiPromptMode = null;
 
 function isGeneralAIActive() {
     return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
+}
+
+function hideAIProgressOverlay() {
+    clearTimeout(aiProgressHideTimer);
+    aiProgressHideTimer = null;
+    if (!el.aiProgressOverlay) return;
+    el.aiProgressOverlay.classList.add('hidden');
+    el.aiProgressOverlay.classList.remove('loading');
+    if (el.aiProgressCancel) {
+        el.aiProgressCancel.classList.add('hidden');
+    }
+    el.aiProgressBarFill.style.width = '0%';
+    el.aiProgressPercent.textContent = '';
+}
+
+async function cancelActiveAIRequest() {
+    if (!aiRequestInFlight) {
+        hideAIProgressOverlay();
+        return;
+    }
+
+    aiRequestInFlight = false;
+    hideAIProgressOverlay();
+    try {
+        await CancelAIRequest();
+    } catch (error) {
+        console.error('Failed to cancel AI request', error);
+    }
+    showToast("AI request cancelled.");
+}
+
+function isCancelledAIError(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('context canceled') || message.includes('context cancelled') || message.includes('canceled');
+}
+
+function shouldUseCenteredPrompt(anchorRect) {
+    if (!anchorRect) return true;
+    const promptWidth = 320;
+    const promptHeight = 64;
+    const left = anchorRect.right + 10;
+    const top = anchorRect.bottom + 10;
+    return (
+        left + promptWidth > window.innerWidth - 16 ||
+        top + promptHeight > window.innerHeight - 16 ||
+        left < 0 ||
+        top < 0
+    );
+}
+
+function hideFloatingButtonImmediately() {
+    clearTimeout(aiFloatingHideTimer);
+    aiFloatingHideTimer = null;
+    el.aiFloatingBtn.classList.remove('is-visible', 'is-leaving');
+    el.aiFloatingBtn.classList.add('hidden');
+}
+
+function showFloatingButtonAt(left, top) {
+    clearTimeout(aiFloatingHideTimer);
+    const buttonSize = 36;
+    const gutter = 10;
+    const toolbarBottom = el.editToolbar?.getBoundingClientRect().bottom ?? 0;
+    const editorRect = el.editorView?.getBoundingClientRect();
+    const minTop = Math.max(toolbarBottom + gutter, (editorRect?.top ?? 0) + gutter);
+    const maxTop = Math.max(minTop, window.innerHeight - buttonSize - gutter);
+    const minLeft = gutter;
+    const maxLeft = Math.max(minLeft, window.innerWidth - buttonSize - gutter);
+
+    el.aiFloatingBtn.style.left = `${Math.max(minLeft, Math.min(left, maxLeft))}px`;
+    el.aiFloatingBtn.style.top = `${Math.max(minTop, Math.min(top, maxTop))}px`;
+    el.aiFloatingBtn.classList.remove('hidden', 'is-leaving');
+    requestAnimationFrame(() => {
+        el.aiFloatingBtn.classList.add('is-visible');
+    });
+}
+
+function hideFloatingButtonAnimated() {
+    if (el.aiFloatingBtn.classList.contains('hidden')) return;
+    clearTimeout(aiFloatingHideTimer);
+    el.aiFloatingBtn.classList.remove('is-visible');
+    el.aiFloatingBtn.classList.add('is-leaving');
+    aiFloatingHideTimer = setTimeout(() => {
+        hideFloatingButtonImmediately();
+    }, 180);
+}
+
+function showPromptBoxElement() {
+    clearTimeout(aiPromptHideTimer);
+    el.aiPromptBox.classList.remove('hidden', 'is-leaving');
+    requestAnimationFrame(() => {
+        el.aiPromptBox.classList.add('is-visible');
+    });
+}
+
+function hidePromptBoxElement() {
+    if (el.aiPromptBox.classList.contains('hidden')) return;
+    clearTimeout(aiPromptHideTimer);
+    el.aiPromptBox.classList.remove('is-visible');
+    el.aiPromptBox.classList.add('is-leaving');
+    aiPromptHideTimer = setTimeout(() => {
+        el.aiPromptBox.classList.remove('is-leaving');
+        el.aiPromptBox.classList.add('hidden');
+    }, 180);
+}
+
+function getSelectionAnchorRect() {
+    if (!cmView) return null;
+    const selection = cmView.state.selection.main;
+    if (selection.empty) return null;
+    return cmView.coordsAtPos(selection.to);
+}
+
+function updateFloatingAIPosition() {
+    if (!state.isEditing || !cmView || !isGeneralAIActive()) {
+        hideFloatingButtonAnimated();
+        return;
+    }
+
+    const sel = cmView.state.selection.main;
+    if (sel.empty || cmView.composing) {
+        hideFloatingButtonAnimated();
+        return;
+    }
+
+    const isAllSelected = (sel.from === 0 && sel.to === cmView.state.doc.length);
+    const rect = getSelectionAnchorRect();
+    if (isAllSelected || shouldUseCenteredPrompt(rect)) {
+        hideFloatingButtonAnimated();
+        if (el.aiPromptBox.classList.contains('hidden')) {
+            showPromptBoxCentered('auto');
+        }
+        return;
+    }
+
+    if (!rect) {
+        hideFloatingButtonAnimated();
+        return;
+    }
+
+    if (!el.aiPromptBox.classList.contains('hidden') && aiPromptMode === 'auto') {
+        hidePromptBox();
+    }
+    showFloatingButtonAt(rect.right + 10, rect.bottom - 15);
 }
 
 async function persistAISettings() {
@@ -195,6 +343,8 @@ export function bindAIEvents() {
     // AI Progress Events from Go
     EventsOn('ai:progress', (data) => {
         if (!el.aiProgressOverlay) return;
+        clearTimeout(aiProgressHideTimer);
+        aiProgressHideTimer = null;
 
         el.aiProgressOverlay.classList.remove('hidden');
         if (data.loading) {
@@ -207,24 +357,22 @@ export function bindAIEvents() {
         const percent = Math.round(data.progress || 0);
         el.aiProgressPercent.textContent = data.loading ? "" : `${percent}%`;
         el.aiProgressBarFill.style.width = `${percent}%`;
+        if (el.aiProgressCancel) {
+            el.aiProgressCancel.classList.toggle('hidden', String(data.label || '').trim().toLowerCase() !== 'receiving processing...');
+        }
 
-        const normalizedLabel = String(data.label || "").trim().toLowerCase();
-        const isCompleted = !data.loading && (
-            percent >= 100 ||
-            normalizedLabel === "completed ✨" ||
-            normalizedLabel === "completed" ||
-            normalizedLabel === "완료 ✨" ||
-            normalizedLabel === "완료"
-        );
+        const isCompleted = data.completed === true;
 
         if (isCompleted) {
-            setTimeout(() => {
-                el.aiProgressOverlay.classList.add('hidden');
-                el.aiProgressOverlay.classList.remove('loading');
-                el.aiProgressBarFill.style.width = '0%';
-                el.aiProgressPercent.textContent = '';
+            aiProgressHideTimer = setTimeout(() => {
+                hideAIProgressOverlay();
+                aiRequestInFlight = false;
+                aiProgressHideTimer = null;
             }, 2000);
         }
+    });
+    el.aiProgressCancel?.addEventListener('click', () => {
+        cancelActiveAIRequest();
     });
 
     // FIM Toggle
@@ -280,6 +428,8 @@ export function bindAIEvents() {
 
     // Detect selection for wand and typing for FIM
     document.addEventListener('selectionchange', handleSelectionChange);
+    window.addEventListener('resize', updateFloatingAIPosition, { passive: true });
+    document.addEventListener('scroll', updateFloatingAIPosition, true);
 
     el.editorView.addEventListener('keydown', handleEditorKeydown, true);
     el.editorView.addEventListener('input', handleEditorInput, true);
@@ -291,9 +441,7 @@ function handleEditorInput() {
     if (!cmView.state.selection.main.empty) return;
 
     // Typing should hide the wand
-    if (!el.aiFloatingBtn.classList.contains('hidden')) {
-        el.aiFloatingBtn.classList.add('hidden');
-    }
+    hideFloatingButtonAnimated();
     if (!el.aiPromptBox.classList.contains('hidden')) {
         hidePromptBox();
     }
@@ -330,7 +478,7 @@ function handleEditorKeydown(e) {
 
 function handleSelectionChange() {
     if (!state.isEditing || !cmView || !isGeneralAIActive()) {
-        el.aiFloatingBtn.classList.add('hidden');
+        hideFloatingButtonAnimated();
         if (!el.aiPromptBox.classList.contains('hidden')) {
             hidePromptBox();
         }
@@ -339,7 +487,7 @@ function handleSelectionChange() {
 
     // Skip showing wand during IME composition (Hangul typing)
     if (cmView.composing) {
-        el.aiFloatingBtn.classList.add('hidden');
+        hideFloatingButtonAnimated();
         return;
     }
 
@@ -349,45 +497,33 @@ function handleSelectionChange() {
     }
 
     if (sel.empty) {
-        el.aiFloatingBtn.classList.add('hidden');
+        hideFloatingButtonAnimated();
         if (!el.aiPromptBox.classList.contains('hidden')) {
             hidePromptBox();
         }
     } else {
-        const isAllSelected = (sel.from === 0 && sel.to === cmView.state.doc.length);
-
-        if (isAllSelected) {
-            // Show prompt box at bottom center
-            el.aiFloatingBtn.classList.add('hidden');
-            showPromptBoxCentered();
-        } else {
-            // Show floating button near selection
-            const rect = cmView.coordsAtPos(sel.to);
-            if (rect) {
-                el.aiFloatingBtn.style.left = `${rect.right + 10}px`;
-                el.aiFloatingBtn.style.top = `${rect.bottom - 15}px`;
-                el.aiFloatingBtn.classList.remove('hidden');
-            }
-        }
+        updateFloatingAIPosition();
     }
 }
 
-function showPromptBoxCentered() {
+function showPromptBoxCentered(mode = 'auto') {
+    aiPromptMode = mode;
     el.aiPromptBox.style.left = '50%';
     el.aiPromptBox.style.bottom = '40px';
     el.aiPromptBox.style.top = 'auto'; // Reset top
-    el.aiPromptBox.style.transform = 'translateX(-50%)';
-    el.aiPromptBox.classList.remove('hidden');
+    el.aiPromptBox.style.setProperty('--ai-prompt-base-transform', 'translateX(-50%)');
+    showPromptBoxElement();
     // el.aiPromptInput.focus(); // Removed to avoid stealing focus during Select All
 }
 
 function showPromptBox() {
+    aiPromptMode = 'manual';
     const btnRect = el.aiFloatingBtn.getBoundingClientRect();
     el.aiPromptBox.style.left = `${btnRect.left}px`;
     el.aiPromptBox.style.top = `${btnRect.bottom + 10}px`;
     el.aiPromptBox.style.bottom = 'auto';
-    el.aiPromptBox.style.transform = 'none';
-    el.aiPromptBox.classList.remove('hidden');
+    el.aiPromptBox.style.setProperty('--ai-prompt-base-transform', 'translateX(0)');
+    showPromptBoxElement();
     el.aiPromptInput.focus();
 }
 
@@ -405,20 +541,29 @@ export function showPromptBoxAtSelection() {
     if (!rect) {
         return false;
     }
+    if (shouldUseCenteredPrompt(rect)) {
+        hideFloatingButtonAnimated();
+        showPromptBoxCentered('manual');
+        el.aiPromptInput.focus();
+        el.aiPromptInput.select();
+        return true;
+    }
 
-    el.aiFloatingBtn.classList.add('hidden');
+    aiPromptMode = 'manual';
+    hideFloatingButtonAnimated();
     el.aiPromptBox.style.left = `${rect.right + 10}px`;
     el.aiPromptBox.style.top = `${rect.bottom + 10}px`;
     el.aiPromptBox.style.bottom = 'auto';
-    el.aiPromptBox.style.transform = 'none';
-    el.aiPromptBox.classList.remove('hidden');
+    el.aiPromptBox.style.setProperty('--ai-prompt-base-transform', 'translateX(0)');
+    showPromptBoxElement();
     el.aiPromptInput.focus();
     el.aiPromptInput.select();
     return true;
 }
 
 function hidePromptBox() {
-    el.aiPromptBox.classList.add('hidden');
+    aiPromptMode = null;
+    hidePromptBoxElement();
     el.aiPromptInput.value = "";
     if (cmView) cmView.focus();
 }
@@ -548,6 +693,7 @@ async function sendPrompt() {
     hidePromptBox();
     
     el.aiPromptSend.disabled = true;
+    aiRequestInFlight = true;
     showToast("AI Processing...");
 
     let endpoint = window.aiState.generalEndpoint.trim();
@@ -606,13 +752,17 @@ async function sendPrompt() {
         });
 
         renderMarkdown(cmView.state.doc.toString());
+        aiRequestInFlight = false;
         showToast("AI Edit Applied! ✨");
     } catch (err) {
+        aiRequestInFlight = false;
         console.error("AI prompt error", err);
-        showToast("AI request failed. ❌");
-        if (el.aiProgressOverlay) {
-            el.aiProgressOverlay.classList.add('hidden');
+        if (isCancelledAIError(err)) {
+            showToast("AI request cancelled.");
+        } else {
+            showToast("AI request failed. ❌");
         }
+        hideAIProgressOverlay();
     } finally {
         el.aiPromptSend.disabled = false;
         // Don't close overlay here to show completion message
@@ -655,7 +805,7 @@ function syncAIControls() {
     }
 
     if (!generalToolbarEnabled) {
-        el.aiFloatingBtn.classList.add('hidden');
+        hideFloatingButtonAnimated();
         if (!el.aiPromptBox.classList.contains('hidden')) {
             hidePromptBox();
         }

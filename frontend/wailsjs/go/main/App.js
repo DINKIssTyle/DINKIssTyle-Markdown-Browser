@@ -10,6 +10,10 @@ export function AskSaveDiscardCancel(arg1, arg2) {
   return window['go']['main']['App']['AskSaveDiscardCancel'](arg1, arg2);
 }
 
+export function CancelAIRequest() {
+  return window['go']['main']['App']['CancelAIRequest']();
+}
+
 export function ClearRecentFiles() {
   return window['go']['main']['App']['ClearRecentFiles']();
 }

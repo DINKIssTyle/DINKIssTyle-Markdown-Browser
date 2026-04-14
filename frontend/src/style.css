@@ -2061,7 +2061,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 
 /* ── AI Floating Button & Prompt ──────────────────── */
 .ai-floating-btn {
-    position: absolute;
+    position: fixed;
     background: linear-gradient(135deg, #1f8fff, #8f00ff);
     color: #fff;
     width: 36px;
@@ -2074,16 +2074,31 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     cursor: pointer;
     box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
     z-index: 800;
-    transition: transform 0.2s, box-shadow 0.2s;
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.18s ease, box-shadow 0.2s ease;
+}
+
+.ai-floating-btn.is-visible {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+    pointer-events: auto;
+}
+
+.ai-floating-btn.is-leaving {
+    opacity: 0;
+    transform: translateY(8px) scale(0.92);
+    pointer-events: none;
 }
 
 .ai-floating-btn:hover {
-    transform: scale(1.1);
+    transform: translateY(-1px) scale(1.06);
     box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
 }
 
 .ai-prompt-box {
-    position: absolute;
+    position: fixed;
     background: var(--surface-color);
     border: 1px solid var(--border-color);
     border-radius: 20px;
@@ -2096,6 +2111,20 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     min-width: 300px;
     backdrop-filter: blur(10px);
     -webkit-backdrop-filter: blur(10px);
+    --ai-prompt-base-transform: translateX(0);
+    opacity: 0;
+    transform: var(--ai-prompt-base-transform) translateY(10px) scale(0.98);
+    transition: opacity 0.18s ease, transform 0.18s ease;
+}
+
+.ai-prompt-box.is-visible {
+    opacity: 1;
+    transform: var(--ai-prompt-base-transform) translateY(0) scale(1);
+}
+
+.ai-prompt-box.is-leaving {
+    opacity: 0;
+    transform: var(--ai-prompt-base-transform) translateY(10px) scale(0.98);
 }
 
 .ai-prompt-box input {
@@ -2193,9 +2222,36 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-progress-content {
+    position: relative;
     display: flex;
     flex-direction: column;
     gap: 8px;
+}
+
+.ai-progress-cancel {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 999px;
+    background: #ff453a;
+    color: white;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    box-shadow: 0 8px 20px rgba(255, 69, 58, 0.28);
+}
+
+.ai-progress-cancel:hover {
+    background: #ff3b30;
+}
+
+.ai-progress-cancel .material-symbols-outlined {
+    font-size: 16px;
+    line-height: 1;
 }
 
 .ai-progress-info {

@@ -128,6 +128,7 @@ export const el = {
     modalBtnOk: $('modal-btn-ok'),
     modalBtnCancel: $('modal-btn-cancel'),
     aiProgressOverlay: $('ai-progress-overlay'),
+    aiProgressCancel: $('ai-progress-cancel'),
     aiProgressLabel: $('ai-progress-label'),
     aiProgressPercent: $('ai-progress-percent'),
     aiProgressBarFill: $('ai-progress-bar-fill'),
