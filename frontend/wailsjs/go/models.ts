@@ -13,6 +13,7 @@ export namespace main {
 	    aiFimKey: string;
 	    aiFimTemp: number;
 	    aiGeneralProvider: string;
+	    koreanImeEnterFix: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -32,6 +33,7 @@ export namespace main {
 	        this.aiFimKey = source["aiFimKey"];
 	        this.aiFimTemp = source["aiFimTemp"];
 	        this.aiGeneralProvider = source["aiGeneralProvider"];
+	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
 	    }
 	}
 	export class FileResult {

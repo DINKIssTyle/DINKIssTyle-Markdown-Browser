@@ -11,7 +11,7 @@ import { showToast } from './main-ui.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
-import { EditorState, Compartment, Prec } from '@codemirror/state';
+import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -25,6 +25,104 @@ let currentEditorFontSize = 15;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 
+// 한글 IME 엔터 중복 입력 방지 익스텐션 (v2: Transaction Filter 방식)
+const setImeState = StateEffect.define();
+
+const imeStateField = StateField.define({
+    create() {
+        return {
+            composing: false,
+            justEndedAt: 0
+        };
+    },
+    update(value, tr) {
+        for (const e of tr.effects) {
+            if (e.is(setImeState)) {
+                value = { ...value, ...e.value };
+            }
+        }
+        return value;
+    }
+});
+
+const koreanImeEnterFix = [
+    imeStateField,
+    // 조합 상태는 "관찰"만 합니다.
+    EditorView.domEventObservers({
+        compositionstart(event, view) {
+            view.dispatch({
+                effects: setImeState.of({ composing: true })
+            });
+        },
+        compositionupdate(event, view) {
+            if (!view.state.field(imeStateField).composing) {
+                view.dispatch({
+                    effects: setImeState.of({ composing: true })
+                });
+            }
+        },
+        compositionend(event, view) {
+            view.dispatch({
+                effects: setImeState.of({ composing: false, justEndedAt: Date.now() })
+            });
+        }
+    }),
+    // 1. 키보드 이벤트 단계에서 차단 (설정 활성화 시에만)
+    Prec.highest(keymap.of([{
+        key: "Enter",
+        run: (view) => {
+            if (!state.koreanImeFixEnabled) return false;
+            const ime = view.state.field(imeStateField, false);
+            if (!ime) return false;
+            const delta = Date.now() - ime.justEndedAt;
+            if (ime.composing || delta < 100) {
+                return true; 
+            }
+            return false;
+        }
+    }])),
+    // 2. 가짜 엔터로 생긴 줄바꿈 transaction 차단 (줄바꿈만 도려내기, 설정 활성화 시에만)
+    EditorState.transactionFilter.of(tr => {
+        if (!tr.docChanged || !state.koreanImeFixEnabled) return tr;
+
+        const ime = tr.startState.field(imeStateField, false);
+        if (!ime) return tr;
+
+        const now = Date.now();
+        const delta = now - ime.justEndedAt;
+
+        let hasNewline = false;
+        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+            if (inserted.toString().includes("\n")) hasNewline = true;
+        });
+
+        if (hasNewline) {
+            // 조합 중이거나 종료 후 150ms 이내인 경우만 감시
+            if (ime.composing || delta < 150) {
+                let changes = [];
+                let modified = false;
+
+                tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+                    const originalText = inserted.toString();
+                    if (originalText.includes("\n")) {
+                        const strippedText = originalText.replace(/\n/g, "");
+                        changes.push({ from: fromA, to: toA, insert: strippedText });
+                        modified = true;
+                    } else {
+                        changes.push({ from: fromA, to: toA, insert: originalText });
+                    }
+                });
+
+                if (modified) {
+                    return { changes };
+                }
+            }
+        }
+
+        return tr;
+    })
+];
+
 // ── Editor Mode ────────────────────────────────────────────
 
 export function initCodeMirror() {
@@ -34,6 +132,7 @@ export function initCodeMirror() {
     const startState = EditorState.create({
         doc: state.currentMarkdownSource || "",
         extensions: [
+            Prec.highest(koreanImeEnterFix),
             lineNumbers(),
             history(),
             keymap.of([
@@ -43,6 +142,7 @@ export function initCodeMirror() {
             ]),
             markdown({ base: markdownLanguage, codeLanguages: languages }),
             themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
+            koreanImeEnterFix,
             ghostTextField,
             drawSelection(),
             dropCursor(),

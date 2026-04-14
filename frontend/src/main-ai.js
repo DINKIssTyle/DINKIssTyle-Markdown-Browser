@@ -79,6 +79,8 @@ export async function initAI() {
     el.aiFimModel.value = aiState.fimModel;
     el.aiFimKey.value = aiState.fimKey;
     el.aiFimTemp.value = aiState.fimTemp;
+    el.aiToggleImeFix.checked = s.koreanImeEnterFix || false;
+    state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
 
     return aiState;
 }
@@ -115,7 +117,10 @@ export function bindAIEvents() {
             aiFimModel: window.aiState.fimModel,
             aiFimKey: window.aiState.fimKey,
             aiFimTemp: window.aiState.fimTemp,
+            koreanImeEnterFix: el.aiToggleImeFix.checked,
         });
+
+        state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
 
         el.aiSettingsModal.classList.add('hidden');
         showToast("AI Settings Saved.");

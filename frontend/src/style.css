@@ -1571,3 +1571,19 @@ html.dark .ai-setting-group {
     align-items: center;
     gap: 8px;
 }
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    cursor: pointer;
+    font-size: 13px;
+    color: var(--text-color);
+    margin-top: 4px;
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}

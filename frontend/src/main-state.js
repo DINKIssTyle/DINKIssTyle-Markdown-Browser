@@ -116,6 +116,7 @@ export const el = {
     aiProgressLabel: $('ai-progress-label'),
     aiProgressPercent: $('ai-progress-percent'),
     aiProgressBarFill: $('ai-progress-bar-fill'),
+    aiToggleImeFix: $('ai-toggle-ime-fix'),
 };
 
 // ── Shared Mutable State ───────────────────────────────────
@@ -138,6 +139,7 @@ export const state = {
     nextTabID: 1,
     isEditing: false,
     editorOriginalContent: "",
+    koreanImeFixEnabled: false,
 };
 
 // ── Pure Utility Functions ─────────────────────────────────
