@@ -69,7 +69,7 @@ type App struct {
 // NewApp creates a new App application struct
 func NewApp() *App {
 	configDir, _ := os.UserConfigDir()
-	appDir := filepath.Join(configDir, "DKST Markdown Browser")
+	appDir := filepath.Join(configDir, AppName)
 	os.MkdirAll(appDir, 0755)
 
 	return &App{
@@ -641,4 +641,7 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 
 	return fullResponse.String(), nil
 }
-
+// GetVersion returns the application version
+func (a *App) GetVersion() string {
+	return AppVersion
+}

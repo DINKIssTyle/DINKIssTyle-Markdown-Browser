@@ -38,6 +38,10 @@ export function GetSystemTheme() {
   return window['go']['main']['App']['GetSystemTheme']();
 }
 
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
+}
+
 export function HandleFileDrop(arg1) {
   return window['go']['main']['App']['HandleFileDrop'](arg1);
 }

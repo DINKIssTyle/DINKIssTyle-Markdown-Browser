@@ -21,6 +21,8 @@ export function GetSettings():Promise<main.AppSettings>;
 
 export function GetSystemTheme():Promise<string>;
 
+export function GetVersion():Promise<string>;
+
 export function HandleFileDrop(arg1:string):Promise<main.FileResult>;
 
 export function HandleSecondInstanceLaunch(arg1:options.SecondInstanceData):Promise<void>;
