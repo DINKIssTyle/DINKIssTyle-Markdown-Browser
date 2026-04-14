@@ -154,6 +154,7 @@ export function updateNavButtons() {
 }
 
 export function goBack() {
+    if (state.isEditing) return;
     if (state.navIndex > 0) {
         saveCurrentScroll();
         state.navIndex--;
@@ -163,6 +164,7 @@ export function goBack() {
 }
 
 export function goForward() {
+    if (state.isEditing) return;
     if (state.navIndex < state.navHistory.length - 1) {
         saveCurrentScroll();
         state.navIndex++;
@@ -172,6 +174,7 @@ export function goForward() {
 }
 
 export function goHome() {
+    if (state.isEditing) return;
     openPath(state.homeTargetPath);
 }
 

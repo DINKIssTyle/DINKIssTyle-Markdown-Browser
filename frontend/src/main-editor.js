@@ -4,6 +4,7 @@
  */
 
 import { state, el } from './main-state.js';
+import { updateNavButtons } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown } from './main-render.js';
 import { showToast } from './main-ui.js';
@@ -12,7 +13,7 @@ import { LogError } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────
 let lastLineCount = 0;
-let currentEditorFontSize = 16;
+let currentEditorFontSize = 15;
 
 // ── Editor Mode ────────────────────────────────────────────
 
@@ -39,6 +40,11 @@ export function enterEditMode() {
     el.btnSearchToggle.disabled = true;
     el.selectEngine.disabled = true;
     
+    // 편집 중 네비게이션 버튼 비활성화
+    el.btnBack.disabled = true;
+    el.btnForward.disabled = true;
+    el.btnHome.disabled = true;
+    
     el.markdownEditor.focus();
 }
 
@@ -53,6 +59,9 @@ export async function exitEditMode(didSave = false) {
     
     el.btnSearchToggle.disabled = false;
     el.selectEngine.disabled = false;
+    
+    // 네비게이션 버튼 상태 복원
+    updateNavButtons();
     
     if (didSave) {
         const { reloadCurrent } = await import('./main-navigation.js');
