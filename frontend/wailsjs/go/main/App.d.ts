@@ -3,6 +3,10 @@
 import {main} from '../models';
 import {options} from '../models';
 
+export function AskConfirm(arg1:string,arg2:string,arg3:string,arg4:string):Promise<boolean>;
+
+export function AskSaveDiscardCancel(arg1:string,arg2:string):Promise<string>;
+
 export function ClearRecentFiles():Promise<void>;
 
 export function ConfirmOpenExternalURL(arg1:string):Promise<boolean>;
@@ -32,6 +36,8 @@ export function OpenFile():Promise<main.FileResult>;
 export function ReadFile(arg1:string):Promise<string>;
 
 export function ReadImageAsDataURL(arg1:string):Promise<string>;
+
+export function SaveFile(arg1:string,arg2:string):Promise<void>;
 
 export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 

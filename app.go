@@ -111,6 +111,11 @@ func (a *App) ReadFile(path string) (string, error) {
 	return string(content), nil
 }
 
+// SaveFile saves the content to a file
+func (a *App) SaveFile(path string, content string) error {
+	return os.WriteFile(path, []byte(content), 0644)
+}
+
 // ReadImageAsDataURL reads a local image file and returns a data URL for stable rendering.
 func (a *App) ReadImageAsDataURL(path string) (string, error) {
 	data, err := os.ReadFile(path)
@@ -231,22 +236,54 @@ func (a *App) OpenDirectory() (string, error) {
 // ConfirmOpenExternalURL shows a native confirmation dialog before opening an external URL.
 func (a *App) ConfirmOpenExternalURL(url string) (bool, error) {
 	log.Printf("external-url: confirm requested url=%s", url)
+	return a.AskConfirm("External Link", fmt.Sprintf("Open in your system browser?\n\n%s", url), "Open", "Cancel"), nil
+}
+
+// AskConfirm shows a native confirmation dialog with custom button labels.
+func (a *App) AskConfirm(title string, message string, okText string, cancelText string) bool {
+	// macOS(darwin)일 경우: 첫 번째 요소가 가장 오른쪽(기본 버튼)으로 가므로 순서를 바꿈
+	// Windows/Linux: 배열 순서대로 왼쪽->오른쪽 배치
+	buttons := []string{cancelText, okText}
+	if goruntime.GOOS == "darwin" {
+		buttons = []string{okText, cancelText}
+	}
+
 	response, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
 		Type:          runtime.QuestionDialog,
-		Title:         "External Link",
-		Message:       fmt.Sprintf("Open in your system browser?\n\n%s", url),
-		Buttons:       []string{"Cancel", "Open"},
-		DefaultButton: "Open",
+		Title:         title,
+		Message:       message,
+		Buttons:       buttons,
+		DefaultButton: okText,
+		CancelButton:  cancelText,
+	})
+	if err != nil {
+		log.Printf("dialog: failed title=%s err=%v", title, err)
+		return false
+	}
+	return response == okText
+}
+
+// AskSaveDiscardCancel shows a dialog with Save, Discard, and Cancel options.
+func (a *App) AskSaveDiscardCancel(title string, message string) string {
+	// macOS(darwin): [Save](1st, far right, default) [Cancel](2nd) [Discard](3rd)
+	// Windows/Linux: [Save] [Discard] [Cancel]
+	buttons := []string{"Save", "Discard", "Cancel"}
+	if goruntime.GOOS == "darwin" {
+		buttons = []string{"Save", "Cancel", "Discard"}
+	}
+
+	response, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
+		Type:          runtime.QuestionDialog,
+		Title:         title,
+		Message:       message,
+		Buttons:       buttons,
+		DefaultButton: "Save",
 		CancelButton:  "Cancel",
 	})
 	if err != nil {
-		log.Printf("external-url: confirm failed url=%s err=%v", url, err)
-		return false, err
+		return "Cancel"
 	}
-
-	ok := response == "Open"
-	log.Printf("external-url: confirm response url=%s response=%s ok=%v", url, response, ok)
-	return ok, nil
+	return response
 }
 
 // HandleFileDrop handles a file dropped onto the window

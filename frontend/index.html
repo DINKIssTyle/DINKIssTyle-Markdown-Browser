@@ -41,6 +41,9 @@
                         <option value="html">HTML</option>
                     </select>
                 </div>
+                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn" disabled>
+                    <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
+                </button>
                 <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
                     <span class="material-symbols-outlined info-btn-icon" aria-hidden="true">info</span>
                 </button>
@@ -66,6 +69,42 @@
             <button id="btn-new-tab" title="New Tab" aria-label="New Tab" class="tab-add-btn">
                 <span class="material-symbols-outlined" aria-hidden="true">add</span>
             </button>
+        </div>
+        
+        <div id="edit-toolbar" class="edit-toolbar hidden">
+            <div class="edit-tool-group">
+                <button id="ed-bold" title="Bold (**)" class="tool-btn"><span class="material-symbols-outlined">format_bold</span></button>
+                <button id="ed-italic" title="Italic (*)" class="tool-btn"><span class="material-symbols-outlined">format_italic</span></button>
+                <button id="ed-strike" title="Strikethrough (~~)" class="tool-btn"><span class="material-symbols-outlined">strikethrough_s</span></button>
+                <button id="ed-quote" title="Blockquote (>)" class="tool-btn"><span class="material-symbols-outlined">format_quote</span></button>
+            </div>
+            <div class="edit-separator"></div>
+            <div class="edit-tool-group">
+                <button id="ed-h1" title="Heading 1 (#)" class="tool-btn">H1</button>
+                <button id="ed-h2" title="Heading 2 (##)" class="tool-btn">H2</button>
+                <button id="ed-h3" title="Heading 3 (###)" class="tool-btn">H3</button>
+                <button id="ed-ul" title="Unordered List (•)" class="tool-btn"><span class="material-symbols-outlined">format_list_bulleted</span></button>
+                <button id="ed-ol" title="Ordered List (1.)" class="tool-btn"><span class="material-symbols-outlined">format_list_numbered</span></button>
+                <button id="ed-hr" title="Horizontal Rule (---)" class="tool-btn"><span class="material-symbols-outlined">horizontal_rule</span></button>
+            </div>
+            <div class="edit-separator"></div>
+            <div class="edit-tool-group">
+                <button id="ed-link" title="Link [title](url)" class="tool-btn"><span class="material-symbols-outlined">link</span></button>
+                <button id="ed-image" title="Image ![alt](url)" class="tool-btn"><span class="material-symbols-outlined">image</span></button>
+                <button id="ed-code" title="Code Block (```)" class="tool-btn"><span class="material-symbols-outlined">code</span></button>
+                <button id="ed-table" title="Table" class="tool-btn"><span class="material-symbols-outlined">table_chart</span></button>
+            </div>
+            <div class="edit-separator"></div>
+            <div class="edit-tool-group">
+                <button id="ed-task" title="Task List (- [ ])" class="tool-btn"><span class="material-symbols-outlined">checklist</span></button>
+                <button id="ed-latex" title="LaTeX ($/$$)" class="tool-btn"><span class="material-symbols-outlined">functions</span></button>
+                <button id="ed-emoji" title="Emoji" class="tool-btn"><span class="material-symbols-outlined">mood</span></button>
+            </div>
+            <div class="spacer"></div>
+            <div class="edit-tool-group">
+                <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span class="material-symbols-outlined">disabled_by_default</span></button>
+                <button id="ed-save" title="Save" class="tool-btn save-btn"><span class="material-symbols-outlined">save</span></button>
+            </div>
         </div>
 
         <main id="main-container">
@@ -95,6 +134,10 @@
                 </div>
                 <div id="markdown-container" class="markdown-container hidden"></div>
                 <iframe id="html-frame" class="html-frame hidden" title="HTML Document Viewer"></iframe>
+            </article>
+
+            <article id="editor-view" class="editor-view hidden">
+                <textarea id="markdown-editor" spellcheck="false" placeholder="Enter markdown content here..."></textarea>
             </article>
 
             <!-- Sidebar (Search) - on the RIGHT -->

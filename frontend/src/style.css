@@ -128,6 +128,7 @@ body {
     color: var(--text-color);
     cursor: pointer;
     transition: background 0.2s ease, border-color 0.2s ease, transform 0.2s ease;
+    --wails-draggable: no-drag;
 }
 
 .tab-item:hover {
@@ -235,6 +236,7 @@ html.dark .info-btn:hover {
     align-items: center;
     justify-content: center;
     transition: background 0.2s;
+    --wails-draggable: no-drag;
 }
 
 .icon-btn {
@@ -261,6 +263,11 @@ html.dark .info-btn:hover {
 
 .nav-btn:hover {
     background: rgba(0, 0, 0, 0.05);
+}
+
+.nav-btn.active {
+    background: rgba(0, 113, 227, 0.1) !important;
+    color: var(--accent-color) !important;
 }
 
 html.dark .nav-btn:hover {
@@ -366,6 +373,7 @@ html.dark .nav-btn:hover {
     justify-content: center;
     cursor: pointer;
     transition: background 0.16s ease, color 0.16s ease;
+    --wails-draggable: no-drag;
 }
 
 .clear-search-btn:hover {
@@ -710,6 +718,136 @@ html.dark .html-frame {
     border-radius: 4px;
 }
 html.dark ::-webkit-scrollbar-thumb { background: rgba(255, 255, 255, 0.1); }
+
+/* ── Edit Toolbar ─────────────────────────────────────── */
+.edit-toolbar {
+    height: 48px;
+    background: var(--surface-elevated);
+    border-bottom: 1px solid var(--border-color);
+    display: flex;
+    align-items: center;
+    padding: 0 16px;
+    gap: 4px;
+    overflow-x: auto;
+    white-space: nowrap;
+    z-index: 90;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.edit-toolbar::-webkit-scrollbar {
+    height: 3px;
+}
+
+.edit-tool-group {
+    display: flex;
+    align-items: center;
+    gap: 2px;
+}
+
+.edit-separator {
+    width: 1px;
+    height: 24px;
+    background: var(--border-color);
+    margin: 0 8px;
+}
+
+.tool-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    min-width: 32px;
+    height: 32px;
+    padding: 0 6px;
+    border-radius: 6px;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 13px;
+    font-weight: 600;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.1s ease;
+    --wails-draggable: no-drag;
+}
+
+.tool-btn:hover {
+    background: rgba(0, 113, 227, 0.08);
+    color: var(--accent-color);
+}
+
+.tool-btn:active {
+    transform: scale(0.94);
+}
+
+.tool-btn .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.cancel-btn:hover {
+    background: rgba(255, 59, 48, 0.12) !important;
+    color: #ff453a !important;
+}
+
+.save-btn:hover {
+    background: rgba(52, 199, 89, 0.12) !important;
+    color: #32d74b !important;
+}
+
+.spacer {
+    flex: 1;
+}
+
+/* ── Editor View ───────────────────────────────────────── */
+.editor-view {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: var(--bg-color);
+    overflow: hidden;
+}
+
+#markdown-editor {
+    flex: 1;
+    width: 100%;
+    max-width: 1012px;
+    margin: 0 auto;
+    padding: 32px 40px;
+    background: transparent;
+    color: var(--text-color);
+    border: none;
+    resize: none;
+    font-family: var(--code-font);
+    font-size: 15px;
+    line-height: 1.6;
+    outline: none;
+    user-select: text;
+    -webkit-user-select: text;
+    tab-size: 4;
+}
+
+#main-container.is-editing {
+    flex-direction: row;
+}
+ 
+#main-container.is-editing .editor-view {
+    border-right: 1px solid var(--border-color);
+    width: 50%;
+    max-width: 50%;
+}
+ 
+#main-container.is-editing .content-view {
+    display: flex !important;
+    width: 50%;
+    max-width: 50%;
+    padding: 32px;
+    background: var(--bg-color);
+    position: relative;
+    border-left: none;
+}
+
+#main-container.is-editing .markdown-container {
+    max-width: 100%;
+}
 
 /* ── Search highlight ─────────────────────────────────── */
 .search-highlight {

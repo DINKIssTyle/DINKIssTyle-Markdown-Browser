@@ -24,6 +24,9 @@ import {
     HandleFileDrop,
     GetSettings,
     SaveSettings,
+    SaveFile,
+    AskConfirm,
+    AskSaveDiscardCancel,
 } from '../wailsjs/go/main/App';
 import { BrowserOpenURL, ClipboardGetText, ClipboardSetText, EventsOn, LogError, LogInfo, OnFileDrop } from '../wailsjs/runtime/runtime';
 
@@ -56,6 +59,8 @@ let htmlFrameResizeObserver = null;
 let activeProgressTaskId = 0;
 let draggedTabId = "";
 let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
+let isEditing = false;
+let editorOriginalContent = "";
 
 const getScroller = () => document.getElementById('content-view');
 const $ = id => document.getElementById(id);
@@ -102,6 +107,30 @@ const el = {
     contextSearch: $('context-search'),
     contextOpen: $('context-open'),
     contextOpenNewTab: $('context-open-new-tab'),
+    mainContainer: $('main-container'),
+    btnEdit: $('btn-edit'),
+    editToolbar: $('edit-toolbar'),
+    editorView: $('editor-view'),
+    markdownEditor: $('markdown-editor'),
+    edBold: $('ed-bold'),
+    edItalic: $('ed-italic'),
+    edStrike: $('ed-strike'),
+    edQuote: $('ed-quote'),
+    edH1: $('ed-h1'),
+    edH2: $('ed-h2'),
+    edH3: $('ed-h3'),
+    edUl: $('ed-ul'),
+    edOl: $('ed-ol'),
+    edHr: $('ed-hr'),
+    edLink: $('ed-link'),
+    edImage: $('ed-image'),
+    edCode: $('ed-code'),
+    edTable: $('ed-table'),
+    edTask: $('ed-task'),
+    edLatex: $('ed-latex'),
+    edEmoji: $('ed-emoji'),
+    edCancel: $('ed-cancel'),
+    edSave: $('ed-save'),
 };
 
 window.addEventListener('DOMContentLoaded', async () => {
@@ -334,9 +363,9 @@ function renderTabs() {
     });
 
     el.tabsList.querySelectorAll('[data-close-tab]').forEach(button => {
-        button.addEventListener('click', event => {
+        button.addEventListener('click', async event => {
             event.stopPropagation();
-            closeTab(button.dataset.closeTab);
+            await closeTab(button.dataset.closeTab);
         });
     });
 
@@ -359,7 +388,29 @@ function moveTab(sourceTabID, targetTabID) {
     renderTabs();
 }
 
-function closeTab(tabID) {
+async function closeTab(tabID) {
+    // Check for unsaved changes if editing this tab
+    if (isEditing && tabID === activeTabId) {
+        if (el.markdownEditor.value !== editorOriginalContent) {
+            const response = await AskSaveDiscardCancel("Unsaved Changes", "The document has been modified. Do you want to save changes?");
+            
+            if (response === "Cancel") return;
+            
+            if (response === "Save") {
+                try {
+                    await SaveFile(currentFilePath, el.markdownEditor.value);
+                    showToast("File saved successfully. ✅");
+                } catch (error) {
+                    LogError(`Auto-save on close failed: ${error}`);
+                    showToast("Failed to save file. ❌");
+                    return; // Don't close tab if save failed
+                }
+            }
+            // If "Discard", just continue
+        }
+        await exitEditMode(false);
+    }
+
     const idx = tabs.findIndex(tab => tab.id === tabID);
     if (idx === -1) return;
 
@@ -466,6 +517,7 @@ function bindToolbar() {
     el.btnThemeToggle.onclick = toggleTheme;
     el.btnSearchToggle.onclick = toggleSearch;
     el.btnNewTab.onclick = () => createAndSwitchToNewTab();
+    el.btnEdit.onclick = enterEditMode;
     el.selectEngine.onchange = async event => {
         if (event.target.value === 'html') {
             syncEngineSelector();
@@ -487,6 +539,170 @@ function bindToolbar() {
     el.btnProgressCancel.onclick = cancelCurrentTask;
     document.addEventListener('keydown', handleGlobalKeydown);
     bindHistoryMouseNavigation(document);
+    bindEditorEvents();
+}
+ 
+function bindEditorEvents() {
+    el.edBold.onclick = () => insertTextAtCursor('**', '**');
+    el.edItalic.onclick = () => insertTextAtCursor('*', '*');
+    el.edStrike.onclick = () => insertTextAtCursor('~~', '~~');
+    el.edQuote.onclick = () => insertTextAtCursor('\n> ', '');
+    el.edH1.onclick = () => insertTextAtCursor('\n# ', '');
+    el.edH2.onclick = () => insertTextAtCursor('\n## ', '');
+    el.edH3.onclick = () => insertTextAtCursor('\n### ', '');
+    el.edUl.onclick = () => insertTextAtCursor('\n- ', '');
+    el.edOl.onclick = () => insertTextAtCursor('\n1. ', '');
+    el.edHr.onclick = () => insertTextAtCursor('\n---\n', '');
+    
+    el.edLink.onclick = () => {
+        const url = window.prompt("Enter link URL:", "https://");
+        if (url) insertTextAtCursor('[', `](${url})`);
+    };
+    
+    el.edImage.onclick = () => {
+        const url = window.prompt("Enter image URL or path:", "https://");
+        if (url) insertTextAtCursor('![', `](${url})`);
+    };
+    
+    el.edCode.onclick = () => {
+        const lang = window.prompt("Enter language (optional):", "javascript");
+        insertTextAtCursor(`\n\`\`\`${lang || ''}\n`, '\n\`\`\`\n');
+    };
+    
+    el.edTable.onclick = () => {
+        const rows = parseInt(window.prompt("Number of rows:", "3") || "0");
+        const cols = parseInt(window.prompt("Number of columns:", "3") || "0");
+        if (rows > 0 && cols > 0) {
+            let table = '\n|';
+            for (let c = 0; c < cols; c++) table += ` Header ${c+1} |`;
+            table += '\n|';
+            for (let c = 0; c < cols; c++) table += ' --- |';
+            for (let r = 0; r < rows; r++) {
+                table += '\n|';
+                for (let c = 0; c < cols; c++) table += ` Cell |`;
+            }
+            table += '\n';
+            insertTextAtCursor(table, '');
+        }
+    };
+    
+    el.edTask.onclick = () => insertTextAtCursor('\n- [ ] ', '');
+    el.edLatex.onclick = () => {
+        const block = window.confirm("Use block math ($$)?\n(Cancel for inline math $)");
+        const tag = block ? '$$' : '$';
+        insertTextAtCursor(tag, tag);
+    };
+    
+    el.edEmoji.onclick = () => {
+        const emojis = ['😀', '🚀', '🔥', '✅', '❌', '📝', '📂', '💡', '⚠️', '⭐'];
+        const choice = window.prompt(`Common emojis:\n${emojis.join(' ')}\nOr enter any emoji:`, '😀');
+        if (choice) insertTextAtCursor(choice, '');
+    };
+    
+    el.edCancel.onclick = handleCancel;
+    el.edSave.onclick = handleSave;
+    
+    el.markdownEditor.oninput = (e) => {
+        const tab = getActiveTab();
+        if (tab) tab.currentMarkdownSource = el.markdownEditor.value;
+        
+        // Update preview if it's a newline or always (user asked for newline specifically)
+        if (e.inputType === 'insertLineBreak' || el.markdownEditor.value.endsWith('\n')) {
+            renderMarkdown(el.markdownEditor.value);
+        }
+    };
+    
+    // Support Tab key in textarea
+    el.markdownEditor.onkeydown = (e) => {
+        if (e.key === 'Tab') {
+            e.preventDefault();
+            insertTextAtCursor('    ', '');
+        }
+    };
+}
+
+function enterEditMode() {
+    if (isEditing || currentDocumentType !== 'markdown') return;
+    
+    isEditing = true;
+    editorOriginalContent = currentMarkdownSource;
+    el.markdownEditor.value = currentMarkdownSource;
+    
+    el.editToolbar.classList.remove('hidden');
+    el.editorView.classList.remove('hidden');
+    el.mainContainer.classList.add('is-editing');
+    el.btnEdit.classList.add('active');
+    
+    // Ensure content view is visible for preview
+    el.contentView.classList.remove('hidden'); 
+    
+    // Hide other non-editor UI
+    el.btnSearchToggle.disabled = true;
+    el.selectEngine.disabled = true;
+    
+    el.markdownEditor.focus();
+}
+
+async function exitEditMode(didSave = false) {
+    if (!isEditing) return;
+    
+    isEditing = false;
+    el.editToolbar.classList.add('hidden');
+    el.editorView.classList.add('hidden');
+    el.mainContainer.classList.remove('is-editing');
+    el.btnEdit.classList.remove('active');
+    
+    el.btnSearchToggle.disabled = false;
+    el.selectEngine.disabled = false;
+    
+    if (didSave) {
+        await reloadCurrent();
+    } else {
+        currentMarkdownSource = editorOriginalContent;
+        const tab = getActiveTab();
+        if (tab) tab.currentMarkdownSource = editorOriginalContent;
+        await renderActiveTab();
+    }
+}
+
+async function handleSave() {
+    const ok = await AskConfirm("Save Changes", "Do you want to save changes to the file?", "Save", "Cancel");
+    if (!ok) return;
+    
+    try {
+        await SaveFile(currentFilePath, el.markdownEditor.value);
+        showToast("File saved successfully. ✅");
+        await exitEditMode(true);
+    } catch (error) {
+        LogError(`Save failed: ${error}`);
+        showToast("Failed to save file. ❌");
+    }
+}
+
+async function handleCancel() {
+    if (el.markdownEditor.value !== editorOriginalContent) {
+        const ok = await AskConfirm("Unsaved Changes", "You have unsaved changes. Discard them?", "Discard", "Cancel");
+        if (!ok) return;
+    }
+    exitEditMode(false);
+}
+
+function insertTextAtCursor(prefix, suffix) {
+    const textarea = el.markdownEditor;
+    const start = textarea.selectionStart;
+    const end = textarea.selectionEnd;
+    const text = textarea.value;
+    const selection = text.substring(start, end);
+    const before = text.substring(0, start);
+    const after = text.substring(end);
+    
+    textarea.value = before + prefix + selection + suffix + after;
+    textarea.selectionStart = start + prefix.length;
+    textarea.selectionEnd = start + prefix.length + selection.length;
+    textarea.focus();
+    
+    // Force inpur event to update tab state
+    textarea.dispatchEvent(new Event('input'));
 }
 
 function bindHomeScreen() {
@@ -580,8 +796,10 @@ function bindContextMenuAction(element, action) {
     });
 }
 
-function handleGlobalKeydown(event) {
-    if (isEditableTarget(event.target)) {
+async function handleGlobalKeydown(event) {
+    const isEditingShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w';
+    
+    if (isEditableTarget(event.target) && !isEditingShortcut) {
         return;
     }
 
@@ -601,7 +819,7 @@ function handleGlobalKeydown(event) {
         event.preventDefault();
         const active = getActiveTab();
         if (active) {
-            closeTab(active.id);
+            await closeTab(active.id);
         }
         return;
     }
@@ -1174,6 +1392,16 @@ async function renderActiveTab() {
     el.currentPath.innerText = formatDisplayPath(currentFilePath);
     updateNavButtons();
 
+    // Update edit button state
+    const isMarkdown = currentDocumentType === 'markdown' && 
+                       currentFilePath !== HOME_SCREEN_PATH && 
+                       currentFilePath !== THIRD_PARTY_NOTICES_PATH;
+    el.btnEdit.disabled = !isMarkdown;
+
+    if (isEditing && !isMarkdown) {
+        await exitEditMode(false);
+    }
+
     if (currentFilePath === HOME_SCREEN_PATH) {
         await renderHomeScreen();
         return;
@@ -1214,6 +1442,7 @@ async function renderActiveTab() {
 }
 
 async function renderHomeScreen() {
+    if (isEditing) await exitEditMode(false);
     await renderRecentFiles();
     cleanupHTMLFrame();
     clearHighlight();
@@ -1483,22 +1712,10 @@ function postProcess() {
 async function confirmAndOpenExternalLink(href) {
     LogInfo(`external link click href=${href}`);
     try {
-        if (isMacOS()) {
-            const ok = await ConfirmOpenExternalURL(href);
-            LogInfo(`external link confirm href=${href} ok=${ok} mode=native`);
-            if (ok) {
-                LogInfo(`external link dispatch href=${href} mode=native`);
-                window.setTimeout(() => {
-                    void openExternalURL(href);
-                }, 0);
-            }
-            return;
-        }
-
-        const ok = window.confirm(`External link detected.\n\nOpen in your system browser?\n${href}`);
-        LogInfo(`external link confirm href=${href} ok=${ok} mode=browser`);
+        const ok = await AskConfirm("External Link", "Open in your system browser?\n\n" + href, "Open", "Cancel");
+        LogInfo(`external link confirm href=${href} ok=${ok}`);
         if (ok) {
-            LogInfo(`external link dispatch href=${href} mode=browser`);
+            LogInfo(`external link dispatch href=${href}`);
             await openExternalURL(href);
         }
     } catch (error) {
