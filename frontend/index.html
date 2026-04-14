@@ -266,6 +266,12 @@
                 <h3>AI Settings</h3>
                 <div class="ai-setting-group">
                     <h4>General AI</h4>
+                    <label>Provider:
+                        <select id="ai-general-provider">
+                            <option value="openai">OpenAI (Compatible)</option>
+                            <option value="lmstudio">LM Studio (Native)</option>
+                        </select>
+                    </label>
                     <label>Endpoint (address:port):
                         <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
                     </label>
@@ -314,6 +320,20 @@
             <button id="ai-prompt-close" title="Close" aria-label="Close AI Prompt">
                 <span class="material-symbols-outlined">close</span>
             </button>
+        </div>
+        <div id="ai-progress-overlay" class="hidden">
+            <div class="ai-progress-content">
+                <div class="ai-progress-info">
+                    <div class="ai-progress-label-wrap">
+                        <div class="ai-progress-spinner"></div>
+                        <span id="ai-progress-label">Processing...</span>
+                    </div>
+                    <span id="ai-progress-percent">0%</span>
+                </div>
+                <div class="ai-progress-bar-container">
+                    <div id="ai-progress-bar-fill"></div>
+                </div>
+            </div>
         </div>
 
     </div>

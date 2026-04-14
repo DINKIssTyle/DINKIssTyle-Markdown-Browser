@@ -100,6 +100,7 @@ async function persist() {
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
+        aiGeneralProvider: window.aiState?.generalProvider || "openai",
         aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
         aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
         aiGeneralKey: window.aiState?.generalKey || "",
@@ -244,38 +245,10 @@ async function handleGlobalKeydown(event) {
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
-        const isGlobalKey = (event.metaKey || event.ctrlKey) && ['w', 'a', 'c'].includes(event.key.toLowerCase());
+        const isGlobalKey = (event.metaKey || event.ctrlKey) && ['w'].includes(event.key.toLowerCase());
         if (!isGlobalKey) {
             return;
         }
-    }
-
-    // Cmd+A 단축키 지원 (전체 선택)
-    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'a') {
-        event.preventDefault();
-        if (isEditableTarget(event.target) && typeof event.target.select === 'function') {
-            event.target.select();
-        } else {
-            const selection = window.getSelection();
-            const range = document.createRange();
-            const container = document.getElementById('content-view') || document.body;
-            range.selectNodeContents(container);
-            selection.removeAllRanges();
-            selection.addRange(range);
-        }
-        return;
-    }
-
-    // Cmd+C 단축키 지원 (유니코드 무결성 유지를 위해 trim() 없이 처리)
-    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'c') {
-        const selectionText = window.getSelection()?.toString() || "";
-        if (selectionText) {
-            event.preventDefault();
-            copyTextToClipboard(selectionText)
-                .then(() => showToast('Copied selection. 📋'))
-                .catch(error => LogError(`keyboard copy failed: ${error?.message || error}`));
-        }
-        return;
     }
 
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'w') {

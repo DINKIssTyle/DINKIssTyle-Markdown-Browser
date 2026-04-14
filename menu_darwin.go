@@ -36,7 +36,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.Quit(app.ctx)
 	})
 
-	// editMenu.AddText("Select All", keys.CmdOrCtrl("a"), nil)
+	appMenu.Append(menu.EditMenu())
 
 	// ── View menu ──────────────────────────────────────────────────────
 	viewMenu := appMenu.AddSubmenu("View")

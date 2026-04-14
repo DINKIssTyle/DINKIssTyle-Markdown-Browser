@@ -408,10 +408,11 @@ export function bindContextMenu() {
                 const text = await ClipboardGetText();
                 if (typeof text === 'string') {
                     const mod = await import('./main-editor.js');
-                    // 포커스를 잃었을 수 있으므로 다시 포커스
-                    contextMenuState.targetElement.focus();
-                    mod.insertTextAtCursor(text, '');
-                    showToast('Pasted. 📋');
+                    if (mod.cmView) {
+                        mod.cmView.focus();
+                        mod.insertTextAtCursor(text, '');
+                        showToast('Pasted. 📋');
+                    }
                 }
             } catch (error) {
                 LogError(`clipboard paste failed: ${error?.message || error}`);
@@ -421,9 +422,19 @@ export function bindContextMenu() {
     });
 
     bindContextMenuAction(el.contextSelectAll, async () => {
-        if (contextMenuState?.targetElement) {
+        if (contextMenuState?.isEditor) {
+            const mod = await import('./main-editor.js');
+            if (mod.cmView) {
+                mod.cmView.focus();
+                mod.cmView.dispatch({
+                    selection: { anchor: 0, head: mod.cmView.state.doc.length }
+                });
+            }
+        } else if (contextMenuState?.targetElement) {
             contextMenuState.targetElement.focus();
-            contextMenuState.targetElement.select();
+            if (typeof contextMenuState.targetElement.select === 'function') {
+                contextMenuState.targetElement.select();
+            }
         }
         closeContextMenu();
     });
@@ -456,10 +467,22 @@ function bindContextMenuAction(element, action) {
 }
 
 function handleContextMenu(event) {
-    const isEditor = event.target.id === 'markdown-editor';
-    const selectionText = isEditor 
-        ? event.target.value.substring(event.target.selectionStart, event.target.selectionEnd)
-        : window.getSelection()?.toString() || "";
+    const cmEditor = event.target.closest('.cm-editor');
+    const isEditor = !!cmEditor;
+    
+    let selectionText = "";
+    if (isEditor) {
+        import('./main-editor.js').then(mod => {
+            if (mod.cmView) {
+                const sel = mod.cmView.state.selection.main;
+                selectionText = mod.cmView.state.sliceDoc(sel.from, sel.to);
+                contextMenuState.selectionText = selectionText;
+                el.contextCopy.classList.toggle('hidden', !selectionText);
+            }
+        });
+    } else {
+        selectionText = window.getSelection()?.toString() || "";
+    }
         
     const linkNode = event.target.closest('a[href]');
     const inMarkdown = !!event.target.closest('#markdown-container');
@@ -488,7 +511,7 @@ function handleContextMenu(event) {
         targetElement: event.target
     };
 
-    el.contextCopy.classList.toggle('hidden', !showSelectionActions);
+    el.contextCopy.classList.toggle('hidden', !selectionText);
     
     if (isEditor) {
         el.contextPaste.classList.remove('hidden');
@@ -498,7 +521,7 @@ function handleContextMenu(event) {
         el.contextOpenNewTab.classList.add('hidden');
     } else {
         el.contextPaste.classList.add('hidden');
-        el.contextSelectAll.classList.add('hidden');
+        el.contextSelectAll.classList.toggle('hidden', true); // No select all for general view
         el.contextSearch.classList.toggle('hidden', !showSelectionActions);
         el.contextOpen.classList.toggle('hidden', !showLinkActions);
         el.contextOpenNewTab.classList.toggle('hidden', !showLinkActions);

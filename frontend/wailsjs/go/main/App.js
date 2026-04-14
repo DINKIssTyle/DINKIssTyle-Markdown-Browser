@@ -54,6 +54,10 @@ export function MakeAIRequest(arg1, arg2, arg3) {
   return window['go']['main']['App']['MakeAIRequest'](arg1, arg2, arg3);
 }
 
+export function MakeLMStudioRequest(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MakeLMStudioRequest'](arg1, arg2, arg3);
+}
+
 export function OpenDirectory() {
   return window['go']['main']['App']['OpenDirectory']();
 }

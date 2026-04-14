@@ -6,6 +6,7 @@
 package main
 
 import (
+	"bufio"
 	"context"
 	"encoding/base64"
 	"encoding/json"
@@ -51,6 +52,7 @@ type AppSettings struct {
 	AIFIMModel        string  `json:"aiFimModel"`
 	AIFIMKey          string  `json:"aiFimKey"`
 	AIFIMTemp         float64 `json:"aiFimTemp"`
+	AIGeneralProvider string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
 }
 
 // App struct
@@ -270,6 +272,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.Theme = "dark"
 	settings.FontSize = 16
 	settings.Engine = "marked"
+	settings.AIGeneralProvider = "openai"
 	settings.AIGeneralTemp = 0.0
 	settings.AIFIMTemp = 0.0
 
@@ -532,3 +535,109 @@ func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body str
 
 	return string(respBody), nil
 }
+	
+// MakeLMStudioRequest handles LM Studio native streaming and progress reporting
+func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, body string) (string, error) {
+	// Add "store": false to the body if it's a JSON object
+	var bodyMap map[string]any
+	if err := json.Unmarshal([]byte(body), &bodyMap); err == nil {
+		bodyMap["store"] = false
+		newBody, _ := json.Marshal(bodyMap)
+		body = string(newBody)
+	}
+
+	req, err := http.NewRequest("POST", endpoint, strings.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	for k, v := range headers {
+		req.Header.Set(k, v)
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+
+	client := &http.Client{Timeout: 300 * time.Second}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("LM Studio error (%d): %s", resp.StatusCode, string(body))
+	}
+
+	var fullResponse strings.Builder
+	reader := bufio.NewReader(resp.Body)
+	var eventData []string
+	
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			break
+		}
+		
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "data:") {
+			data := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
+			if data != "" {
+				eventData = append(eventData, data)
+			}
+		} else if trimmed == "" && len(eventData) > 0 {
+			// End of event block, process joined data
+			joined := strings.Join(eventData, "\n")
+			eventData = nil
+			
+			var raw map[string]any
+			if err := json.Unmarshal([]byte(joined), &raw); err == nil {
+				// Handle events
+				eventType, _ := raw["type"].(string)
+				if eventType == "" {
+					// Some versions might not have "type" at top level but in data
+				}
+
+				switch eventType {
+				case "model_load.progress", "prompt_processing.progress":
+					progress := 0.0
+					if p, ok := raw["progress"].(float64); ok {
+						progress = p
+					}
+					label := "Processing..."
+					if eventType == "model_load.progress" {
+						label = "Loading Model"
+					} else {
+						label = "Processing Prompt"
+					}
+					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
+						"label":    label,
+						"progress": progress * 100,
+					})
+				case "message.start":
+					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
+						"label":    "처리 내용 받는 중...",
+						"progress": 100,
+						"loading":  true,
+					})
+				case "message.delta":
+					if next, ok := raw["content"].(string); ok {
+						fullResponse.WriteString(next)
+					}
+				case "chat.end":
+					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
+						"label":    "완료 ✨",
+						"progress": 100,
+						"loading":  false,
+					})
+				}
+			}
+		}
+
+		if err == io.EOF {
+			break
+		}
+	}
+
+	return fullResponse.String(), nil
+}
+

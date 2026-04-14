@@ -87,6 +87,7 @@ export const el = {
     edFim: $('ed-fim'),
     edSettings: $('ed-settings'),
     aiSettingsModal: $('ai-settings-modal'),
+    aiGeneralProvider: $('ai-general-provider'),
     aiGeneralEndpoint: $('ai-general-endpoint'),
     aiGeneralModel: $('ai-general-model'),
     aiGeneralKey: $('ai-general-key'),
@@ -111,6 +112,10 @@ export const el = {
     modalEmojiGrid: $('modal-emoji-grid'),
     modalBtnOk: $('modal-btn-ok'),
     modalBtnCancel: $('modal-btn-cancel'),
+    aiProgressOverlay: $('ai-progress-overlay'),
+    aiProgressLabel: $('ai-progress-label'),
+    aiProgressPercent: $('ai-progress-percent'),
+    aiProgressBarFill: $('ai-progress-bar-fill'),
 };
 
 // ── Shared Mutable State ───────────────────────────────────

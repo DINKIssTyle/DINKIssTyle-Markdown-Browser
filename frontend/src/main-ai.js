@@ -4,9 +4,11 @@
  */
 
 import { state, el } from './main-state.js';
-import { GetSettings, SaveSettings, MakeAIRequest } from '../wailsjs/go/main/App';
+import { GetSettings, SaveSettings, MakeAIRequest, MakeLMStudioRequest } from '../wailsjs/go/main/App';
+import { EventsOn } from '../wailsjs/runtime/runtime';
 import { cmView, insertTextAtCursor } from './main-editor.js';
 import { showToast } from './main-ui.js';
+import { renderMarkdown } from './main-render.js';
 import { StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
 
@@ -53,8 +55,9 @@ let debounceTimer = null;
 export async function initAI() {
     const s = await GetSettings();
     const aiState = {
+        generalProvider: s.aiGeneralProvider || "openai",
         generalEndpoint: s.aiGeneralEndpoint || "",
-        generalModel: s.aiGeneralModel || "qwen3.5-35b-a3b",
+        generalModel: s.aiGeneralModel || "gemma-4-e4b-it",
         generalKey: s.aiGeneralKey || "",
         generalTemp: s.aiGeneralTemp || 0,
         fimEndpoint: s.aiFimEndpoint || "",
@@ -67,6 +70,7 @@ export async function initAI() {
     };
 
     // UI Load
+    el.aiGeneralProvider.value = aiState.generalProvider;
     el.aiGeneralEndpoint.value = aiState.generalEndpoint;
     el.aiGeneralModel.value = aiState.generalModel;
     el.aiGeneralKey.value = aiState.generalKey;
@@ -88,8 +92,9 @@ export function bindAIEvents() {
         el.aiSettingsModal.classList.add('hidden');
     };
     el.aiSettingsSave.onclick = async () => {
+        window.aiState.generalProvider = el.aiGeneralProvider.value;
         window.aiState.generalEndpoint = el.aiGeneralEndpoint.value;
-        window.aiState.generalModel = el.aiGeneralModel.value || "qwen3.5-35b-a3b";
+        window.aiState.generalModel = el.aiGeneralModel.value || "gemma-4-e4b-it";
         window.aiState.generalKey = el.aiGeneralKey.value;
         window.aiState.generalTemp = parseFloat(el.aiGeneralTemp.value) || 0;
         window.aiState.fimEndpoint = el.aiFimEndpoint.value;
@@ -101,6 +106,7 @@ export function bindAIEvents() {
             theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
             fontSize: state.currentFontSize,
             engine: state.currentMarkdownEngine,
+            aiGeneralProvider: window.aiState.generalProvider,
             aiGeneralEndpoint: window.aiState.generalEndpoint,
             aiGeneralModel: window.aiState.generalModel,
             aiGeneralKey: window.aiState.generalKey,
@@ -114,6 +120,30 @@ export function bindAIEvents() {
         el.aiSettingsModal.classList.add('hidden');
         showToast("AI Settings Saved.");
     };
+
+    // AI Progress Events from Go
+    EventsOn('ai:progress', (data) => {
+        if (!el.aiProgressOverlay) return;
+
+        el.aiProgressOverlay.classList.remove('hidden');
+        if (data.loading) {
+            el.aiProgressOverlay.classList.add('loading');
+        } else {
+            el.aiProgressOverlay.classList.remove('loading');
+        }
+
+        el.aiProgressLabel.textContent = data.label || "Processing...";
+        const percent = Math.round(data.progress || 0);
+        el.aiProgressPercent.textContent = data.loading ? "" : `${percent}%`;
+        el.aiProgressBarFill.style.width = `${percent}%`;
+
+        if (!data.loading && percent >= 100 && data.label === "완료 ✨") {
+            setTimeout(() => {
+                el.aiProgressOverlay.classList.add('hidden');
+                el.aiProgressBarFill.style.width = '0%';
+            }, 2000);
+        }
+    });
 
     // FIM Toggle
     el.edFim.onclick = () => {
@@ -140,8 +170,16 @@ export function bindAIEvents() {
     el.aiPromptClose.onclick = hidePromptBox;
     el.aiPromptSend.onclick = sendPrompt;
     el.aiPromptInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') sendPrompt();
-        if (e.key === 'Escape') hidePromptBox();
+        if (e.key === 'Enter') {
+            e.preventDefault();
+            e.stopPropagation();
+            sendPrompt();
+        }
+        if (e.key === 'Escape') {
+            e.preventDefault();
+            e.stopPropagation();
+            hidePromptBox();
+        }
     });
 
     // Detect selection for wand and typing for FIM
@@ -154,26 +192,39 @@ export function bindAIEvents() {
 function handleEditorInput() {
     if (!cmView || !window.aiState.fimEnabled || !window.aiState.fimEndpoint) return;
 
-    clearGhostText();
+    // Typing should hide the wand
+    if (!el.aiFloatingBtn.classList.contains('hidden')) {
+        el.aiFloatingBtn.classList.add('hidden');
+    }
+    if (!el.aiPromptBox.classList.contains('hidden')) {
+        hidePromptBox();
+    }
+
+    if (window.aiState.ghostText !== "") clearGhostText();
     clearTimeout(debounceTimer);
     debounceTimer = setTimeout(() => {
         requestFIM();
-    }, 600); // 600ms debounce
+    }, 800);
 }
 
 function handleEditorKeydown(e) {
     if (!cmView) return;
+
+    // IME 조합 중(한글 입력 중)에는 AI 관련 키 처리를 중단하여 중복 엔터 등 방지
+    if (e.isComposing) return;
+
     if (window.aiState.ghostText !== "") {
         if (e.key === 'Tab') {
             e.preventDefault();
             e.stopPropagation();
             insertTextAtCursor(window.aiState.ghostText, '');
             clearGhostText();
-        } else if (e.key === 'Escape') {
-            e.preventDefault();
-            e.stopPropagation();
+        } else if (e.key === 'Escape' || e.key === 'Enter') {
+            // On Enter, we just clear ghost text and let the natural Enter happen
+            // unless we want to prevent it. Here we just clear.
             clearGhostText();
-        } else {
+        } else if (!e.metaKey && !e.ctrlKey && !e.altKey && e.key.length === 1) {
+            // Typable keys clear it anyway, but we do it gracefully
             clearGhostText();
         }
     }
@@ -188,24 +239,52 @@ function handleSelectionChange() {
         return;
     }
 
+    // Skip showing wand during IME composition (Hangul typing)
+    if (cmView.composing) {
+        el.aiFloatingBtn.classList.add('hidden');
+        return;
+    }
+
     const sel = cmView.state.selection.main;
     if (sel.empty) {
         el.aiFloatingBtn.classList.add('hidden');
+        if (!el.aiPromptBox.classList.contains('hidden')) {
+            hidePromptBox();
+        }
     } else {
-        // Show floating button near selection
-        const rect = cmView.coordsAtPos(sel.to);
-        if (rect) {
-            el.aiFloatingBtn.style.left = `${rect.right + 10}px`;
-            el.aiFloatingBtn.style.top = `${rect.bottom - 15}px`;
-            el.aiFloatingBtn.classList.remove('hidden');
+        const isAllSelected = (sel.from === 0 && sel.to === cmView.state.doc.length);
+
+        if (isAllSelected) {
+            // Show prompt box at bottom center
+            el.aiFloatingBtn.classList.add('hidden');
+            showPromptBoxCentered();
+        } else {
+            // Show floating button near selection
+            const rect = cmView.coordsAtPos(sel.to);
+            if (rect) {
+                el.aiFloatingBtn.style.left = `${rect.right + 10}px`;
+                el.aiFloatingBtn.style.top = `${rect.bottom - 15}px`;
+                el.aiFloatingBtn.classList.remove('hidden');
+            }
         }
     }
+}
+
+function showPromptBoxCentered() {
+    el.aiPromptBox.style.left = '50%';
+    el.aiPromptBox.style.bottom = '40px';
+    el.aiPromptBox.style.top = 'auto'; // Reset top
+    el.aiPromptBox.style.transform = 'translateX(-50%)';
+    el.aiPromptBox.classList.remove('hidden');
+    // el.aiPromptInput.focus(); // Removed to avoid stealing focus during Select All
 }
 
 function showPromptBox() {
     const btnRect = el.aiFloatingBtn.getBoundingClientRect();
     el.aiPromptBox.style.left = `${btnRect.left}px`;
     el.aiPromptBox.style.top = `${btnRect.bottom + 10}px`;
+    el.aiPromptBox.style.bottom = 'auto';
+    el.aiPromptBox.style.transform = 'none';
     el.aiPromptBox.classList.remove('hidden');
     el.aiPromptInput.focus();
 }
@@ -217,6 +296,7 @@ function hidePromptBox() {
 }
 
 function clearGhostText() {
+    if (window.aiState.ghostText === "") return; // Avoid redundant dispatch
     window.aiState.ghostText = "";
     if (cmView) {
         cmView.dispatch({
@@ -274,27 +354,60 @@ async function sendPrompt() {
     if (sel.empty) return;
 
     const selectedText = cmView.state.sliceDoc(sel.from, sel.to);
+    
+    // Hide prompt box immediately so user can see the editor
+    hidePromptBox();
+    
     el.aiPromptSend.disabled = true;
     showToast("AI Processing...");
 
-    const endpoint = window.aiState.generalEndpoint.startsWith("http") ? window.aiState.generalEndpoint : `http://${window.aiState.generalEndpoint}`;
+    let endpoint = window.aiState.generalEndpoint.trim();
+    if (!endpoint.startsWith("http")) endpoint = `http://${endpoint}`;
 
     try {
-        const headers = { "Content-Type": "application/json" };
-        if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
+        let resultText = "";
 
-        const payload = {
-            model: window.aiState.generalModel,
-            messages: [
-                { role: "system", content: "You are an AI Markdown editor assistant. Your job is to process the context text and return ONLY the raw modified text (no wrappers like ```markdown)." },
-                { role: "user", content: `Context: ${selectedText}\n\nInstruction: ${userPrompt}` }
-            ]
-        };
-        if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
+        if (window.aiState.generalProvider === "lmstudio") {
+            // LM Studio Native logic: baseUrl/api/v1/chat
+            let base = endpoint.replace(/\/$/, "");
+            base = base.replace(/\/api\/v1$/, "").replace(/\/v1$/, "");
+            endpoint = base + "/api/v1/chat";
 
-        const responseJson = await MakeAIRequest(`${endpoint}/v1/chat/completions`, headers, JSON.stringify(payload));
-        const data = JSON.parse(responseJson);
-        let resultText = data.choices[0].message.content;
+            const payload = {
+                model: window.aiState.generalModel,
+                input: `You are an AI Markdown editor assistant. Your job is to process the context text and return ONLY the raw modified text.\n\nContext: ${selectedText}\n\nInstruction: ${userPrompt}`,
+                stream: true
+            };
+            if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
+
+            const headers = { "Content-Type": "application/json" };
+            if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
+
+            resultText = await MakeLMStudioRequest(endpoint, headers, JSON.stringify(payload));
+        } else {
+            // OpenAI Compatible logic: baseUrl/v1/chat/completions
+            let base = endpoint.replace(/\/$/, "");
+            if (!base.endsWith("/v1")) {
+                base = base + "/v1";
+            }
+            endpoint = base + "/chat/completions";
+
+            const headers = { "Content-Type": "application/json" };
+            if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
+
+            const payload = {
+                model: window.aiState.generalModel,
+                messages: [
+                    { role: "system", content: "You are an AI Markdown editor assistant. Your job is to process the context text and return ONLY the raw modified text (no wrappers like ```markdown)." },
+                    { role: "user", content: `Context: ${selectedText}\n\nInstruction: ${userPrompt}` }
+                ]
+            };
+            if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
+
+            const responseJson = await MakeAIRequest(endpoint, headers, JSON.stringify(payload));
+            const data = JSON.parse(responseJson);
+            resultText = data.choices[0].message.content;
+        }
 
         // Remove wrap codeblocks
         resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
@@ -303,12 +416,16 @@ async function sendPrompt() {
             changes: { from: sel.from, to: sel.to, insert: resultText }
         });
 
-        hidePromptBox();
+        renderMarkdown(cmView.state.doc.toString());
         showToast("AI Edit Applied! ✨");
     } catch (err) {
         console.error("AI prompt error", err);
         showToast("AI request failed. ❌");
+        if (el.aiProgressOverlay) {
+            el.aiProgressOverlay.classList.add('hidden');
+        }
     } finally {
         el.aiPromptSend.disabled = false;
+        // Don't close overlay here to show completion message
     }
 }

@@ -11,8 +11,8 @@ import { showToast } from './main-ui.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
-import { EditorState, Compartment } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, placeholder } from '@codemirror/view';
+import { EditorState, Compartment, Prec } from '@codemirror/state';
+import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
@@ -44,6 +44,9 @@ export function initCodeMirror() {
             markdown({ base: markdownLanguage, codeLanguages: languages }),
             themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
             ghostTextField,
+            drawSelection(),
+            dropCursor(),
+            EditorView.lineWrapping,
             EditorView.updateListener.of((update) => {
                 if (update.docChanged) {
                     const val = update.state.doc.toString();
@@ -51,11 +54,15 @@ export function initCodeMirror() {
                     const tab = getActiveTab();
                     if (tab) tab.currentMarkdownSource = val;
                     
-                    const currentLineCount = update.state.doc.lines;
-                    if (currentLineCount !== lastLineCount || val.endsWith('\n')) {
-                        renderMarkdown(val);
-                        lastLineCount = currentLineCount;
-                    }
+                    // Use a small delay for rendering to avoid UI stutter
+                    clearTimeout(window._renderTimer);
+                    window._renderTimer = setTimeout(() => {
+                        const currentLineCount = update.state.doc.lines;
+                        if (currentLineCount !== lastLineCount || val.endsWith('\n')) {
+                            renderMarkdown(val);
+                            lastLineCount = currentLineCount;
+                        }
+                    }, 100);
                 }
             })
         ]

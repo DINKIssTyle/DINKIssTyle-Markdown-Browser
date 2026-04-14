@@ -128,7 +128,6 @@ export async function renderActiveTab() {
     el.homeScreen.classList.add('hidden');
     
     if (state.isEditing) {
-        el.markdownEditor.value = state.currentMarkdownSource;
         el.editToolbar.classList.remove('hidden');
         el.editorView.classList.remove('hidden');
         el.mainContainer.classList.add('is-editing');

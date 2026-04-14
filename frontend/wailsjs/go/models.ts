@@ -12,6 +12,7 @@ export namespace main {
 	    aiFimModel: string;
 	    aiFimKey: string;
 	    aiFimTemp: number;
+	    aiGeneralProvider: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -30,6 +31,7 @@ export namespace main {
 	        this.aiFimModel = source["aiFimModel"];
 	        this.aiFimKey = source["aiFimKey"];
 	        this.aiFimTemp = source["aiFimTemp"];
+	        this.aiGeneralProvider = source["aiGeneralProvider"];
 	    }
 	}
 	export class FileResult {
