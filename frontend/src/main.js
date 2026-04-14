@@ -223,9 +223,33 @@ function bindHomeScreen() {
 
 // ── Drag and Drop ──────────────────────────────────────────
 
+function blockNativeFileDrop(target) {
+    if (!target?.addEventListener) {
+        return;
+    }
+
+    const prevent = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'copy';
+        }
+    };
+
+    target.addEventListener('dragenter', prevent, true);
+    target.addEventListener('dragover', prevent, true);
+    target.addEventListener('drop', prevent, true);
+}
+
 function setupDragAndDrop() {
-    window.addEventListener('dragover', event => { event.preventDefault(); event.stopPropagation(); });
-    window.addEventListener('drop', event => { event.preventDefault(); event.stopPropagation(); });
+    blockNativeFileDrop(window);
+    blockNativeFileDrop(document);
+    blockNativeFileDrop(document.body);
+    blockNativeFileDrop(el.mainContainer);
+    blockNativeFileDrop(el.contentView);
+    blockNativeFileDrop(el.markdownContainer);
+    blockNativeFileDrop(el.editorView);
+    blockNativeFileDrop(el.htmlFrame);
 
     OnFileDrop(async (_x, _y, files) => {
         if (!Array.isArray(files) || files.length === 0) {

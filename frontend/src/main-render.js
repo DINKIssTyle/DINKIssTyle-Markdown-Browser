@@ -24,6 +24,46 @@ import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 let recentFilesCache = [];
 let htmlFrameResizeObserver = null;
 
+function blockNativeFileDrop(target) {
+    if (!target?.addEventListener) {
+        return;
+    }
+
+    const prevent = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'copy';
+        }
+    };
+
+    target.addEventListener('dragenter', prevent, true);
+    target.addEventListener('dragover', prevent, true);
+    target.addEventListener('drop', prevent, true);
+}
+
+function hardenAnchorDropHandling(anchor) {
+    if (!anchor?.addEventListener) {
+        return;
+    }
+
+    anchor.draggable = false;
+    anchor.setAttribute('draggable', 'false');
+
+    const prevent = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'copy';
+        }
+    };
+
+    anchor.addEventListener('dragenter', prevent, true);
+    anchor.addEventListener('dragover', prevent, true);
+    anchor.addEventListener('drop', prevent, true);
+    anchor.addEventListener('dragstart', prevent, true);
+}
+
 function syncEditingPreviewReturnButton() {
     const shouldShow = state.isEditing &&
         !!state.editingSourcePath &&
@@ -212,6 +252,7 @@ async function postProcess() {
     el.markdownContainer.querySelectorAll('a').forEach(anchor => {
         const href = anchor.getAttribute('href');
         if (!href) return;
+        hardenAnchorDropHandling(anchor);
 
         const handleLinkNavigation = event => {
             event.preventDefault();
@@ -439,10 +480,14 @@ export function applyHTMLZoom() {
 
 function wireHTMLDocumentLinks(doc) {
     import('./main-navigation.js').then(mod => mod.bindHistoryMouseNavigation(doc));
+    blockNativeFileDrop(doc);
+    blockNativeFileDrop(doc.body);
+    blockNativeFileDrop(doc.documentElement);
 
     doc.querySelectorAll('a[href]').forEach(anchor => {
         const rawHref = anchor.getAttribute('href');
         if (!rawHref) return;
+        hardenAnchorDropHandling(anchor);
 
         anchor.addEventListener('click', event => {
             const href = anchor.href || rawHref;
