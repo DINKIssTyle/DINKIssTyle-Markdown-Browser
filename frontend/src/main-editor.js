@@ -100,25 +100,25 @@ function updatePreviewForEditorChange(update) {
 
 function getSlashCommands() {
     return [
-        { id: 'bold', label: 'Bold', token: '**', keywords: 'bold strong', run: () => applyInlineWrap('**', '**') },
-        { id: 'italic', label: 'Italic', token: '*', keywords: 'italic emphasis', run: () => applyInlineWrap('*', '*') },
-        { id: 'underline', label: 'Underline', token: '<u>', keywords: 'underline', run: () => applyInlineWrap('<u>', '</u>') },
-        { id: 'strike', label: 'Strikethrough', token: '~~', keywords: 'strike strikethrough', run: () => applyInlineWrap('~~', '~~') },
-        { id: 'quote', label: 'Blockquote', token: '>', keywords: 'quote blockquote', run: () => applyBlockMarker('quote') },
-        { id: 'h1', label: 'Heading 1', token: '#', keywords: 'h1 heading title', run: () => applyBlockMarker('h1') },
-        { id: 'h2', label: 'Heading 2', token: '##', keywords: 'h2 heading', run: () => applyBlockMarker('h2') },
-        { id: 'h3', label: 'Heading 3', token: '###', keywords: 'h3 heading', run: () => applyBlockMarker('h3') },
-        { id: 'ul', label: 'Bullet List', token: '- ', keywords: 'unordered list bullet ul', run: () => applyBlockMarker('ul') },
-        { id: 'ol', label: 'Numbered List', token: '1. ', keywords: 'ordered list number ol', run: () => applyBlockMarker('ol') },
-        { id: 'hr', label: 'Horizontal Rule', token: '---', keywords: 'rule divider hr', run: () => insertHorizontalRule() },
-        { id: 'link', label: 'Link', token: '[ ]( )', keywords: 'link url', run: () => insertLink() },
-        { id: 'image', label: 'Image', token: '![ ]( )', keywords: 'image img photo', run: () => insertImage() },
-        { id: 'code', label: 'Code Block', token: '```', keywords: 'code block fence', run: () => insertCodeBlock() },
-        { id: 'table', label: 'Table', token: '| |', keywords: 'table grid', run: () => insertTable() },
-        { id: 'div', label: 'DIV Wrapper', token: '<div>', keywords: 'div wrapper align', run: () => insertDivWrapper() },
-        { id: 'task', label: 'Task List', token: '- [ ]', keywords: 'task checklist todo', run: () => applyBlockMarker('task') },
-        { id: 'latex', label: 'LaTeX', token: '$$', keywords: 'latex math equation', run: () => insertLatex() },
-        { id: 'emoji', label: 'Emoji', token: ':)', keywords: 'emoji emoticon smile', run: () => insertEmoji() },
+        { id: 'bold', label: 'Bold', token: '**', keywords: 'bold strong', aliases: ['볼드', '굵게', '굵은글씨', 'ㅂ'], run: () => applyInlineWrap('**', '**') },
+        { id: 'italic', label: 'Italic', token: '*', keywords: 'italic emphasis', aliases: ['이탤릭', '이탤릭체', '기울임', 'ㄱㅇ', 'ㅇㅌ'], run: () => applyInlineWrap('*', '*') },
+        { id: 'underline', label: 'Underline', token: '<u>', keywords: 'underline', aliases: ['언더라인', '밑줄', 'ㅁㅈ', 'ㅇㄷ'], run: () => applyInlineWrap('<u>', '</u>') },
+        { id: 'strike', label: 'Strikethrough', token: '~~', keywords: 'strike strikethrough', aliases: ['취소선', '스트라이크', 'ㅊㅅㅅ'], run: () => applyInlineWrap('~~', '~~') },
+        { id: 'quote', label: 'Blockquote', token: '>', keywords: 'quote blockquote', aliases: ['인용', '인용문', '블록인용', 'ㅇㅇ'], run: () => applyBlockMarker('quote') },
+        { id: 'h1', label: 'Heading 1', token: '#', keywords: 'h1 heading title', aliases: ['헤딩', '헤딩1', '헤드', 'ㅎ', '헤', '헤딩원'], run: () => applyBlockMarker('h1') },
+        { id: 'h2', label: 'Heading 2', token: '##', keywords: 'h2 heading', aliases: ['헤딩', '헤딩2', '헤드', 'ㅎ', '헤', '헤딩투'], run: () => applyBlockMarker('h2') },
+        { id: 'h3', label: 'Heading 3', token: '###', keywords: 'h3 heading', aliases: ['헤딩', '헤딩3', '헤드', 'ㅎ', '헤', '헤딩쓰리'], run: () => applyBlockMarker('h3') },
+        { id: 'ul', label: 'Bullet List', token: '- ', keywords: 'unordered list bullet ul', aliases: ['리스트', '목록', '불릿', '글머리표', 'ㄹㅅㅌ'], run: () => applyBlockMarker('ul') },
+        { id: 'ol', label: 'Numbered List', token: '1. ', keywords: 'ordered list number ol', aliases: ['번호목록', '숫자목록', '리스트', '목록', 'ㅂㅎ'], run: () => applyBlockMarker('ol') },
+        { id: 'hr', label: 'Horizontal Rule', token: '---', keywords: 'rule divider hr', aliases: ['구분선', '수평선', '라인', 'ㄱㅂㅅ'], run: () => insertHorizontalRule() },
+        { id: 'link', label: 'Link', token: '[ ]( )', keywords: 'link url', aliases: ['링크', '주소', '링크삽입', 'ㄹㅋ'], run: () => insertLink() },
+        { id: 'image', label: 'Image', token: '![ ]( )', keywords: 'image img photo', aliases: ['이미지', '사진', '그림', 'ㅇㅁㅈ'], run: () => insertImage() },
+        { id: 'code', label: 'Code Block', token: '```', keywords: 'code block fence', aliases: ['코드', '코드블록', '코드블럭', 'ㅋㄷ'], run: () => insertCodeBlock() },
+        { id: 'table', label: 'Table', token: '| |', keywords: 'table grid', aliases: ['테이블', '표', 'ㅌㅇㅂ'], run: () => insertTable() },
+        { id: 'div', label: 'DIV Wrapper', token: '<div>', keywords: 'div wrapper align', aliases: ['디브', '박스', '정렬박스', 'ㄷㅂ'], run: () => insertDivWrapper() },
+        { id: 'task', label: 'Task List', token: '- [ ]', keywords: 'task checklist todo', aliases: ['체크리스트', '할일', '할일목록', '작업목록', 'ㅊㅋ'], run: () => applyBlockMarker('task') },
+        { id: 'latex', label: 'LaTeX', token: '$$', keywords: 'latex math equation', aliases: ['수식', '라텍스', '공식', 'ㅅㅅ'], run: () => insertLatex() },
+        { id: 'emoji', label: 'Emoji', token: ':)', keywords: 'emoji emoticon smile', aliases: ['이모지', '이모티콘', '표정', 'ㅇㅁㅈ'], run: () => insertEmoji() },
     ];
 }
 
@@ -127,9 +127,21 @@ function filterSlashCommands(query = "") {
     const commands = getSlashCommands();
     if (!normalized) return commands;
     return commands.filter(command => {
-        const haystack = `${command.label} ${command.keywords} ${command.token}`.toLowerCase();
-        return haystack.includes(normalized);
+        const searchTerms = [
+            command.label,
+            command.keywords,
+            command.token,
+            ...(command.aliases || [])
+        ].map(value => String(value || '').toLowerCase());
+
+        return searchTerms.some(term => term.includes(normalized));
     });
+}
+
+function isImeComposing(view = cmView) {
+    if (!view) return false;
+    const ime = view.state.field(imeStateField, false);
+    return !!ime?.composing || !!view.composing;
 }
 
 const slashMenuKeymap = Prec.highest(keymap.of([
@@ -326,6 +338,25 @@ export function initCodeMirror() {
                 blur() {
                     closeSlashMenu();
                     return false;
+                },
+                keydown(event, view) {
+                    if (!slashMenuState) return false;
+                    if (!isImeComposing(view)) return false;
+                    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return false;
+
+                    event.preventDefault();
+                    event.stopPropagation();
+
+                    view.contentDOM.blur();
+                    requestAnimationFrame(() => {
+                        view.focus();
+                        if (event.key === 'ArrowDown') {
+                            moveSlashSelection(1);
+                        } else {
+                            moveSlashSelection(-1);
+                        }
+                    });
+                    return true;
                 }
             }),
             EditorView.updateListener.of((update) => {
