@@ -7,6 +7,7 @@ package main
 
 import (
 	"embed"
+	"fmt"
 
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
@@ -29,7 +30,7 @@ func main() {
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:  "DKST Markdown Browser",
+		Title:  AppName,
 		Width:  1200,
 		Height: 800,
 		AssetServer: &assetserver.Options{
@@ -38,6 +39,7 @@ func main() {
 		},
 		BackgroundColour: &options.RGBA{R: 18, G: 18, B: 18, A: 1}, // Sleek dark
 		OnStartup:        app.startup,
+		OnBeforeClose:    app.onBeforeClose,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "com.dinkisstyle.mdbrowser",
 			OnSecondInstanceLaunch: app.HandleSecondInstanceLaunch,
@@ -57,8 +59,8 @@ func main() {
 			TitleBar:   mac.TitleBarDefault(),
 			Appearance: mac.NSAppearanceNameAqua, // 시스템 라이트/다크 자동 따름
 			About: &mac.AboutInfo{
-				Title:   "DKST Markdown Browser",
-				Message: "Version 1.0.0\nCopyright (C) 2026 DINKI'ssTyle.\nAll rights reserved.",
+				Title:   AppName,
+				Message: fmt.Sprintf("Version %s\nCopyright (C) 2026 DINKI'ssTyle.\nAll rights reserved.", AppVersion),
 			},
 			OnFileOpen: app.HandleSystemOpenFile,
 		},

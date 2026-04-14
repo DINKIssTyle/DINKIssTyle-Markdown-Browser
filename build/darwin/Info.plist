@@ -31,36 +31,17 @@
                 <key>CFBundleTypeExtensions</key>
                 <array>
                     <string>md</string>
-                    <string>markdown</string>
                 </array>
                 <key>CFBundleTypeName</key>
                 <string>Markdown Document</string>
                 <key>CFBundleTypeRole</key>
                 <string>Viewer</string>
                 <key>CFBundleTypeIconFile</key>
-                <string>iconfile</string>
+                <string>markdown-doc</string>
                 <key>LSItemContentTypes</key>
                 <array>
                     <string>net.daringfireball.markdown</string>
                     <string>public.plain-text</string>
-                </array>
-            </dict>
-            <dict>
-                <key>CFBundleTypeExtensions</key>
-                <array>
-                    <string>html</string>
-                    <string>htm</string>
-                </array>
-                <key>CFBundleTypeName</key>
-                <string>HTML Document</string>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>CFBundleTypeIconFile</key>
-                <string>iconfile</string>
-                <key>LSItemContentTypes</key>
-                <array>
-                    <string>public.html</string>
-                    <string>public.xhtml</string>
                 </array>
             </dict>
         </array>

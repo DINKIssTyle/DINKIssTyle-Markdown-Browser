@@ -8,35 +8,14 @@
   "frontend:dev:serverUrl": "auto",
   "info": {
     "productName": "DKST Markdown Browser",
-    "productVersion": "1.0.0",
+    "productVersion": "2.0.0 b1",
     "comments": "An elegant cross-platform viewer for Markdown and HTML files.",
     "fileAssociations": [
       {
         "ext": "md",
         "name": "DKSTDocument",
         "description": "Markdown Document",
-        "iconName": "appicon",
-        "role": "Viewer"
-      },
-      {
-        "ext": "markdown",
-        "name": "DKSTDocument",
-        "description": "Markdown Document",
-        "iconName": "appicon",
-        "role": "Viewer"
-      },
-      {
-        "ext": "html",
-        "name": "DKSTHTMLDocument",
-        "description": "HTML Document",
-        "iconName": "appicon",
-        "role": "Viewer"
-      },
-      {
-        "ext": "htm",
-        "name": "DKSTHTMLDocument",
-        "description": "HTML Document",
-        "iconName": "appicon",
+        "iconName": "markdown-doc",
         "role": "Viewer"
       }
     ]

@@ -8,10 +8,26 @@ set -euo pipefail
 
 APP_NAME="DKST Markdown Browser"
 BUNDLE_ID="com.dinkisstyle.mdbrowser"
-VERSION="1.0.0"
 ARCH="${1:-universal}"   # arm64 | amd64 | universal (default)
 OUT_DIR="./dist/macos"
 ENTITLEMENTS="build/darwin/entitlements.plist"
+DOC_ICON_SRC="./build/darwin/markdown-doc.icns"
+
+read_app_version() {
+    local version
+    version=$(sed -n 's/^[[:space:]]*AppVersion = "\(.*\)"/\1/p' config.go | head -n 1)
+    if [ -z "${version}" ]; then
+        echo "❌ Failed to read AppVersion from config.go"
+        exit 1
+    fi
+    echo "${version}"
+}
+
+sync_wails_product_version() {
+    perl -0pi -e 's/"productVersion":\s*"[^"]+"/"productVersion": "'"${VERSION}"'"/' wails.json
+}
+
+VERSION="$(read_app_version)"
 
 echo "============================================================"
 echo " DKST Markdown Browser — macOS Build"
@@ -26,6 +42,7 @@ export PATH="$HOME/go/bin:/usr/local/go/bin:/opt/homebrew/bin:$PATH"
 command -v wails >/dev/null 2>&1 || { echo "❌ wails is not installed. Install it with 'go install github.com/wailsapp/wails/v2/cmd/wails@latest'."; exit 1; }
 command -v go    >/dev/null 2>&1 || { echo "❌ Go is not installed."; exit 1; }
 
+sync_wails_product_version
 mkdir -p "${OUT_DIR}"
 
 # ── Signing Identity Resolution ─────────────────────────────
@@ -80,7 +97,7 @@ echo "🔨 Starting Build for ${ARCH}..."
 wails build \
     -platform "darwin/${ARCH}" \
     -o "${APP_NAME}" \
-    -ldflags "-X main.version=${VERSION}" \
+    -ldflags "-X 'main.AppVersion=${VERSION}'" \
     -clean
 
 # ── .app Bundle Processing & Signing ─────────────────────────
@@ -90,6 +107,10 @@ if [ -d "${APP_BUNDLE}" ]; then
     
     # Remove hidden metadata attributes that can break code signing
     xattr -cr "${APP_BUNDLE}"
+
+    if [ -f "${DOC_ICON_SRC}" ]; then
+        cp "${DOC_ICON_SRC}" "${APP_BUNDLE}/Contents/Resources/markdown-doc.icns"
+    fi
     
     EXE_PATH="${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
     

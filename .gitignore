@@ -5,8 +5,6 @@ frontend/node_modules
 dist/linux/DKST Markdown Browser-1.0.0-linux-amd64
 *.exe
 /dist
-.DS_Store
 frontend/package.json.md5
 dinkisstyle-markdown-browser
-.DS_Store
-.DS_Store
+note

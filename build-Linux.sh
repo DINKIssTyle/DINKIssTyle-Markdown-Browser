@@ -7,9 +7,24 @@
 set -euo pipefail
 
 APP_NAME="DKST Markdown Browser"
-VERSION="1.0.0"
 ARCH="${1:-amd64}"   # amd64 | arm64 | arm (default amd64)
 OUT_DIR="./dist/linux"
+
+read_app_version() {
+    local version
+    version=$(sed -n 's/^[[:space:]]*AppVersion = "\(.*\)"/\1/p' config.go | head -n 1)
+    if [ -z "${version}" ]; then
+        echo "❌ Failed to read AppVersion from config.go"
+        exit 1
+    fi
+    echo "${version}"
+}
+
+sync_wails_product_version() {
+    perl -0pi -e 's/"productVersion":\s*"[^"]+"/"productVersion": "'"${VERSION}"'"/' wails.json
+}
+
+VERSION="$(read_app_version)"
 
 echo "============================================================"
 echo " DKST Markdown Browser — Linux Build"
@@ -31,6 +46,8 @@ if ! command -v go &> /dev/null; then
     exit 1
 fi
 echo "Using Go: $(go version | awk '{print $3}')"
+
+sync_wails_product_version
 
 # --- 3. System Dependencies (Auto-install) ---
 echo "Checking system dependencies..."
@@ -81,7 +98,7 @@ case "${ARCH}" in
         wails build \
             -platform "linux/${ARCH}" \
             -o "${APP_NAME}" \
-            -ldflags "-X main.version=${VERSION}" \
+            -ldflags "-X 'main.AppVersion=${VERSION}'" \
             ${BUILD_TAGS} \
             -clean
         ;;

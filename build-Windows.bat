@@ -7,10 +7,16 @@ REM ============================================================
 setlocal enabledelayedexpansion
 
 set APP_NAME=DKST Markdown Browser
-set VERSION=1.0.0
 set ARCH=%1
 if "%ARCH%"=="" set ARCH=amd64
 set OUT_DIR=dist\windows
+
+for /f "tokens=3 delims== " %%A in ('findstr /r /c:"AppVersion = " config.go') do set VERSION=%%~A
+set VERSION=%VERSION:"=%
+if "%VERSION%"=="" (
+    echo [ERROR] Failed to read AppVersion from config.go
+    exit /b 1
+)
 
 echo ============================================================
 echo  DKST Markdown Browser — Windows Build
@@ -31,18 +37,24 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
+powershell -NoProfile -Command "$content = Get-Content 'wails.json' -Raw; $content = $content -replace '\"productVersion\":\s*\"[^\"]+\"', '\"productVersion\": \"%VERSION%\"'; Set-Content 'wails.json' $content"
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] Failed to sync wails.json productVersion
+    exit /b 1
+)
+
 if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 
 REM ── Build Execution ──────────────────────────────────────────────
 if /I "%ARCH%"=="amd64" (
     echo [*] Starting Windows amd64 build...
-    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X main.version=%VERSION%" -clean
+    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X main.AppVersion=%VERSION%" -clean
 ) else if /I "%ARCH%"=="arm64" (
     echo [*] Starting Windows arm64 build...
-    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X main.version=%VERSION%" -clean
+    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X main.AppVersion=%VERSION%" -clean
 ) else if /I "%ARCH%"=="386" (
     echo [*] Starting Windows 386 build...
-    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X main.version=%VERSION%" -clean
+    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X main.AppVersion=%VERSION%" -clean
 ) else (
     echo [ERROR] Unknown architecture: %ARCH%  (amd64 ^| arm64 ^| 386^)
     exit /b 1

@@ -7,23 +7,37 @@ export function AskConfirm(arg1:string,arg2:string,arg3:string,arg4:string):Prom
 
 export function AskSaveDiscardCancel(arg1:string,arg2:string):Promise<string>;
 
+export function CancelAIRequest():Promise<void>;
+
 export function ClearRecentFiles():Promise<void>;
 
 export function ConfirmOpenExternalURL(arg1:string):Promise<boolean>;
 
 export function FrontendReady():Promise<Array<string>>;
 
+export function GetAIModelCatalog(arg1:string,arg2:Record<string, string>):Promise<Array<main.AIModelInfo>>;
+
+export function GetAIModelList(arg1:string,arg2:Record<string, string>):Promise<Array<string>>;
+
 export function GetRecentFiles():Promise<Array<main.RecentFile>>;
+
+export function GetRelativePath(arg1:string,arg2:string):Promise<string>;
 
 export function GetSettings():Promise<main.AppSettings>;
 
 export function GetSystemTheme():Promise<string>;
+
+export function GetVersion():Promise<string>;
 
 export function HandleFileDrop(arg1:string):Promise<main.FileResult>;
 
 export function HandleSecondInstanceLaunch(arg1:options.SecondInstanceData):Promise<void>;
 
 export function HandleSystemOpenFile(arg1:string):Promise<void>;
+
+export function MakeAIRequest(arg1:string,arg2:Record<string, string>,arg3:string):Promise<string>;
+
+export function MakeLMStudioRequest(arg1:string,arg2:Record<string, string>,arg3:string):Promise<string>;
 
 export function OpenDirectory():Promise<string>;
 
@@ -42,3 +56,15 @@ export function SaveFile(arg1:string,arg2:string):Promise<void>;
 export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 
 export function SearchMarkdown(arg1:string,arg2:string):Promise<Array<Record<string, string>>>;
+
+export function SelectDocument():Promise<string>;
+
+export function SelectImage():Promise<string>;
+
+export function ShowSaveFileDialog(arg1:string):Promise<string>;
+
+export function SyncEditorState(arg1:boolean,arg2:boolean,arg3:string,arg4:string):Promise<void>;
+
+export function TouchRecentFile(arg1:string):Promise<void>;
+
+export function UnloadAIModel(arg1:string,arg2:Record<string, string>,arg3:string):Promise<void>;

@@ -10,6 +10,10 @@ export function AskSaveDiscardCancel(arg1, arg2) {
   return window['go']['main']['App']['AskSaveDiscardCancel'](arg1, arg2);
 }
 
+export function CancelAIRequest() {
+  return window['go']['main']['App']['CancelAIRequest']();
+}
+
 export function ClearRecentFiles() {
   return window['go']['main']['App']['ClearRecentFiles']();
 }
@@ -22,8 +26,20 @@ export function FrontendReady() {
   return window['go']['main']['App']['FrontendReady']();
 }
 
+export function GetAIModelCatalog(arg1, arg2) {
+  return window['go']['main']['App']['GetAIModelCatalog'](arg1, arg2);
+}
+
+export function GetAIModelList(arg1, arg2) {
+  return window['go']['main']['App']['GetAIModelList'](arg1, arg2);
+}
+
 export function GetRecentFiles() {
   return window['go']['main']['App']['GetRecentFiles']();
+}
+
+export function GetRelativePath(arg1, arg2) {
+  return window['go']['main']['App']['GetRelativePath'](arg1, arg2);
 }
 
 export function GetSettings() {
@@ -32,6 +48,10 @@ export function GetSettings() {
 
 export function GetSystemTheme() {
   return window['go']['main']['App']['GetSystemTheme']();
+}
+
+export function GetVersion() {
+  return window['go']['main']['App']['GetVersion']();
 }
 
 export function HandleFileDrop(arg1) {
@@ -44,6 +64,14 @@ export function HandleSecondInstanceLaunch(arg1) {
 
 export function HandleSystemOpenFile(arg1) {
   return window['go']['main']['App']['HandleSystemOpenFile'](arg1);
+}
+
+export function MakeAIRequest(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MakeAIRequest'](arg1, arg2, arg3);
+}
+
+export function MakeLMStudioRequest(arg1, arg2, arg3) {
+  return window['go']['main']['App']['MakeLMStudioRequest'](arg1, arg2, arg3);
 }
 
 export function OpenDirectory() {
@@ -80,4 +108,28 @@ export function SaveSettings(arg1) {
 
 export function SearchMarkdown(arg1, arg2) {
   return window['go']['main']['App']['SearchMarkdown'](arg1, arg2);
+}
+
+export function SelectDocument() {
+  return window['go']['main']['App']['SelectDocument']();
+}
+
+export function SelectImage() {
+  return window['go']['main']['App']['SelectImage']();
+}
+
+export function ShowSaveFileDialog(arg1) {
+  return window['go']['main']['App']['ShowSaveFileDialog'](arg1);
+}
+
+export function SyncEditorState(arg1, arg2, arg3, arg4) {
+  return window['go']['main']['App']['SyncEditorState'](arg1, arg2, arg3, arg4);
+}
+
+export function TouchRecentFile(arg1) {
+  return window['go']['main']['App']['TouchRecentFile'](arg1);
+}
+
+export function UnloadAIModel(arg1, arg2, arg3) {
+  return window['go']['main']['App']['UnloadAIModel'](arg1, arg2, arg3);
 }

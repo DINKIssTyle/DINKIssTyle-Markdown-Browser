@@ -41,17 +41,23 @@
                         <option value="html">HTML</option>
                     </select>
                 </div>
-                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn" disabled>
+                <button id="btn-new-doc" title="New Document" aria-label="New Document" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">add_notes</span>
+                </button>
+                <button id="btn-edit" title="Edit Markdown" aria-label="Edit Markdown" class="nav-btn icon-btn"
+                    disabled>
                     <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                 </button>
                 <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
                     <span class="material-symbols-outlined info-btn-icon" aria-hidden="true">info</span>
                 </button>
-                <button id="btn-font-minus" title="Decrease Font Size" aria-label="Decrease Font Size" class="nav-btn icon-btn font-btn">
+                <button id="btn-font-minus" title="Decrease Font Size" aria-label="Decrease Font Size"
+                    class="nav-btn icon-btn font-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
                     <span class="font-adjust-label" aria-hidden="true">-</span>
                 </button>
-                <button id="btn-font-plus" title="Increase Font Size" aria-label="Increase Font Size" class="nav-btn icon-btn font-btn">
+                <button id="btn-font-plus" title="Increase Font Size" aria-label="Increase Font Size"
+                    class="nav-btn icon-btn font-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
                     <span class="font-adjust-label" aria-hidden="true">+</span>
                 </button>
@@ -70,55 +76,114 @@
                 <span class="material-symbols-outlined" aria-hidden="true">add</span>
             </button>
         </div>
-        
+
         <div id="edit-toolbar" class="edit-toolbar hidden">
             <div class="edit-tool-group">
-                <button id="ed-bold" title="Bold (**)" class="tool-btn"><span class="material-symbols-outlined">format_bold</span></button>
-                <button id="ed-italic" title="Italic (*)" class="tool-btn"><span class="material-symbols-outlined">format_italic</span></button>
-                <button id="ed-strike" title="Strikethrough (~~)" class="tool-btn"><span class="material-symbols-outlined">strikethrough_s</span></button>
-                <button id="ed-quote" title="Blockquote (>)" class="tool-btn"><span class="material-symbols-outlined">format_quote</span></button>
+                <button id="ed-bold" title="Bold (**)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_bold</span></button>
+                <button id="ed-italic" title="Italic (*)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_italic</span></button>
+                <button id="ed-underline" title="Underline (&lt;u&gt;)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_underlined</span></button>
+                <button id="ed-strike" title="Strikethrough (~~)" class="tool-btn"><span
+                        class="material-symbols-outlined">strikethrough_s</span></button>
+                <button id="ed-quote" title="Blockquote (>)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_quote</span></button>
             </div>
             <div class="edit-separator"></div>
             <div class="edit-tool-group">
                 <button id="ed-h1" title="Heading 1 (#)" class="tool-btn">H1</button>
                 <button id="ed-h2" title="Heading 2 (##)" class="tool-btn">H2</button>
                 <button id="ed-h3" title="Heading 3 (###)" class="tool-btn">H3</button>
-                <button id="ed-ul" title="Unordered List (•)" class="tool-btn"><span class="material-symbols-outlined">format_list_bulleted</span></button>
-                <button id="ed-ol" title="Ordered List (1.)" class="tool-btn"><span class="material-symbols-outlined">format_list_numbered</span></button>
-                <button id="ed-hr" title="Horizontal Rule (---)" class="tool-btn"><span class="material-symbols-outlined">horizontal_rule</span></button>
+                <button id="ed-ul" title="Unordered List (•)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_list_bulleted</span></button>
+                <button id="ed-ol" title="Ordered List (1.)" class="tool-btn"><span
+                        class="material-symbols-outlined">format_list_numbered</span></button>
+                <button id="ed-hr" title="Horizontal Rule (---)" class="tool-btn"><span
+                        class="material-symbols-outlined">horizontal_rule</span></button>
             </div>
             <div class="edit-separator"></div>
             <div class="edit-tool-group">
-                <button id="ed-link" title="Link [title](url)" class="tool-btn"><span class="material-symbols-outlined">link</span></button>
-                <button id="ed-image" title="Image ![alt](url)" class="tool-btn"><span class="material-symbols-outlined">image</span></button>
-                <button id="ed-code" title="Code Block (```)" class="tool-btn"><span class="material-symbols-outlined">code</span></button>
-                <button id="ed-table" title="Table" class="tool-btn"><span class="material-symbols-outlined">table_chart</span></button>
+                <button id="ed-link" title="Link [title](url)" class="tool-btn"><span
+                        class="material-symbols-outlined">link</span></button>
+                <button id="ed-image" title="Image ![alt](url)" class="tool-btn"><span
+                        class="material-symbols-outlined">image</span></button>
+                <button id="ed-code" title="Code Block (```)" class="tool-btn"><span
+                        class="material-symbols-outlined">code</span></button>
+                <button id="ed-table" title="Table" class="tool-btn"><span
+                        class="material-symbols-outlined">table_chart</span></button>
+                <button id="ed-div" title="DIV Wrapper" class="tool-btn"><span
+                        class="material-symbols-outlined">border_inner</span></button>
             </div>
             <div class="edit-separator"></div>
             <div class="edit-tool-group">
-                <button id="ed-task" title="Task List (- [ ])" class="tool-btn"><span class="material-symbols-outlined">checklist</span></button>
-                <button id="ed-latex" title="LaTeX ($/$$)" class="tool-btn"><span class="material-symbols-outlined">functions</span></button>
-                <button id="ed-emoji" title="Emoji" class="tool-btn"><span class="material-symbols-outlined">mood</span></button>
+                <button id="ed-task" title="Task List (- [ ])" class="tool-btn"><span
+                        class="material-symbols-outlined">checklist</span></button>
+                <button id="ed-latex" title="LaTeX ($/$$)" class="tool-btn"><span
+                        class="material-symbols-outlined">functions</span></button>
+                <button id="ed-emoji" title="Emoji" class="tool-btn"><span
+                        class="material-symbols-outlined">mood</span></button>
+            </div>
+            <div class="edit-separator"></div>
+            <div class="edit-tool-group">
+                <!-- <label for="ed-render-mode" class="edit-inline-label">Update:</label> -->
+                <span class="material-symbols-outlined">update</span><label for="ed-render-mode"
+                    class="edit-inline-label">:</label>
+                <select id="ed-render-mode" class="edit-select">
+                    <option value="realtime">Realtime</option>
+                    <option value="cursor-line-change">Line change</option>
+                </select>
+            </div>
+            <div class="edit-separator"></div>
+            <div class="edit-tool-group">
+                <button id="ed-font-minus" title="Decrease Editor Font Size" class="tool-btn">
+                    <span class="material-symbols-outlined">text_decrease</span>
+                    <!-- <span class="font-adjust-label">-</span> -->
+                </button>
+                <button id="ed-font-plus" title="Increase Editor Font Size" class="tool-btn">
+                    <span class="material-symbols-outlined">text_increase</span>
+                    <!-- <span class="font-adjust-label">+</span> -->
+                </button>
+            </div>
+            <div class="edit-tool-group">
+                <button id="ed-general-ai" title="Toggle General AI" class="tool-btn">
+                    <span class="material-symbols-outlined">wand_stars</span>
+                </button>
+                <button id="ed-fim" title="Toggle FIM (AI Autocomplete)" class="tool-btn">
+                    <span class="material-symbols-outlined">flash_auto</span>
+                </button>
+                <button id="ed-settings" title="AI Settings" class="tool-btn">
+                    <span class="material-symbols-outlined">settings</span>
+                </button>
             </div>
             <div class="spacer"></div>
             <div class="edit-tool-group">
-                <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span class="material-symbols-outlined">disabled_by_default</span></button>
-                <button id="ed-save" title="Save" class="tool-btn save-btn"><span class="material-symbols-outlined">save</span></button>
+                <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span
+                        class="material-symbols-outlined">disabled_by_default</span></button>
+                <button id="ed-save" title="Save" class="tool-btn save-btn"><span
+                        class="material-symbols-outlined">save</span></button>
             </div>
         </div>
 
         <main id="main-container">
+            <button id="edit-preview-return" class="edit-preview-return hidden" type="button"
+                title="Return to editing preview" aria-label="Return to editing preview">
+                <span class="material-symbols-outlined" aria-hidden="true">arrow_back_ios_new</span>
+            </button>
             <!-- Markdown Content -->
             <article id="content-view" class="content-view">
                 <!-- Home Screen (Recent Files) -->
                 <div id="home-screen" class="home-screen">
-                    <h1><span class="material-symbols-outlined home-title-icon" aria-hidden="true">markdown</span> <span>DKST Markdown Browser</span></h1>
+                    <h1><span class="material-symbols-outlined home-title-icon" aria-hidden="true">markdown</span>
+                        <span>DKST Markdown Browser</span>
+                    </h1>
                     <p class="home-subtitle">Open or drag a Markdown or HTML file here.</p>
                     <div id="recent-files-list" class="recent-list">
                         <div class="empty-state">
                             <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
                             <div class="empty-state-title">No recent documents yet</div>
-                            <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here for quick access.</div>
+                            <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here for quick
+                                access.</div>
                         </div>
                     </div>
                     <div class="recent-actions">
@@ -131,13 +196,24 @@
                             <span>Clear Recent Files</span>
                         </button>
                     </div>
+
+                    <footer class="home-footer" aria-label="Version and Copyright Info">
+                        <span id="app-version-footer">Version --</span>
+                        <span class="footer-dot" aria-hidden="true">•</span>
+                        <a href="#" id="footer-whats-new" class="footer-link">What's New</a>
+                        <span class="footer-dot" aria-hidden="true">•</span>
+                        <span class="footer-copyright">(C) 2026 DINKI'ssTyle</span>
+                    </footer>
                 </div>
                 <div id="markdown-container" class="markdown-container hidden"></div>
                 <iframe id="html-frame" class="html-frame hidden" title="HTML Document Viewer"></iframe>
             </article>
 
             <article id="editor-view" class="editor-view hidden">
-                <textarea id="markdown-editor" spellcheck="false" placeholder="Enter markdown content here..."></textarea>
+                <textarea id="markdown-editor" spellcheck="false"
+                    placeholder="Enter markdown content here..."></textarea>
+                <div id="editor-slash-menu" class="editor-slash-menu hidden" role="listbox"
+                    aria-label="Editor slash commands"></div>
             </article>
 
             <!-- Sidebar (Search) - on the RIGHT -->
@@ -145,7 +221,8 @@
                 <div class="search-header">
                     <div class="search-input-wrap">
                         <input type="text" id="search-input" placeholder="Search keyword..." />
-                        <button id="btn-clear-search" class="clear-search-btn hidden" type="button" aria-label="Clear search">
+                        <button id="btn-clear-search" class="clear-search-btn hidden" type="button"
+                            aria-label="Clear search">
                             <span class="material-symbols-outlined" aria-hidden="true">close</span>
                         </button>
                     </div>
@@ -177,7 +254,8 @@
                     <span id="progress-title" class="progress-title">Working…</span>
                     <span id="progress-value" class="progress-value"></span>
                 </div>
-                <button id="btn-progress-cancel" class="progress-cancel-btn" aria-label="Cancel Current Task" title="Cancel Current Task">
+                <button id="btn-progress-cancel" class="progress-cancel-btn" aria-label="Cancel Current Task"
+                    title="Cancel Current Task">
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
             </div>
@@ -188,10 +266,161 @@
 
         <div id="context-menu" class="context-menu hidden" role="menu" aria-hidden="true">
             <button id="context-copy" class="context-menu-item" type="button" role="menuitem">Copy</button>
+            <button id="context-paste" class="context-menu-item" type="button" role="menuitem">Paste</button>
+            <button id="context-select-all" class="context-menu-item" type="button" role="menuitem">Select All</button>
             <button id="context-search" class="context-menu-item" type="button" role="menuitem">Search</button>
             <button id="context-open" class="context-menu-item" type="button" role="menuitem">Open</button>
-            <button id="context-open-new-tab" class="context-menu-item" type="button" role="menuitem">Open In New Tab</button>
+            <button id="context-open-new-tab" class="context-menu-item" type="button" role="menuitem">Open In New
+                Tab</button>
         </div>
+
+        <!-- Custom Modal for Prompts -->
+        <div id="modal-overlay" class="modal-overlay hidden">
+            <div id="modal-content" class="modal-content">
+                <h3 id="modal-title">Prompt</h3>
+                <p id="modal-message"></p>
+                <div id="modal-input-group" class="modal-input-group">
+                    <input type="text" id="modal-input" />
+                </div>
+                <div id="modal-option-grid" class="modal-option-grid hidden"></div>
+                <div id="modal-emoji-grid" class="modal-emoji-grid hidden"></div>
+                <div class="modal-actions">
+                    <button id="modal-btn-cancel" class="modal-btn secondary">Cancel</button>
+                    <button id="modal-btn-ok" class="modal-btn primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Settings Modal -->
+        <div id="ai-settings-modal" class="modal-overlay hidden">
+            <div class="modal-content ai-settings-content">
+                <h3>AI Settings</h3>
+                <div class="ai-settings-panels">
+                    <section class="ai-setting-group ai-setting-panel">
+                        <div class="ai-setting-header">
+                            <h4>General AI</h4>
+                            <label class="ai-enable-toggle" for="ai-general-enabled">
+                                <input type="checkbox" id="ai-general-enabled" />
+                                <span>Enable</span>
+                            </label>
+                        </div>
+                        <div class="ai-setting-lead">
+                            <label class="ai-setting-field">Provider
+                                <select id="ai-general-provider">
+                                    <option value="openai">OpenAI (Compatible)</option>
+                                    <option value="lmstudio">LM Studio (Native)</option>
+                                </select>
+                            </label>
+                        </div>
+                        <div class="ai-setting-grid">
+                            <label class="ai-setting-field">Endpoint
+                                <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
+                            </label>
+                            <label class="ai-setting-field">Model
+                                <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
+                                <div id="ai-general-model-picker" class="ai-model-picker hidden">
+                                    <button type="button" id="ai-general-model-trigger" class="ai-model-trigger"
+                                        aria-haspopup="dialog" aria-expanded="false">
+                                        <span id="ai-general-model-trigger-label" class="ai-model-trigger-label">Choose
+                                            a model...</span>
+                                        <span class="ai-model-trigger-caret">▾</span>
+                                    </button>
+                                    <div id="ai-general-model-popover" class="ai-model-popover hidden">
+                                        <div id="ai-general-model-status" class="ai-model-popover-status">Loading
+                                            models...</div>
+                                        <div id="ai-general-model-list" class="ai-model-popover-list"></div>
+                                    </div>
+                                </div>
+                            </label>
+                            <label class="ai-setting-field">API Key
+                                <input type="password" id="ai-general-key" placeholder="Bearer Token" />
+                            </label>
+                            <label class="ai-setting-field">Temperature
+                                <input type="number" id="ai-general-temp" min="0" max="1" step="0.1" value="0" />
+                            </label>
+                        </div>
+                    </section>
+                    <section class="ai-setting-group ai-setting-panel">
+                        <div class="ai-setting-header">
+                            <h4>FIM (Ghost Text)</h4>
+                            <label class="ai-enable-toggle" for="ai-fim-enabled">
+                                <input type="checkbox" id="ai-fim-enabled" />
+                                <span>Enable</span>
+                            </label>
+                        </div>
+                        <div class="ai-setting-lead">
+                            <div class="ai-setting-note">
+                                Real-time, context-aware code autocomplete. For a seamless typing experience with zero
+                                latency, we highly recommend using a fast, small Instruct model.
+                            </div>
+                        </div>
+                        <div class="ai-setting-grid">
+                            <label class="ai-setting-field">Endpoint
+                                <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
+                            </label>
+                            <label class="ai-setting-field">Model
+                                <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
+                            </label>
+                            <label class="ai-setting-field">API Key
+                                <input type="password" id="ai-fim-key" placeholder="Bearer Token" />
+                            </label>
+                            <label class="ai-setting-field">Temperature
+                                <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
+                            </label>
+                        </div>
+                    </section>
+                </div>
+                <section class="ai-setting-group ai-setting-group-editor">
+                    <div class="ai-setting-header ai-setting-header-tight">
+                        <h4>Editor Fixes</h4>
+                    </div>
+                    <div class="ai-setting-grid ai-setting-grid-single-row">
+                        <label class="ai-setting-checkbox-row" for="ai-toggle-ime-fix">
+                            <input type="checkbox" id="ai-toggle-ime-fix" />
+                            <span>Korean IME Enter Fix</span>
+                        </label>
+                    </div>
+                </section>
+                <div class="modal-actions">
+                    <button id="ai-settings-cancel" class="modal-btn secondary">Cancel</button>
+                    <button id="ai-settings-save" class="modal-btn primary">Save</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- AI Floating Interface -->
+        <button id="ai-floating-btn" class="ai-floating-btn hidden" title="AI Request" aria-label="AI Request">
+            <span class="material-symbols-outlined">wand_stars</span>
+        </button>
+
+        <div id="ai-prompt-box" class="ai-prompt-box hidden">
+            <input type="text" id="ai-prompt-input" placeholder="Ask AI (e.g. Improve this)..." autocomplete="off" />
+            <button id="ai-prompt-send" title="Send" aria-label="Send to AI">
+                <span class="material-symbols-outlined">send</span>
+            </button>
+            <button id="ai-prompt-close" title="Close" aria-label="Close AI Prompt">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+        <div id="ai-progress-overlay" class="hidden">
+            <div class="ai-progress-content">
+                <button id="ai-progress-cancel" class="ai-progress-cancel hidden" type="button" title="Cancel AI Response"
+                    aria-label="Cancel AI Response">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+                <div class="ai-progress-info">
+                    <div class="ai-progress-label-wrap">
+                        <div class="ai-progress-spinner"></div>
+                        <span id="ai-progress-label">Processing...</span>
+                    </div>
+                    <span id="ai-progress-percent">0%</span>
+                </div>
+                <div class="ai-progress-bar-container">
+                    <div id="ai-progress-bar-fill"></div>
+                </div>
+            </div>
+        </div>
+
     </div>
     <script src="./src/main.js" type="module"></script>
 </body>

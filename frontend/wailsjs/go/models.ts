@@ -1,9 +1,45 @@
 export namespace main {
 	
+	export class AIModelInfo {
+	    id: string;
+	    displayName: string;
+	    isLoaded: boolean;
+	    stateLabel: string;
+	    primaryLoadedInstanceId: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new AIModelInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.displayName = source["displayName"];
+	        this.isLoaded = source["isLoaded"];
+	        this.stateLabel = source["stateLabel"];
+	        this.primaryLoadedInstanceId = source["primaryLoadedInstanceId"];
+	    }
+	}
 	export class AppSettings {
 	    theme: string;
 	    fontSize: number;
 	    engine: string;
+	    editorRenderMode: string;
+	    aiGeneralEnabled: boolean;
+	    aiGeneralToolbarEnabled: boolean;
+	    aiGeneralEndpoint: string;
+	    aiGeneralModel: string;
+	    aiGeneralKey: string;
+	    aiGeneralTemp: number;
+	    aiFimEnabled: boolean;
+	    aiFimToolbarEnabled: boolean;
+	    aiFimEndpoint: string;
+	    aiFimModel: string;
+	    aiFimKey: string;
+	    aiFimTemp: number;
+	    aiGeneralProvider: string;
+	    koreanImeEnterFix: boolean;
+	    lastVersion: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -14,6 +50,22 @@ export namespace main {
 	        this.theme = source["theme"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
+	        this.editorRenderMode = source["editorRenderMode"];
+	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
+	        this.aiGeneralToolbarEnabled = source["aiGeneralToolbarEnabled"];
+	        this.aiGeneralEndpoint = source["aiGeneralEndpoint"];
+	        this.aiGeneralModel = source["aiGeneralModel"];
+	        this.aiGeneralKey = source["aiGeneralKey"];
+	        this.aiGeneralTemp = source["aiGeneralTemp"];
+	        this.aiFimEnabled = source["aiFimEnabled"];
+	        this.aiFimToolbarEnabled = source["aiFimToolbarEnabled"];
+	        this.aiFimEndpoint = source["aiFimEndpoint"];
+	        this.aiFimModel = source["aiFimModel"];
+	        this.aiFimKey = source["aiFimKey"];
+	        this.aiFimTemp = source["aiFimTemp"];
+	        this.aiGeneralProvider = source["aiGeneralProvider"];
+	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
+	        this.lastVersion = source["lastVersion"];
 	    }
 	}
 	export class FileResult {
