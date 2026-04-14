@@ -496,7 +496,22 @@ func (a *App) AskSaveDiscardCancel(title string, message string) string {
 	if err != nil {
 		return "Cancel"
 	}
-	return response
+	return normalizeSaveDiscardCancelResponse(response)
+}
+
+func normalizeSaveDiscardCancelResponse(response string) string {
+	normalized := strings.ToLower(strings.TrimSpace(response))
+
+	switch normalized {
+	case "save", "yes", "ok", "예":
+		return "Save"
+	case "discard", "don't save", "dont save", "no", "아니오":
+		return "Discard"
+	case "cancel", "취소":
+		return "Cancel"
+	default:
+		return strings.TrimSpace(response)
+	}
 }
 
 // HandleFileDrop handles a file dropped onto the window
