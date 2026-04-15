@@ -306,12 +306,10 @@
                             </label>
                         </div>
                         <div class="ai-setting-lead">
-                            <label class="ai-setting-field">Provider
-                                <select id="ai-general-provider">
-                                    <option value="openai">OpenAI (Compatible)</option>
-                                    <option value="lmstudio">LM Studio (Native)</option>
-                                </select>
-                            </label>
+                            <div class="ai-setting-note">
+                                Recommends using LM Studio and requires the use of an <b>Instruct LLM model</b>. *It
+                                will not function correctly when using a Reasoning model.<br>
+                            </div>
                         </div>
                         <div class="ai-setting-grid">
                             <label class="ai-setting-field">Endpoint
@@ -338,6 +336,12 @@
                             </label>
                             <label class="ai-setting-field">Temperature
                                 <input type="number" id="ai-general-temp" min="0" max="1" step="0.1" value="0" />
+                            </label>
+                            <label class="ai-setting-field ai-setting-field-full">Provider
+                                <select id="ai-general-provider">
+                                    <option value="openai">OpenAI (Compatible)</option>
+                                    <option value="lmstudio">LM Studio (Native)</option>
+                                </select>
                             </label>
                         </div>
                     </section>
@@ -389,24 +393,24 @@
             </div>
         </div>
 
-        <!-- AI Floating Interface -->
-        <button id="ai-floating-btn" class="ai-floating-btn hidden" title="AI Request" aria-label="AI Request">
-            <span class="material-symbols-outlined">wand_stars</span>
-        </button>
-
         <div id="ai-prompt-box" class="ai-prompt-box hidden">
-            <input type="text" id="ai-prompt-input" placeholder="Ask AI (e.g. Improve this)..." autocomplete="off" />
-            <button id="ai-prompt-send" title="Send" aria-label="Send to AI">
-                <span class="material-symbols-outlined">send</span>
-            </button>
-            <button id="ai-prompt-close" title="Close" aria-label="Close AI Prompt">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+            <div class="ai-prompt-badge" aria-hidden="true">
+                <span class="material-symbols-outlined">wand_stars</span>
+            </div>
+            <div class="ai-prompt-shell">
+                <textarea id="ai-prompt-input" rows="1" placeholder="Press / to Ask AI..."></textarea>
+                <button id="ai-prompt-send" title="Send" aria-label="Send to AI">
+                    <span class="material-symbols-outlined">arrow_circle_right</span>
+                </button>
+                <button id="ai-prompt-close" title="Close" aria-label="Close AI Prompt">
+                    <span class="material-symbols-outlined">close</span>
+                </button>
+            </div>
         </div>
         <div id="ai-progress-overlay" class="hidden">
             <div class="ai-progress-content">
-                <button id="ai-progress-cancel" class="ai-progress-cancel hidden" type="button" title="Cancel AI Response"
-                    aria-label="Cancel AI Response">
+                <button id="ai-progress-cancel" class="ai-progress-cancel hidden" type="button"
+                    title="Cancel AI Response" aria-label="Cancel AI Response">
                     <span class="material-symbols-outlined">close</span>
                 </button>
                 <div class="ai-progress-info">

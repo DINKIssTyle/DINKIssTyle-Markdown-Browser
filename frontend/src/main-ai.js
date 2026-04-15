@@ -62,12 +62,10 @@ let lmStudioModelsError = "";
 let unloadingInstanceId = "";
 let aiProgressHideTimer = null;
 let aiRequestInFlight = false;
-let aiFloatingHideTimer = null;
 let aiPromptHideTimer = null;
-let aiPromptMode = null;
-const AI_FLOATING_BUTTON_SIZE = 36;
-const AI_FLOATING_BUTTON_GUTTER = 10;
-const AI_FLOATING_TOP_SAFE_PADDING = 24;
+const AI_PROMPT_BASE_WIDTH = 320;
+const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.5);
+const AI_PROMPT_MAX_LINES = 3;
 
 function isGeneralAIActive() {
     return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
@@ -84,6 +82,13 @@ function hideAIProgressOverlay() {
     }
     el.aiProgressBarFill.style.width = '0%';
     el.aiProgressPercent.textContent = '';
+    requestAnimationFrame(() => {
+        refreshPromptForSelection({ preserveInput: true });
+    });
+}
+
+function isAIProgressVisible() {
+    return !!el.aiProgressOverlay && !el.aiProgressOverlay.classList.contains('hidden');
 }
 
 async function cancelActiveAIRequest() {
@@ -107,59 +112,40 @@ function isCancelledAIError(error) {
     return message.includes('context canceled') || message.includes('context cancelled') || message.includes('canceled');
 }
 
-function shouldUseCenteredPrompt(anchorRect) {
-    if (!anchorRect) return true;
-    const promptWidth = 320;
-    const promptHeight = 64;
-    const left = anchorRect.right + 10;
-    const top = anchorRect.bottom + 10;
-    return (
-        left + promptWidth > window.innerWidth - 16 ||
-        top + promptHeight > window.innerHeight - 16 ||
-        left < 0 ||
-        top < 0
-    );
+function getEditorSelection() {
+    if (!state.isEditing || !cmView) return null;
+    const selection = cmView.state.selection.main;
+    if (selection.empty) return null;
+    return {
+        from: selection.from,
+        to: selection.to,
+        isAllSelected: selection.from === 0 && selection.to === cmView.state.doc.length,
+    };
 }
 
-function hideFloatingButtonImmediately() {
-    clearTimeout(aiFloatingHideTimer);
-    aiFloatingHideTimer = null;
-    el.aiFloatingBtn.classList.remove('is-visible', 'is-leaving');
-    el.aiFloatingBtn.classList.add('hidden');
-}
+function updatePromptInputLayout() {
+    if (!el.aiPromptInput || !el.aiPromptBox) return;
+    const content = el.aiPromptInput.value || "";
+    const longestLineLength = content
+        .split('\n')
+        .reduce((maxLength, line) => Math.max(maxLength, line.length), 0);
+    const calculatedWidth = AI_PROMPT_BASE_WIDTH + Math.max(0, longestLineLength - 18) * 7;
+    const nextWidth = Math.max(AI_PROMPT_BASE_WIDTH, Math.min(AI_PROMPT_MAX_WIDTH, calculatedWidth));
+    el.aiPromptBox.style.setProperty('--ai-prompt-width', `${nextWidth}px`);
 
-function showFloatingButtonAt(left, top) {
-    clearTimeout(aiFloatingHideTimer);
-    const toolbarBottom = el.editToolbar?.getBoundingClientRect().bottom ?? 0;
-    const editorRect = el.editorView?.getBoundingClientRect();
-    const minTop = Math.max(
-        toolbarBottom + AI_FLOATING_TOP_SAFE_PADDING,
-        (editorRect?.top ?? 0) + AI_FLOATING_TOP_SAFE_PADDING
-    );
-    const maxTop = Math.max(minTop, window.innerHeight - AI_FLOATING_BUTTON_SIZE - AI_FLOATING_BUTTON_GUTTER);
-    const minLeft = AI_FLOATING_BUTTON_GUTTER;
-    const maxLeft = Math.max(minLeft, window.innerWidth - AI_FLOATING_BUTTON_SIZE - AI_FLOATING_BUTTON_GUTTER);
-
-    el.aiFloatingBtn.style.left = `${Math.max(minLeft, Math.min(left, maxLeft))}px`;
-    el.aiFloatingBtn.style.top = `${Math.max(minTop, Math.min(top, maxTop))}px`;
-    el.aiFloatingBtn.classList.remove('hidden', 'is-leaving');
-    requestAnimationFrame(() => {
-        el.aiFloatingBtn.classList.add('is-visible');
-    });
-}
-
-function hideFloatingButtonAnimated() {
-    if (el.aiFloatingBtn.classList.contains('hidden')) return;
-    clearTimeout(aiFloatingHideTimer);
-    el.aiFloatingBtn.classList.remove('is-visible');
-    el.aiFloatingBtn.classList.add('is-leaving');
-    aiFloatingHideTimer = setTimeout(() => {
-        hideFloatingButtonImmediately();
-    }, 180);
+    el.aiPromptInput.style.height = 'auto';
+    const computedStyle = window.getComputedStyle(el.aiPromptInput);
+    const lineHeight = parseFloat(computedStyle.lineHeight) || 20;
+    const verticalInsets = parseFloat(computedStyle.paddingTop || '0') + parseFloat(computedStyle.paddingBottom || '0');
+    const maxHeight = lineHeight * AI_PROMPT_MAX_LINES + verticalInsets;
+    const nextHeight = Math.min(el.aiPromptInput.scrollHeight, maxHeight);
+    el.aiPromptInput.style.height = `${Math.max(lineHeight + verticalInsets, nextHeight)}px`;
+    el.aiPromptInput.style.overflowY = el.aiPromptInput.scrollHeight > maxHeight ? 'auto' : 'hidden';
 }
 
 function showPromptBoxElement() {
     clearTimeout(aiPromptHideTimer);
+    updatePromptInputLayout();
     el.aiPromptBox.classList.remove('hidden', 'is-leaving');
     requestAnimationFrame(() => {
         el.aiPromptBox.classList.add('is-visible');
@@ -181,59 +167,42 @@ function isPromptBoxVisible() {
     return !el.aiPromptBox.classList.contains('hidden');
 }
 
-function getSelectionAnchorRect() {
-    if (!cmView) return null;
-    const selection = cmView.state.selection.main;
-    if (selection.empty) return null;
-    return cmView.coordsAtPos(selection.to);
+function positionPromptBox() {
+    el.aiPromptBox.style.left = '50%';
+    el.aiPromptBox.style.bottom = '132px';
+    el.aiPromptBox.style.top = 'auto';
 }
 
-function updateFloatingAIPosition() {
-    if (!state.isEditing || !cmView || !isGeneralAIActive()) {
-        hideFloatingButtonAnimated();
-        return;
-    }
+function showPromptBoxForSelection({ focusInput = false, preserveInput = true } = {}) {
+    if (!isGeneralAIActive() || isAIProgressVisible()) return false;
+    if (!getEditorSelection()) return false;
 
-    if (isPromptBoxVisible()) {
-        hideFloatingButtonImmediately();
-        return;
+    positionPromptBox();
+    if (!preserveInput) {
+        el.aiPromptInput.value = "";
     }
+    showPromptBoxElement();
+    if (focusInput) {
+        requestAnimationFrame(() => {
+            el.aiPromptInput.focus();
+            if (el.aiPromptInput.value) {
+                el.aiPromptInput.select();
+            }
+        });
+    }
+    return true;
+}
 
-    const sel = cmView.state.selection.main;
-    if (sel.empty || cmView.composing) {
-        hideFloatingButtonAnimated();
-        return;
+function refreshPromptForSelection({ focusInput = false, preserveInput = true } = {}) {
+    if (!state.isEditing || !cmView || !isGeneralAIActive() || cmView.composing || isAIProgressVisible()) {
+        hidePromptBoxElement();
+        return false;
     }
-
-    const isAllSelected = (sel.from === 0 && sel.to === cmView.state.doc.length);
-    const rect = getSelectionAnchorRect();
-    if (isAllSelected || shouldUseCenteredPrompt(rect)) {
-        hideFloatingButtonAnimated();
-        if (el.aiPromptBox.classList.contains('hidden')) {
-            showPromptBoxCentered('auto');
-        }
-        return;
+    if (!getEditorSelection()) {
+        hidePromptBoxElement();
+        return false;
     }
-
-    if (!rect) {
-        hideFloatingButtonAnimated();
-        return;
-    }
-
-    const toolbarBottom = el.editToolbar?.getBoundingClientRect().bottom ?? 0;
-    const isNearTopToolbarZone = rect.top <= toolbarBottom + AI_FLOATING_TOP_SAFE_PADDING;
-    if (isNearTopToolbarZone) {
-        hideFloatingButtonAnimated();
-        if (el.aiPromptBox.classList.contains('hidden')) {
-            showPromptBoxCentered('auto');
-        }
-        return;
-    }
-
-    if (!el.aiPromptBox.classList.contains('hidden') && aiPromptMode === 'auto') {
-        hidePromptBox();
-    }
-    showFloatingButtonAt(rect.right + 10, rect.bottom - 15);
+    return showPromptBoxForSelection({ focusInput, preserveInput });
 }
 
 async function persistAISettings() {
@@ -369,6 +338,7 @@ export function bindAIEvents() {
         clearTimeout(aiProgressHideTimer);
         aiProgressHideTimer = null;
 
+        hidePromptBoxElement();
         el.aiProgressOverlay.classList.remove('hidden');
         if (data.loading) {
             el.aiProgressOverlay.classList.add('loading');
@@ -425,25 +395,11 @@ export function bindAIEvents() {
         showToast(window.aiState.fimEnabled ? "AI FIM Enabled" : "AI FIM Disabled");
     };
 
-    // Wand toggle
-    el.aiFloatingBtn.addEventListener('mousedown', (event) => {
-        // Keep the editor selection intact so the prompt can anchor to it.
-        event.preventDefault();
-    });
-    el.aiFloatingBtn.onclick = () => {
-        if (el.aiPromptBox.classList.contains('hidden')) {
-            if (!showPromptBoxAtSelection()) {
-                showPromptBox();
-            }
-        } else {
-            hidePromptBox();
-        }
-    };
-
-    el.aiPromptClose.onclick = hidePromptBox;
+    el.aiPromptClose.onclick = () => hidePromptBox();
     el.aiPromptSend.onclick = sendPrompt;
+    el.aiPromptInput.addEventListener('input', updatePromptInputLayout);
     el.aiPromptInput.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
+        if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
             sendPrompt();
@@ -455,25 +411,23 @@ export function bindAIEvents() {
         }
     });
 
-    // Detect selection for wand and typing for FIM
+    // Detect selection for prompt and typing for FIM
     document.addEventListener('selectionchange', handleSelectionChange);
-    window.addEventListener('resize', updateFloatingAIPosition, { passive: true });
-    document.addEventListener('scroll', updateFloatingAIPosition, true);
+    window.addEventListener('resize', () => {
+        refreshPromptForSelection({ preserveInput: true });
+    }, { passive: true });
 
     el.editorView.addEventListener('keydown', handleEditorKeydown, true);
     el.editorView.addEventListener('input', handleEditorInput, true);
 }
 
 function handleEditorInput() {
+    if (isPromptBoxVisible()) {
+        hidePromptBox({ restoreEditorFocus: false });
+    }
     if (!cmView || !window.aiState.fimAvailable || !window.aiState.fimEnabled || !window.aiState.fimEndpoint) return;
     if (cmView.composing) return;
     if (!cmView.state.selection.main.empty) return;
-
-    // Typing should hide the wand
-    hideFloatingButtonAnimated();
-    if (!el.aiPromptBox.classList.contains('hidden')) {
-        hidePromptBox();
-    }
 
     if (window.aiState.ghostText !== "") clearGhostText();
     clearTimeout(debounceTimer);
@@ -507,16 +461,12 @@ function handleEditorKeydown(e) {
 
 function handleSelectionChange() {
     if (!state.isEditing || !cmView || !isGeneralAIActive()) {
-        hideFloatingButtonAnimated();
-        if (!el.aiPromptBox.classList.contains('hidden')) {
-            hidePromptBox();
-        }
+        hidePromptBox({ restoreEditorFocus: false });
         return;
     }
 
-    // Skip showing wand during IME composition (Hangul typing)
     if (cmView.composing) {
-        hideFloatingButtonAnimated();
+        hidePromptBox({ restoreEditorFocus: false });
         return;
     }
 
@@ -526,80 +476,25 @@ function handleSelectionChange() {
     }
 
     if (sel.empty) {
-        hideFloatingButtonAnimated();
-        if (!el.aiPromptBox.classList.contains('hidden')) {
-            hidePromptBox();
-        }
+        hidePromptBox({ restoreEditorFocus: false });
     } else {
-        updateFloatingAIPosition();
+        refreshPromptForSelection({ preserveInput: true });
     }
-}
-
-function showPromptBoxCentered(mode = 'auto') {
-    aiPromptMode = mode;
-    hideFloatingButtonImmediately();
-    el.aiPromptBox.style.left = '50%';
-    el.aiPromptBox.style.bottom = '40px';
-    el.aiPromptBox.style.top = 'auto'; // Reset top
-    el.aiPromptBox.style.setProperty('--ai-prompt-base-transform', 'translateX(-50%)');
-    showPromptBoxElement();
-    // el.aiPromptInput.focus(); // Removed to avoid stealing focus during Select All
-}
-
-function showPromptBox() {
-    aiPromptMode = 'manual';
-    hideFloatingButtonImmediately();
-    const btnRect = el.aiFloatingBtn.getBoundingClientRect();
-    el.aiPromptBox.style.left = `${btnRect.left}px`;
-    el.aiPromptBox.style.top = `${btnRect.bottom + 10}px`;
-    el.aiPromptBox.style.bottom = 'auto';
-    el.aiPromptBox.style.setProperty('--ai-prompt-base-transform', 'translateX(0)');
-    showPromptBoxElement();
-    el.aiPromptInput.focus();
 }
 
 export function showPromptBoxAtSelection() {
-    if (!state.isEditing || !cmView || !isGeneralAIActive()) {
-        return false;
-    }
-
-    const selection = cmView.state.selection.main;
-    if (selection.empty) {
-        return false;
-    }
-
-    const rect = cmView.coordsAtPos(selection.to);
-    if (!rect) {
-        return false;
-    }
-    if (shouldUseCenteredPrompt(rect)) {
-        hideFloatingButtonAnimated();
-        showPromptBoxCentered('manual');
-        el.aiPromptInput.focus();
-        el.aiPromptInput.select();
-        return true;
-    }
-
-    aiPromptMode = 'manual';
-    hideFloatingButtonAnimated();
-    el.aiPromptBox.style.left = `${rect.right + 10}px`;
-    el.aiPromptBox.style.top = `${rect.bottom + 10}px`;
-    el.aiPromptBox.style.bottom = 'auto';
-    el.aiPromptBox.style.setProperty('--ai-prompt-base-transform', 'translateX(0)');
-    showPromptBoxElement();
-    el.aiPromptInput.focus();
-    el.aiPromptInput.select();
-    return true;
+    return showPromptBoxForSelection({ focusInput: true, preserveInput: true });
 }
 
-function hidePromptBox() {
-    aiPromptMode = null;
+function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
     hidePromptBoxElement();
-    el.aiPromptInput.value = "";
-    if (cmView) cmView.focus();
-    requestAnimationFrame(() => {
-        updateFloatingAIPosition();
-    });
+    if (clearInput) {
+        el.aiPromptInput.value = "";
+        updatePromptInputLayout();
+    }
+    if (restoreEditorFocus && cmView) {
+        cmView.focus();
+    }
 }
 
 function clearGhostText() {
@@ -720,11 +615,12 @@ async function sendPrompt() {
 
     const sel = cmView.state.selection.main;
     if (sel.empty) return;
+    const isAllSelected = sel.from === 0 && sel.to === cmView.state.doc.length;
 
     const selectedText = cmView.state.sliceDoc(sel.from, sel.to);
     
     // Hide prompt box immediately so user can see the editor
-    hidePromptBox();
+    hidePromptBox({ restoreEditorFocus: false });
     
     el.aiPromptSend.disabled = true;
     aiRequestInFlight = true;
@@ -782,7 +678,10 @@ async function sendPrompt() {
         resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
 
         cmView.dispatch({
-            changes: { from: sel.from, to: sel.to, insert: resultText }
+            changes: { from: sel.from, to: sel.to, insert: resultText },
+            selection: isAllSelected
+                ? { anchor: 0, head: resultText.length }
+                : { anchor: sel.from, head: sel.from + resultText.length }
         });
 
         renderMarkdown(cmView.state.doc.toString());
@@ -839,9 +738,8 @@ function syncAIControls() {
     }
 
     if (!generalToolbarEnabled) {
-        hideFloatingButtonAnimated();
         if (!el.aiPromptBox.classList.contains('hidden')) {
-            hidePromptBox();
+            hidePromptBox({ restoreEditorFocus: false });
         }
     }
 }

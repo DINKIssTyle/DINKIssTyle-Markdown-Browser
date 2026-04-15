@@ -112,7 +112,6 @@ export const el = {
     aiFimTemp: $('ai-fim-temp'),
     aiSettingsCancel: $('ai-settings-cancel'),
     aiSettingsSave: $('ai-settings-save'),
-    aiFloatingBtn: $('ai-floating-btn'),
     aiPromptBox: $('ai-prompt-box'),
     aiPromptInput: $('ai-prompt-input'),
     aiPromptSend: $('ai-prompt-send'),
