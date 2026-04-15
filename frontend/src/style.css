@@ -2080,6 +2080,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     pointer-events: none;
 }
 
+/* 프롬프트 뱃지 관련 */
 .ai-prompt-badge {
     width: 40px;
     height: 40px;

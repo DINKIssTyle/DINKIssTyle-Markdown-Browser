@@ -593,7 +593,7 @@ async function requestFIM() {
     try {
         const headers = { "Content-Type": "application/json" };
         if (window.aiState.fimKey) headers["Authorization"] = `Bearer ${window.aiState.fimKey}`;
-
+        // FIM 관련 
         const payload = {
             model: window.aiState.fimModel,
             prompt: `<|fim_prefix|>${prefix}<|fim_middle|><|fim_suffix|>${suffix}`,
@@ -676,10 +676,10 @@ async function sendPrompt() {
     const isAllSelected = sel.from === 0 && sel.to === cmView.state.doc.length;
 
     const selectedText = cmView.state.sliceDoc(sel.from, sel.to);
-    
+
     // Hide prompt box immediately so user can see the editor
     showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
-    
+
     aiRequestInFlight = true;
     showToast("AI Processing...");
 
