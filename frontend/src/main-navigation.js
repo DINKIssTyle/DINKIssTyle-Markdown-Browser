@@ -4,7 +4,7 @@
  */
 
 import {
-    state, el, HOME_SCREEN_PATH, THIRD_PARTY_NOTICES_PATH, WHATS_NEW_PATH,
+    state, el, HOME_SCREEN_PATH, ABOUT_PATH, SHORTCUTS_PATH, THIRD_PARTY_NOTICES_PATH, WHATS_NEW_PATH,
     getPathDirname, normalizeFileURLPath, normalizeAppLocalFileHref,
     documentTypeFromPath, splitLinkTarget, isExternalURL,
     joinPath, getScroller, syncEngineSelector, deriveTabTitle,
@@ -285,6 +285,14 @@ export async function reloadCurrent() {
 
 export async function openThirdPartyNotices(newTab = false) {
     await openPath(THIRD_PARTY_NOTICES_PATH, { newTab });
+}
+
+export async function openShortcuts(newTab = false) {
+    await openPath(SHORTCUTS_PATH, { newTab });
+}
+
+export async function openAbout(newTab = false) {
+    await openPath(ABOUT_PATH, { newTab });
 }
 
 export async function openWhatsNew(newTab = false) {

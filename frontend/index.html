@@ -48,8 +48,8 @@
                     disabled>
                     <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                 </button>
-                <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
-                    <span class="material-symbols-outlined info-btn-icon" aria-hidden="true">info</span>
+                <!-- <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
+                    <span class="material-symbols-outlined info-btn-icon" aria-hidden="true">info</span> -->
                 </button>
                 <button id="btn-font-minus" title="Decrease Font Size" aria-label="Decrease Font Size"
                     class="nav-btn icon-btn font-btn">
@@ -198,11 +198,20 @@
                     </div>
 
                     <footer class="home-footer" aria-label="Version and Copyright Info">
-                        <span id="app-version-footer">Version --</span>
-                        <span class="footer-dot" aria-hidden="true">•</span>
-                        <a href="#" id="footer-whats-new" class="footer-link">What's New</a>
-                        <span class="footer-dot" aria-hidden="true">•</span>
-                        <span class="footer-copyright">(C) 2026 DINKI'ssTyle</span>
+                        <div class="home-footer-line">
+                            <span id="app-version-footer">Version --</span>
+                        </div>
+                        <div class="home-footer-line">
+                            <a href="#" id="footer-whats-new" class="footer-link">What's New</a>
+                            <span class="footer-dot" aria-hidden="true">•</span>
+                            <a href="#" id="footer-shortcuts" class="footer-link">Shortcuts</a>
+                            <span class="footer-dot" aria-hidden="true">•</span>
+                            <a href="#" id="footer-third-party-notices" class="footer-link">Third-Party Notices</a>
+                        </div>
+                        <div class="home-footer-line">
+                            <a href="#" id="footer-copyright" class="footer-link footer-copyright">(C) 2026
+                                DINKI'ssTyle</a>
+                        </div>
                     </footer>
                 </div>
                 <div id="markdown-container" class="markdown-container hidden"></div>
@@ -377,13 +386,30 @@
                 </div>
                 <section class="ai-setting-group ai-setting-group-editor">
                     <div class="ai-setting-header ai-setting-header-tight">
-                        <h4>Editor Fixes</h4>
+                        <h4>Advanced Options</h4>
                     </div>
                     <div class="ai-setting-grid ai-setting-grid-single-row">
-                        <label class="ai-setting-checkbox-row" for="ai-toggle-ime-fix">
-                            <input type="checkbox" id="ai-toggle-ime-fix" />
-                            <span>Korean IME Enter Fix</span>
-                        </label>
+                        <div class="ai-setting-option">
+                            <label class="ai-setting-checkbox-row" for="ai-selection-context">
+                                <input type="checkbox" id="ai-selection-context" />
+                                <span>Include surrounding context for AI edits</span>
+                            </label>
+                            <div class="ai-setting-note">
+                                Sends nearby text around the selection as reference only. This can improve tone and flow
+                                matching, but may make AI edits slightly slower.
+                            </div>
+                        </div>
+                        <div class="ai-setting-option">
+                            <label class="ai-setting-checkbox-row" for="ai-toggle-ime-fix">
+                                <input type="checkbox" id="ai-toggle-ime-fix" />
+                                <span>Korean IME Enter Fix</span>
+                            </label>
+                            <div class="ai-setting-note">
+                                Helps prevent extra blank lines while typing with a Korean IME. In some cases, you may
+                                need to press Enter once to commit the final character and a second time to insert a new
+                                line.
+                            </div>
+                        </div>
                     </div>
                 </section>
                 <div class="modal-actions">

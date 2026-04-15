@@ -5,6 +5,8 @@
 
 // ── Constants ──────────────────────────────────────────────
 export const HOME_SCREEN_PATH = '__home__';
+export const ABOUT_PATH = '/ABOUT.md';
+export const SHORTCUTS_PATH = '/SHORTCUTS.md';
 export const THIRD_PARTY_NOTICES_PATH = '/THIRD-PARTY-NOTICES.md';
 export const WHATS_NEW_PATH = '/WHATS-NEW.md';
 
@@ -127,9 +129,13 @@ export const el = {
     modalEmojiGrid: $('modal-emoji-grid'),
     modalBtnOk: $('modal-btn-ok'),
     modalBtnCancel: $('modal-btn-cancel'),
+    aiSelectionContext: $('ai-selection-context'),
     aiToggleImeFix: $('ai-toggle-ime-fix'),
     appVersionFooter: $('app-version-footer'),
+    footerShortcuts: $('footer-shortcuts'),
+    footerThirdPartyNotices: $('footer-third-party-notices'),
     footerWhatsNew: $('footer-whats-new'),
+    footerCopyright: $('footer-copyright'),
 };
 
 // ── Shared Mutable State ───────────────────────────────────
@@ -157,6 +163,7 @@ export const state = {
     editingPreviewPath: "",
     editingPreviewFolder: "",
     currentEditorRenderMode: "realtime",
+    aiSelectionContextEnabled: false,
     koreanImeFixEnabled: false,
 };
 
@@ -301,6 +308,8 @@ export function isExternalURL(href) {
 
 export function formatDisplayPath(path) {
     if (path === HOME_SCREEN_PATH) return 'DKST Markdown Browser';
+    if (path === ABOUT_PATH) return 'ABOUT.md';
+    if (path === SHORTCUTS_PATH) return 'SHORTCUTS.md';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'THIRD-PARTY-NOTICES.md';
     if (path === WHATS_NEW_PATH) return 'WHATS-NEW.md';
     return path;
@@ -308,6 +317,8 @@ export function formatDisplayPath(path) {
 
 export function deriveTabTitle(path, content) {
     if (path === HOME_SCREEN_PATH) return 'Start';
+    if (path === ABOUT_PATH) return 'About';
+    if (path === SHORTCUTS_PATH) return 'Shortcuts';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
     if (path === WHATS_NEW_PATH) return "What's New";
     if (documentTypeFromPath(path) === 'html') {
@@ -374,7 +385,10 @@ export function debounce(fn, ms) {
 }
 
 export function isBundledDocumentPath(path) {
-    return path === THIRD_PARTY_NOTICES_PATH || path === WHATS_NEW_PATH;
+    return path === ABOUT_PATH ||
+        path === SHORTCUTS_PATH ||
+        path === THIRD_PARTY_NOTICES_PATH ||
+        path === WHATS_NEW_PATH;
 }
 
 export function isActiveMarkdownEditTab() {

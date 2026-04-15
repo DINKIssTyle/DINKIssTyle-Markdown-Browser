@@ -4,6 +4,7 @@
  */
 
 import './style.css';
+import 'katex/dist/katex.min.css';
 
 // ── Module Imports ─────────────────────────────────────────
 import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector } from './main-state.js';
@@ -12,13 +13,13 @@ import {
     createAndSwitchToNewTab, closeTab, activateTabByShortcut,
 } from './main-tabs.js';
 import {
-    handleOpenFile, openPath, openIncomingFiles, openThirdPartyNotices,
+    handleOpenFile, openPath, openIncomingFiles, openAbout, openShortcuts, openThirdPartyNotices,
     openWhatsNew,
     goBack, goForward, goHome, reloadCurrent, updateNavButtons,
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -133,6 +134,8 @@ async function persist() {
         aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
         aiFimKey: window.aiState?.fimKey || "",
         aiFimTemp: window.aiState?.fimTemp || 0,
+        aiSelectionContext: state.aiSelectionContextEnabled,
+        koreanImeEnterFix: state.koreanImeFixEnabled,
     });
 }
 
@@ -157,7 +160,9 @@ function bindToolbar() {
     el.btnForward.onclick = goForward;
     el.btnHome.onclick = goHome;
     el.btnRefresh.onclick = reloadCurrent;
-    el.btnInfo.onclick = () => openThirdPartyNotices(true);
+    if (el.btnInfo) {
+        el.btnInfo.onclick = () => openThirdPartyNotices(true);
+    }
     el.btnFontMinus.onclick = () => changeFontSize(-2);
     el.btnFontPlus.onclick = () => changeFontSize(2);
     el.btnThemeToggle.onclick = toggleTheme;
@@ -220,6 +225,24 @@ function bindHomeScreen() {
         el.footerWhatsNew.onclick = async (e) => {
             e.preventDefault();
             await openWhatsNew(true);
+        };
+    }
+    if (el.footerShortcuts) {
+        el.footerShortcuts.onclick = async (e) => {
+            e.preventDefault();
+            await openShortcuts(true);
+        };
+    }
+    if (el.footerThirdPartyNotices) {
+        el.footerThirdPartyNotices.onclick = async (e) => {
+            e.preventDefault();
+            await openThirdPartyNotices(true);
+        };
+    }
+    if (el.footerCopyright) {
+        el.footerCopyright.onclick = async (e) => {
+            e.preventDefault();
+            await openAbout(true);
         };
     }
 }
@@ -304,16 +327,31 @@ function bindMenuEvents() {
 
 async function handleGlobalKeydown(event) {
     const isEditingShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w';
+    const isEditorFontDownShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && (event.key === '-' || event.key === '_' || event.code === 'Minus' || event.code === 'NumpadSubtract');
+    const isEditorFontUpShortcut = (event.metaKey || event.ctrlKey) && !event.altKey
+        && (
+            event.key === '+' ||
+            event.key === '=' ||
+            event.code === 'Equal' ||
+            event.code === 'NumpadAdd'
+        );
     
     // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)
-            && (['w', 's', 'e'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key));
+            && (['w', 's', 'e'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isEditorFontDownShortcut || isEditorFontUpShortcut);
         if (!isGlobalKey) {
             return;
         }
+    }
+
+    if (isEditorFocused() && (isEditorFontDownShortcut || isEditorFontUpShortcut)) {
+        event.preventDefault();
+        changeEditorFontSize(isEditorFontDownShortcut ? -1 : 1);
+        return;
     }
 
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 's') {

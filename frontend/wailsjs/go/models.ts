@@ -38,6 +38,7 @@ export namespace main {
 	    aiFimKey: string;
 	    aiFimTemp: number;
 	    aiGeneralProvider: string;
+	    aiSelectionContext: boolean;
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
 	
@@ -64,6 +65,7 @@ export namespace main {
 	        this.aiFimKey = source["aiFimKey"];
 	        this.aiFimTemp = source["aiFimTemp"];
 	        this.aiGeneralProvider = source["aiGeneralProvider"];
+	        this.aiSelectionContext = source["aiSelectionContext"];
 	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
 	        this.lastVersion = source["lastVersion"];
 	    }

@@ -9,7 +9,7 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument } from './main-editor.js';
+import { exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { AskSaveDiscardCancel } from '../wailsjs/go/main/App';
@@ -29,12 +29,17 @@ export function createTab({ path = HOME_SCREEN_PATH, title = 'New Tab' } = {}) {
         kind: kindFromPath(path),
         documentType: documentTypeFromPath(path),
         title,
+        currentFolder: getPathDirname(path),
         navHistory: [{ path, scroll: 0 }],
         navIndex: 0,
         homeTargetPath: path === HOME_SCREEN_PATH ? HOME_SCREEN_PATH : path,
         currentMarkdownSource: "",
         isEditing: false,
         editorOriginalContent: "",
+        editingSourcePath: "",
+        editingSourceFolder: "",
+        editingPreviewPath: "",
+        editingPreviewFolder: "",
         pendingKeyword: "",
         pendingAnchor: "",
     };
@@ -53,6 +58,10 @@ export function syncTabFromGlobals(tab) {
     tab.currentMarkdownSource = state.currentMarkdownSource;
     tab.isEditing = state.isEditing;
     tab.editorOriginalContent = state.editorOriginalContent;
+    tab.editingSourcePath = state.editingSourcePath;
+    tab.editingSourceFolder = state.editingSourceFolder;
+    tab.editingPreviewPath = state.editingPreviewPath;
+    tab.editingPreviewFolder = state.editingPreviewFolder;
     tab.navHistory = state.navHistory.map(item => ({ ...item }));
     tab.navIndex = state.navIndex;
     tab.homeTargetPath = state.homeTargetPath;
@@ -68,6 +77,10 @@ export function syncGlobalsFromTab(tab) {
     state.currentMarkdownSource = tab.currentMarkdownSource || "";
     state.isEditing = !!tab.isEditing;
     state.editorOriginalContent = tab.editorOriginalContent || "";
+    state.editingSourcePath = tab.editingSourcePath || "";
+    state.editingSourceFolder = tab.editingSourceFolder || "";
+    state.editingPreviewPath = tab.editingPreviewPath || "";
+    state.editingPreviewFolder = tab.editingPreviewFolder || "";
     state.navHistory = (tab.navHistory || [{ path: tab.path, scroll: 0 }]).map(item => ({ ...item }));
     state.navIndex = typeof tab.navIndex === "number" ? tab.navIndex : state.navHistory.length - 1;
     state.homeTargetPath = tab.homeTargetPath || HOME_SCREEN_PATH;
@@ -95,6 +108,7 @@ export async function switchToTab(tabID) {
     saveCurrentScroll();
     state.activeTabId = nextTab.id;
     syncGlobalsFromTab(nextTab);
+    syncEditorSessionFromState();
     renderTabs();
     await renderActiveTab();
 }

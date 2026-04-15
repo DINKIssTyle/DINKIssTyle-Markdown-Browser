@@ -67,6 +67,7 @@ type AppSettings struct {
 	AIFIMKey                string  `json:"aiFimKey"`
 	AIFIMTemp               float64 `json:"aiFimTemp"`
 	AIGeneralProvider       string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
+	AISelectionContext      bool    `json:"aiSelectionContext"`
 	KoreanImeEnterFix       bool    `json:"koreanImeEnterFix"`
 	LastVersion             string  `json:"lastVersion"`
 }

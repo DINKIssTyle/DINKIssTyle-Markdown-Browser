@@ -69,6 +69,7 @@ const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.5);
 const AI_PROMPT_MAX_LINES = 3;
 const AI_PROMPT_DEFAULT_PLACEHOLDER = "Press / to Ask AI...";
 const AI_PROMPT_FOCUSED_PLACEHOLDER = "Ask AI ...";
+const AI_EDIT_CONTEXT_LIMIT = 700;
 
 function isGeneralAIActive() {
     return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
@@ -175,6 +176,85 @@ function getEditorSelection() {
         from: selection.from,
         to: selection.to,
         isAllSelected: selection.from === 0 && selection.to === cmView.state.doc.length,
+    };
+}
+
+function findContextBoundary(text, start, end, direction) {
+    const segment = text.slice(start, end);
+    const paragraphBreak = direction === 'backward'
+        ? segment.lastIndexOf('\n\n')
+        : segment.indexOf('\n\n');
+    if (paragraphBreak === -1) {
+        return direction === 'backward' ? start : end;
+    }
+    return direction === 'backward'
+        ? start + paragraphBreak + 2
+        : start + paragraphBreak;
+}
+
+function buildSelectionContext(docText, from, to) {
+    const rawBeforeStart = Math.max(0, from - AI_EDIT_CONTEXT_LIMIT);
+    const rawAfterEnd = Math.min(docText.length, to + AI_EDIT_CONTEXT_LIMIT);
+
+    const beforeStart = findContextBoundary(docText, rawBeforeStart, from, 'backward');
+    const afterEnd = findContextBoundary(docText, to, rawAfterEnd, 'forward');
+
+    const beforeContext = docText.slice(beforeStart, from).trimStart();
+    const selectedText = docText.slice(from, to);
+    const afterContext = docText.slice(to, afterEnd).trimEnd();
+
+    return {
+        selectedText,
+        beforeContext,
+        afterContext,
+    };
+}
+
+function buildAIEditPrompt(docText, from, to, userPrompt) {
+    if (!state.aiSelectionContextEnabled) {
+        const selectedText = docText.slice(from, to);
+        return {
+            prompt: [
+                'You must edit ONLY the text inside <selected_text>.',
+                'Your entire response must be only the replacement for <selected_text>.',
+                'If the instruction does not require a change, return the original <selected_text> unchanged.',
+                'Do not add explanations, code fences, labels, or quotes.',
+                '',
+                '<selected_text>',
+                selectedText,
+                '</selected_text>',
+                '',
+                `<instruction>${userPrompt}</instruction>`,
+            ].join('\n'),
+        };
+    }
+
+    const { selectedText, beforeContext, afterContext } = buildSelectionContext(docText, from, to);
+
+    const sections = [
+        'You must edit ONLY the text inside <selected_text>.',
+        'The surrounding context is REFERENCE ONLY. Never rewrite it, never continue it, and never include it in the output.',
+        'Your entire response must be only the replacement for <selected_text>.',
+        'If the instruction does not require a change, return the original <selected_text> unchanged.',
+        'Do not add explanations, code fences, labels, or quotes.',
+        '',
+        '<before_context>',
+        beforeContext || '(empty)',
+        '</before_context>',
+        '',
+        '<selected_text>',
+        selectedText,
+        '</selected_text>',
+        '',
+        '<after_context>',
+        afterContext || '(empty)',
+        '</after_context>',
+        '',
+        `<instruction>${userPrompt}</instruction>`,
+    ];
+
+    return {
+        prompt: sections.join('\n'),
     };
 }
 
@@ -294,6 +374,7 @@ async function persistAISettings() {
         aiFimModel: window.aiState.fimModel,
         aiFimKey: window.aiState.fimKey,
         aiFimTemp: window.aiState.fimTemp,
+        aiSelectionContext: el.aiSelectionContext.checked,
         koreanImeEnterFix: el.aiToggleImeFix.checked,
     });
 }
@@ -330,6 +411,8 @@ export async function initAI() {
     el.aiFimModel.value = aiState.fimModel;
     el.aiFimKey.value = aiState.fimKey;
     el.aiFimTemp.value = aiState.fimTemp;
+    el.aiSelectionContext.checked = s.aiSelectionContext || false;
+    state.aiSelectionContextEnabled = el.aiSelectionContext.checked;
     el.aiToggleImeFix.checked = s.koreanImeEnterFix || false;
     state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
     if (!aiState.generalAvailable) {
@@ -392,6 +475,7 @@ export function bindAIEvents() {
             window.aiState.fimEnabled = false;
         }
 
+        state.aiSelectionContextEnabled = el.aiSelectionContext.checked;
         await persistAISettings();
 
         state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
@@ -693,8 +777,8 @@ async function sendPrompt() {
     const sel = cmView.state.selection.main;
     if (sel.empty) return;
     const isAllSelected = sel.from === 0 && sel.to === cmView.state.doc.length;
-
-    const selectedText = cmView.state.sliceDoc(sel.from, sel.to);
+    const docText = cmView.state.doc.toString();
+    const { prompt: contextualPrompt } = buildAIEditPrompt(docText, sel.from, sel.to, userPrompt);
 
     // Hide prompt box immediately so user can see the editor
     showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
@@ -716,7 +800,7 @@ async function sendPrompt() {
 
             const payload = {
                 model: window.aiState.generalModel,
-                input: `You are an AI Markdown editor assistant. Your job is to process the context text and return ONLY the raw modified text.\n\nContext: ${selectedText}\n\nInstruction: ${userPrompt}`,
+                input: `You are an AI Markdown editor assistant. Edit only <selected_text>. Treat <before_context> and <after_context> as reference only. Return only the replacement for <selected_text> and nothing else.\n\n${contextualPrompt}`,
                 stream: true
             };
             if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
@@ -739,8 +823,8 @@ async function sendPrompt() {
             const payload = {
                 model: window.aiState.generalModel,
                 messages: [
-                    { role: "system", content: "You are an AI Markdown editor assistant. Your job is to process the context text and return ONLY the raw modified text (no wrappers like ```markdown)." },
-                    { role: "user", content: `Context: ${selectedText}\n\nInstruction: ${userPrompt}` }
+                    { role: "system", content: "You are an AI Markdown editor assistant. Edit only <selected_text>. <before_context> and <after_context> are reference only. Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context." },
+                    { role: "user", content: contextualPrompt }
                 ]
             };
             if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;

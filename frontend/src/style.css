@@ -571,15 +571,25 @@ html.dark .empty-state {
     padding-top: 32px;
     border-top: 1px solid var(--border-color);
     display: flex;
+    flex-direction: column;
     align-items: center;
     justify-content: center;
-    gap: 12px;
+    gap: 8px;
     font-size: 13px;
     color: var(--text-color);
+    text-align: center;
 }
 
 .home-footer span {
     opacity: 0.5;
+}
+
+.home-footer-line {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-wrap: wrap;
+    gap: 12px;
 }
 
 .footer-link {
@@ -787,6 +797,16 @@ html.dark .html-frame {
 }
 
 .markdown-container img {
+    max-width: 100%;
+}
+
+.markdown-container .katex-display {
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding: 0.25em 0;
+}
+
+.markdown-container .katex {
     max-width: 100%;
 }
 
@@ -2114,6 +2134,12 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 
 .ai-setting-group-editor {
     margin-bottom: 12px;
+}
+
+.ai-setting-option {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
 }
 
 @media (max-width: 720px) {

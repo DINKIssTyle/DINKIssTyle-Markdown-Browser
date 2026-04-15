@@ -4,6 +4,7 @@
  */
 
 import { marked } from 'marked';
+import katex from 'katex';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
 import remarkHtml from 'remark-html';
@@ -23,6 +24,168 @@ import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 // ── Module-level State ─────────────────────────────────────
 let recentFilesCache = [];
 let htmlFrameResizeObserver = null;
+const MATH_DATA_ATTR = 'data-dkst-math';
+const MATH_DISPLAY_ATTR = 'data-dkst-math-display';
+
+function isEscaped(text, index) {
+    let slashCount = 0;
+    for (let i = index - 1; i >= 0 && text[i] === '\\'; i -= 1) {
+        slashCount += 1;
+    }
+    return slashCount % 2 === 1;
+}
+
+function encodeMathPayload(value) {
+    return encodeURIComponent(value)
+        .replace(/'/g, '%27')
+        .replace(/"/g, '%22');
+}
+
+function decodeMathPayload(value) {
+    return decodeURIComponent(value);
+}
+
+function createMathPlaceholder(math, displayMode) {
+    const payload = encodeMathPayload(math);
+    return `<span class="dkst-math-placeholder" ${MATH_DATA_ATTR}="${payload}" ${MATH_DISPLAY_ATTR}="${displayMode ? 'true' : 'false'}"></span>`;
+}
+
+function findMatchingDelimiter(text, start, delimiter) {
+    let searchIndex = start;
+    while (searchIndex < text.length) {
+        const found = text.indexOf(delimiter, searchIndex);
+        if (found === -1) {
+            return -1;
+        }
+        if (!isEscaped(text, found)) {
+            return found;
+        }
+        searchIndex = found + delimiter.length;
+    }
+    return -1;
+}
+
+function isInlineMathStart(text, index) {
+    const next = text[index + 1] || '';
+    if (!next || next === '$' || /\s/.test(next)) {
+        return false;
+    }
+    const prev = text[index - 1] || '';
+    return !/\d/.test(prev);
+}
+
+function isInlineMathEnd(text, index) {
+    const prev = text[index - 1] || '';
+    const next = text[index + 1] || '';
+    if (!prev || /\s/.test(prev)) {
+        return false;
+    }
+    return !/\d/.test(next);
+}
+
+function transformMarkdownMath(segment) {
+    let out = '';
+    let i = 0;
+    while (i < segment.length) {
+        if (segment[i] === '`') {
+            let tickCount = 1;
+            while (segment[i + tickCount] === '`') {
+                tickCount += 1;
+            }
+            const fence = '`'.repeat(tickCount);
+            const end = segment.indexOf(fence, i + tickCount);
+            if (end === -1) {
+                out += segment.slice(i);
+                break;
+            }
+            out += segment.slice(i, end + tickCount);
+            i = end + tickCount;
+            continue;
+        }
+
+        if (segment.startsWith('$$', i) && !isEscaped(segment, i)) {
+            const end = findMatchingDelimiter(segment, i + 2, '$$');
+            if (end !== -1) {
+                out += createMathPlaceholder(segment.slice(i + 2, end).trim(), true);
+                i = end + 2;
+                continue;
+            }
+        }
+
+        if (segment.startsWith('\\[', i) && !isEscaped(segment, i)) {
+            const end = findMatchingDelimiter(segment, i + 2, '\\]');
+            if (end !== -1) {
+                out += createMathPlaceholder(segment.slice(i + 2, end).trim(), true);
+                i = end + 2;
+                continue;
+            }
+        }
+
+        if (segment.startsWith('\\(', i) && !isEscaped(segment, i)) {
+            const end = findMatchingDelimiter(segment, i + 2, '\\)');
+            if (end !== -1) {
+                out += createMathPlaceholder(segment.slice(i + 2, end).trim(), false);
+                i = end + 2;
+                continue;
+            }
+        }
+
+        if (segment[i] === '$' && !isEscaped(segment, i) && isInlineMathStart(segment, i)) {
+            let end = i + 1;
+            while (end < segment.length) {
+                if (segment[end] === '$' && !isEscaped(segment, end) && isInlineMathEnd(segment, end)) {
+                    break;
+                }
+                end += 1;
+            }
+            if (end < segment.length) {
+                out += createMathPlaceholder(segment.slice(i + 1, end), false);
+                i = end + 1;
+                continue;
+            }
+        }
+
+        out += segment[i];
+        i += 1;
+    }
+    return out;
+}
+
+function preprocessMarkdownMath(content) {
+    const fencePattern = /(^|\n)(`{3,}|~{3,})[^\n]*\n[\s\S]*?\n\2(?=\n|$)/g;
+    let result = '';
+    let lastIndex = 0;
+
+    for (const match of content.matchAll(fencePattern)) {
+        const start = match.index + match[1].length;
+        result += transformMarkdownMath(content.slice(lastIndex, start));
+        result += content.slice(start, start + match[0].length - match[1].length);
+        lastIndex = start + match[0].length - match[1].length;
+    }
+
+    result += transformMarkdownMath(content.slice(lastIndex));
+    return result;
+}
+
+function renderMathPlaceholders(container) {
+    container.querySelectorAll(`[${MATH_DATA_ATTR}]`).forEach(node => {
+        const rawMath = node.getAttribute(MATH_DATA_ATTR);
+        if (!rawMath) {
+            return;
+        }
+        const displayMode = node.getAttribute(MATH_DISPLAY_ATTR) === 'true';
+        try {
+            node.outerHTML = katex.renderToString(decodeMathPayload(rawMath), {
+                displayMode,
+                throwOnError: false,
+                strict: 'ignore',
+            });
+        } catch (error) {
+            LogError(`Failed to render math: ${error?.message || error}`);
+            node.textContent = decodeMathPayload(rawMath);
+        }
+    });
+}
 
 function blockNativeFileDrop(target) {
     if (!target?.addEventListener) {
@@ -100,17 +263,19 @@ mermaid.initialize(getMermaidConfig());
 // ── Markdown Rendering ─────────────────────────────────────
 
 export async function renderMarkdown(content) {
+    const preparedContent = preprocessMarkdownMath(content);
     let html;
     if (state.currentEngine === "marked") {
-        html = marked.parse(content);
+        html = marked.parse(preparedContent);
     } else {
         const vf = await unified()
             .use(remarkParse)
             .use(remarkHtml, { sanitize: false })
-            .process(content);
+            .process(preparedContent);
         html = String(vf);
     }
     el.markdownContainer.innerHTML = html;
+    renderMathPlaceholders(el.markdownContainer);
     await postProcess();
     syncEditingPreviewReturnButton();
 }

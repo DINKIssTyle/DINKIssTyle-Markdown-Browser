@@ -29,11 +29,29 @@ let lastRenderedPreviewContent = "";
 export let cmView = null;
 export const themeCompartment = new Compartment();
 
+function applyEditorFontSize() {
+    if (!cmView) return;
+    cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
+}
+
 export function getCurrentEditorText() {
     if (cmView) {
         return cmView.state.doc.toString();
     }
     return state.currentMarkdownSource || "";
+}
+
+export function isEditorFocused() {
+    if (!cmView?.contentDOM) return false;
+    const activeElement = document.activeElement;
+    return activeElement === cmView.contentDOM || cmView.contentDOM.contains(activeElement);
+}
+
+export function changeEditorFontSize(delta) {
+    if (!cmView) return false;
+    currentEditorFontSize = Math.min(72, Math.max(8, currentEditorFontSize + delta));
+    applyEditorFontSize();
+    return true;
 }
 
 function syncEditorStateToBackend() {
@@ -65,6 +83,7 @@ async function persistEditorPreferences() {
         aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
         aiFimKey: window.aiState?.fimKey || "",
         aiFimTemp: window.aiState?.fimTemp || 0,
+        aiSelectionContext: state.aiSelectionContextEnabled,
         koreanImeEnterFix: state.koreanImeFixEnabled,
     });
 }
@@ -394,7 +413,7 @@ export function initCodeMirror() {
     if (el.markdownEditor) el.markdownEditor.style.display = 'none';
 
     // Apply font size
-    cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
+    applyEditorFontSize();
     cmView.contentDOM.style.fontFamily = 'var(--code-font)';
 }
 
@@ -404,6 +423,43 @@ export function setEditorTheme(isDark) {
             effects: themeCompartment.reconfigure(isDark ? oneDark : [])
         });
     }
+}
+
+export function syncEditorSessionFromState() {
+    if (!state.isEditing) {
+        return;
+    }
+
+    initCodeMirror();
+
+    const nextContent = state.currentMarkdownSource || "";
+    const currentContent = cmView.state.doc.toString();
+    if (currentContent !== nextContent) {
+        cmView.dispatch({
+            changes: { from: 0, to: cmView.state.doc.length, insert: nextContent }
+        });
+    }
+
+    if (!state.editingSourcePath) {
+        state.editingSourcePath = state.currentFilePath;
+    }
+    if (!state.editingSourceFolder) {
+        state.editingSourceFolder = state.currentFolder;
+    }
+    if (!state.editingPreviewPath) {
+        state.editingPreviewPath = state.editingSourcePath || state.currentFilePath;
+    }
+    if (!state.editingPreviewFolder) {
+        state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
+    }
+
+    lastRenderedPreviewContent = nextContent;
+    lastPreviewCursorLine = getCursorLineNumber(cmView.state);
+    if (el.edRenderMode) {
+        el.edRenderMode.value = state.currentEditorRenderMode;
+    }
+    updateSlashMenu();
+    syncEditorStateToBackend();
 }
 
 export async function createNewDocument() {
@@ -1238,15 +1294,11 @@ export function bindEditorEvents() {
     };
 
     el.edFontMinus.onclick = () => {
-        if (!cmView) return;
-        currentEditorFontSize = Math.max(8, currentEditorFontSize - 1);
-        cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
+        changeEditorFontSize(-1);
     };
 
     el.edFontPlus.onclick = () => {
-        if (!cmView) return;
-        currentEditorFontSize = Math.min(72, currentEditorFontSize + 1);
-        cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
+        changeEditorFontSize(1);
     };
     
     el.edCancel.onclick = handleCancel;
