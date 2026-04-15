@@ -75,9 +75,9 @@ function isGeneralAIActive() {
 
 function getPromptBusyPlaceholder(label = "") {
     const normalizedLabel = String(label || "").trim().toLowerCase();
-    if (normalizedLabel.includes('receiv')) return '응답 받는 중';
-    if (normalizedLabel.includes('model') || normalizedLabel.includes('load')) return '모델 로딩 중';
-    return '프롬프트 처리 중';
+    if (normalizedLabel.includes('receiv')) return 'Receiving response...';
+    if (normalizedLabel.includes('model') || normalizedLabel.includes('load')) return 'Loading model...';
+    return 'Processing prompt...';
 }
 
 function updatePromptBusyUI() {
