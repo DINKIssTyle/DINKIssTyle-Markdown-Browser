@@ -82,6 +82,21 @@ fi
 # Show Wails version without color indicators for cleaner log
 echo "Using Wails: $(wails version 2>/dev/null | grep "Wails CLI" | awk '{print $3}' || echo "installed")"
 
+# --- 4.5. Frontend Dependency Sync ---
+if ! command -v npm &> /dev/null; then
+    echo "❌ npm is not installed. Please install Node.js and npm first."
+    exit 1
+fi
+
+echo "Refreshing frontend dependencies..."
+pushd frontend > /dev/null
+if [ -f package-lock.json ]; then
+    npm ci
+else
+    npm install
+fi
+popd > /dev/null
+
 # --- 5. WebKit Build Tags ---
 BUILD_TAGS=""
 if pkg-config --exists webkit2gtk-4.1; then
