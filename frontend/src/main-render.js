@@ -7,6 +7,7 @@ import { marked } from 'marked';
 import katex from 'katex';
 import { unified } from 'unified';
 import remarkParse from 'remark-parse';
+import remarkGfm from 'remark-gfm';
 import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
 
@@ -275,6 +276,7 @@ async function renderMarkdownToHTML(content) {
 
     const vf = await unified()
         .use(remarkParse)
+        .use(remarkGfm)
         .use(remarkHtml, { sanitize: false })
         .process(preparedContent);
     return String(vf);

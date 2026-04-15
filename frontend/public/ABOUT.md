@@ -3,7 +3,7 @@
 <div style="display: flex; justify-content: center; align-items: center; width: 100%; padding:20px;"><img src="icon-512.png" alt="" style="width: 128px;"></div>
 
 
-<div align="center" style="font-size: 1.2rem;"> A lightweight, elegant cross-platform Markdown viewer</div>
+<div align="center" style="font-size: 1.2rem; font-weight: 700;"> Lightweight and elegant cross-platform<br>Markdown viewer and editor!</div>
 
 ## Features
 
@@ -18,6 +18,8 @@
 - **Native Experience**: Native macOS menu bar, About dialog, and window controls.
 - **File Management**: Recent files list and support for Drag & Drop to open files instantly.
 - **Cross-Platform**: Optimized for macOS, Windows, and Linux.
+
+<div align="center"><div style="font-size: 1.1rem; font-weight: 700; ">Check the latest release on the Github repository:</div> https://github.com/DINKIssTyle/DINKIssTyle-Markdown-Browser</div>
 
 
 ## File Association Behavior
