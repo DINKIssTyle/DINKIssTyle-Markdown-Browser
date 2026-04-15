@@ -83,6 +83,7 @@ async function persistEditorPreferences() {
         aiFimKey: window.aiState?.fimKey || "",
         aiFimTemp: window.aiState?.fimTemp || 0,
         aiSelectionContext: state.aiSelectionContextEnabled,
+        aiGithubCompatible: state.aiGithubCompatibleEnabled,
         koreanImeEnterFix: state.koreanImeFixEnabled,
     });
 }

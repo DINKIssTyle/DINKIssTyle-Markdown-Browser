@@ -93,6 +93,7 @@ export const el = {
     edDiv: $('ed-div'),
     edGeneralAi: $('ed-general-ai'),
     edFim: $('ed-fim'),
+    edGithubCompatible: $('ed-github-compatible'),
     edSettings: $('ed-settings'),
     aiSettingsModal: $('ai-settings-modal'),
     aiGeneralEnabled: $('ai-general-enabled'),
@@ -164,6 +165,7 @@ export const state = {
     editingPreviewFolder: "",
     currentEditorRenderMode: "realtime",
     aiSelectionContextEnabled: false,
+    aiGithubCompatibleEnabled: false,
     koreanImeFixEnabled: false,
 };
 

@@ -259,11 +259,20 @@ function buildAIEditPrompt(docText, from, to, userPrompt) {
 }
 
 function getAIEditSystemPrompt() {
-    if (state.aiSelectionContextEnabled) {
-        return 'You are an AI Markdown editor assistant. Edit only <selected_text>. <before_context> and <after_context> are reference only. Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.';
-    }
+    const baseIdentity = 'You are an AI Markdown editor assistant.';
+    const githubCompatibilityInstruction = state.aiGithubCompatibleEnabled
+        ? 'Write only GitHub-compatible Markdown and code.'
+        : '';
+    const contextInstruction = state.aiSelectionContextEnabled
+        ? 'Edit only <selected_text>. <before_context> and <after_context> are reference only.'
+        : 'Edit only <selected_text>.';
 
-    return 'You are an AI Markdown editor assistant. Edit only <selected_text>. Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.';
+    return [
+        baseIdentity,
+        githubCompatibilityInstruction,
+        contextInstruction,
+        'Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.',
+    ].filter(Boolean).join(' ');
 }
 
 function updatePromptInputLayout() {
@@ -383,6 +392,7 @@ async function persistAISettings() {
         aiFimKey: window.aiState.fimKey,
         aiFimTemp: window.aiState.fimTemp,
         aiSelectionContext: el.aiSelectionContext.checked,
+        aiGithubCompatible: state.aiGithubCompatibleEnabled,
         koreanImeEnterFix: el.aiToggleImeFix.checked,
     });
 }
@@ -421,6 +431,7 @@ export async function initAI() {
     el.aiFimTemp.value = aiState.fimTemp;
     el.aiSelectionContext.checked = s.aiSelectionContext || false;
     state.aiSelectionContextEnabled = el.aiSelectionContext.checked;
+    state.aiGithubCompatibleEnabled = s.aiGithubCompatible || false;
     el.aiToggleImeFix.checked = s.koreanImeEnterFix || false;
     state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
     if (!aiState.generalAvailable) {
@@ -537,6 +548,13 @@ export function bindAIEvents() {
         syncAIControls();
         await persistAISettings();
         showToast(window.aiState.fimEnabled ? "AI FIM Enabled" : "AI FIM Disabled");
+    };
+
+    el.edGithubCompatible.onclick = async () => {
+        state.aiGithubCompatibleEnabled = !state.aiGithubCompatibleEnabled;
+        syncAIControls();
+        await persistAISettings();
+        showToast(state.aiGithubCompatibleEnabled ? "GitHub Compatible AI Edits Enabled" : "GitHub Compatible AI Edits Disabled");
     };
 
     el.aiPromptClose.onclick = () => {
@@ -907,6 +925,11 @@ function syncAIControls() {
     } else {
         el.edFim.setAttribute('data-tooltip', fimDisabledMessage);
     }
+
+    el.edGithubCompatible.classList.toggle('active-github-compatible', !!state.aiGithubCompatibleEnabled);
+    el.edGithubCompatible.title = state.aiGithubCompatibleEnabled
+        ? "Disable GitHub Compatible AI Edits"
+        : "Enable GitHub Compatible AI Edits";
 
     if (!generalToolbarEnabled) {
         if (!el.aiPromptBox.classList.contains('hidden')) {

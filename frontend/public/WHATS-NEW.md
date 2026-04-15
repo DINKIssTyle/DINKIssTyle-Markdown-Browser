@@ -131,5 +131,10 @@ Proposal Writing    :after a1, 20d
 * Font size shortcut used while editing should now be reflected in the editor.
 * Resolved an issue where the editing screen failed to update when switching between tabs with multiple open tabs
 * Enabled GitHub-compatible syntax in Remark mode.
+
+
+## 2.0 Beta5
+* Added GitHub compatibility mode: When enabled, it prompts the LLM to respond only with GitHub-compatible code.
+
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
