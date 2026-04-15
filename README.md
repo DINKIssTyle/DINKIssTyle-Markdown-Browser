@@ -1,11 +1,30 @@
-# DKST Markdown Browser
+# About DKST Markdown Browser
 
-A lightweight, elegant cross-platform Markdown viewer built with [Wails](https://wails.io).
+<p align="center">
+  <img src="frontend/public/icon-192.png" width="128">
+</p>
 
-![Main Screenshot](doc/screenshot.png)
+<p align="center">
+  <strong>Lightweight and elegant cross-platform<br>Markdown viewer and editor!</strong>
+</p>
+
 
 ## Features
 
+### New! Version 2.0!
+- ✨ **AI Assistance**: AI assistant features for writing and editing Markdown documents.
+- **Flow State**: Continuous Writing markdown editor that keeps your workflow uninterrupted.
+<p align="center">
+  <img src="frontend/public/img/200_ai_01.gif" width="90%">
+</p>
+<p align="center">
+  <img src="frontend/public/img/200_ai_02.gif" width="90%">
+</p>
+<p align="center">
+  <img src="frontend/public/img/200_ai_03.gif" width="90%">
+</p>
+
+---
 - **Dual Rendering Engines**: Choose between `Marked` and `Remark` for your preferred rendering style.
 - **Search & Navigation**: Quickly search for keywords within the current folder and navigate through historical files.
 - **Modern UI**: Sleek dark-mode interface with smooth transitions and Material Design icons.
@@ -13,6 +32,7 @@ A lightweight, elegant cross-platform Markdown viewer built with [Wails](https:/
 - **Native Experience**: Native macOS menu bar, About dialog, and window controls.
 - **File Management**: Recent files list and support for Drag & Drop to open files instantly.
 - **Cross-Platform**: Optimized for macOS, Windows, and Linux.
+
 
 ## File Association Behavior
 
