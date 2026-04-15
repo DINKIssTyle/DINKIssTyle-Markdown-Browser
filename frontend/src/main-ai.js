@@ -177,6 +177,10 @@ function hidePromptBoxElement() {
     }, 180);
 }
 
+function isPromptBoxVisible() {
+    return !el.aiPromptBox.classList.contains('hidden');
+}
+
 function getSelectionAnchorRect() {
     if (!cmView) return null;
     const selection = cmView.state.selection.main;
@@ -187,6 +191,11 @@ function getSelectionAnchorRect() {
 function updateFloatingAIPosition() {
     if (!state.isEditing || !cmView || !isGeneralAIActive()) {
         hideFloatingButtonAnimated();
+        return;
+    }
+
+    if (isPromptBoxVisible()) {
+        hideFloatingButtonImmediately();
         return;
     }
 
@@ -417,9 +426,15 @@ export function bindAIEvents() {
     };
 
     // Wand toggle
+    el.aiFloatingBtn.addEventListener('mousedown', (event) => {
+        // Keep the editor selection intact so the prompt can anchor to it.
+        event.preventDefault();
+    });
     el.aiFloatingBtn.onclick = () => {
         if (el.aiPromptBox.classList.contains('hidden')) {
-            showPromptBox();
+            if (!showPromptBoxAtSelection()) {
+                showPromptBox();
+            }
         } else {
             hidePromptBox();
         }
@@ -522,6 +537,7 @@ function handleSelectionChange() {
 
 function showPromptBoxCentered(mode = 'auto') {
     aiPromptMode = mode;
+    hideFloatingButtonImmediately();
     el.aiPromptBox.style.left = '50%';
     el.aiPromptBox.style.bottom = '40px';
     el.aiPromptBox.style.top = 'auto'; // Reset top
@@ -532,6 +548,7 @@ function showPromptBoxCentered(mode = 'auto') {
 
 function showPromptBox() {
     aiPromptMode = 'manual';
+    hideFloatingButtonImmediately();
     const btnRect = el.aiFloatingBtn.getBoundingClientRect();
     el.aiPromptBox.style.left = `${btnRect.left}px`;
     el.aiPromptBox.style.top = `${btnRect.bottom + 10}px`;
@@ -580,6 +597,9 @@ function hidePromptBox() {
     hidePromptBoxElement();
     el.aiPromptInput.value = "";
     if (cmView) cmView.focus();
+    requestAnimationFrame(() => {
+        updateFloatingAIPosition();
+    });
 }
 
 function clearGhostText() {

@@ -402,6 +402,28 @@ export function bindContextMenu() {
         showToast('Copied selection. 📋');
     });
 
+    bindContextMenuAction(el.contextCut, async () => {
+        if (!contextMenuState?.isEditor || !contextMenuState.selectionText) return;
+        try {
+            await copyTextToClipboard(contextMenuState.selectionText);
+            const mod = await import('./main-editor.js');
+            if (mod.cmView) {
+                const selection = mod.cmView.state.selection.main;
+                if (!selection.empty) {
+                    mod.cmView.focus();
+                    mod.cmView.dispatch({
+                        changes: { from: selection.from, to: selection.to, insert: '' },
+                        selection: { anchor: selection.from }
+                    });
+                    showToast('Cut selection. ✂️');
+                }
+            }
+        } catch (error) {
+            LogError(`clipboard cut failed: ${error?.message || error}`);
+        }
+        closeContextMenu();
+    });
+
     bindContextMenuAction(el.contextPaste, async () => {
         if (contextMenuState?.isEditor) {
             try {
@@ -477,6 +499,7 @@ function handleContextMenu(event) {
                 const sel = mod.cmView.state.selection.main;
                 selectionText = mod.cmView.state.sliceDoc(sel.from, sel.to);
                 contextMenuState.selectionText = selectionText;
+                el.contextCut.classList.toggle('hidden', !selectionText);
                 el.contextCopy.classList.toggle('hidden', !selectionText);
             }
         });
@@ -511,6 +534,7 @@ function handleContextMenu(event) {
         targetElement: event.target
     };
 
+    el.contextCut.classList.toggle('hidden', !isEditor || !selectionText);
     el.contextCopy.classList.toggle('hidden', !selectionText);
     
     if (isEditor) {
@@ -520,6 +544,7 @@ function handleContextMenu(event) {
         el.contextOpen.classList.add('hidden');
         el.contextOpenNewTab.classList.add('hidden');
     } else {
+        el.contextCut.classList.add('hidden');
         el.contextPaste.classList.add('hidden');
         el.contextSelectAll.classList.toggle('hidden', true); // No select all for general view
         el.contextSearch.classList.toggle('hidden', !showSelectionActions);

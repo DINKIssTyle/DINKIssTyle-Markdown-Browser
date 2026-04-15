@@ -52,6 +52,7 @@ export const el = {
     progressFill: $('progress-fill'),
     btnProgressCancel: $('btn-progress-cancel'),
     contextMenu: $('context-menu'),
+    contextCut: $('context-cut'),
     contextCopy: $('context-copy'),
     contextPaste: $('context-paste'),
     contextSelectAll: $('context-select-all'),
