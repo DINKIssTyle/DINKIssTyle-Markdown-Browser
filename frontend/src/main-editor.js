@@ -6,7 +6,7 @@
 import { state, el, getPathDirname, formatSaveDialogMessage } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
-import { renderActiveTab, renderMarkdown } from './main-render.js';
+import { renderActiveTab, renderMarkdown, queueEditorPreviewRender } from './main-render.js';
 import { showToast } from './main-ui.js';
 import { SaveFile, SaveSettings, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
@@ -20,7 +20,6 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { ghostTextField, showPromptBoxAtSelection } from './main-ai.js';
 
 // ── Module-level State ─────────────────────────────────────
-let lastLineCount = 0;
 let currentEditorFontSize = 15;
 let slashMenuState = null;
 let slashMenuEventsBound = false;
@@ -99,7 +98,6 @@ function schedulePreviewRender(content, delay = 100) {
         if (content === lastRenderedPreviewContent) return;
         renderMarkdown(content);
         lastRenderedPreviewContent = content;
-        lastLineCount = cmView?.state.doc.lines ?? lastLineCount;
     }, delay);
 }
 
@@ -109,7 +107,8 @@ function updatePreviewForEditorChange(update) {
 
     if (state.currentEditorRenderMode === 'realtime') {
         if (update.docChanged) {
-            schedulePreviewRender(nextDocText, 100);
+            queueEditorPreviewRender(nextDocText, nextCursorLine, { delay: 80 });
+            lastRenderedPreviewContent = nextDocText;
         }
         lastPreviewCursorLine = nextCursorLine;
         return;

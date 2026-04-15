@@ -1,5 +1,7 @@
 # What's New in Version 2.0
 
+<div align="center"><img src="icon-512.png" width="128"/></div>
+
 DKST Markdown Browser has become even more powerful! Check out the major features added in this version.
 
 <div style="display: block; margin: 0 auto; text-align: center; width: 100%; font-size: 1.5em;">
@@ -17,7 +19,7 @@ DKST Markdown Browser has become even more powerful! Check out the major feature
 - Easily link to local assets like hyperlinks and images! It completes them using relative paths from the current file.
 
 
-### 2. AI Assists You!
+### 2. <span style="color:#007bff;">✨AI Assists You!</span>
 - Select the text block where you need an assistant. An AI call button will appear. (Press `/` to type immediately!)Type what you want. It can correct rambling paragraphs, translate to another language, or even convert it into appropriate markdown.
 
 ![](img/200_ai_b_01.png)
@@ -32,7 +34,8 @@ DKST Markdown Browser has become even more powerful! Check out the major feature
 
 ### 3. Mermaid Rendering Support
 - Now supports rendering Mermaid diagrams.
-![](img/200_equation_diagram.png)
+
+<div align="center"><img src="img/200_equation_diagram.png" width="80%"></div>
 
 ---
 # Recent Changes

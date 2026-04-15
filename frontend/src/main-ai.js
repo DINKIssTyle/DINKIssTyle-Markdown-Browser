@@ -258,6 +258,14 @@ function buildAIEditPrompt(docText, from, to, userPrompt) {
     };
 }
 
+function getAIEditSystemPrompt() {
+    if (state.aiSelectionContextEnabled) {
+        return 'You are an AI Markdown editor assistant. Edit only <selected_text>. <before_context> and <after_context> are reference only. Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.';
+    }
+
+    return 'You are an AI Markdown editor assistant. Edit only <selected_text>. Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.';
+}
+
 function updatePromptInputLayout() {
     if (!el.aiPromptInput || !el.aiPromptBox) return;
     if (aiPromptBusyState) {
@@ -779,6 +787,7 @@ async function sendPrompt() {
     const isAllSelected = sel.from === 0 && sel.to === cmView.state.doc.length;
     const docText = cmView.state.doc.toString();
     const { prompt: contextualPrompt } = buildAIEditPrompt(docText, sel.from, sel.to, userPrompt);
+    const systemPrompt = getAIEditSystemPrompt();
 
     // Hide prompt box immediately so user can see the editor
     showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
@@ -800,7 +809,7 @@ async function sendPrompt() {
 
             const payload = {
                 model: window.aiState.generalModel,
-                input: `You are an AI Markdown editor assistant. Edit only <selected_text>. Treat <before_context> and <after_context> as reference only. Return only the replacement for <selected_text> and nothing else.\n\n${contextualPrompt}`,
+                input: `${systemPrompt}\n\n${contextualPrompt}`,
                 stream: true
             };
             if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
@@ -823,7 +832,7 @@ async function sendPrompt() {
             const payload = {
                 model: window.aiState.generalModel,
                 messages: [
-                    { role: "system", content: "You are an AI Markdown editor assistant. Edit only <selected_text>. <before_context> and <after_context> are reference only. Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context." },
+                    { role: "system", content: systemPrompt },
                     { role: "user", content: contextualPrompt }
                 ]
             };

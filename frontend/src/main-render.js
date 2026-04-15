@@ -26,6 +26,11 @@ let recentFilesCache = [];
 let htmlFrameResizeObserver = null;
 const MATH_DATA_ATTR = 'data-dkst-math';
 const MATH_DISPLAY_ATTR = 'data-dkst-math-display';
+const LIVE_BLOCK_ATTR = 'data-dkst-live-block-index';
+let previewRenderToken = 0;
+let editorIdleFullRenderHandle = null;
+let editorIdleFullRenderTimer = 0;
+let livePreviewBlocks = [];
 
 function isEscaped(text, index) {
     let slashCount = 0;
@@ -262,22 +267,218 @@ mermaid.initialize(getMermaidConfig());
 
 // ── Markdown Rendering ─────────────────────────────────────
 
-export async function renderMarkdown(content) {
+async function renderMarkdownToHTML(content) {
     const preparedContent = preprocessMarkdownMath(content);
-    let html;
     if (state.currentEngine === "marked") {
-        html = marked.parse(preparedContent);
-    } else {
-        const vf = await unified()
-            .use(remarkParse)
-            .use(remarkHtml, { sanitize: false })
-            .process(preparedContent);
-        html = String(vf);
+        return marked.parse(preparedContent);
+    }
+
+    const vf = await unified()
+        .use(remarkParse)
+        .use(remarkHtml, { sanitize: false })
+        .process(preparedContent);
+    return String(vf);
+}
+
+function clearQueuedEditorPreviewRender() {
+    if (editorIdleFullRenderHandle && typeof window.cancelIdleCallback === 'function') {
+        window.cancelIdleCallback(editorIdleFullRenderHandle);
+    }
+    editorIdleFullRenderHandle = null;
+    if (editorIdleFullRenderTimer) {
+        clearTimeout(editorIdleFullRenderTimer);
+    }
+    editorIdleFullRenderTimer = 0;
+}
+
+function splitMarkdownIntoBlocks(content) {
+    const normalized = String(content || '').replace(/\r\n/g, '\n');
+    const blocks = [];
+    const separatorRegex = /\n{2,}/g;
+    let lastIndex = 0;
+    let currentLine = 1;
+
+    const pushBlock = (rawContent, startLine) => {
+        const normalizedBlock = rawContent.replace(/\n+$/g, '');
+        const blockLineCount = normalizedBlock ? normalizedBlock.split('\n').length : 1;
+        blocks.push({
+            content: normalizedBlock,
+            startLine,
+            endLine: startLine + blockLineCount - 1,
+        });
+    };
+
+    for (const match of normalized.matchAll(separatorRegex)) {
+        const segment = normalized.slice(lastIndex, match.index);
+        const segmentLineCount = segment ? segment.split('\n').length : 1;
+        if (segment.trim()) {
+            pushBlock(segment, currentLine);
+        }
+        currentLine += segmentLineCount + match[0].length;
+        lastIndex = match.index + match[0].length;
+    }
+
+    const tail = normalized.slice(lastIndex);
+    if (tail.trim() || blocks.length === 0) {
+        pushBlock(tail, currentLine);
+    }
+
+    return blocks;
+}
+
+function findBlockIndexForLine(blocks, lineNumber) {
+    const safeLine = Math.max(1, lineNumber || 1);
+    const index = blocks.findIndex(block => safeLine >= block.startLine && safeLine <= block.endLine);
+    return index >= 0 ? index : Math.max(0, blocks.length - 1);
+}
+
+async function postProcess(container = el.markdownContainer) {
+    container.querySelectorAll('a').forEach(anchor => {
+        const href = anchor.getAttribute('href');
+        if (!href) return;
+        hardenAnchorDropHandling(anchor);
+
+        const handleLinkNavigation = event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            if (href.startsWith('#')) {
+                const { anchor: targetAnchor } = splitLinkTarget(href);
+                if (targetAnchor) {
+                    state.pendingAnchor = targetAnchor;
+                    scrollToAnchor(targetAnchor);
+                }
+                return;
+            }
+
+            if (isExternalURL(href)) {
+                import('./main-navigation.js').then(mod => mod.confirmAndOpenExternalLink(href));
+                return;
+            }
+
+            const wantsNewTab = event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1;
+            if (state.isEditing && !wantsNewTab) {
+                previewEditingLinkTarget(href);
+                return;
+            }
+            import('./main-navigation.js').then(mod => mod.resolveLink(href, { newTab: wantsNewTab }));
+        };
+
+        anchor.addEventListener('click', handleLinkNavigation);
+        anchor.addEventListener('auxclick', event => {
+            if (event.button === 1) {
+                handleLinkNavigation(event);
+            }
+        });
+    });
+
+    container.querySelectorAll('img').forEach(img => {
+        const src = img.getAttribute('src');
+        if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+            const imageBaseFolder = state.isEditing
+                ? (state.editingPreviewFolder || state.editingSourceFolder || state.currentFolder)
+                : state.currentFolder;
+            const abs = joinPath(imageBaseFolder, src);
+            ReadImageAsDataURL(abs)
+                .then(dataUrl => {
+                    if (dataUrl) img.src = dataUrl;
+                })
+                .catch(err => console.error(`Failed to load image: ${abs}`, err));
+        }
+    });
+
+    el.markdownContainer.style.fontSize = `${state.currentFontSize}px`;
+
+    await renderMermaidSub(container);
+}
+
+async function renderMarkdownBlockPreview(content, cursorLine, token) {
+    const blocks = splitMarkdownIntoBlocks(content);
+    const focusIndex = findBlockIndexForLine(blocks, cursorLine);
+    const shouldRebuild = livePreviewBlocks.length !== blocks.length;
+
+    if (shouldRebuild) {
+        const blockMarkup = await Promise.all(blocks.map(async (block, index) => {
+            const html = await renderMarkdownToHTML(block.content);
+            return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}">${html}</section>`;
+        }));
+        if (token !== previewRenderToken) {
+            return;
+        }
+        el.markdownContainer.innerHTML = blockMarkup.join('');
+        renderMathPlaceholders(el.markdownContainer);
+        await postProcess(el.markdownContainer);
+        syncEditingPreviewReturnButton();
+        livePreviewBlocks = blocks;
+        return;
+    }
+
+    const targetNode = el.markdownContainer.querySelector(`[${LIVE_BLOCK_ATTR}="${focusIndex}"]`);
+    if (!targetNode) {
+        await renderMarkdown(content, { token, preserveLiveBlocks: true });
+        return;
+    }
+
+    const html = await renderMarkdownToHTML(blocks[focusIndex].content);
+    if (token !== previewRenderToken) {
+        return;
+    }
+    targetNode.innerHTML = html;
+    renderMathPlaceholders(targetNode);
+    await postProcess(targetNode);
+    syncEditingPreviewReturnButton();
+    livePreviewBlocks = blocks;
+}
+
+function scheduleIdleFullPreviewRender(content, token) {
+    clearQueuedEditorPreviewRender();
+
+    const runFullRender = () => {
+        if (token !== previewRenderToken) {
+            return;
+        }
+        renderMarkdown(content, { token }).catch(error => {
+            LogError(`Idle full preview render failed: ${error?.message || error}`);
+        });
+    };
+
+    if (typeof window.requestIdleCallback === 'function') {
+        editorIdleFullRenderHandle = window.requestIdleCallback(runFullRender, { timeout: 280 });
+        return;
+    }
+
+    editorIdleFullRenderTimer = window.setTimeout(runFullRender, 220);
+}
+
+export function queueEditorPreviewRender(content, cursorLine, { delay = 100 } = {}) {
+    const token = ++previewRenderToken;
+    clearTimeout(window._renderTimer);
+    window._renderTimer = setTimeout(() => {
+        renderMarkdownBlockPreview(content, cursorLine, token).catch(error => {
+            LogError(`Block preview render failed: ${error?.message || error}`);
+        });
+    }, delay);
+    scheduleIdleFullPreviewRender(content, token);
+}
+
+export async function renderMarkdown(content, options = {}) {
+    const {
+        token = ++previewRenderToken,
+        preserveLiveBlocks = false,
+    } = options;
+
+    clearQueuedEditorPreviewRender();
+    const html = await renderMarkdownToHTML(content);
+    if (token !== previewRenderToken) {
+        return;
     }
     el.markdownContainer.innerHTML = html;
     renderMathPlaceholders(el.markdownContainer);
-    await postProcess();
+    await postProcess(el.markdownContainer);
     syncEditingPreviewReturnButton();
+    if (!preserveLiveBlocks) {
+        livePreviewBlocks = [];
+    }
 }
 
 // ── Recent Files Rendering ─────────────────────────────────
@@ -413,67 +614,6 @@ async function renderHomeScreen() {
 
 // ── Post Processing ────────────────────────────────────────
 
-async function postProcess() {
-    el.markdownContainer.querySelectorAll('a').forEach(anchor => {
-        const href = anchor.getAttribute('href');
-        if (!href) return;
-        hardenAnchorDropHandling(anchor);
-
-        const handleLinkNavigation = event => {
-            event.preventDefault();
-            event.stopPropagation();
-
-            if (href.startsWith('#')) {
-                const { anchor: targetAnchor } = splitLinkTarget(href);
-                if (targetAnchor) {
-                    state.pendingAnchor = targetAnchor;
-                    scrollToAnchor(targetAnchor);
-                }
-                return;
-            }
-
-            if (isExternalURL(href)) {
-                import('./main-navigation.js').then(mod => mod.confirmAndOpenExternalLink(href));
-                return;
-            }
-
-            const wantsNewTab = event.metaKey || event.ctrlKey || event.shiftKey || event.button === 1;
-            if (state.isEditing && !wantsNewTab) {
-                previewEditingLinkTarget(href);
-                return;
-            }
-            import('./main-navigation.js').then(mod => mod.resolveLink(href, { newTab: wantsNewTab }));
-        };
-
-        anchor.addEventListener('click', handleLinkNavigation);
-        anchor.addEventListener('auxclick', event => {
-            if (event.button === 1) {
-                handleLinkNavigation(event);
-            }
-        });
-    });
-
-    el.markdownContainer.querySelectorAll('img').forEach(img => {
-        const src = img.getAttribute('src');
-        if (src && !src.startsWith('http') && !src.startsWith('data:')) {
-            const imageBaseFolder = state.isEditing
-                ? (state.editingPreviewFolder || state.editingSourceFolder || state.currentFolder)
-                : state.currentFolder;
-            const abs = joinPath(imageBaseFolder, src);
-            ReadImageAsDataURL(abs)
-                .then(dataUrl => {
-                    if (dataUrl) img.src = dataUrl;
-                })
-                .catch(err => console.error(`Failed to load image: ${abs}`, err));
-        }
-    });
-
-    el.markdownContainer.style.fontSize = `${state.currentFontSize}px`;
-
-    // Mermaid 다이어그램 렌더링 (병렬 실행 방지 위해 await)
-    await renderMermaidSub();
-}
-
 export async function previewEditingLinkTarget(rel) {
     const { pathPart, anchor } = splitLinkTarget(rel);
 
@@ -523,9 +663,9 @@ export async function restoreEditingPreview() {
 /**
  * Mermaid 블록을 찾아 렌더링 가능한 div로 변환하고 mermaid 실행
  */
-async function renderMermaidSub() {
+async function renderMermaidSub(container = el.markdownContainer) {
     // 1. 명시적인 mermaid 클래스가 있는 블록과 모든 코드 블록을 탐색
-    const codeBlocks = el.markdownContainer.querySelectorAll('pre code');
+    const codeBlocks = container.querySelectorAll('pre code');
     if (codeBlocks.length === 0) return;
 
     const mermaidKeywords = [
