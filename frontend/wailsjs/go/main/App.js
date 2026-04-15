@@ -122,8 +122,8 @@ export function ShowSaveFileDialog(arg1) {
   return window['go']['main']['App']['ShowSaveFileDialog'](arg1);
 }
 
-export function SyncEditorState(arg1, arg2, arg3, arg4) {
-  return window['go']['main']['App']['SyncEditorState'](arg1, arg2, arg3, arg4);
+export function SyncEditorState(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['main']['App']['SyncEditorState'](arg1, arg2, arg3, arg4, arg5);
 }
 
 export function TouchRecentFile(arg1) {

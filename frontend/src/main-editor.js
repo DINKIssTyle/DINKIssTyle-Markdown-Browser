@@ -3,7 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { state, el, getPathDirname } from './main-state.js';
+import { state, el, getPathDirname, formatSaveDialogMessage } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown } from './main-render.js';
@@ -39,7 +39,9 @@ export function getCurrentEditorText() {
 function syncEditorStateToBackend() {
     const content = getCurrentEditorText();
     const hasUnsaved = state.isEditing && content !== state.editorOriginalContent;
-    SyncEditorState(state.isEditing, hasUnsaved, state.currentFilePath || "", content).catch((error) => {
+    const activeTab = getActiveTab();
+    const tabTitle = activeTab?.title || "";
+    SyncEditorState(state.isEditing, hasUnsaved, state.currentFilePath || "", content, tabTitle).catch((error) => {
         LogError(`SyncEditorState failed: ${error}`);
     });
 }
@@ -502,12 +504,19 @@ export function hasUnsavedEditorChanges() {
     return state.isEditing && getCurrentEditorText() !== state.editorOriginalContent;
 }
 
+export function hasUnsavedTabChanges(tab) {
+    if (!tab?.isEditing) return false;
+    return (tab.currentMarkdownSource || "") !== (tab.editorOriginalContent || "");
+}
+
 export async function saveCurrentDocument({ confirm = true, exitAfterSave = true } = {}) {
     if (!cmView) return;
     const contentToSave = cmView.state.doc.toString();
     const targetPath = state.editingSourcePath || state.currentFilePath;
+    const activeTab = getActiveTab();
+    const dialogMessage = formatSaveDialogMessage(activeTab?.title, "Do you want to save changes to the file?");
     if (confirm) {
-        const ok = await AskConfirm("Save Changes", "Do you want to save changes to the file?", "Save", "Cancel");
+        const ok = await AskConfirm("Save Changes", dialogMessage, "Save", "Cancel");
         if (!ok) return false;
     }
     
@@ -535,13 +544,38 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
     }
 }
 
+export async function saveTabDocument(tab, { confirm = true } = {}) {
+    if (!tab) return false;
+    const contentToSave = tab.currentMarkdownSource || "";
+    const targetPath = tab.path;
+    const dialogMessage = formatSaveDialogMessage(tab.title, "Do you want to save changes to the file?");
+
+    if (confirm) {
+        const ok = await AskConfirm("Save Changes", dialogMessage, "Save", "Cancel");
+        if (!ok) return false;
+    }
+
+    try {
+        await SaveFile(targetPath, contentToSave);
+        tab.editorOriginalContent = contentToSave;
+        tab.currentMarkdownSource = contentToSave;
+        showToast("File saved successfully. ✅");
+        return true;
+    } catch (error) {
+        LogError(`Save failed: ${error}`);
+        showToast("Failed to save file. ❌");
+        return false;
+    }
+}
+
 async function handleSave() {
     await saveCurrentDocument({ confirm: true, exitAfterSave: true });
 }
 
 async function handleCancel() {
     if (hasUnsavedEditorChanges()) {
-        const ok = await AskConfirm("Unsaved Changes", "You have unsaved changes. Discard them?", "Discard", "Cancel");
+        const activeTab = getActiveTab();
+        const ok = await AskConfirm("Unsaved Changes", formatSaveDialogMessage(activeTab?.title, "You have unsaved changes. Discard them?"), "Discard", "Cancel");
         if (!ok) return;
     }
     exitEditMode(false);

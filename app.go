@@ -90,6 +90,7 @@ type EditorSessionState struct {
 	HasUnsaved  bool
 	CurrentPath string
 	Content     string
+	Title       string
 }
 
 func (a *App) beginAIRequest() (context.Context, context.CancelFunc, int64) {
@@ -156,7 +157,7 @@ func (a *App) startup(ctx context.Context) {
 	a.queueOpenRequests(os.Args[1:], "")
 }
 
-func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath string, content string) {
+func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath string, content string, title string) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
 
@@ -165,6 +166,7 @@ func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath strin
 		HasUnsaved:  hasUnsaved,
 		CurrentPath: strings.TrimSpace(currentPath),
 		Content:     content,
+		Title:       strings.TrimSpace(title),
 	}
 }
 
@@ -177,7 +179,11 @@ func (a *App) onBeforeClose(ctx context.Context) bool {
 		return false
 	}
 
-	response := a.AskSaveDiscardCancel("Unsaved Changes", "The document has been modified. Do you want to save changes before quitting?")
+	displayTitle := strings.TrimSpace(editorState.Title)
+	if displayTitle == "" && strings.TrimSpace(editorState.CurrentPath) != "" {
+		displayTitle = filepath.Base(editorState.CurrentPath)
+	}
+	response := a.AskSaveDiscardCancel("Unsaved Changes", buildSaveChangesMessage(displayTitle, "The document has been modified. Do you want to save changes before quitting?"))
 	switch response {
 	case "Save":
 		if strings.TrimSpace(editorState.CurrentPath) == "" {
@@ -512,6 +518,14 @@ func normalizeSaveDiscardCancelResponse(response string) string {
 	default:
 		return strings.TrimSpace(response)
 	}
+}
+
+func buildSaveChangesMessage(title string, prompt string) string {
+	trimmedTitle := strings.TrimSpace(title)
+	if trimmedTitle == "" {
+		return prompt
+	}
+	return fmt.Sprintf("%s\n\n%s", trimmedTitle, prompt)
 }
 
 // HandleFileDrop handles a file dropped onto the window

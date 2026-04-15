@@ -6,7 +6,7 @@
 import './style.css';
 
 // ── Module Imports ─────────────────────────────────────────
-import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, syncEngineSelector } from './main-state.js';
+import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector } from './main-state.js';
 import {
     createTab, getActiveTab, syncGlobalsFromTab, renderTabs,
     createAndSwitchToNewTab, closeTab, activateTabByShortcut,
@@ -18,7 +18,7 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -33,12 +33,15 @@ import {
     ClearRecentFiles,
     HandleFileDrop,
     GetVersion,
+    AskSaveDiscardCancel,
 } from '../wailsjs/go/main/App';
 import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
 
 // ── App Initialization ─────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', async () => {
+    document.documentElement.classList.toggle('platform-linux', isLinux());
+
     // Step 1: Parallelize initial data fetching from Go backend
     await Promise.all([loadSettings(), renderRecentFiles()]);
 
@@ -182,7 +185,7 @@ function bindToolbar() {
     el.searchOpenTabFolders.addEventListener('change', () => handleSearch());
     el.btnProgressCancel.onclick = cancelCurrentTask;
     el.editPreviewReturn.onclick = () => restoreEditingPreview();
-    document.addEventListener('keydown', handleGlobalKeydown);
+    document.addEventListener('keydown', handleGlobalKeydown, true);
     bindHistoryMouseNavigation(document);
     bindEditorEvents();
 }
@@ -306,7 +309,8 @@ async function handleGlobalKeydown(event) {
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
-        const isGlobalKey = (event.metaKey || event.ctrlKey) && ['w', 's'].includes(event.key.toLowerCase());
+        const isGlobalKey = (event.metaKey || event.ctrlKey)
+            && (['w', 's', 'e'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key));
         if (!isGlobalKey) {
             return;
         }
@@ -348,6 +352,12 @@ async function handleGlobalKeydown(event) {
         return;
     }
 
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'e') {
+        event.preventDefault();
+        await toggleEditModeFromShortcut();
+        return;
+    }
+
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key === '[') {
         event.preventDefault();
         goBack();
@@ -363,4 +373,35 @@ async function handleGlobalKeydown(event) {
     if (event.key === 'Escape') {
         closeContextMenu();
     }
+}
+
+async function toggleEditModeFromShortcut() {
+    if (!state.isEditing) {
+        if (state.currentDocumentType === 'markdown') {
+            enterEditMode();
+        }
+        return;
+    }
+
+    if (!hasUnsavedEditorChanges()) {
+        await exitEditMode(false);
+        return;
+    }
+
+    const activeTab = getActiveTab();
+    const response = await AskSaveDiscardCancel(
+        "Unsaved Changes",
+        formatSaveDialogMessage(activeTab?.title, "The document has been modified. Do you want to save changes?")
+    );
+
+    if (response === "Cancel") return;
+
+    if (response === "Save") {
+        const saved = await saveCurrentDocument({ confirm: false, exitAfterSave: false });
+        if (!saved) {
+            return;
+        }
+    }
+
+    await exitEditMode(false);
 }

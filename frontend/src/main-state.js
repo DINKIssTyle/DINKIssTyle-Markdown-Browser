@@ -280,6 +280,11 @@ export function isMacOS() {
     return /mac/i.test(platform);
 }
 
+export function isLinux() {
+    const platform = navigator.userAgentData?.platform || navigator.platform || "";
+    return /linux/i.test(platform);
+}
+
 export function isEditableTarget(target) {
     if (!target) {
         return false;
@@ -322,6 +327,14 @@ export function deriveTabTitle(path, content) {
         return firstLine.replace(/^#+\s*/, '').slice(0, 48);
     }
     return basename(path);
+}
+
+export function formatSaveDialogMessage(tabTitle, prompt) {
+    const title = String(tabTitle || '').trim();
+    if (!title) {
+        return prompt;
+    }
+    return `${title}\n\n${prompt}`;
 }
 
 export function escapeAttr(str) {

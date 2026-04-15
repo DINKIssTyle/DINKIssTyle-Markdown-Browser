@@ -68,6 +68,7 @@ const AI_PROMPT_BASE_WIDTH = 320;
 const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.5);
 const AI_PROMPT_MAX_LINES = 3;
 const AI_PROMPT_DEFAULT_PLACEHOLDER = "Press / to Ask AI...";
+const AI_PROMPT_FOCUSED_PLACEHOLDER = "Ask AI ...";
 
 function isGeneralAIActive() {
     return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
@@ -99,10 +100,19 @@ function updatePromptBusyUI() {
         el.aiPromptBox.style.setProperty('--ai-prompt-progress', '0%');
         el.aiPromptInput.disabled = false;
         el.aiPromptSend.disabled = false;
-        el.aiPromptInput.placeholder = AI_PROMPT_DEFAULT_PLACEHOLDER;
         el.aiPromptInput.value = lastPromptInputValue;
+        updatePromptPlaceholder();
     }
     updatePromptInputLayout();
+}
+
+function updatePromptPlaceholder() {
+    if (aiPromptBusyState) {
+        return;
+    }
+    el.aiPromptInput.placeholder = document.activeElement === el.aiPromptInput
+        ? AI_PROMPT_FOCUSED_PLACEHOLDER
+        : AI_PROMPT_DEFAULT_PLACEHOLDER;
 }
 
 function showPromptBusyState({ label = "", progress = 0 } = {}) {
@@ -234,9 +244,11 @@ function showPromptBoxForSelection({ focusInput = false, preserveInput = true } 
     }
     clearPromptBusyState();
     showPromptBoxElement();
+    updatePromptPlaceholder();
     if (focusInput) {
         requestAnimationFrame(() => {
             el.aiPromptInput.focus();
+            updatePromptPlaceholder();
             if (el.aiPromptInput.value) {
                 el.aiPromptInput.select();
             }
@@ -447,6 +459,12 @@ export function bindAIEvents() {
         lastPromptInputValue = el.aiPromptInput.value;
         updatePromptInputLayout();
     });
+    el.aiPromptInput.addEventListener('focus', () => {
+        updatePromptPlaceholder();
+    });
+    el.aiPromptInput.addEventListener('blur', () => {
+        updatePromptPlaceholder();
+    });
     el.aiPromptInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -549,6 +567,7 @@ function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
         lastPromptInputValue = "";
         updatePromptInputLayout();
     }
+    updatePromptPlaceholder();
     if (restoreEditorFocus && cmView) {
         cmView.focus();
     }
@@ -742,6 +761,9 @@ async function sendPrompt() {
         });
 
         renderMarkdown(cmView.state.doc.toString());
+        requestAnimationFrame(() => {
+            cmView?.focus();
+        });
         aiRequestInFlight = false;
         showToast("AI Edit Applied! ✨");
     } catch (err) {

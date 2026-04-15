@@ -5,18 +5,20 @@
 
 import {
     state, el, HOME_SCREEN_PATH,
-    kindFromPath, documentTypeFromPath, escapeHTML,
+    kindFromPath, documentTypeFromPath, escapeHTML, formatSaveDialogMessage,
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { exitEditMode, hasUnsavedEditorChanges, saveCurrentDocument } from './main-editor.js';
+import { exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { AskSaveDiscardCancel } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────
-let draggedTabId = "";
+let dragState = null;
+let suppressClickUntil = 0;
+let dragBindingsReady = false;
 
 // ── Tab CRUD ───────────────────────────────────────────────
 
@@ -100,8 +102,10 @@ export async function switchToTab(tabID) {
 // ── Tab Rendering ──────────────────────────────────────────
 
 export function renderTabs() {
+    ensureTabDragBindings();
+
     el.tabsList.innerHTML = state.tabs.map(tab => `
-        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''}" data-tab-id="${tab.id}" draggable="true">
+        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''}" data-tab-id="${tab.id}">
             <span class="tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
             <button class="tab-close-btn" data-close-tab="${tab.id}" aria-label="Close Tab">
                 <span class="material-symbols-outlined" aria-hidden="true">close</span>
@@ -111,40 +115,21 @@ export function renderTabs() {
 
     el.tabsList.querySelectorAll('.tab-item').forEach(tabNode => {
         tabNode.addEventListener('click', async event => {
+            if (Date.now() < suppressClickUntil) {
+                event.preventDefault();
+                return;
+            }
             if (event.target.closest('[data-close-tab]')) {
                 return;
             }
             await switchToTab(tabNode.dataset.tabId);
         });
 
-        tabNode.addEventListener('dragstart', event => {
-            if (event.target.closest('[data-close-tab]')) {
-                event.preventDefault();
+        tabNode.addEventListener('pointerdown', event => {
+            if (event.button !== 0 || event.target.closest('[data-close-tab]')) {
                 return;
             }
-
-            draggedTabId = tabNode.dataset.tabId;
-            tabNode.classList.add('dragging');
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', draggedTabId);
-        });
-
-        tabNode.addEventListener('dragover', event => {
-            if (!draggedTabId || draggedTabId === tabNode.dataset.tabId) {
-                return;
-            }
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-        });
-
-        tabNode.addEventListener('drop', event => {
-            event.preventDefault();
-            moveTab(draggedTabId, tabNode.dataset.tabId);
-        });
-
-        tabNode.addEventListener('dragend', () => {
-            draggedTabId = "";
-            el.tabsList.querySelectorAll('.tab-item.dragging').forEach(node => node.classList.remove('dragging'));
+            beginPointerDrag(tabNode, event);
         });
     });
 
@@ -158,41 +143,231 @@ export function renderTabs() {
     el.tabsList.querySelector('.tab-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
 }
 
-function moveTab(sourceTabID, targetTabID) {
-    if (!sourceTabID || !targetTabID || sourceTabID === targetTabID) {
+function ensureTabDragBindings() {
+    if (dragBindingsReady) {
+        return;
+    }
+
+    document.addEventListener('pointermove', handlePointerMove);
+    document.addEventListener('pointerup', handlePointerUp);
+    document.addEventListener('pointercancel', cancelPointerDrag);
+    dragBindingsReady = true;
+}
+
+function beginPointerDrag(tabNode, event) {
+    const stripRect = el.tabsList.getBoundingClientRect();
+    const fixedY = stripRect.top + stripRect.height / 2;
+    const tabRect = tabNode.getBoundingClientRect();
+    dragState = {
+        tabId: tabNode.dataset.tabId,
+        pointerId: event.pointerId,
+        startX: event.clientX,
+        startY: fixedY,
+        lastX: event.clientX,
+        lastY: fixedY,
+        sourceNode: tabNode,
+        placeholderNode: null,
+        pointerOffsetX: event.clientX - tabRect.left,
+        insertionIndex: state.tabs.findIndex(tab => tab.id === tabNode.dataset.tabId),
+        isDragging: false,
+    };
+}
+
+function handlePointerMove(event) {
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+        return;
+    }
+
+    dragState.lastX = event.clientX;
+    dragState.lastY = dragState.startY;
+
+    if (!dragState.isDragging) {
+        // X축 거리만으로 드래그 시작 판정 (레일 방식: 좌우 이동만 감지)
+        const distanceX = Math.abs(event.clientX - dragState.startX);
+        if (distanceX < 6) {
+            return;
+        }
+        startVisualDrag();
+    }
+
+    event.preventDefault();
+    updateDraggedTabPosition(event.clientX);
+    updateDropIndicator(event.clientX, dragState.startY);
+    autoScrollTabs(event.clientX);
+}
+
+function handlePointerUp(event) {
+    if (!dragState || event.pointerId !== dragState.pointerId) {
+        return;
+    }
+
+    const { tabId, insertionIndex, isDragging } = dragState;
+
+    cleanupPointerDrag();
+
+    if (isDragging) {
+        moveTabToIndex(tabId, insertionIndex);
+        suppressClickUntil = Date.now() + 250;
+    }
+}
+
+function cancelPointerDrag() {
+    if (!dragState) {
+        return;
+    }
+    cleanupPointerDrag();
+}
+
+function startVisualDrag() {
+    if (!dragState?.sourceNode) {
+        return;
+    }
+
+    dragState.isDragging = true;
+    dragState.sourceNode.classList.add('dragging');
+
+    // 드래그 시작 시점에 탭 스트립 Y좌표 재계산 (레이아웃 변경 대응)
+    const stripRect = el.tabsList.getBoundingClientRect();
+    dragState.startY = stripRect.top + stripRect.height / 2;
+
+    const rect = dragState.sourceNode.getBoundingClientRect();
+    const placeholderNode = document.createElement('div');
+    placeholderNode.className = 'tab-drag-placeholder';
+    placeholderNode.style.width = `${Math.max(8, Math.min(14, rect.width * 0.08))}px`;
+    placeholderNode.style.height = `${rect.height}px`;
+    dragState.sourceNode.insertAdjacentElement('afterend', placeholderNode);
+    dragState.placeholderNode = placeholderNode;
+
+    dragState.sourceNode.style.width = `${rect.width}px`;
+    dragState.sourceNode.style.height = `${rect.height}px`;
+    dragState.sourceNode.style.left = `${rect.left}px`;
+    dragState.sourceNode.style.top = `${rect.top}px`;
+    document.body.appendChild(dragState.sourceNode);
+
+    updateDraggedTabPosition(dragState.lastX);
+    updateDropIndicator(dragState.lastX, dragState.startY);
+}
+
+function updateDraggedTabPosition(clientX) {
+    if (!dragState?.sourceNode) {
+        return;
+    }
+
+    const sourceNode = dragState.sourceNode;
+    const height = sourceNode.offsetHeight;
+    sourceNode.style.left = `${clientX - dragState.pointerOffsetX}px`;
+    sourceNode.style.top = `${dragState.startY - height / 2}px`;
+}
+
+function updateDropIndicator(clientX, clientY) {
+    clearDropIndicators();
+
+    const sourceNode = dragState?.sourceNode;
+    if (!dragState?.isDragging || !sourceNode) {
+        return;
+    }
+
+    const otherNodes = [...el.tabsList.querySelectorAll('.tab-item')]
+        .filter(node => node.dataset.tabId !== dragState.tabId);
+
+    if (otherNodes.length === 0) {
+        dragState.insertionIndex = 0;
+        return;
+    }
+
+    let insertionIndex = otherNodes.length;
+    let anchorNode = otherNodes[otherNodes.length - 1];
+    let gapMode = 'after';
+
+    for (let i = 0; i < otherNodes.length; i += 1) {
+        const node = otherNodes[i];
+        const rect = node.getBoundingClientRect();
+        if (clientX < rect.left + rect.width / 2) {
+            insertionIndex = i;
+            anchorNode = node;
+            gapMode = 'before';
+            break;
+        }
+    }
+
+    dragState.insertionIndex = insertionIndex;
+    anchorNode.classList.add(gapMode === 'before' ? 'drop-before' : 'drop-after');
+    dragState.sourceNode.classList.add('drag-lifted');
+}
+
+function clearDropIndicators() {
+    el.tabsList.querySelectorAll('.tab-item.drop-before, .tab-item.drop-after')
+        .forEach(node => node.classList.remove('drop-before', 'drop-after'));
+    el.tabsList.querySelectorAll('.tab-item.drag-lifted')
+        .forEach(node => node.classList.remove('drag-lifted'));
+}
+
+function cleanupPointerDrag() {
+    clearDropIndicators();
+    if (dragState?.sourceNode) {
+        dragState.sourceNode.classList.remove('dragging');
+        dragState.sourceNode.style.removeProperty('width');
+        dragState.sourceNode.style.removeProperty('height');
+        dragState.sourceNode.style.removeProperty('left');
+        dragState.sourceNode.style.removeProperty('top');
+        dragState.placeholderNode?.insertAdjacentElement('beforebegin', dragState.sourceNode);
+    }
+    dragState?.placeholderNode?.remove();
+    dragState = null;
+}
+
+function autoScrollTabs(clientX) {
+    const rect = el.tabsList.getBoundingClientRect();
+    const edgeSize = 48;
+    if (clientX < rect.left + edgeSize) {
+        el.tabsList.scrollLeft -= 14;
+    } else if (clientX > rect.right - edgeSize) {
+        el.tabsList.scrollLeft += 14;
+    }
+}
+
+function moveTabToIndex(sourceTabID, insertionIndex) {
+    if (!sourceTabID) {
         return;
     }
 
     const sourceIndex = state.tabs.findIndex(tab => tab.id === sourceTabID);
-    const targetIndex = state.tabs.findIndex(tab => tab.id === targetTabID);
-    if (sourceIndex === -1 || targetIndex === -1) {
+    if (sourceIndex === -1) {
         return;
     }
 
     const [movedTab] = state.tabs.splice(sourceIndex, 1);
-    state.tabs.splice(targetIndex, 0, movedTab);
+    const boundedIndex = Math.max(0, Math.min(insertionIndex, state.tabs.length));
+    state.tabs.splice(boundedIndex, 0, movedTab);
     renderTabs();
 }
 
 // ── Tab Close ──────────────────────────────────────────────
 
 export async function closeTab(tabID) {
-    // Check for unsaved changes if editing this tab
-    if (state.isEditing && tabID === state.activeTabId) {
-        if (hasUnsavedEditorChanges()) {
-            const response = await AskSaveDiscardCancel("Unsaved Changes", "The document has been modified. Do you want to save changes?");
-            
-            if (response === "Cancel") return;
-            
-            if (response === "Save") {
-                const saved = await saveCurrentDocument({ confirm: false, exitAfterSave: false });
-                if (!saved) {
-                    LogError(`Auto-save on close failed: ${state.currentFilePath}`);
-                    return; // Don't close tab if save failed
-                }
+    const tab = state.tabs.find(item => item.id === tabID);
+    if (!tab) return;
+
+    const isActiveEditingTab = tabID === state.activeTabId && state.isEditing;
+    const hasUnsavedChanges = isActiveEditingTab ? hasUnsavedEditorChanges() : hasUnsavedTabChanges(tab);
+
+    if ((isActiveEditingTab || tab.isEditing) && hasUnsavedChanges) {
+        const response = await AskSaveDiscardCancel("Unsaved Changes", formatSaveDialogMessage(tab.title, "The document has been modified. Do you want to save changes?"));
+        if (response === "Cancel") return;
+
+        if (response === "Save") {
+            const saved = isActiveEditingTab
+                ? await saveCurrentDocument({ confirm: false, exitAfterSave: false })
+                : await saveTabDocument(tab, { confirm: false });
+
+            if (!saved) {
+                LogError(`Auto-save on close failed: ${tab.path}`);
+                return;
             }
-            // If "Discard", just continue
         }
+    }
+
+    if (isActiveEditingTab) {
         await exitEditMode(false);
     }
 
