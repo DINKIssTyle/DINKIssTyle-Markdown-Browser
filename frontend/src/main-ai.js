@@ -60,40 +60,85 @@ let lmStudioModels = [];
 let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
 let unloadingInstanceId = "";
-let aiProgressHideTimer = null;
 let aiRequestInFlight = false;
 let aiPromptHideTimer = null;
+let aiPromptBusyState = null;
+let lastPromptInputValue = "";
 const AI_PROMPT_BASE_WIDTH = 320;
 const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.5);
 const AI_PROMPT_MAX_LINES = 3;
+const AI_PROMPT_DEFAULT_PLACEHOLDER = "Press / to Ask AI...";
 
 function isGeneralAIActive() {
     return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
 }
 
-function hideAIProgressOverlay() {
-    clearTimeout(aiProgressHideTimer);
-    aiProgressHideTimer = null;
-    if (!el.aiProgressOverlay) return;
-    el.aiProgressOverlay.classList.add('hidden');
-    el.aiProgressOverlay.classList.remove('loading');
-    if (el.aiProgressCancel) {
-        el.aiProgressCancel.classList.add('hidden');
+function getPromptBusyPlaceholder(label = "") {
+    const normalizedLabel = String(label || "").trim().toLowerCase();
+    if (normalizedLabel.includes('receiv')) return '응답 받는 중';
+    if (normalizedLabel.includes('model') || normalizedLabel.includes('load')) return '모델 로딩 중';
+    return '프롬프트 처리 중';
+}
+
+function updatePromptBusyUI() {
+    const isBusy = !!aiPromptBusyState;
+    el.aiPromptBox.classList.toggle('is-busy', isBusy);
+    el.aiPromptBox.classList.toggle('is-cancelable', isBusy);
+    el.aiPromptBox.classList.toggle('is-resetting-progress', !isBusy);
+    el.aiPromptInput.disabled = isBusy;
+    el.aiPromptSend.disabled = isBusy;
+    el.aiPromptSend.classList.toggle('hidden', isBusy);
+    el.aiPromptClose.title = isBusy ? 'Cancel AI Response' : 'Close AI Prompt';
+    el.aiPromptClose.setAttribute('aria-label', isBusy ? 'Cancel AI Response' : 'Close AI Prompt');
+
+    if (isBusy) {
+        el.aiPromptBox.style.setProperty('--ai-prompt-progress', `${aiPromptBusyState.progress}%`);
+        el.aiPromptInput.value = '';
+        el.aiPromptInput.placeholder = aiPromptBusyState.placeholder;
+    } else {
+        el.aiPromptBox.style.setProperty('--ai-prompt-progress', '0%');
+        el.aiPromptInput.disabled = false;
+        el.aiPromptSend.disabled = false;
+        el.aiPromptInput.placeholder = AI_PROMPT_DEFAULT_PLACEHOLDER;
+        el.aiPromptInput.value = lastPromptInputValue;
     }
-    el.aiProgressBarFill.style.width = '0%';
-    el.aiProgressPercent.textContent = '';
+    updatePromptInputLayout();
+}
+
+function showPromptBusyState({ label = "", progress = 0 } = {}) {
+    const nextProgress = Math.max(
+        aiPromptBusyState?.progress ?? 0,
+        Math.max(0, Math.min(100, Math.round(progress || 0)))
+    );
+    aiPromptBusyState = {
+        label,
+        progress: nextProgress,
+        placeholder: getPromptBusyPlaceholder(label),
+    };
+    positionPromptBox();
+    showPromptBoxElement();
+    updatePromptBusyUI();
+}
+
+function clearPromptBusyState() {
+    aiPromptBusyState = null;
+    updatePromptBusyUI();
+}
+
+function hideAIProgressOverlay() {
+    clearPromptBusyState();
     requestAnimationFrame(() => {
-        refreshPromptForSelection({ preserveInput: true });
+        refreshPromptForSelection({ preserveInput: false });
     });
 }
 
 function isAIProgressVisible() {
-    return !!el.aiProgressOverlay && !el.aiProgressOverlay.classList.contains('hidden');
+    return !!aiPromptBusyState;
 }
 
 async function cancelActiveAIRequest() {
     if (!aiRequestInFlight) {
-        hideAIProgressOverlay();
+        clearPromptBusyState();
         return;
     }
 
@@ -125,6 +170,11 @@ function getEditorSelection() {
 
 function updatePromptInputLayout() {
     if (!el.aiPromptInput || !el.aiPromptBox) return;
+    if (aiPromptBusyState) {
+        el.aiPromptInput.style.height = '';
+        el.aiPromptInput.style.overflowY = 'hidden';
+        return;
+    }
     const content = el.aiPromptInput.value || "";
     const longestLineLength = content
         .split('\n')
@@ -180,7 +230,9 @@ function showPromptBoxForSelection({ focusInput = false, preserveInput = true } 
     positionPromptBox();
     if (!preserveInput) {
         el.aiPromptInput.value = "";
+        lastPromptInputValue = "";
     }
+    clearPromptBusyState();
     showPromptBoxElement();
     if (focusInput) {
         requestAnimationFrame(() => {
@@ -194,7 +246,13 @@ function showPromptBoxForSelection({ focusInput = false, preserveInput = true } 
 }
 
 function refreshPromptForSelection({ focusInput = false, preserveInput = true } = {}) {
-    if (!state.isEditing || !cmView || !isGeneralAIActive() || cmView.composing || isAIProgressVisible()) {
+    if (isAIProgressVisible()) {
+        positionPromptBox();
+        showPromptBoxElement();
+        updatePromptBusyUI();
+        return true;
+    }
+    if (!state.isEditing || !cmView || !isGeneralAIActive() || cmView.composing) {
         hidePromptBoxElement();
         return false;
     }
@@ -334,38 +392,20 @@ export function bindAIEvents() {
 
     // AI Progress Events from Go
     EventsOn('ai:progress', (data) => {
-        if (!el.aiProgressOverlay) return;
-        clearTimeout(aiProgressHideTimer);
-        aiProgressHideTimer = null;
-
-        hidePromptBoxElement();
-        el.aiProgressOverlay.classList.remove('hidden');
-        if (data.loading) {
-            el.aiProgressOverlay.classList.add('loading');
-        } else {
-            el.aiProgressOverlay.classList.remove('loading');
-        }
-
-        el.aiProgressLabel.textContent = data.label || "Processing...";
-        const percent = Math.round(data.progress || 0);
-        el.aiProgressPercent.textContent = data.loading ? "" : `${percent}%`;
-        el.aiProgressBarFill.style.width = `${percent}%`;
-        if (el.aiProgressCancel) {
-            el.aiProgressCancel.classList.toggle('hidden', String(data.label || '').trim().toLowerCase() !== 'receiving processing...');
-        }
-
         const isCompleted = data.completed === true;
+        const progress = data.loading ? 0 : Math.round(data.progress || 0);
+
+        if (!isCompleted) {
+            showPromptBusyState({
+                label: data.label || "Processing...",
+                progress,
+            });
+        }
 
         if (isCompleted) {
-            aiProgressHideTimer = setTimeout(() => {
-                hideAIProgressOverlay();
-                aiRequestInFlight = false;
-                aiProgressHideTimer = null;
-            }, 2000);
+            hideAIProgressOverlay();
+            aiRequestInFlight = false;
         }
-    });
-    el.aiProgressCancel?.addEventListener('click', () => {
-        cancelActiveAIRequest();
     });
 
     // FIM Toggle
@@ -395,9 +435,18 @@ export function bindAIEvents() {
         showToast(window.aiState.fimEnabled ? "AI FIM Enabled" : "AI FIM Disabled");
     };
 
-    el.aiPromptClose.onclick = () => hidePromptBox();
+    el.aiPromptClose.onclick = () => {
+        if (isAIProgressVisible()) {
+            cancelActiveAIRequest();
+            return;
+        }
+        hidePromptBox();
+    };
     el.aiPromptSend.onclick = sendPrompt;
-    el.aiPromptInput.addEventListener('input', updatePromptInputLayout);
+    el.aiPromptInput.addEventListener('input', () => {
+        lastPromptInputValue = el.aiPromptInput.value;
+        updatePromptInputLayout();
+    });
     el.aiPromptInput.addEventListener('keydown', (e) => {
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
@@ -422,7 +471,7 @@ export function bindAIEvents() {
 }
 
 function handleEditorInput() {
-    if (isPromptBoxVisible()) {
+    if (!isAIProgressVisible() && isPromptBoxVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
     }
     if (!cmView || !window.aiState.fimAvailable || !window.aiState.fimEnabled || !window.aiState.fimEndpoint) return;
@@ -460,6 +509,12 @@ function handleEditorKeydown(e) {
 }
 
 function handleSelectionChange() {
+    if (isAIProgressVisible()) {
+        positionPromptBox();
+        showPromptBoxElement();
+        updatePromptBusyUI();
+        return;
+    }
     if (!state.isEditing || !cmView || !isGeneralAIActive()) {
         hidePromptBox({ restoreEditorFocus: false });
         return;
@@ -487,9 +542,11 @@ export function showPromptBoxAtSelection() {
 }
 
 function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
+    if (isAIProgressVisible()) return;
     hidePromptBoxElement();
     if (clearInput) {
         el.aiPromptInput.value = "";
+        lastPromptInputValue = "";
         updatePromptInputLayout();
     }
     if (restoreEditorFocus && cmView) {
@@ -612,6 +669,7 @@ async function sendPrompt() {
 
     const userPrompt = el.aiPromptInput.value.trim();
     if (!userPrompt || !cmView) return;
+    lastPromptInputValue = "";
 
     const sel = cmView.state.selection.main;
     if (sel.empty) return;
@@ -620,9 +678,8 @@ async function sendPrompt() {
     const selectedText = cmView.state.sliceDoc(sel.from, sel.to);
     
     // Hide prompt box immediately so user can see the editor
-    hidePromptBox({ restoreEditorFocus: false });
+    showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
     
-    el.aiPromptSend.disabled = true;
     aiRequestInFlight = true;
     showToast("AI Processing...");
 
@@ -697,8 +754,7 @@ async function sendPrompt() {
         }
         hideAIProgressOverlay();
     } finally {
-        el.aiPromptSend.disabled = false;
-        // Don't close overlay here to show completion message
+        clearPromptBusyState();
     }
 }
 

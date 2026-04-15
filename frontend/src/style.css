@@ -2068,12 +2068,14 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     position: fixed;
     left: 50%;
     bottom: 132px;
-    transform: translateX(-50%);
+    transform: translateX(-57%);
     display: inline-flex;
     align-items: center;
     gap: 14px;
     z-index: 801;
     --ai-prompt-width: 320px;
+    --ai-prompt-placeholder-color: color-mix(in srgb, var(--text-color) 52%, transparent 48%);
+    --ai-prompt-busy-placeholder-color: #ffffff;
     opacity: 0;
     pointer-events: none;
 }
@@ -2123,6 +2125,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     width: var(--ai-prompt-width);
     max-width: min(480px, calc(100vw - 104px));
     min-height: 40px;
+    position: relative;
     padding: 8px 14px;
     border-radius: 20px;
     border: 1px solid rgba(0, 0, 0, 0.08);
@@ -2137,6 +2140,23 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     opacity: 0;
     transform: translateY(16px) scale(0.97);
     transition: opacity 0.2s ease 0.04s, transform 0.24s cubic-bezier(0.2, 0.8, 0.2, 1) 0.04s;
+    overflow: hidden;
+}
+
+/* 응답 프로그레스 색상 */
+.ai-prompt-shell::before {
+    content: "";
+    position: absolute;
+    inset: 0 auto 0 0;
+    width: var(--ai-prompt-progress, 0%);
+    /* background: linear-gradient(90deg, rgba(70, 174, 247, 0.18), rgba(143, 0, 255, 0.14)); */
+    background-image: linear-gradient(70deg, #66a6ff 0%, #89f7fe 100%);
+    pointer-events: none;
+    transition: width 0.22s ease;
+}
+
+.ai-prompt-box.is-resetting-progress .ai-prompt-shell::before {
+    transition: none;
 }
 
 .ai-prompt-box.is-visible {
@@ -2171,6 +2191,8 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-box textarea {
+    position: relative;
+    z-index: 1;
     background: transparent;
     border: none;
     color: var(--text-color);
@@ -2187,7 +2209,16 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-box textarea::placeholder {
-    color: color-mix(in srgb, var(--text-color) 52%, transparent 48%);
+    color: var(--ai-prompt-placeholder-color);
+}
+
+.ai-prompt-box textarea:disabled {
+    cursor: default;
+    opacity: 1;
+}
+
+.ai-prompt-box.is-busy textarea::placeholder {
+    color: var(--ai-prompt-busy-placeholder-color);
 }
 
 .ai-prompt-box button {
@@ -2203,6 +2234,8 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     width: 28px;
     height: 28px;
     flex: 0 0 auto;
+    position: relative;
+    z-index: 1;
 }
 
 .ai-prompt-box button:first-of-type {
@@ -2212,6 +2245,14 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 
 .ai-prompt-box button:hover {
     background: rgba(128, 128, 128, 0.1);
+}
+
+.ai-prompt-box.is-busy #ai-prompt-close {
+    color: #ff5f57;
+}
+
+.ai-prompt-box.is-busy #ai-prompt-close:hover {
+    background: rgba(255, 95, 87, 0.12);
 }
 
 html.dark .ai-prompt-shell {
@@ -2238,6 +2279,15 @@ html.dark .ai-prompt-shell {
     animation: ai-prompt-badge-sheen 0.72s ease-out 0.14s 1;
 }
 
+.ai-prompt-box.is-busy .ai-prompt-badge {
+    animation: ai-prompt-badge-shimmer 1s ease-in-out infinite;
+}
+
+.ai-prompt-box.is-busy .ai-prompt-badge::after {
+    opacity: 1;
+    animation: ai-prompt-badge-sheen-horizontal 1.05s linear infinite;
+}
+
 @keyframes ai-prompt-badge-sheen {
     0% {
         transform: translateX(-160%) rotate(18deg);
@@ -2250,6 +2300,26 @@ html.dark .ai-prompt-shell {
 
     100% {
         transform: translateX(160%) rotate(18deg);
+        opacity: 0;
+    }
+}
+
+@keyframes ai-prompt-badge-sheen-horizontal {
+    0% {
+        transform: translateX(-170%) rotate(18deg);
+        opacity: 0;
+    }
+
+    12% {
+        opacity: 1;
+    }
+
+    88% {
+        opacity: 1;
+    }
+
+    100% {
+        transform: translateX(170%) rotate(18deg);
         opacity: 0;
     }
 }
@@ -2291,122 +2361,6 @@ html.dark .ai-prompt-shell {
     line-height: 1.6;
     max-width: 1012px;
     margin: 0 auto;
-}
-
-/* AI Progress Overlay */
-#ai-progress-overlay {
-    position: fixed;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
-    background: var(--btn-bg);
-    border: 1px solid var(--border-color);
-    border-radius: 12px;
-    padding: 12px 16px;
-    min-width: 280px;
-    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
-    z-index: 1000;
-    backdrop-filter: blur(16px);
-    -webkit-backdrop-filter: blur(16px);
-    transition: opacity 0.3s ease, transform 0.3s ease;
-}
-
-#ai-progress-overlay.hidden {
-    display: none;
-    opacity: 0;
-    transform: translate(-50%, 20px);
-}
-
-.ai-progress-content {
-    position: relative;
-    display: flex;
-    flex-direction: column;
-    gap: 8px;
-}
-
-.ai-progress-cancel {
-    position: absolute;
-    top: -6px;
-    right: -6px;
-    width: 24px;
-    height: 24px;
-    border: none;
-    border-radius: 999px;
-    background: #ff453a;
-    color: white;
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    cursor: pointer;
-    box-shadow: 0 8px 20px rgba(255, 69, 58, 0.28);
-}
-
-.ai-progress-cancel:hover {
-    background: #ff3b30;
-}
-
-.ai-progress-cancel .material-symbols-outlined {
-    font-size: 16px;
-    line-height: 1;
-}
-
-.ai-progress-info {
-    display: flex;
-    justify-content: space-between;
-    font-size: 13px;
-    font-weight: 500;
-    color: var(--text-color);
-}
-
-.ai-progress-bar-container {
-    width: 100%;
-    height: 4px;
-    background: rgba(128, 128, 128, 0.15);
-    border-radius: 2px;
-    overflow: hidden;
-}
-
-#ai-progress-bar-fill {
-    width: 0%;
-    height: 100%;
-    background: linear-gradient(90deg, #8f00ff, var(--accent-color));
-    transition: width 0.3s ease;
-}
-
-/* AI Progress Spinner */
-.ai-progress-spinner {
-    width: 14px;
-    height: 14px;
-    border: 2px solid rgba(255, 255, 255, 0.1);
-    border-top: 2px solid var(--accent-color);
-    border-radius: 50%;
-    animation: ai-spin 1s linear infinite;
-    display: none;
-}
-
-@keyframes ai-spin {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
-#ai-progress-overlay.loading .ai-progress-spinner {
-    display: block;
-}
-
-#ai-progress-overlay.loading .ai-progress-bar-container {
-    opacity: 0.5;
-    /* Fade bar during indeterminate loading */
-}
-
-.ai-progress-label-wrap {
-    display: flex;
-    align-items: center;
-    gap: 8px;
 }
 
 .checkbox-label {
