@@ -17,6 +17,7 @@
     --code-font: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --header-height: 56px;
     --sidebar-width: 300px;
+    --editor-ai-dock-height: 42px;
 }
 
 html.dark {
@@ -65,6 +66,7 @@ body {
     display: flex;
     flex-direction: column;
     height: 100vh;
+    position: relative;
 }
 
 /* Toolbar */
@@ -238,33 +240,6 @@ html.dark .tab-add-btn:hover {
     display: flex;
     align-items: center;
     gap: 8px;
-}
-
-.info-btn {
-    background: transparent;
-    border: none;
-    color: var(--text-color);
-    width: 36px;
-    height: 36px;
-    padding: 0;
-    border-radius: 10px;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, opacity 0.2s;
-}
-
-.info-btn:hover {
-    background: rgba(0, 0, 0, 0.05);
-}
-
-html.dark .info-btn:hover {
-    background: rgba(255, 255, 255, 0.1);
-}
-
-.info-btn-icon {
-    font-size: 21px;
 }
 
 .nav-btn {
@@ -851,15 +826,16 @@ html.dark ::-webkit-scrollbar-thumb {
 
 /* ── Edit Toolbar ─────────────────────────────────────── */
 .edit-toolbar {
-    height: 48px;
+    min-height: 48px;
     background: var(--surface-elevated);
     border-bottom: 1px solid var(--border-color);
     display: flex;
-    align-items: center;
-    padding: 0 16px;
-    gap: 4px;
+    flex-direction: column;
+    align-items: stretch;
+    padding: 10px 16px;
+    gap: 8px;
     overflow-x: auto;
-    white-space: nowrap;
+    overflow-y: hidden;
     z-index: 90;
     user-select: none;
     -webkit-user-select: none;
@@ -867,6 +843,18 @@ html.dark ::-webkit-scrollbar-thumb {
 
 .edit-toolbar::-webkit-scrollbar {
     height: 3px;
+}
+
+.edit-toolbar-row {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    min-width: max-content;
+    white-space: nowrap;
+}
+
+.edit-tool-group-ai {
+    gap: 8px;
 }
 
 .edit-tool-group {
@@ -1020,6 +1008,17 @@ html.platform-linux .edit-select option {
     font-size: 18px;
 }
 
+.tool-btn-labeled {
+    gap: 7px;
+    padding: 0 12px;
+}
+
+.tool-btn-text {
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+}
+
 .cancel-btn:hover {
     background: rgba(255, 59, 48, 0.12) !important;
     color: #ff453a !important;
@@ -1034,6 +1033,102 @@ html.platform-linux .edit-select option {
     flex: 1;
 }
 
+
+/* 온도조절기! */
+.ed-temp-control {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+    padding: 6px 10px 6px 12px;
+    /* border: 1px solid var(--editor-ai-btn-border); */
+    border-radius: 12px;
+    /* background: var(--editor-ai-btn-bg); */
+    color: var(--editor-ai-btn-fg);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, box-shadow 0.15s ease;
+}
+
+html.dark .ed-temp-control {
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.06);
+}
+
+.ed-temp-label {
+    font-size: 11px;
+    font-weight: 800;
+    letter-spacing: 0.03em;
+    text-transform: uppercase;
+    color: var(--text-muted);
+}
+
+.ed-temp-slider-wrap {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    min-width: 0;
+}
+
+.ed-temp-slider {
+    width: 140px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+    opacity: 0.92;
+    --wails-draggable: no-drag;
+}
+
+.ed-temp-value {
+    width: 60px;
+    min-width: 60px;
+    height: 28px;
+    padding: 0 10px;
+    border: 1px solid var(--editor-ai-btn-border-strong);
+    border-radius: 999px;
+    /* background: color-mix(in srgb, var(--editor-ai-btn-bg-active), var(--editor-ai-btn-fg-active)); */
+    background: var(--editor-ai-btn-bg-active);
+    color: var(--editor-ai-btn-fg);
+    font-size: 12px;
+    font-weight: 800;
+    letter-spacing: -0.01em;
+    cursor: pointer;
+    text-align: center;
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.22);
+    transition: background 0.15s ease, border-color 0.15s ease, color 0.15s ease, transform 0.1s ease, box-shadow 0.15s ease;
+    --wails-draggable: no-drag;
+}
+
+.ed-temp-value:hover {
+    background: var(--editor-ai-btn-bg-hover);
+    border-color: var(--editor-ai-btn-border-strong);
+}
+
+.ed-temp-value:active {
+    transform: scale(0.96);
+}
+
+.editor-ai-temp-control.is-active {
+    border-color: var(--editor-ai-btn-border-strong);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.2);
+}
+
+.editor-ai-temp-control.is-active .ed-temp-value {
+    /* background: color-mix(in srgb, var(--editor-ai-btn-bg-active), var(--editor-ai-btn-fg-active)); */
+    color: var(--editor-ai-btn-fg-active);
+}
+
+html.dark .ed-temp-value {
+    background: color-mix(in srgb, var(--editor-ai-btn-bg-hover) 82%, black 18%);
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.08);
+}
+
+.ed-temp-control.disabled {
+    opacity: 0.46;
+}
+
+.ed-temp-control.disabled .ed-temp-slider,
+.ed-temp-control.disabled .ed-temp-value {
+    cursor: not-allowed;
+}
+
 /* ── Editor View ───────────────────────────────────────── */
 .editor-view {
     flex: 1;
@@ -1042,6 +1137,299 @@ html.platform-linux .edit-select option {
     background: var(--bg-color);
     overflow: hidden;
     position: relative;
+}
+
+/* ── Editor AI Dock ───────────────────────────────────────── */
+.editor-ai-dock {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    z-index: 35;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-height: var(--editor-ai-dock-height);
+    padding: 0px 12px;
+    border-top: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+    border-bottom: 1px solid var(--border-color);
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--surface-color) 40%, var(--surface-elevated) 60%),
+            var(--surface-elevated));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.52);
+    overflow-x: auto;
+    overflow-y: hidden;
+    user-select: none;
+    -webkit-user-select: none;
+    --editor-ai-toggle-size: 30px;
+    /* 버튼 보더 색상 */
+    --editor-ai-btn-border: #d7fffe;
+    /* 버튼 흐린 색상 */
+    --editor-ai-btn-bg: #f9f9fb;
+    --editor-ai-btn-bg-hover: rgb(211, 242, 254);
+    /* 버튼 비활성화 폰트 색상 */
+    --editor-ai-btn-fg: #696969;
+    /* 버튼 보더 색상 */
+    --editor-ai-btn-border-strong: #73baf87d;
+    /* 버튼 활성화 색상 */
+    --editor-ai-btn-bg-active: #73bbf8;
+    /* 버튼 폰트 색상 */
+    --editor-ai-btn-fg-active: #ffffff;
+    opacity: 0;
+    transform: translateY(300px);
+    pointer-events: none;
+    transition: opacity 0.18s ease, transform 0.22s ease;
+}
+
+.editor-ai-dock.is-visible {
+    opacity: 1;
+    transform: translateY(0);
+    pointer-events: auto;
+}
+
+.editor-ai-dock.is-hiding {
+    opacity: 0;
+    transform: translateY(8px);
+    pointer-events: none;
+}
+
+.editor-ai-anchor {
+    flex-shrink: 0;
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+}
+
+.editor-ai-dock.is-collapsed {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    min-height: var(--editor-ai-dock-height);
+    width: 100%;
+    max-width: none;
+    padding: 5px 12px;
+    border-top: none;
+    border-bottom: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+.editor-ai-dock::-webkit-scrollbar {
+    height: 3px;
+}
+
+/* AI 활성화 버튼 텍스트 */
+.editor-ai-trigger,
+.editor-ai-dock .tool-btn,
+.editor-ai-toggle-btn {
+    border: 1px solid var(--editor-ai-btn-border);
+    background: var(--editor-ai-btn-bg);
+    color: var(--editor-ai-btn-fg);
+    cursor: pointer;
+    box-shadow: none;
+    --wails-draggable: no-drag;
+}
+
+.editor-ai-trigger:hover,
+.editor-ai-dock .tool-btn:hover,
+.editor-ai-toggle-btn:hover {
+    background: var(--editor-ai-btn-bg-hover);
+    border-color: var(--editor-ai-btn-border-strong);
+}
+
+.editor-ai-trigger {
+    height: 30px;
+    min-width: 0;
+    padding: 0 12px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    font-size: 12px;
+    font-weight: 700;
+    letter-spacing: -0.01em;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease, transform 0.1s ease;
+}
+
+.editor-ai-trigger:active {
+    transform: scale(0.97);
+}
+
+.editor-ai-trigger .material-symbols-outlined {
+    font-size: 14px;
+}
+
+.editor-ai-trigger-text {
+    line-height: 1;
+    white-space: nowrap;
+}
+
+.editor-ai-panel {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: 960px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    overflow-x: auto;
+    overflow-y: hidden;
+    padding-right: 4px;
+    border-left: 1px solid color-mix(in srgb, var(--border-color) 76%, transparent);
+    padding-left: 10px;
+    box-shadow: none;
+    background: transparent;
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+    opacity: 0;
+    transform: translateX(-10px);
+    transform-origin: left center;
+    transition: max-width 0.24s ease, opacity 0.18s ease, padding 0.24s ease, border-color 0.24s ease, transform 0.24s ease;
+    pointer-events: none;
+}
+
+.editor-ai-panel.hidden {
+    display: none;
+}
+
+.editor-ai-panel.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+    pointer-events: auto;
+}
+
+.editor-ai-dock.is-expanded .editor-ai-trigger {
+    border-color: var(--editor-ai-btn-border-strong);
+    background: var(--editor-ai-btn-bg-active);
+}
+
+.editor-ai-dock.is-toolbar-collapsed {
+    left: 0;
+    right: 0;
+    bottom: 0;
+    width: 100%;
+    max-width: none;
+    min-height: var(--editor-ai-dock-height);
+    padding: 5px 12px;
+    border-top: none;
+    border-bottom: none;
+    background: transparent;
+    box-shadow: none;
+    overflow: hidden;
+}
+
+/* AI 플로팅 버튼 */
+.editor-ai-dock.is-collapsed .editor-ai-trigger {
+    border-color: var(--editor-ai-btn-border-strong);
+    background: var(--editor-ai-btn-bg);
+}
+
+.editor-ai-dock:not(.is-expanded) {
+    justify-content: flex-start;
+}
+
+.editor-ai-dock .edit-tool-group-ai {
+    flex-shrink: 0;
+}
+
+.editor-ai-dock .tool-btn {
+    border-radius: 8px;
+}
+
+.editor-ai-toggle-btn {
+    flex-shrink: 0;
+    width: var(--editor-ai-toggle-size);
+    height: var(--editor-ai-toggle-size);
+    border-radius: 999px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: transform 0.22s ease, background 0.15s ease, border-color 0.15s ease, color 0.15s ease;
+}
+
+.editor-ai-toggle-btn:active {
+    transform: scale(0.96);
+}
+
+.editor-ai-toggle-btn .material-symbols-outlined {
+    font-size: 18px;
+    transition: transform 0.24s ease;
+}
+
+.editor-ai-dock.is-toolbar-collapsed .editor-ai-toggle-btn .material-symbols-outlined {
+    transform: rotate(180deg);
+}
+
+.editor-ai-temp-control {
+    flex-shrink: 0;
+    height: 30px;
+    padding: 3px 8px 3px 10px;
+    border-radius: 9px;
+}
+
+.editor-ai-temp-control .ed-temp-label {
+    font-size: 10px;
+}
+
+.editor-ai-temp-control .ed-temp-slider {
+    width: 96px;
+}
+
+.editor-ai-temp-control .ed-temp-value {
+    min-width: 42px;
+    height: 24px;
+    padding: 0 8px;
+    font-size: 11px;
+}
+
+html.dark .editor-ai-dock {
+    background: linear-gradient(180deg,
+            color-mix(in srgb, var(--surface-color) 32%, var(--surface-elevated) 68%),
+            var(--surface-elevated));
+    box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
+    --editor-ai-btn-border: #5b4479;
+    --editor-ai-btn-bg: #543131;
+    --editor-ai-btn-bg-hover: #4a3962;
+    --editor-ai-btn-fg: #d6a6ff;
+    --editor-ai-btn-border-strong: #735597;
+    --editor-ai-btn-bg-active: #4a3962;
+    --editor-ai-btn-fg-active: #f1d6ff;
+}
+
+html.dark .editor-ai-dock.is-collapsed {
+    background: transparent;
+    box-shadow: none;
+}
+
+html.dark .editor-ai-dock.is-toolbar-collapsed {
+    background: transparent;
+    box-shadow: none;
+}
+
+html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
+    border-color: var(--editor-ai-btn-border-strong);
+    background: var(--editor-ai-btn-bg-active);
+}
+
+@media (max-width: 900px) {
+    .editor-ai-dock {
+        gap: 6px;
+        padding-inline: 8px;
+    }
+
+    .editor-ai-trigger {
+        padding-inline: 10px;
+    }
+
+    .editor-ai-panel {
+        gap: 6px;
+        padding-left: 8px;
+    }
+}
+
+.editor-ai-panel::-webkit-scrollbar {
+    height: 3px;
 }
 
 #markdown-editor {
@@ -1751,6 +2139,8 @@ html.dark .context-menu-item:hover {
 .ai-settings-content {
     max-width: 860px;
     padding: 20px;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
 .ai-settings-content>h3 {
@@ -1809,6 +2199,11 @@ html.dark .ai-settings-content .ai-setting-group {
     grid-template-columns: 1fr;
 }
 
+.ai-setting-group.is-locked,
+.ai-setting-option.is-locked {
+    opacity: 0.55;
+}
+
 .ai-settings-content .ai-setting-group label {
     margin-bottom: 0;
     font-size: 12px;
@@ -1839,7 +2234,8 @@ html.dark .ai-settings-content .ai-setting-note {
 }
 
 .ai-settings-content .ai-setting-group input:not([type="checkbox"]),
-.ai-settings-content .ai-setting-group select {
+.ai-settings-content .ai-setting-group select,
+.ai-settings-content .ai-model-trigger {
     width: 100%;
     height: 30px;
     padding: 0 10px;
@@ -1852,6 +2248,8 @@ html.dark .ai-settings-content .ai-setting-note {
     appearance: none;
     -webkit-appearance: none;
     box-sizing: border-box;
+    user-select: text;
+    -webkit-user-select: text;
 }
 
 .ai-settings-content .ai-model-picker {
@@ -2174,6 +2572,20 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     --ai-prompt-width: 320px;
     --ai-prompt-placeholder-color: color-mix(in srgb, var(--text-color) 52%, transparent 48%);
     --ai-prompt-busy-placeholder-color: #ffffff;
+    --ai-prompt-accent-rgb: 70, 174, 247;
+    --ai-prompt-badge-gradient: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
+    --ai-prompt-badge-shadow: 0 16px 28px rgba(var(--ai-prompt-accent-rgb), 0.26);
+    --ai-prompt-badge-shadow-strong: 0 18px 30px rgba(var(--ai-prompt-accent-rgb), 0.34);
+    --ai-prompt-shell-border: rgba(0, 0, 0, 0.08);
+    --ai-prompt-shell-bg: #ffffff;
+    --ai-prompt-shell-shadow: 0 8px 18px rgba(15, 23, 42, 0.08), 0 18px 32px rgba(15, 23, 42, 0.1);
+    --ai-prompt-shell-focus-shadow:
+        0 0 0 1px rgba(var(--ai-prompt-accent-rgb), 0.28),
+        0 0 0 6px rgba(var(--ai-prompt-accent-rgb), 0.12),
+        0 14px 34px rgba(15, 23, 42, 0.18);
+    --ai-support-agent-pop-duration: 280ms;
+    --ai-support-agent-pop-scale: 1.25;
+    --ai-support-agent-pop-origin: center center;
     opacity: 0;
     pointer-events: none;
 }
@@ -2189,11 +2601,8 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     justify-content: center;
     color: #fff;
     /* background: linear-gradient(130deg, #f5a1b1 15%, #a277bc 50%, #4dd6d3 85%); */
-    background-image: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
-
-
-
-    box-shadow: 0 16px 28px rgba(65, 59, 213, 0.34);
+    background-image: var(--ai-prompt-badge-gradient);
+    box-shadow: var(--ai-prompt-badge-shadow);
     flex: 0 0 auto;
     opacity: 0;
     transform: translateY(12px) scale(0.9);
@@ -2227,9 +2636,9 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     position: relative;
     padding: 8px 14px;
     border-radius: 20px;
-    border: 1px solid rgba(0, 0, 0, 0.08);
-    background: color-mix(in srgb, var(--surface-color) 92%, white 8%);
-    box-shadow: 0 14px 34px rgba(0, 0, 0, 0.2);
+    border: 1px solid var(--ai-prompt-shell-border);
+    background: var(--ai-prompt-shell-bg);
+    box-shadow: var(--ai-prompt-shell-shadow);
     backdrop-filter: blur(16px);
     -webkit-backdrop-filter: blur(16px);
     display: grid;
@@ -2244,7 +2653,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 
 .ai-prompt-shell:focus-within {
     border-color: rgba(70, 174, 247, 0.58);
-    box-shadow: 0 0 0 1px rgba(70, 174, 247, 0.28), 0 0 0 6px rgba(70, 174, 247, 0.12), 0 14px 34px rgba(0, 0, 0, 0.2);
+    box-shadow: var(--ai-prompt-shell-focus-shadow);
 }
 
 /* 응답 프로그레스 색상 */
@@ -2279,6 +2688,27 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     transform: translateY(0) scale(1);
 }
 
+.ai-prompt-box.is-support-agent .ai-prompt-shell {
+    grid-template-columns: minmax(0, 1fr) auto;
+}
+
+.ai-prompt-box.is-support-agent textarea {
+    color: #1077df;
+    cursor: pointer;
+}
+
+.ai-prompt-box.is-support-agent .ai-prompt-badge {
+    background-image: var(--ai-prompt-badge-gradient);
+    box-shadow: var(--ai-prompt-badge-shadow);
+}
+
+.ai-prompt-box.is-support-agent {
+    --ai-prompt-accent-rgb: 16, 119, 223;
+    --ai-prompt-badge-gradient: linear-gradient(120deg, #8fd0ff 0%, #1077df 100%);
+    --ai-prompt-shell-border: rgba(16, 119, 223, 0.14);
+    --ai-prompt-shell-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 255, 0.98));
+}
+
 .ai-prompt-box.is-leaving {
     pointer-events: none;
 }
@@ -2309,7 +2739,15 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     max-height: calc(1.45em * 3 + 8px);
     resize: none;
     overflow-y: hidden;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     padding: 4px 0;
+}
+
+.ai-prompt-box textarea::-webkit-scrollbar {
+    width: 0;
+    height: 0;
+    display: none;
 }
 
 .ai-prompt-box textarea::placeholder {
@@ -2321,8 +2759,18 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     opacity: 1;
 }
 
+.ai-prompt-box textarea[readonly] {
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.ai-prompt-box.is-busy textarea {
+    color: var(--ai-prompt-busy-placeholder-color);
+}
+
 .ai-prompt-box.is-busy textarea::placeholder {
     color: var(--ai-prompt-busy-placeholder-color);
+    font-weight: 700;
 }
 
 .ai-prompt-box button {
@@ -2352,11 +2800,12 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-box.is-busy #ai-prompt-close {
+    background: rgba(255, 255, 255, 0.96);
     color: #ff5f57;
 }
 
 .ai-prompt-box.is-busy #ai-prompt-close:hover {
-    background: rgba(255, 95, 87, 0.12);
+    background: rgba(255, 255, 255, 1);
 }
 
 html.dark .ai-prompt-shell {
@@ -2366,20 +2815,24 @@ html.dark .ai-prompt-shell {
 
 html.dark .ai-prompt-shell:focus-within {
     border-color: rgba(108, 190, 255, 0.68);
-    box-shadow: 0 0 0 1px rgba(108, 190, 255, 0.34), 0 0 0 6px rgba(70, 174, 247, 0.16), 0 14px 34px rgba(0, 0, 0, 0.3);
+    box-shadow:
+        0 0 0 1px rgba(108, 190, 255, 0.34),
+        0 0 0 6px rgba(var(--ai-prompt-accent-rgb), 0.16),
+        0 8px 18px rgba(2, 6, 23, 0.18),
+        0 18px 32px rgba(2, 6, 23, 0.16);
 }
 
 @keyframes ai-prompt-badge-shimmer {
     0% {
-        box-shadow: 0 16px 28px rgba(65, 59, 213, 0.34);
+        box-shadow: var(--ai-prompt-badge-shadow);
     }
 
     50% {
-        box-shadow: 0 18px 30px rgba(65, 59, 213, 0.4);
+        box-shadow: var(--ai-prompt-badge-shadow-strong);
     }
 
     100% {
-        box-shadow: 0 16px 28px rgba(65, 59, 213, 0.34);
+        box-shadow: var(--ai-prompt-badge-shadow);
     }
 }
 
@@ -2395,6 +2848,13 @@ html.dark .ai-prompt-shell:focus-within {
 .ai-prompt-box.is-busy .ai-prompt-badge::after {
     opacity: 1;
     animation: ai-prompt-badge-sheen-horizontal 1.05s linear infinite;
+}
+
+.ai-prompt-box.is-transitioning-to-support .ai-prompt-badge,
+.ai-prompt-box.is-transitioning-to-support .ai-prompt-shell {
+    animation: ai-prompt-support-pop var(--ai-support-agent-pop-duration) cubic-bezier(0.2, 0.9, 0.2, 1.12) 1;
+    will-change: transform;
+    transform-origin: var(--ai-support-agent-pop-origin);
 }
 
 @keyframes ai-prompt-badge-sheen {
@@ -2433,11 +2893,27 @@ html.dark .ai-prompt-shell:focus-within {
     }
 }
 
-.tool-btn.active-ai,
-.tool-btn.active-fim,
-.tool-btn.active-github-compatible {
-    background: rgba(143, 0, 255, 0.15) !important;
-    color: #b055ff !important;
+@keyframes ai-prompt-support-pop {
+    0% {
+        transform: translateY(0) scale(1);
+    }
+
+    42% {
+        transform: translateY(-1px) scale(var(--ai-support-agent-pop-scale));
+    }
+
+    100% {
+        transform: translateY(0) scale(1);
+    }
+}
+
+.editor-ai-dock .tool-btn.active-ai,
+.editor-ai-dock .tool-btn.active-fim,
+.editor-ai-dock .tool-btn.active-github-compatible,
+.editor-ai-trigger.active-ai {
+    background: var(--editor-ai-btn-bg-active) !important;
+    border-color: var(--editor-ai-btn-border-strong) !important;
+    color: var(--editor-ai-btn-fg-active) !important;
 }
 
 /* ── FIM Ghost Text Decoration ────────────────────── */
@@ -2471,20 +2947,4 @@ html.dark .ai-prompt-shell:focus-within {
     line-height: 1.6;
     max-width: 1012px;
     margin: 0 auto;
-}
-
-.checkbox-label {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    cursor: pointer;
-    font-size: 13px;
-    color: var(--text-color);
-    margin-top: 4px;
-}
-
-.checkbox-label input[type="checkbox"] {
-    width: 16px;
-    height: 16px;
-    cursor: pointer;
 }

@@ -3,6 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
 import { marked } from 'marked';
 import katex from 'katex';
 import { unified } from 'unified';
@@ -18,6 +19,7 @@ import {
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
+import { syncAIControls } from './main-ai.js';
 import { applyHighlight, clearHighlight } from './main-ui.js';
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL } from '../wailsjs/go/main/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
@@ -32,6 +34,62 @@ let previewRenderToken = 0;
 let editorIdleFullRenderHandle = null;
 let editorIdleFullRenderTimer = 0;
 let livePreviewBlocks = [];
+
+function captureLivePreviewScrollAnchor() {
+    if (!state.isEditing || state.currentEditorRenderMode !== 'realtime') {
+        return null;
+    }
+
+    const scroller = getScroller();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const liveBlocks = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_ATTR}]`));
+    if (liveBlocks.length === 0) {
+        return {
+            scrollTop: scroller.scrollTop,
+            type: 'scroll-top',
+        };
+    }
+
+    const scrollerTop = scrollerRect.top;
+    let anchorNode = liveBlocks[0];
+    for (const block of liveBlocks) {
+        if (block.getBoundingClientRect().top <= scrollerTop + 1) {
+            anchorNode = block;
+            continue;
+        }
+        break;
+    }
+
+    const anchorIndex = Number(anchorNode.getAttribute(LIVE_BLOCK_ATTR));
+    return {
+        type: 'live-block',
+        index: Number.isFinite(anchorIndex) ? anchorIndex : 0,
+        offset: anchorNode.getBoundingClientRect().top - scrollerTop,
+        scrollTop: scroller.scrollTop,
+    };
+}
+
+function restoreLivePreviewScrollAnchor(snapshot) {
+    if (!snapshot) {
+        return;
+    }
+
+    const scroller = getScroller();
+    if (snapshot.type !== 'live-block') {
+        scroller.scrollTop = snapshot.scrollTop ?? scroller.scrollTop;
+        return;
+    }
+
+    const anchorNode = el.markdownContainer.querySelector(`[${LIVE_BLOCK_ATTR}="${snapshot.index}"]`);
+    if (!anchorNode) {
+        scroller.scrollTop = snapshot.scrollTop ?? scroller.scrollTop;
+        return;
+    }
+
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    const nextOffset = anchorNode.getBoundingClientRect().top - scrollerTop;
+    scroller.scrollTop += nextOffset - snapshot.offset;
+}
 
 function isEscaped(text, index) {
     let slashCount = 0;
@@ -258,7 +316,7 @@ function getMermaidConfig() {
             lineColor: isDark ? '#8e8e93' : '#636366',
             secondaryColor: isDark ? '#1c1c1e' : '#f5f5f7',
             tertiaryColor: isDark ? '#2c2c2e' : '#e5e5ea',
-            fontSize: '14px',
+            fontSize: `${DEFAULT_CONTENT_FONT_SIZE}px`,
         }
     };
 }
@@ -394,24 +452,33 @@ async function postProcess(container = el.markdownContainer) {
     await renderMermaidSub(container);
 }
 
+async function renderMarkdownLiveBlocks(content, token) {
+    const blocks = splitMarkdownIntoBlocks(content);
+    const blockMarkup = await Promise.all(blocks.map(async (block, index) => {
+        const html = await renderMarkdownToHTML(block.content);
+        return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}">${html}</section>`;
+    }));
+    if (token !== previewRenderToken) {
+        return null;
+    }
+
+    const scrollAnchor = captureLivePreviewScrollAnchor();
+    el.markdownContainer.innerHTML = blockMarkup.join('');
+    renderMathPlaceholders(el.markdownContainer);
+    await postProcess(el.markdownContainer);
+    restoreLivePreviewScrollAnchor(scrollAnchor);
+    syncEditingPreviewReturnButton();
+    livePreviewBlocks = blocks;
+    return blocks;
+}
+
 async function renderMarkdownBlockPreview(content, cursorLine, token) {
     const blocks = splitMarkdownIntoBlocks(content);
     const focusIndex = findBlockIndexForLine(blocks, cursorLine);
     const shouldRebuild = livePreviewBlocks.length !== blocks.length;
 
     if (shouldRebuild) {
-        const blockMarkup = await Promise.all(blocks.map(async (block, index) => {
-            const html = await renderMarkdownToHTML(block.content);
-            return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}">${html}</section>`;
-        }));
-        if (token !== previewRenderToken) {
-            return;
-        }
-        el.markdownContainer.innerHTML = blockMarkup.join('');
-        renderMathPlaceholders(el.markdownContainer);
-        await postProcess(el.markdownContainer);
-        syncEditingPreviewReturnButton();
-        livePreviewBlocks = blocks;
+        await renderMarkdownLiveBlocks(content, token);
         return;
     }
 
@@ -425,9 +492,11 @@ async function renderMarkdownBlockPreview(content, cursorLine, token) {
     if (token !== previewRenderToken) {
         return;
     }
+    const scrollAnchor = captureLivePreviewScrollAnchor();
     targetNode.innerHTML = html;
     renderMathPlaceholders(targetNode);
     await postProcess(targetNode);
+    restoreLivePreviewScrollAnchor(scrollAnchor);
     syncEditingPreviewReturnButton();
     livePreviewBlocks = blocks;
 }
@@ -470,6 +539,11 @@ export async function renderMarkdown(content, options = {}) {
     } = options;
 
     clearQueuedEditorPreviewRender();
+    if (state.isEditing && state.currentEditorRenderMode === 'realtime' && !preserveLiveBlocks) {
+        await renderMarkdownLiveBlocks(content, token);
+        return;
+    }
+
     const html = await renderMarkdownToHTML(content);
     if (token !== previewRenderToken) {
         return;
@@ -539,6 +613,7 @@ export async function renderActiveTab() {
     
     if (state.isEditing) {
         el.editToolbar.classList.remove('hidden');
+        syncAIControls();
         el.editorView.classList.remove('hidden');
         el.mainContainer.classList.add('is-editing');
         el.btnEdit.classList.add('active');
@@ -547,6 +622,7 @@ export async function renderActiveTab() {
         el.selectEngine.disabled = true;
     } else {
         el.editToolbar.classList.add('hidden');
+        syncAIControls();
         el.editorView.classList.add('hidden');
         el.mainContainer.classList.remove('is-editing');
         el.btnEdit.classList.remove('active');
@@ -774,7 +850,7 @@ export function applyHTMLZoom() {
             return;
         }
 
-        const zoom = Math.max(0.625, state.currentFontSize / 16);
+        const zoom = Math.max(0.625, state.currentFontSize / DEFAULT_CONTENT_FONT_SIZE);
         doc.documentElement.style.zoom = String(zoom);
         if (doc.body) {
             doc.body.style.zoom = String(zoom);

@@ -5,6 +5,7 @@
 
 import './style.css';
 import 'katex/dist/katex.min.css';
+import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
 
 // ── Module Imports ─────────────────────────────────────────
 import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector } from './main-state.js';
@@ -19,7 +20,7 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -52,7 +53,7 @@ window.addEventListener('DOMContentLoaded', async () => {
     bindContextMenu();
     setupDragAndDrop();
     bindMenuEvents();
-    
+
     // AI Init
     window.aiState = await initAI();
     bindAIEvents();
@@ -61,10 +62,10 @@ window.addEventListener('DOMContentLoaded', async () => {
     const startupPaths = await FrontendReady();
     const hasStartupFiles = (startupPaths && startupPaths.length > 0);
     const initialPath = hasStartupFiles ? startupPaths[0] : HOME_SCREEN_PATH;
-    
-    const initialTab = createTab({ 
-        path: initialPath, 
-        title: hasStartupFiles ? 'Loading...' : 'Start' 
+
+    const initialTab = createTab({
+        path: initialPath,
+        title: hasStartupFiles ? 'Loading...' : 'Start'
     });
     state.tabs = [initialTab];
     state.activeTabId = initialTab.id;
@@ -81,9 +82,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         // No startup files, proceed to Home Screen
         await renderActiveTab();
     }
-    
+
     updateNavButtons();
-    
+
     document.addEventListener('copy', () => {
         showToast('Copied to clipboard.');
     });
@@ -93,7 +94,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
 async function loadSettings() {
     const s = await GetSettings();
-    state.currentFontSize = s.fontSize || 16;
+    state.currentFontSize = s.fontSize || DEFAULT_CONTENT_FONT_SIZE;
     state.currentMarkdownEngine = s.engine || "marked";
     state.currentEngine = state.currentMarkdownEngine;
     state.currentEditorRenderMode = s.editorRenderMode || "realtime";
@@ -121,8 +122,10 @@ async function persist() {
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
         editorRenderMode: state.currentEditorRenderMode,
+        aiFeaturesDisabled: state.aiFeaturesDisabled,
         aiGeneralEnabled: window.aiState?.generalAvailable ?? true,
         aiGeneralToolbarEnabled: window.aiState?.generalToolbarEnabled ?? true,
+        aiToolbarCollapsed: state.aiToolbarCollapsed,
         aiGeneralProvider: window.aiState?.generalProvider || "openai",
         aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
         aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
@@ -136,6 +139,7 @@ async function persist() {
         aiFimTemp: window.aiState?.fimTemp || 0,
         aiSelectionContext: state.aiSelectionContextEnabled,
         aiGithubCompatible: state.aiGithubCompatibleEnabled,
+        aiSupportAgent: state.aiSupportAgentEnabled,
         koreanImeEnterFix: state.koreanImeFixEnabled,
     });
 }
@@ -310,7 +314,7 @@ function bindMenuEvents() {
     EventsOn('menu:font-up', () => changeFontSize(2));
     EventsOn('menu:font-down', () => changeFontSize(-2));
     EventsOn('menu:font-reset', () => {
-        state.currentFontSize = 16;
+        state.currentFontSize = DEFAULT_CONTENT_FONT_SIZE;
         el.markdownContainer.style.fontSize = `${state.currentFontSize}px`;
         persist();
     });
@@ -337,21 +341,27 @@ async function handleGlobalKeydown(event) {
             event.code === 'Equal' ||
             event.code === 'NumpadAdd'
         );
-    
+    const isEditorFontResetShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && (event.key === '0' || event.code === 'Digit0' || event.code === 'Numpad0');
+
     // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)
-            && (['w', 's', 'e'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isEditorFontDownShortcut || isEditorFontUpShortcut);
+            && (['w', 's', 'e'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
         if (!isGlobalKey) {
             return;
         }
     }
 
-    if (isEditorFocused() && (isEditorFontDownShortcut || isEditorFontUpShortcut)) {
+    if (isEditorFocused() && (isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut)) {
         event.preventDefault();
-        changeEditorFontSize(isEditorFontDownShortcut ? -1 : 1);
+        if (isEditorFontResetShortcut) {
+            resetEditorFontSize();
+        } else {
+            changeEditorFontSize(isEditorFontDownShortcut ? -1 : 1);
+        }
         return;
     }
 

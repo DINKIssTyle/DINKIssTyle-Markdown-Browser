@@ -9,6 +9,7 @@ import { EventsOn } from '../wailsjs/runtime/runtime';
 import { cmView, insertPlainTextAtCursor } from './main-editor.js';
 import { showToast } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
+import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import { StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
 
@@ -54,8 +55,8 @@ let debounceTimer = null;
 let fimRequestSeq = 0;
 let latestAppliedFimSeq = 0;
 let lastFimContextKey = "";
-const FIM_PREFIX_LIMIT = 1200;
-const FIM_SUFFIX_LIMIT = 400;
+const FIM_PREFIX_LIMIT = 600;
+const FIM_SUFFIX_LIMIT = 200;
 let lmStudioModels = [];
 let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
@@ -63,16 +64,108 @@ let unloadingInstanceId = "";
 let aiRequestInFlight = false;
 let aiPromptHideTimer = null;
 let aiPromptBusyState = null;
+let supportAgentPromptText = "";
+let supportAgentTransitionTimer = null;
 let lastPromptInputValue = "";
+let aiDockHideTimer = null;
+let aiPanelHideTimer = null;
 const AI_PROMPT_BASE_WIDTH = 320;
-const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.5);
+const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.3);
 const AI_PROMPT_MAX_LINES = 3;
 const AI_PROMPT_DEFAULT_PLACEHOLDER = "Press / to Ask AI...";
 const AI_PROMPT_FOCUSED_PLACEHOLDER = "Ask AI ...";
-const AI_EDIT_CONTEXT_LIMIT = 700;
+const AI_EDIT_CONTEXT_LIMIT = 500;
+const GENERAL_TEMP_AUTO_LABEL = "Auto";
+const SUPPORT_AGENT_FALLBACK_REPORT = "Task finished, but the support report was missing or could not be parsed.";
+const AI_DOCK_FADE_MS = 180;
+const AI_EDIT_RULES = Object.freeze({
+    selectedTextOnly: 'You must edit ONLY the text inside <selected_text>.',
+    responseOnlyReplacement: 'Your entire response must be only the replacement for <selected_text>.',
+    noChangeKeepOriginal: 'If the instruction does not require a change, return the original <selected_text> unchanged.',
+    noExtras: 'Do not add explanations, code fences, labels, or quotes.',
+});
+
+const AI_CONTEXT_RULES = Object.freeze({
+    referenceOnlyOutput: 'The surrounding context is REFERENCE ONLY. Never rewrite it, never continue it, and never include it in the output.',
+    referenceOnlyReplacement: 'The surrounding context is REFERENCE ONLY. Never rewrite it, never continue it, and never include it in the replacement.',
+});
+
+const AI_SHARED_RULE_PROMPT_LINES = Object.freeze([
+]);
+
+const SUPPORT_AGENT_PROMPT_LINES = Object.freeze([
+    'Return your response using exactly these XML blocks in this order:',
+    '<support_report>short task review and summary for the user</support_report>',
+    '<replacement>replacement text only</replacement>',
+    'Write <support_report> In the language requested by the user within <instruction>.',
+    'Inside <support_report>, briefly explain what changed and mention anything the user should quickly review.',
+    'Inside <replacement>, return only the replacement text for <selected_text>.',
+    'Do not use code fences.',
+]);
+
+function isAIFeaturesDisabled() {
+    return !!state.aiFeaturesDisabled;
+}
+
+function isGeneralAIAvailable() {
+    return !isAIFeaturesDisabled() && !!window.aiState?.generalAvailable;
+}
+
+function isGeneralAIToolbarEnabled() {
+    return isGeneralAIAvailable() && !!window.aiState?.generalToolbarEnabled;
+}
+
+function isFIMAvailable() {
+    return !isAIFeaturesDisabled() && !!window.aiState?.fimAvailable;
+}
+
+function isFIMEnabled() {
+    return isFIMAvailable() && !!window.aiState?.fimEnabled;
+}
 
 function isGeneralAIActive() {
-    return !!window.aiState?.generalAvailable && !!window.aiState?.generalToolbarEnabled;
+    return isGeneralAIToolbarEnabled();
+}
+
+function clampTemperature(value) {
+    const numericValue = Number(value);
+    if (!Number.isFinite(numericValue)) return 0;
+    return Math.max(0, Math.min(1, Math.round(numericValue * 10) / 10));
+}
+
+function formatTemperatureLabel(value) {
+    const normalized = clampTemperature(value);
+    return normalized <= 0 ? GENERAL_TEMP_AUTO_LABEL : normalized.toFixed(1);
+}
+
+function syncGeneralTemperatureControl() {
+    if (!el.edGeneralTempSlider || !el.edGeneralTempValue || !el.aiGeneralTemp) return;
+
+    const generalAvailable = isGeneralAIAvailable();
+    const generalToolbarEnabled = isGeneralAIToolbarEnabled();
+    const nextTemp = clampTemperature(window.aiState?.generalTemp || 0);
+    const nextLabel = formatTemperatureLabel(nextTemp);
+
+    el.edGeneralTempSlider.value = String(nextTemp);
+    el.edGeneralTempSlider.disabled = !generalAvailable;
+    el.edGeneralTempValue.textContent = nextLabel;
+    el.edGeneralTempValue.disabled = !generalAvailable;
+    el.edGeneralTempValue.setAttribute(
+        'aria-label',
+        nextTemp <= 0 ? 'Set General AI temperature to Auto' : `General AI temperature ${nextLabel}`
+    );
+    el.edGeneralTempControl.classList.toggle('disabled', !generalAvailable);
+    el.edGeneralTempControl.classList.toggle('is-active', generalToolbarEnabled);
+    el.aiGeneralTemp.value = String(nextTemp);
+}
+
+async function setGeneralTemperature(value, { persist = true } = {}) {
+    const nextTemp = clampTemperature(value);
+    window.aiState.generalTemp = nextTemp;
+    syncGeneralTemperatureControl();
+    if (persist) {
+        await persistAISettings();
+    }
 }
 
 function getPromptBusyPlaceholder(label = "") {
@@ -84,25 +177,38 @@ function getPromptBusyPlaceholder(label = "") {
 
 function updatePromptBusyUI() {
     const isBusy = !!aiPromptBusyState;
+    const isSupportAgentVisible = !!supportAgentPromptText && !isBusy;
+    const promptValue = isBusy
+        ? (aiPromptBusyState.inputText || '')
+        : (isSupportAgentVisible ? supportAgentPromptText : lastPromptInputValue);
+
     el.aiPromptBox.classList.toggle('is-busy', isBusy);
+    el.aiPromptBox.classList.toggle('is-support-agent', isSupportAgentVisible);
     el.aiPromptBox.classList.toggle('is-cancelable', isBusy);
     el.aiPromptBox.classList.toggle('is-resetting-progress', !isBusy);
     el.aiPromptInput.disabled = isBusy;
-    el.aiPromptSend.disabled = isBusy;
-    el.aiPromptSend.classList.toggle('hidden', isBusy);
+    el.aiPromptInput.readOnly = isSupportAgentVisible;
+    el.aiPromptSend.disabled = isBusy || isSupportAgentVisible;
+    el.aiPromptSend.classList.toggle('hidden', isBusy || isSupportAgentVisible);
     el.aiPromptClose.title = isBusy ? 'Cancel AI Response' : 'Close AI Prompt';
     el.aiPromptClose.setAttribute('aria-label', isBusy ? 'Cancel AI Response' : 'Close AI Prompt');
+    if (el.aiPromptBadgeIcon) {
+        el.aiPromptBadgeIcon.textContent = isSupportAgentVisible ? 'support_agent' : 'wand_stars';
+    }
 
     if (isBusy) {
         el.aiPromptBox.style.setProperty('--ai-prompt-progress', `${aiPromptBusyState.progress}%`);
-        el.aiPromptInput.value = '';
+        el.aiPromptInput.value = promptValue;
         el.aiPromptInput.placeholder = aiPromptBusyState.placeholder;
     } else {
         el.aiPromptBox.style.setProperty('--ai-prompt-progress', '0%');
         el.aiPromptInput.disabled = false;
-        el.aiPromptSend.disabled = false;
-        el.aiPromptInput.value = lastPromptInputValue;
-        updatePromptPlaceholder();
+        el.aiPromptInput.value = promptValue;
+        if (isSupportAgentVisible) {
+            el.aiPromptInput.placeholder = '';
+        } else {
+            updatePromptPlaceholder();
+        }
     }
     updatePromptInputLayout();
 }
@@ -125,15 +231,72 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
         label,
         progress: nextProgress,
         placeholder: getPromptBusyPlaceholder(label),
+        inputText: aiPromptBusyState?.inputText || "",
     };
     positionPromptBox();
     showPromptBoxElement();
     updatePromptBusyUI();
 }
 
+function setPromptBusyInputText(value = "") {
+    if (!aiPromptBusyState) {
+        return;
+    }
+    aiPromptBusyState = {
+        ...aiPromptBusyState,
+        inputText: String(value || ""),
+    };
+    updatePromptBusyUI();
+}
+
 function clearPromptBusyState() {
     aiPromptBusyState = null;
     updatePromptBusyUI();
+}
+
+function isSupportAgentPromptVisible() {
+    return !!supportAgentPromptText;
+}
+
+function showSupportAgentPrompt(reportText) {
+    supportAgentPromptText = String(reportText || SUPPORT_AGENT_FALLBACK_REPORT);
+    positionPromptBox();
+    showPromptBoxElement();
+    if (el.aiPromptBox) {
+        el.aiPromptBox.classList.remove('is-transitioning-to-support');
+        if (supportAgentTransitionTimer) {
+            clearTimeout(supportAgentTransitionTimer);
+        }
+        requestAnimationFrame(() => {
+            el.aiPromptBox.classList.add('is-transitioning-to-support');
+            supportAgentTransitionTimer = setTimeout(() => {
+                el.aiPromptBox?.classList.remove('is-transitioning-to-support');
+                supportAgentTransitionTimer = null;
+            }, AI_SUPPORT_AGENT_POP_MS);
+        });
+    }
+    updatePromptBusyUI();
+}
+
+function applyAIPromptMotionConfig() {
+    if (!el.aiPromptBox) return;
+    el.aiPromptBox.style.setProperty('--ai-support-agent-pop-duration', `${AI_SUPPORT_AGENT_POP_MS}ms`);
+    el.aiPromptBox.style.setProperty('--ai-support-agent-pop-scale', String(AI_SUPPORT_AGENT_POP_SCALE));
+    el.aiPromptBox.style.setProperty('--ai-support-agent-pop-origin', AI_SUPPORT_AGENT_POP_ORIGIN);
+}
+
+function clearSupportAgentPrompt({ focusInput = false } = {}) {
+    if (!isSupportAgentPromptVisible()) return;
+    supportAgentPromptText = "";
+    updatePromptBusyUI();
+    if (focusInput) {
+        requestAnimationFrame(() => {
+            if (!el.aiPromptInput.disabled) {
+                el.aiPromptInput.focus();
+                updatePromptPlaceholder();
+            }
+        });
+    }
 }
 
 function hideAIProgressOverlay() {
@@ -210,69 +373,198 @@ function buildSelectionContext(docText, from, to) {
     };
 }
 
-function buildAIEditPrompt(docText, from, to, userPrompt) {
-    if (!state.aiSelectionContextEnabled) {
-        const selectedText = docText.slice(from, to);
-        return {
-            prompt: [
-                'You must edit ONLY the text inside <selected_text>.',
-                'Your entire response must be only the replacement for <selected_text>.',
-                'If the instruction does not require a change, return the original <selected_text> unchanged.',
-                'Do not add explanations, code fences, labels, or quotes.',
-                '',
-                '<selected_text>',
-                selectedText,
-                '</selected_text>',
-                '',
-                `<instruction>${userPrompt}</instruction>`,
-            ].join('\n'),
-        };
-    }
+function buildPromptSection(tagName, content) {
+    return [
+        `<${tagName}>`,
+        content || '(empty)',
+        `</${tagName}>`,
+    ];
+}
 
-    const { selectedText, beforeContext, afterContext } = buildSelectionContext(docText, from, to);
+function buildMarkdownSection(title, lines) {
+    if (!lines?.length) return [];
+    return [
+        `## ${title}`,
+        ...lines.map(line => `- ${line}`),
+    ];
+}
 
-    const sections = [
-        'You must edit ONLY the text inside <selected_text>.',
-        'The surrounding context is REFERENCE ONLY. Never rewrite it, never continue it, and never include it in the output.',
-        'Your entire response must be only the replacement for <selected_text>.',
-        'If the instruction does not require a change, return the original <selected_text> unchanged.',
-        'Do not add explanations, code fences, labels, or quotes.',
-        '',
-        '<before_context>',
-        beforeContext || '(empty)',
-        '</before_context>',
-        '',
-        '<selected_text>',
-        selectedText,
-        '</selected_text>',
-        '',
-        '<after_context>',
-        afterContext || '(empty)',
-        '</after_context>',
-        '',
+function buildTaggedDataSection(title, tagName, content) {
+    return [
+        `## ${title}`,
+        ...buildPromptSection(tagName, content),
+    ];
+}
+
+function buildInstructionSection(userPrompt) {
+    return [
+        '## Instruction',
         `<instruction>${userPrompt}</instruction>`,
     ];
+}
+
+function getSharedRulePromptLines() {
+    return AI_SHARED_RULE_PROMPT_LINES.length
+        ? [
+            'Apply these shared formatting rules to every edit.',
+            ...AI_SHARED_RULE_PROMPT_LINES,
+        ]
+        : [];
+}
+
+function getStandardEditInstructionLines({ includeContext }) {
+    return [
+        AI_EDIT_RULES.selectedTextOnly,
+        ...(includeContext ? [AI_CONTEXT_RULES.referenceOnlyOutput] : []),
+        ...getSharedRulePromptLines(),
+        AI_EDIT_RULES.responseOnlyReplacement,
+        AI_EDIT_RULES.noChangeKeepOriginal,
+        AI_EDIT_RULES.noExtras,
+    ];
+}
+
+function joinPromptSections(...sections) {
+    return sections
+        .filter(section => Array.isArray(section) && section.length > 0)
+        .map(section => section.join('\n'))
+        .join('\n\n');
+}
+
+function buildEditPromptSections({ selectedText, beforeContext, afterContext, instructionLines, includeContext, userPrompt }) {
+    const sections = [buildMarkdownSection('Rules', instructionLines)];
+
+    if (includeContext) {
+        sections.push(buildTaggedDataSection('Before Context', 'before_context', beforeContext));
+    }
+
+    sections.push(buildTaggedDataSection('Selected Text', 'selected_text', selectedText));
+
+    if (includeContext) {
+        sections.push(buildTaggedDataSection('After Context', 'after_context', afterContext));
+    }
+
+    sections.push(buildInstructionSection(userPrompt));
+
+    return sections;
+}
+
+function buildAIEditPrompt(docText, from, to, userPrompt) {
+    const includeContext = !!state.aiSelectionContextEnabled;
+    const context = includeContext
+        ? buildSelectionContext(docText, from, to)
+        : { selectedText: docText.slice(from, to) };
 
     return {
-        prompt: sections.join('\n'),
+        prompt: joinPromptSections(...buildEditPromptSections({
+            ...context,
+            instructionLines: getStandardEditInstructionLines({ includeContext }),
+            includeContext,
+            userPrompt,
+        })),
     };
 }
 
 function getAIEditSystemPrompt() {
     const baseIdentity = 'You are an AI Markdown editor assistant.';
-    const githubCompatibilityInstruction = state.aiGithubCompatibleEnabled
-        ? 'Write only GitHub-compatible Markdown and code.'
-        : '';
     const contextInstruction = state.aiSelectionContextEnabled
         ? 'Edit only <selected_text>. <before_context> and <after_context> are reference only.'
         : 'Edit only <selected_text>.';
-
-    return [
+    const capabilityLines = [
         baseIdentity,
-        githubCompatibilityInstruction,
+        ...(state.aiGithubCompatibleEnabled ? [
+            'When content is wrapped in <div> tags, convert Markdown image syntax (e.g., ![alt](image.png)) into standard HTML <img> tags.',
+            'Remove all font-related HTML tags and inline styles (e.g., <font>, style="font-family:...", style="font-size:...") to ensure clean, GitHub-compatible rendering.',
+        ] : []),
         contextInstruction,
-        'Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.',
-    ].filter(Boolean).join(' ');
+    ];
+    const responseLines = state.aiSupportAgentEnabled
+        ? ['Return exactly two XML blocks in this order: <support_report>...</support_report><replacement>...</replacement>. The replacement must contain only the replacement text for <selected_text>.']
+        : ['Return only the replacement text for <selected_text>, with no wrappers, explanations, labels, or repeated context.'];
+
+    return joinPromptSections(
+        buildMarkdownSection('Role', capabilityLines),
+        buildMarkdownSection('Shared Rules', AI_SHARED_RULE_PROMPT_LINES),
+        buildMarkdownSection('Response Format', responseLines),
+    );
+}
+
+function buildSupportAgentEditPrompt(docText, from, to, userPrompt) {
+    const { selectedText, beforeContext, afterContext } = buildSelectionContext(docText, from, to);
+    return {
+        prompt: joinPromptSections(...buildEditPromptSections({
+            selectedText,
+            beforeContext,
+            afterContext,
+            includeContext: true,
+            userPrompt,
+            instructionLines: [
+                AI_EDIT_RULES.selectedTextOnly,
+                AI_CONTEXT_RULES.referenceOnlyReplacement,
+                ...getSharedRulePromptLines(),
+                ...SUPPORT_AGENT_PROMPT_LINES,
+            ],
+        })),
+    };
+}
+
+function extractSupportAgentPayload(rawText) {
+    const source = String(rawText || '');
+    const reportMatch = source.match(/<support_report>([\s\S]*?)<\/support_report>/i);
+    const replacementMatch = source.match(/<replacement>([\s\S]*?)<\/replacement>/i);
+    const report = reportMatch ? reportMatch[1].trim() : '';
+    let replacement = replacementMatch ? replacementMatch[1] : '';
+
+    if (!replacementMatch) {
+        replacement = source
+            .replace(/<support_report>[\s\S]*?<\/support_report>/gi, '')
+            .replace(/<\/?replacement>/gi, '')
+            .trim();
+    }
+
+    replacement = replacement.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '');
+
+    return {
+        report: report || SUPPORT_AGENT_FALLBACK_REPORT,
+        replacement,
+    };
+}
+
+function showAIDock() {
+    clearTimeout(aiDockHideTimer);
+    el.editorAiDock.classList.remove('hidden', 'is-hiding');
+    requestAnimationFrame(() => {
+        el.editorAiDock.classList.add('is-visible');
+    });
+}
+
+function hideAIDock() {
+    if (el.editorAiDock.classList.contains('hidden')) return;
+    clearTimeout(aiDockHideTimer);
+    el.editorAiDock.classList.remove('is-visible');
+    el.editorAiDock.classList.add('is-hiding');
+    aiDockHideTimer = setTimeout(() => {
+        el.editorAiDock.classList.remove('is-hiding');
+        el.editorAiDock.classList.add('hidden');
+    }, AI_DOCK_FADE_MS);
+}
+
+function showAIPanel() {
+    clearTimeout(aiPanelHideTimer);
+    el.editorAiPanel.classList.remove('hidden', 'is-hiding');
+    requestAnimationFrame(() => {
+        el.editorAiPanel.classList.add('is-visible');
+    });
+}
+
+function hideAIPanel() {
+    if (el.editorAiPanel.classList.contains('hidden')) return;
+    clearTimeout(aiPanelHideTimer);
+    el.editorAiPanel.classList.remove('is-visible');
+    el.editorAiPanel.classList.add('is-hiding');
+    aiPanelHideTimer = setTimeout(() => {
+        el.editorAiPanel.classList.remove('is-hiding');
+        el.editorAiPanel.classList.add('hidden');
+    }, AI_DOCK_FADE_MS);
 }
 
 function updatePromptInputLayout() {
@@ -335,6 +627,9 @@ function showPromptBoxForSelection({ focusInput = false, preserveInput = true } 
     if (!getEditorSelection()) return false;
 
     positionPromptBox();
+    if (focusInput) {
+        clearSupportAgentPrompt();
+    }
     if (!preserveInput) {
         el.aiPromptInput.value = "";
         lastPromptInputValue = "";
@@ -378,8 +673,10 @@ async function persistAISettings() {
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
         editorRenderMode: state.currentEditorRenderMode,
+        aiFeaturesDisabled: state.aiFeaturesDisabled,
         aiGeneralEnabled: window.aiState.generalAvailable,
         aiGeneralToolbarEnabled: window.aiState.generalToolbarEnabled,
+        aiToolbarCollapsed: state.aiToolbarCollapsed,
         aiGeneralProvider: window.aiState.generalProvider,
         aiGeneralEndpoint: window.aiState.generalEndpoint,
         aiGeneralModel: window.aiState.generalModel,
@@ -391,14 +688,17 @@ async function persistAISettings() {
         aiFimModel: window.aiState.fimModel,
         aiFimKey: window.aiState.fimKey,
         aiFimTemp: window.aiState.fimTemp,
-        aiSelectionContext: el.aiSelectionContext.checked,
+        aiSelectionContext: state.aiSelectionContextEnabled,
         aiGithubCompatible: state.aiGithubCompatibleEnabled,
+        aiSupportAgent: state.aiSupportAgentEnabled,
         koreanImeEnterFix: el.aiToggleImeFix.checked,
     });
 }
 
 export async function initAI() {
+    applyAIPromptMotionConfig();
     const s = await GetSettings();
+    state.aiFeaturesDisabled = s.aiFeaturesDisabled || false;
     const aiState = {
         generalAvailable: s.aiGeneralEnabled !== false,
         generalToolbarEnabled: s.aiGeneralToolbarEnabled !== false,
@@ -406,7 +706,7 @@ export async function initAI() {
         generalEndpoint: s.aiGeneralEndpoint || "",
         generalModel: s.aiGeneralModel || "gemma-4-e4b-it",
         generalKey: s.aiGeneralKey || "",
-        generalTemp: s.aiGeneralTemp || 0,
+        generalTemp: clampTemperature(s.aiGeneralTemp || 0),
         fimAvailable: s.aiFimEnabled !== false,
         fimEndpoint: s.aiFimEndpoint || "",
         fimModel: s.aiFimModel || "qwen2.5-coder-0.5b-instruct-mlx",
@@ -418,31 +718,27 @@ export async function initAI() {
     };
 
     // UI Load
-    el.aiGeneralEnabled.checked = aiState.generalAvailable;
+    el.aiFeaturesDisabled.checked = state.aiFeaturesDisabled;
     el.aiGeneralProvider.value = aiState.generalProvider;
     el.aiGeneralEndpoint.value = aiState.generalEndpoint;
     el.aiGeneralModel.value = aiState.generalModel;
     el.aiGeneralKey.value = aiState.generalKey;
-    el.aiGeneralTemp.value = aiState.generalTemp;
-    el.aiFimEnabled.checked = aiState.fimAvailable;
+    el.aiGeneralTemp.value = String(aiState.generalTemp);
     el.aiFimEndpoint.value = aiState.fimEndpoint;
     el.aiFimModel.value = aiState.fimModel;
     el.aiFimKey.value = aiState.fimKey;
     el.aiFimTemp.value = aiState.fimTemp;
-    el.aiSelectionContext.checked = s.aiSelectionContext || false;
-    state.aiSelectionContextEnabled = el.aiSelectionContext.checked;
+    state.aiSelectionContextEnabled = s.aiSelectionContext || false;
     state.aiGithubCompatibleEnabled = s.aiGithubCompatible || false;
+    state.aiSupportAgentEnabled = s.aiSupportAgent || false;
+    state.aiToolbarCollapsed = s.aiToolbarCollapsed === true;
     el.aiToggleImeFix.checked = s.koreanImeEnterFix || false;
     state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
-    if (!aiState.generalAvailable) {
-        aiState.generalToolbarEnabled = false;
-    }
-    if (!aiState.fimAvailable) {
-        aiState.fimEnabled = false;
-    }
+    aiState.fimEnabled = s.aiFimToolbarEnabled === true;
     window.aiState = aiState;
     syncAISettingsSections();
     syncAIControls();
+    syncGeneralTemperatureControl();
     syncGeneralModelControl();
     updateGeneralModelTrigger();
 
@@ -450,8 +746,7 @@ export async function initAI() {
 }
 
 export function bindAIEvents() {
-    el.aiGeneralEnabled.addEventListener('change', syncAISettingsSections);
-    el.aiFimEnabled.addEventListener('change', syncAISettingsSections);
+    el.aiFeaturesDisabled.addEventListener('change', syncAISettingsSections);
     el.aiGeneralProvider.addEventListener('change', handleGeneralProviderChange);
     el.aiGeneralEndpoint.addEventListener('change', handleGeneralEndpointChange);
     el.aiGeneralEndpoint.addEventListener('blur', handleGeneralEndpointChange);
@@ -459,6 +754,21 @@ export function bindAIEvents() {
     el.aiGeneralKey.addEventListener('blur', handleGeneralEndpointChange);
     el.aiGeneralModelTrigger.addEventListener('click', handleGeneralModelTriggerClick);
     el.aiGeneralModelList.addEventListener('click', handleGeneralModelListClick);
+    el.edGeneralTempSlider.addEventListener('input', event => {
+        void setGeneralTemperature(event.target.value, { persist: false });
+    });
+    el.edGeneralTempSlider.addEventListener('change', event => {
+        void setGeneralTemperature(event.target.value);
+    });
+    el.edGeneralTempValue.addEventListener('click', () => {
+        void setGeneralTemperature(0);
+    });
+    el.edAiToolbarToggle.addEventListener('click', () => {
+        if (!isGeneralAIToolbarEnabled()) return;
+        state.aiToolbarCollapsed = !state.aiToolbarCollapsed;
+        syncAIControls();
+        void persistAISettings();
+    });
     document.addEventListener('click', handleDocumentClickForModelPopover);
     document.addEventListener('keydown', handleDocumentKeydownForModelPopover);
 
@@ -476,29 +786,24 @@ export function bindAIEvents() {
         el.aiSettingsModal.classList.add('hidden');
     };
     el.aiSettingsSave.onclick = async () => {
-        window.aiState.generalAvailable = el.aiGeneralEnabled.checked;
+        state.aiFeaturesDisabled = el.aiFeaturesDisabled.checked;
+        if (state.aiFeaturesDisabled && aiRequestInFlight) {
+            await cancelActiveAIRequest();
+        }
         window.aiState.generalProvider = el.aiGeneralProvider.value;
         window.aiState.generalEndpoint = el.aiGeneralEndpoint.value;
         window.aiState.generalModel = el.aiGeneralModel.value || "gemma-4-e4b-it";
         window.aiState.generalKey = el.aiGeneralKey.value;
-        window.aiState.generalTemp = parseFloat(el.aiGeneralTemp.value) || 0;
-        window.aiState.fimAvailable = el.aiFimEnabled.checked;
+        window.aiState.generalTemp = clampTemperature(el.aiGeneralTemp.value);
         window.aiState.fimEndpoint = el.aiFimEndpoint.value;
         window.aiState.fimModel = el.aiFimModel.value || "qwen2.5-coder-0.5b-instruct-mlx";
         window.aiState.fimKey = el.aiFimKey.value;
         window.aiState.fimTemp = parseFloat(el.aiFimTemp.value) || 0;
-        if (!window.aiState.generalAvailable) {
-            window.aiState.generalToolbarEnabled = false;
-        }
-        if (!window.aiState.fimAvailable) {
-            window.aiState.fimEnabled = false;
-        }
-
-        state.aiSelectionContextEnabled = el.aiSelectionContext.checked;
         await persistAISettings();
 
         state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
         syncAIControls();
+        syncGeneralTemperatureControl();
 
         closeGeneralModelPopover();
         el.aiSettingsModal.classList.add('hidden');
@@ -508,7 +813,7 @@ export function bindAIEvents() {
     // AI Progress Events from Go
     EventsOn('ai:progress', (data) => {
         const isCompleted = data.completed === true;
-        const progress = data.loading ? 0 : Math.round(data.progress || 0);
+        const progress = Math.round(data.progress || 0);
 
         if (!isCompleted) {
             showPromptBusyState({
@@ -523,12 +828,18 @@ export function bindAIEvents() {
         }
     });
 
+    EventsOn('ai:reasoning', () => {
+        if (!aiRequestInFlight && !aiPromptBusyState) {
+            return;
+        }
+        setPromptBusyInputText('Thinking...');
+    });
+
     // FIM Toggle
     el.edGeneralAi.onclick = async () => {
-        if (!window.aiState.generalAvailable) {
-            window.aiState.generalToolbarEnabled = false;
+        if (!isGeneralAIAvailable()) {
             syncAIControls();
-            showToast("General AI is disabled in AI Settings.");
+            showToast(isAIFeaturesDisabled() ? "AI features are disabled in Advanced Options." : "General AI is disabled in AI Settings.");
             return;
         }
         window.aiState.generalToolbarEnabled = !window.aiState.generalToolbarEnabled;
@@ -538,10 +849,9 @@ export function bindAIEvents() {
     };
 
     el.edFim.onclick = async () => {
-        if (!window.aiState.fimAvailable) {
-            window.aiState.fimEnabled = false;
+        if (!isFIMAvailable()) {
             syncAIControls();
-            showToast("FIM is disabled in AI Settings.");
+            showToast(isAIFeaturesDisabled() ? "AI features are disabled in Advanced Options." : "FIM is disabled in AI Settings.");
             return;
         }
         window.aiState.fimEnabled = !window.aiState.fimEnabled;
@@ -550,11 +860,31 @@ export function bindAIEvents() {
         showToast(window.aiState.fimEnabled ? "AI FIM Enabled" : "AI FIM Disabled");
     };
 
+    el.edContextPlus.onclick = async () => {
+        if (isAIFeaturesDisabled()) return;
+        state.aiSelectionContextEnabled = !state.aiSelectionContextEnabled;
+        syncAIControls();
+        await persistAISettings();
+        showToast(state.aiSelectionContextEnabled ? "Context+ Enabled" : "Context+ Disabled");
+    };
+
     el.edGithubCompatible.onclick = async () => {
+        if (isAIFeaturesDisabled()) return;
         state.aiGithubCompatibleEnabled = !state.aiGithubCompatibleEnabled;
         syncAIControls();
         await persistAISettings();
         showToast(state.aiGithubCompatibleEnabled ? "GitHub Compatible AI Edits Enabled" : "GitHub Compatible AI Edits Disabled");
+    };
+
+    el.edSupportAgent.onclick = async () => {
+        if (isAIFeaturesDisabled()) return;
+        state.aiSupportAgentEnabled = !state.aiSupportAgentEnabled;
+        if (!state.aiSupportAgentEnabled) {
+            clearSupportAgentPrompt();
+        }
+        syncAIControls();
+        await persistAISettings();
+        showToast(state.aiSupportAgentEnabled ? "Support Agent Enabled" : "Support Agent Disabled");
     };
 
     el.aiPromptClose.onclick = () => {
@@ -566,16 +896,35 @@ export function bindAIEvents() {
     };
     el.aiPromptSend.onclick = sendPrompt;
     el.aiPromptInput.addEventListener('input', () => {
+        if (isSupportAgentPromptVisible()) return;
         lastPromptInputValue = el.aiPromptInput.value;
         updatePromptInputLayout();
     });
+    el.aiPromptInput.addEventListener('mousedown', (e) => {
+        if (!isSupportAgentPromptVisible()) return;
+        e.preventDefault();
+        e.stopPropagation();
+        clearSupportAgentPrompt({ focusInput: true });
+    });
     el.aiPromptInput.addEventListener('focus', () => {
+        if (isSupportAgentPromptVisible()) {
+            clearSupportAgentPrompt({ focusInput: true });
+            return;
+        }
         updatePromptPlaceholder();
     });
     el.aiPromptInput.addEventListener('blur', () => {
         updatePromptPlaceholder();
     });
     el.aiPromptInput.addEventListener('keydown', (e) => {
+        if (isSupportAgentPromptVisible()) {
+            if (e.key === 'Escape') {
+                e.preventDefault();
+                e.stopPropagation();
+                hidePromptBox();
+            }
+            return;
+        }
         if (e.key === 'Enter' && !e.shiftKey) {
             e.preventDefault();
             e.stopPropagation();
@@ -602,7 +951,7 @@ function handleEditorInput() {
     if (!isAIProgressVisible() && isPromptBoxVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
     }
-    if (!cmView || !window.aiState.fimAvailable || !window.aiState.fimEnabled || !window.aiState.fimEndpoint) return;
+    if (!cmView || !isFIMEnabled() || !window.aiState.fimEndpoint) return;
     if (cmView.composing) return;
     if (!cmView.state.selection.main.empty) return;
 
@@ -671,6 +1020,12 @@ export function showPromptBoxAtSelection() {
 
 function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
     if (isAIProgressVisible()) return;
+    clearSupportAgentPrompt();
+    if (supportAgentTransitionTimer) {
+        clearTimeout(supportAgentTransitionTimer);
+        supportAgentTransitionTimer = null;
+    }
+    el.aiPromptBox?.classList.remove('is-transitioning-to-support');
     hidePromptBoxElement();
     if (clearInput) {
         el.aiPromptInput.value = "";
@@ -696,7 +1051,7 @@ function clearGhostText() {
 }
 
 async function requestFIM() {
-    if (!cmView || !window.aiState.fimAvailable || !window.aiState.fimEnabled) return;
+    if (!cmView || !isFIMEnabled()) return;
     if (cmView.composing) return;
 
     const selection = cmView.state.selection.main;
@@ -735,7 +1090,7 @@ async function requestFIM() {
 
         const responseJson = await MakeAIRequest(`${endpoint}/v1/completions`, headers, JSON.stringify(payload));
         if (requestSeq < fimRequestSeq) return;
-        if (!cmView || cmView.composing) return;
+        if (!cmView || cmView.composing || !isFIMEnabled()) return;
 
         const currentSelection = cmView.state.selection.main;
         if (!currentSelection.empty) return;
@@ -792,7 +1147,10 @@ function sanitizeGhostText(text, suffix = "") {
 async function sendPrompt() {
     if (!isGeneralAIActive()) {
         hidePromptBox();
-        showToast("General AI is disabled in AI Settings.");
+        showToast(isAIFeaturesDisabled() ? "AI features are disabled in Advanced Options." : "General AI is disabled in AI Settings.");
+        return;
+    }
+    if (isSupportAgentPromptVisible()) {
         return;
     }
 
@@ -804,20 +1162,24 @@ async function sendPrompt() {
     if (sel.empty) return;
     const isAllSelected = sel.from === 0 && sel.to === cmView.state.doc.length;
     const docText = cmView.state.doc.toString();
-    const { prompt: contextualPrompt } = buildAIEditPrompt(docText, sel.from, sel.to, userPrompt);
+    const { prompt: contextualPrompt } = state.aiSupportAgentEnabled
+        ? buildSupportAgentEditPrompt(docText, sel.from, sel.to, userPrompt)
+        : buildAIEditPrompt(docText, sel.from, sel.to, userPrompt);
     const systemPrompt = getAIEditSystemPrompt();
+    if (state.aiSupportAgentEnabled) {
+        clearSupportAgentPrompt();
+    }
 
     // Hide prompt box immediately so user can see the editor
     showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
 
     aiRequestInFlight = true;
-    showToast("AI Processing...");
-
     let endpoint = window.aiState.generalEndpoint.trim();
     if (!endpoint.startsWith("http")) endpoint = `http://${endpoint}`;
 
     try {
         let resultText = "";
+        let supportReport = "";
 
         if (window.aiState.generalProvider === "lmstudio") {
             // LM Studio Native logic: baseUrl/api/v1/chat
@@ -861,8 +1223,18 @@ async function sendPrompt() {
             resultText = data.choices[0].message.content;
         }
 
-        // Remove wrap codeblocks
-        resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
+        if (!isGeneralAIActive()) {
+            hideAIProgressOverlay();
+            return;
+        }
+
+        if (state.aiSupportAgentEnabled) {
+            const payload = extractSupportAgentPayload(resultText);
+            resultText = payload.replacement || docText.slice(sel.from, sel.to);
+            supportReport = payload.report;
+        } else {
+            resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
+        }
 
         cmView.dispatch({
             changes: { from: sel.from, to: sel.to, insert: resultText },
@@ -872,11 +1244,13 @@ async function sendPrompt() {
         });
 
         renderMarkdown(cmView.state.doc.toString());
+        if (state.aiSupportAgentEnabled) {
+            showSupportAgentPrompt(supportReport);
+        }
         requestAnimationFrame(() => {
             cmView?.focus();
         });
         aiRequestInFlight = false;
-        showToast("AI Edit Applied! ✨");
     } catch (err) {
         aiRequestInFlight = false;
         console.error("AI prompt error", err);
@@ -891,39 +1265,59 @@ async function sendPrompt() {
     }
 }
 
-function syncAIControls() {
-    const generalAvailable = !!window.aiState?.generalAvailable;
-    const generalToolbarEnabled = !!window.aiState?.generalToolbarEnabled && generalAvailable;
-    const fimAvailable = !!window.aiState?.fimAvailable;
+export function syncAIControls() {
+    const generalAvailable = isGeneralAIAvailable();
+    const generalToolbarEnabled = isGeneralAIToolbarEnabled();
+    const toolbarCollapsed = generalToolbarEnabled && !!state.aiToolbarCollapsed;
+    const fimAvailable = isFIMAvailable();
     const generalDisabledMessage = "General AI is disabled in AI Settings.";
     const fimDisabledMessage = "FIM is disabled in AI Settings.";
+    const aiDisabledMessage = "AI features are disabled in Advanced Options.";
 
-    if (!fimAvailable) {
-        window.aiState.fimEnabled = false;
+    if (!isFIMEnabled()) {
         clearGhostText();
     }
-    if (!generalAvailable) {
-        window.aiState.generalToolbarEnabled = false;
+    const showAiDock = state.isEditing && generalAvailable;
+    if (showAiDock) {
+        showAIDock();
+    } else {
+        hideAIDock();
     }
+    el.editorAiDock.classList.toggle('is-expanded', generalToolbarEnabled);
+    el.editorAiDock.classList.toggle('is-collapsed', showAiDock && !generalToolbarEnabled);
+    el.editorAiDock.classList.toggle('is-toolbar-collapsed', toolbarCollapsed);
+    if (showAiDock && generalToolbarEnabled && !toolbarCollapsed) {
+        showAIPanel();
+    } else {
+        hideAIPanel();
+    }
+    el.edAiToolbarToggle.classList.toggle('hidden', !generalToolbarEnabled);
+    el.edGeneralTempControl.classList.toggle('hidden', !generalToolbarEnabled);
+    el.edFimGroup.classList.toggle('hidden', !generalToolbarEnabled || !fimAvailable);
+    el.edContextPlusGroup.classList.toggle('hidden', !generalToolbarEnabled);
+    el.edGithubCompatibleGroup.classList.toggle('hidden', !generalToolbarEnabled);
+    el.edSupportAgentGroup.classList.toggle('hidden', !generalToolbarEnabled);
+    el.edAiToolbarToggle.title = toolbarCollapsed ? "Show AI Toolbar" : "Hide AI Toolbar";
+    el.edAiToolbarToggle.setAttribute('aria-label', toolbarCollapsed ? "Show AI Toolbar" : "Hide AI Toolbar");
 
     el.edGeneralAi.classList.toggle('active-ai', generalToolbarEnabled);
     el.edGeneralAi.classList.toggle('disabled', !generalAvailable);
     el.edGeneralAi.setAttribute('aria-disabled', String(!generalAvailable));
-    el.edGeneralAi.title = generalAvailable ? "Toggle General AI" : generalDisabledMessage;
+    el.edGeneralAi.title = generalAvailable ? "Toggle General AI" : (isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
     if (generalAvailable) {
         el.edGeneralAi.removeAttribute('data-tooltip');
     } else {
-        el.edGeneralAi.setAttribute('data-tooltip', generalDisabledMessage);
+        el.edGeneralAi.setAttribute('data-tooltip', isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
     }
 
-    el.edFim.classList.toggle('active-fim', !!window.aiState?.fimEnabled && fimAvailable);
+    el.edFim.classList.toggle('active-fim', isFIMEnabled());
     el.edFim.classList.toggle('disabled', !fimAvailable);
     el.edFim.setAttribute('aria-disabled', String(!fimAvailable));
-    el.edFim.title = fimAvailable ? "Toggle FIM (AI Autocomplete)" : fimDisabledMessage;
+    el.edFim.title = fimAvailable ? "Toggle FIM (AI Autocomplete)" : (isAIFeaturesDisabled() ? aiDisabledMessage : fimDisabledMessage);
     if (fimAvailable) {
         el.edFim.removeAttribute('data-tooltip');
     } else {
-        el.edFim.setAttribute('data-tooltip', fimDisabledMessage);
+        el.edFim.setAttribute('data-tooltip', isAIFeaturesDisabled() ? aiDisabledMessage : fimDisabledMessage);
     }
 
     el.edGithubCompatible.classList.toggle('active-github-compatible', !!state.aiGithubCompatibleEnabled);
@@ -931,28 +1325,78 @@ function syncAIControls() {
         ? "Disable GitHub Compatible AI Edits"
         : "Enable GitHub Compatible AI Edits";
 
+    el.edSupportAgent.classList.toggle('active-ai', !!state.aiSupportAgentEnabled);
+    el.edSupportAgent.classList.toggle('disabled', !generalAvailable);
+    el.edSupportAgent.setAttribute('aria-disabled', String(!generalAvailable));
+    el.edSupportAgent.title = generalAvailable
+        ? (state.aiSupportAgentEnabled ? "Disable Support Agent" : "Enable Support Agent")
+        : (isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
+    if (generalAvailable) {
+        el.edSupportAgent.removeAttribute('data-tooltip');
+    } else {
+        el.edSupportAgent.setAttribute('data-tooltip', isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
+    }
+
+    el.edContextPlus.classList.toggle('active-ai', !!state.aiSelectionContextEnabled && generalAvailable);
+    el.edContextPlus.classList.toggle('disabled', !generalAvailable);
+    el.edContextPlus.setAttribute('aria-disabled', String(!generalAvailable));
+    el.edContextPlus.title = generalAvailable
+        ? (state.aiSelectionContextEnabled
+            ? "Disable surrounding context for AI edits"
+            : "Enable surrounding context for AI edits")
+        : (isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
+    if (generalAvailable) {
+        el.edContextPlus.removeAttribute('data-tooltip');
+    } else {
+        el.edContextPlus.setAttribute('data-tooltip', isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
+    }
+    syncGeneralTemperatureControl();
+
     if (!generalToolbarEnabled) {
         if (!el.aiPromptBox.classList.contains('hidden')) {
             hidePromptBox({ restoreEditorFocus: false });
         }
     }
+    if (isAIFeaturesDisabled()) {
+        hidePromptBox({ restoreEditorFocus: false });
+    }
+    if (!state.aiSupportAgentEnabled) {
+        clearSupportAgentPrompt();
+    }
+    if (isAIFeaturesDisabled()) {
+        clearSupportAgentPrompt();
+    }
 }
 
 function syncAISettingsSections() {
-    setSectionInputsEnabled('ai-general-enabled', [
+    const aiDisabled = el.aiFeaturesDisabled.checked;
+
+    const lockedControls = [
         el.aiGeneralProvider,
         el.aiGeneralEndpoint,
         el.aiGeneralModel,
         el.aiGeneralModelTrigger,
         el.aiGeneralKey,
         el.aiGeneralTemp,
-    ]);
-    setSectionInputsEnabled('ai-fim-enabled', [
         el.aiFimEndpoint,
         el.aiFimModel,
         el.aiFimKey,
         el.aiFimTemp,
-    ]);
+    ];
+
+    for (const control of lockedControls) {
+        if (control) {
+            control.disabled = aiDisabled || control.disabled;
+        }
+    }
+
+    document.querySelectorAll('.ai-settings-panels .ai-setting-group').forEach((group) => {
+        group.classList.toggle('is-locked', aiDisabled);
+    });
+    document.querySelectorAll('.ai-setting-group-editor .ai-setting-option').forEach((option) => {
+        const containsUnlockedControl = option.contains(el.aiFeaturesDisabled) || option.contains(el.aiToggleImeFix);
+        option.classList.toggle('is-locked', aiDisabled && !containsUnlockedControl);
+    });
 }
 
 function handleGeneralProviderChange() {
@@ -1058,15 +1502,6 @@ function escapeHTMLAttr(value) {
         .replace(/"/g, '&quot;')
         .replace(/</g, '&lt;')
         .replace(/>/g, '&gt;');
-}
-
-function setSectionInputsEnabled(toggleId, controls) {
-    const enabled = document.getElementById(toggleId)?.checked ?? true;
-    for (const control of controls) {
-        if (control) {
-            control.disabled = !enabled;
-        }
-    }
 }
 
 function getGeneralAIHeaders() {

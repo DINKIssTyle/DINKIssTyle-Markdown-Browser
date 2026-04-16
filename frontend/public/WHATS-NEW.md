@@ -134,7 +134,13 @@ Proposal Writing    :after a1, 20d
 
 
 ## 2.0 Beta5
-* Added GitHub compatibility mode: When enabled, it prompts the LLM to respond only with GitHub-compatible code.
+### AI Feature Improvements
+* **Introduction of AI-specific toolbar:** With enhanced AI features, an AI-dedicated toolbar has been added at the bottom, making it easier to change Temperature and improving access to various AI functions.
+* **Added GitHub compatibility mode**: When enabled, it prompts the LLM to respond only with GitHub-compatible code.
+* **Talk to Me**: When this feature is enabled, AI leaves brief comments after the task.
+
+### Bug Fixes & Polish
+* **Stability Enhancement**: Fixed an issue where the preview scroll position was not being safely maintained during re-rendering in realtime rendering states.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

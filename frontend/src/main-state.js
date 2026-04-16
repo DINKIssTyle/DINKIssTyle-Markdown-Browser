@@ -3,6 +3,8 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
+
 // ── Constants ──────────────────────────────────────────────
 export const HOME_SCREEN_PATH = '__home__';
 export const ABOUT_PATH = '/ABOUT.md';
@@ -92,11 +94,23 @@ export const el = {
     btnNewDoc: $('btn-new-doc'),
     edDiv: $('ed-div'),
     edGeneralAi: $('ed-general-ai'),
+    editorAiDock: $('editor-ai-dock'),
+    editorAiPanel: $('editor-ai-panel'),
+    edAiToolbarToggle: $('ed-ai-toolbar-toggle'),
+    edGeneralTempControl: $('ed-general-temp-control'),
+    edGeneralTempSlider: $('ed-general-temp-slider'),
+    edGeneralTempValue: $('ed-general-temp-value'),
     edFim: $('ed-fim'),
+    edFimGroup: $('ed-fim-group'),
+    edContextPlus: $('ed-context-plus'),
+    edContextPlusGroup: $('ed-context-plus-group'),
     edGithubCompatible: $('ed-github-compatible'),
+    edGithubCompatibleGroup: $('ed-github-compatible-group'),
+    edSupportAgent: $('ed-support-agent'),
+    edSupportAgentGroup: $('ed-support-agent-group'),
     edSettings: $('ed-settings'),
     aiSettingsModal: $('ai-settings-modal'),
-    aiGeneralEnabled: $('ai-general-enabled'),
+    aiFeaturesDisabled: $('ai-features-disabled'),
     aiGeneralProvider: $('ai-general-provider'),
     aiGeneralEndpoint: $('ai-general-endpoint'),
     aiGeneralModel: $('ai-general-model'),
@@ -108,7 +122,6 @@ export const el = {
     aiGeneralModelList: $('ai-general-model-list'),
     aiGeneralKey: $('ai-general-key'),
     aiGeneralTemp: $('ai-general-temp'),
-    aiFimEnabled: $('ai-fim-enabled'),
     aiFimEndpoint: $('ai-fim-endpoint'),
     aiFimModel: $('ai-fim-model'),
     aiFimKey: $('ai-fim-key'),
@@ -116,6 +129,7 @@ export const el = {
     aiSettingsCancel: $('ai-settings-cancel'),
     aiSettingsSave: $('ai-settings-save'),
     aiPromptBox: $('ai-prompt-box'),
+    aiPromptBadgeIcon: $('ai-prompt-badge-icon'),
     aiPromptInput: $('ai-prompt-input'),
     aiPromptSend: $('ai-prompt-send'),
     aiPromptClose: $('ai-prompt-close'),
@@ -130,7 +144,6 @@ export const el = {
     modalEmojiGrid: $('modal-emoji-grid'),
     modalBtnOk: $('modal-btn-ok'),
     modalBtnCancel: $('modal-btn-cancel'),
-    aiSelectionContext: $('ai-selection-context'),
     aiToggleImeFix: $('ai-toggle-ime-fix'),
     appVersionFooter: $('app-version-footer'),
     footerShortcuts: $('footer-shortcuts'),
@@ -147,7 +160,7 @@ export const state = {
     navHistory: [],
     navIndex: -1,
     homeTargetPath: HOME_SCREEN_PATH,
-    currentFontSize: 16,
+    currentFontSize: DEFAULT_CONTENT_FONT_SIZE,
     currentEngine: "marked",
     currentMarkdownEngine: "marked",
     currentDocumentType: "markdown",
@@ -164,8 +177,11 @@ export const state = {
     editingPreviewPath: "",
     editingPreviewFolder: "",
     currentEditorRenderMode: "realtime",
+    aiFeaturesDisabled: false,
     aiSelectionContextEnabled: false,
     aiGithubCompatibleEnabled: false,
+    aiSupportAgentEnabled: false,
+    aiToolbarCollapsed: false,
     koreanImeFixEnabled: false,
 };
 

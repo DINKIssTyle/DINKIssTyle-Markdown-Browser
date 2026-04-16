@@ -54,8 +54,10 @@ type AppSettings struct {
 	FontSize                int     `json:"fontSize"`
 	Engine                  string  `json:"engine"`
 	EditorRenderMode        string  `json:"editorRenderMode"`
+	AIFeaturesDisabled      bool    `json:"aiFeaturesDisabled"`
 	AIGeneralEnabled        bool    `json:"aiGeneralEnabled"`
 	AIGeneralToolbarEnabled bool    `json:"aiGeneralToolbarEnabled"`
+	AIToolbarCollapsed      bool    `json:"aiToolbarCollapsed"`
 	AIGeneralEndpoint       string  `json:"aiGeneralEndpoint"`
 	AIGeneralModel          string  `json:"aiGeneralModel"`
 	AIGeneralKey            string  `json:"aiGeneralKey"`
@@ -69,6 +71,7 @@ type AppSettings struct {
 	AIGeneralProvider       string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
 	AISelectionContext      bool    `json:"aiSelectionContext"`
 	AIGithubCompatible      bool    `json:"aiGithubCompatible"`
+	AISupportAgent          bool    `json:"aiSupportAgent"`
 	KoreanImeEnterFix       bool    `json:"koreanImeEnterFix"`
 	LastVersion             string  `json:"lastVersion"`
 }
@@ -414,13 +417,14 @@ func (a *App) ClearRecentFiles() {
 func (a *App) GetSettings() AppSettings {
 	var settings AppSettings
 	// Default settings
-	settings.Theme = "dark"
+	settings.Theme = "light" // "dark" | "light"
 	settings.FontSize = 16
-	settings.Engine = "marked"
-	settings.EditorRenderMode = "realtime"
+	settings.Engine = "marked"             // "marked" | "html"
+	settings.EditorRenderMode = "realtime" // "realtime" | "cursor"
 	settings.AIGeneralEnabled = true
 	settings.AIGeneralToolbarEnabled = true
-	settings.AIGeneralProvider = "openai"
+	settings.AIToolbarCollapsed = false
+	settings.AIGeneralProvider = "lmstudio" // "openai" | "lmstudio"
 	settings.AIGeneralTemp = 0.0
 	settings.AIFIMEnabled = true
 	settings.AIFIMToolbarEnabled = false
@@ -1155,6 +1159,10 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 					if next, ok := raw["content"].(string); ok {
 						fullResponse.WriteString(next)
 					}
+				case "reasoning.delta":
+					runtime.EventsEmit(a.ctx, "ai:reasoning", map[string]any{
+						"text": "Thinking...",
+					})
 				case "chat.end":
 					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
 						"label":     "Completed ✨",
