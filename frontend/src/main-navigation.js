@@ -28,9 +28,12 @@ let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
 export async function handleOpenFile() {
     const result = await OpenFile();
     if (result && result.path) {
-        // 스타트 페이지가 아닌 탭에서는 항상 새 탭으로 열기
-        const forceNewTab = state.currentFilePath !== HOME_SCREEN_PATH;
-        await openPath(result.path, { pushHistory: true, setHome: true, content: result.content, newTab: forceNewTab });
+        await openPath(result.path, {
+            pushHistory: true,
+            setHome: true,
+            content: result.content,
+            newTab: shouldOpenAdditionalFileInNewTab(),
+        });
     }
 }
 
@@ -39,6 +42,8 @@ export async function openIncomingFiles(paths) {
         return;
     }
 
+    const firstFileNeedsNewTab = shouldOpenAdditionalFileInNewTab();
+
     for (let index = 0; index < paths.length; index++) {
         const path = paths[index];
         if (!path) continue;
@@ -46,9 +51,13 @@ export async function openIncomingFiles(paths) {
         await openPath(path, {
             pushHistory: true,
             setHome: true,
-            newTab: index > 0,
+            newTab: firstFileNeedsNewTab || index > 0,
         });
     }
+}
+
+export function shouldOpenAdditionalFileInNewTab() {
+    return state.currentFilePath !== HOME_SCREEN_PATH;
 }
 
 export async function openPath(path, options = {}) {

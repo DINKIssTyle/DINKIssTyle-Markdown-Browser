@@ -6,11 +6,7 @@
 
 <div align="center">DKST Markdown Browser has become even more powerful! Check out the major features added in this version.</div>
 
-
-
 ## 🚀 Key Changes
-
-
 
 ### 1. Create or Edit Markdown Documents
 <div style="display: block; margin: 0 auto; text-align: center; width: 100%; font-size: 1.5em;">
@@ -37,8 +33,7 @@
 ### 3. LaTeX, Mermaid Rendering Support
 
 #### LaTeX Example
-
-
+  
 * $a^2 + b^2 = c^2$
 * $\frac{1}{2} + \frac{1}{4} = \frac{3}{4}$
 * $\sqrt{x^2 + y^2}$
@@ -46,31 +41,30 @@
 $$\int_{a}^{b} f(x) \,dx$$
 $$\lim_{n \to \infty} \frac{1}{n} = 0$$
 $$\log_{2} 8 = 3$$
-
+  
 $$
 \begin{matrix}
 1 & 0 \\
 0 & 1
 \end{matrix}
 $$
-
+  
 $$
 \begin{pmatrix}
 a & b \\
 c & d
 \end{pmatrix}
 $$
-
+  
 $\alpha, \beta, \gamma, \delta, \pi, \sigma$
 $\sum_{i=1}^{n} i$
 $\prod_{i=1}^{n} a_i$
 $x \neq y, x \leq y, x \geq y$
-
+  
 #### Mermaid Example
 
 ```
 graph TD
-
 A[Start] --> B{Decision}
 B -- Yes --> C[Result 1]
 B -- No --> D[Result 2]
@@ -94,9 +88,6 @@ section Planning
 Idea Conception     :a1, 2024-01-01, 30d
 Proposal Writing    :after a1, 20d
 ```
-
-
-<!-- <div align="center"><img src="img/200_equation_diagram.png" width="80%"></div> -->
 
 ---
 # Recent Changes
@@ -134,7 +125,22 @@ Proposal Writing    :after a1, 20d
 
 
 ## 2.0 Beta5
-* Added GitHub compatibility mode: When enabled, it prompts the LLM to respond only with GitHub-compatible code.
+### AI Feature Improvements
+* **Introduction of AI-specific toolbar:** With enhanced AI features, an AI-dedicated toolbar has been added at the bottom, making it easier to change Temperature and improving access to various AI functions.
+* **Added GitHub compatibility mode**: When enabled, it prompts the LLM to respond only with GitHub-compatible code.
+* **Talk to Me**: When this feature is enabled, AI leaves brief comments after the task.
+
+### Bug Fixes & Polish
+* **Stability Enhancement**: Fixed an issue where the preview scroll position was not being safely maintained during re-rendering in realtime rendering states.
+
+
+## 2.0 Beta6
+### AI Feature Improvements
+* **Intelligent Support Agent:** Ask the AI agent simple questions through the `/ menu` without selecting text, or ask about selected text. You can also receive answers without editing.
+
+### Bug Fixes & Polish
+* **Stability Enhancement**: Polished it again. Fixed an issue where the preview scroll position was not safely maintained while re-rendering in real-time rendering state.
+* **File Opening While Editing Issue**: Resolved an issue where opening certain files while editing caused them to open in the Markdown rendering viewer of the document being edited.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

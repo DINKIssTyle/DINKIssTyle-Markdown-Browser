@@ -3,6 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
 import { marked } from 'marked';
 import katex from 'katex';
 import { unified } from 'unified';
@@ -18,6 +19,7 @@ import {
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
+import { syncAIControls } from './main-ai.js';
 import { applyHighlight, clearHighlight } from './main-ui.js';
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL } from '../wailsjs/go/main/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
@@ -29,9 +31,74 @@ const MATH_DATA_ATTR = 'data-dkst-math';
 const MATH_DISPLAY_ATTR = 'data-dkst-math-display';
 const LIVE_BLOCK_ATTR = 'data-dkst-live-block-index';
 let previewRenderToken = 0;
-let editorIdleFullRenderHandle = null;
-let editorIdleFullRenderTimer = 0;
 let livePreviewBlocks = [];
+
+function captureLivePreviewScrollAnchor() {
+    if (!state.isEditing || state.currentEditorRenderMode !== 'realtime') {
+        return null;
+    }
+
+    const scroller = getScroller();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const liveBlocks = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_ATTR}]`));
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const distanceFromBottom = Math.max(0, maxScrollTop - scroller.scrollTop);
+    if (liveBlocks.length === 0) {
+        return {
+            scrollTop: scroller.scrollTop,
+            type: 'scroll-top',
+            distanceFromBottom,
+        };
+    }
+
+    const scrollerTop = scrollerRect.top;
+    let anchorNode = liveBlocks[0];
+    for (const block of liveBlocks) {
+        if (block.getBoundingClientRect().top <= scrollerTop + 1) {
+            anchorNode = block;
+            continue;
+        }
+        break;
+    }
+
+    const anchorIndex = Number(anchorNode.getAttribute(LIVE_BLOCK_ATTR));
+    const anchorTop = scroller.scrollTop + (anchorNode.getBoundingClientRect().top - scrollerTop);
+    return {
+        type: 'live-block',
+        index: Number.isFinite(anchorIndex) ? anchorIndex : 0,
+        offsetWithinBlock: Math.max(0, scroller.scrollTop - anchorTop),
+        scrollTop: scroller.scrollTop,
+        distanceFromBottom,
+    };
+}
+
+function restoreLivePreviewScrollAnchor(snapshot) {
+    if (!snapshot) {
+        return;
+    }
+
+    const scroller = getScroller();
+    if (snapshot.type !== 'live-block') {
+        scroller.scrollTop = snapshot.scrollTop ?? scroller.scrollTop;
+        return;
+    }
+
+    const anchorNode = el.markdownContainer.querySelector(`[${LIVE_BLOCK_ATTR}="${snapshot.index}"]`);
+    if (!anchorNode) {
+        scroller.scrollTop = snapshot.scrollTop ?? scroller.scrollTop;
+        return;
+    }
+
+    const scrollerTop = scroller.getBoundingClientRect().top;
+    const anchorTop = scroller.scrollTop + (anchorNode.getBoundingClientRect().top - scrollerTop);
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const desiredByAnchor = anchorTop + (snapshot.offsetWithinBlock ?? 0);
+    const desiredByBottomGap = Math.max(0, maxScrollTop - (snapshot.distanceFromBottom ?? 0));
+    const shouldPreferBottomGap = (snapshot.distanceFromBottom ?? Number.POSITIVE_INFINITY) <= 4;
+    scroller.scrollTop = shouldPreferBottomGap
+        ? desiredByBottomGap
+        : Math.min(maxScrollTop, Math.max(0, desiredByAnchor));
+}
 
 function isEscaped(text, index) {
     let slashCount = 0;
@@ -258,7 +325,7 @@ function getMermaidConfig() {
             lineColor: isDark ? '#8e8e93' : '#636366',
             secondaryColor: isDark ? '#1c1c1e' : '#f5f5f7',
             tertiaryColor: isDark ? '#2c2c2e' : '#e5e5ea',
-            fontSize: '14px',
+            fontSize: `${DEFAULT_CONTENT_FONT_SIZE}px`,
         }
     };
 }
@@ -280,17 +347,6 @@ async function renderMarkdownToHTML(content) {
         .use(remarkHtml, { sanitize: false })
         .process(preparedContent);
     return String(vf);
-}
-
-function clearQueuedEditorPreviewRender() {
-    if (editorIdleFullRenderHandle && typeof window.cancelIdleCallback === 'function') {
-        window.cancelIdleCallback(editorIdleFullRenderHandle);
-    }
-    editorIdleFullRenderHandle = null;
-    if (editorIdleFullRenderTimer) {
-        clearTimeout(editorIdleFullRenderTimer);
-    }
-    editorIdleFullRenderTimer = 0;
 }
 
 function splitMarkdownIntoBlocks(content) {
@@ -326,12 +382,6 @@ function splitMarkdownIntoBlocks(content) {
     }
 
     return blocks;
-}
-
-function findBlockIndexForLine(blocks, lineNumber) {
-    const safeLine = Math.max(1, lineNumber || 1);
-    const index = blocks.findIndex(block => safeLine >= block.startLine && safeLine <= block.endLine);
-    return index >= 0 ? index : Math.max(0, blocks.length - 1);
 }
 
 async function postProcess(container = el.markdownContainer) {
@@ -394,73 +444,87 @@ async function postProcess(container = el.markdownContainer) {
     await renderMermaidSub(container);
 }
 
-async function renderMarkdownBlockPreview(content, cursorLine, token) {
+async function renderMarkdownLiveBlocks(content, token) {
     const blocks = splitMarkdownIntoBlocks(content);
-    const focusIndex = findBlockIndexForLine(blocks, cursorLine);
-    const shouldRebuild = livePreviewBlocks.length !== blocks.length;
+    const blockMarkup = await Promise.all(blocks.map(async (block, index) => {
+        const html = await renderMarkdownToHTML(block.content);
+        return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}">${html}</section>`;
+    }));
+    if (token !== previewRenderToken) {
+        return null;
+    }
+
+    const scrollAnchor = captureLivePreviewScrollAnchor();
+    el.markdownContainer.innerHTML = blockMarkup.join('');
+    renderMathPlaceholders(el.markdownContainer);
+    await postProcess(el.markdownContainer);
+    restoreLivePreviewScrollAnchor(scrollAnchor);
+    syncEditingPreviewReturnButton();
+    livePreviewBlocks = blocks;
+    return blocks;
+}
+
+async function updateChangedLivePreviewBlocks(content, token) {
+    const blocks = splitMarkdownIntoBlocks(content);
+    const shouldRebuild = livePreviewBlocks.length !== blocks.length ||
+        el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_ATTR}]`).length !== blocks.length;
 
     if (shouldRebuild) {
-        const blockMarkup = await Promise.all(blocks.map(async (block, index) => {
-            const html = await renderMarkdownToHTML(block.content);
-            return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}">${html}</section>`;
-        }));
-        if (token !== previewRenderToken) {
-            return;
+        await renderMarkdownLiveBlocks(content, token);
+        return;
+    }
+
+    const changedIndexes = [];
+    for (let index = 0; index < blocks.length; index += 1) {
+        if (blocks[index].content !== livePreviewBlocks[index]?.content) {
+            changedIndexes.push(index);
         }
-        el.markdownContainer.innerHTML = blockMarkup.join('');
-        renderMathPlaceholders(el.markdownContainer);
-        await postProcess(el.markdownContainer);
-        syncEditingPreviewReturnButton();
+    }
+
+    if (changedIndexes.length === 0) {
         livePreviewBlocks = blocks;
         return;
     }
 
-    const targetNode = el.markdownContainer.querySelector(`[${LIVE_BLOCK_ATTR}="${focusIndex}"]`);
-    if (!targetNode) {
-        await renderMarkdown(content, { token, preserveLiveBlocks: true });
-        return;
-    }
-
-    const html = await renderMarkdownToHTML(blocks[focusIndex].content);
     if (token !== previewRenderToken) {
         return;
     }
-    targetNode.innerHTML = html;
-    renderMathPlaceholders(targetNode);
-    await postProcess(targetNode);
+
+    const scrollAnchor = captureLivePreviewScrollAnchor();
+
+    const renderedBlocks = await Promise.all(changedIndexes.map(async index => ({
+        index,
+        html: await renderMarkdownToHTML(blocks[index].content),
+    })));
+    if (token !== previewRenderToken) {
+        return;
+    }
+
+    for (const { index, html } of renderedBlocks) {
+        const targetNode = el.markdownContainer.querySelector(`[${LIVE_BLOCK_ATTR}="${index}"]`);
+        if (!targetNode) {
+            await renderMarkdownLiveBlocks(content, token);
+            return;
+        }
+        targetNode.innerHTML = html;
+        renderMathPlaceholders(targetNode);
+        await postProcess(targetNode);
+    }
+
+    restoreLivePreviewScrollAnchor(scrollAnchor);
     syncEditingPreviewReturnButton();
     livePreviewBlocks = blocks;
 }
 
-function scheduleIdleFullPreviewRender(content, token) {
-    clearQueuedEditorPreviewRender();
-
-    const runFullRender = () => {
-        if (token !== previewRenderToken) {
-            return;
-        }
-        renderMarkdown(content, { token }).catch(error => {
-            LogError(`Idle full preview render failed: ${error?.message || error}`);
-        });
-    };
-
-    if (typeof window.requestIdleCallback === 'function') {
-        editorIdleFullRenderHandle = window.requestIdleCallback(runFullRender, { timeout: 280 });
-        return;
-    }
-
-    editorIdleFullRenderTimer = window.setTimeout(runFullRender, 220);
-}
-
 export function queueEditorPreviewRender(content, cursorLine, { delay = 100 } = {}) {
+    void cursorLine;
     const token = ++previewRenderToken;
     clearTimeout(window._renderTimer);
     window._renderTimer = setTimeout(() => {
-        renderMarkdownBlockPreview(content, cursorLine, token).catch(error => {
+        updateChangedLivePreviewBlocks(content, token).catch(error => {
             LogError(`Block preview render failed: ${error?.message || error}`);
         });
     }, delay);
-    scheduleIdleFullPreviewRender(content, token);
 }
 
 export async function renderMarkdown(content, options = {}) {
@@ -469,7 +533,11 @@ export async function renderMarkdown(content, options = {}) {
         preserveLiveBlocks = false,
     } = options;
 
-    clearQueuedEditorPreviewRender();
+    if (state.isEditing && state.currentEditorRenderMode === 'realtime' && !preserveLiveBlocks) {
+        await renderMarkdownLiveBlocks(content, token);
+        return;
+    }
+
     const html = await renderMarkdownToHTML(content);
     if (token !== previewRenderToken) {
         return;
@@ -539,6 +607,7 @@ export async function renderActiveTab() {
     
     if (state.isEditing) {
         el.editToolbar.classList.remove('hidden');
+        syncAIControls();
         el.editorView.classList.remove('hidden');
         el.mainContainer.classList.add('is-editing');
         el.btnEdit.classList.add('active');
@@ -547,6 +616,7 @@ export async function renderActiveTab() {
         el.selectEngine.disabled = true;
     } else {
         el.editToolbar.classList.add('hidden');
+        syncAIControls();
         el.editorView.classList.add('hidden');
         el.mainContainer.classList.remove('is-editing');
         el.btnEdit.classList.remove('active');
@@ -774,7 +844,7 @@ export function applyHTMLZoom() {
             return;
         }
 
-        const zoom = Math.max(0.625, state.currentFontSize / 16);
+        const zoom = Math.max(0.625, state.currentFontSize / DEFAULT_CONTENT_FONT_SIZE);
         doc.documentElement.style.zoom = String(zoom);
         if (doc.body) {
             doc.body.style.zoom = String(zoom);

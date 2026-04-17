@@ -3,6 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
 import { state, el, getPathDirname, formatSaveDialogMessage } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
@@ -17,10 +18,9 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoD
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { ghostTextField, showPromptBoxAtSelection } from './main-ai.js';
+import { ghostTextField, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 
 // ── Module-level State ─────────────────────────────────────
-let currentEditorFontSize = 15;
 let slashMenuState = null;
 let slashMenuEventsBound = false;
 let lastPreviewCursorLine = 1;
@@ -30,7 +30,7 @@ export const themeCompartment = new Compartment();
 
 function applyEditorFontSize() {
     if (!cmView) return;
-    cmView.contentDOM.style.fontSize = `${currentEditorFontSize}px`;
+    cmView.contentDOM.style.fontSize = `${state.currentFontSize * EDITOR_FONT_VISUAL_SCALE}px`;
 }
 
 export function getCurrentEditorText() {
@@ -48,8 +48,17 @@ export function isEditorFocused() {
 
 export function changeEditorFontSize(delta) {
     if (!cmView) return false;
-    currentEditorFontSize = Math.min(72, Math.max(8, currentEditorFontSize + delta));
+    state.currentFontSize = Math.min(72, Math.max(8, state.currentFontSize + delta));
     applyEditorFontSize();
+    void persistEditorPreferences();
+    return true;
+}
+
+export function resetEditorFontSize() {
+    if (!cmView) return false;
+    state.currentFontSize = DEFAULT_CONTENT_FONT_SIZE;
+    applyEditorFontSize();
+    void persistEditorPreferences();
     return true;
 }
 
@@ -69,8 +78,10 @@ async function persistEditorPreferences() {
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
         editorRenderMode: state.currentEditorRenderMode,
+        aiFeaturesDisabled: state.aiFeaturesDisabled,
         aiGeneralEnabled: window.aiState?.generalAvailable ?? true,
         aiGeneralToolbarEnabled: window.aiState?.generalToolbarEnabled ?? true,
+        aiToolbarCollapsed: state.aiToolbarCollapsed,
         aiGeneralProvider: window.aiState?.generalProvider || "openai",
         aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
         aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
@@ -84,6 +95,7 @@ async function persistEditorPreferences() {
         aiFimTemp: window.aiState?.fimTemp || 0,
         aiSelectionContext: state.aiSelectionContextEnabled,
         aiGithubCompatible: state.aiGithubCompatibleEnabled,
+        aiSupportAgent: state.aiSupportAgentEnabled,
         koreanImeEnterFix: state.koreanImeFixEnabled,
     });
 }
@@ -122,7 +134,7 @@ function updatePreviewForEditorChange(update) {
 }
 
 function getSlashCommands() {
-    return [
+    const commands = [
         { id: 'bold', label: 'Bold', token: '**', keywords: 'bold strong', aliases: ['볼드', '굵게', '굵은글씨', 'ㅂ'], run: () => applyInlineWrap('**', '**') },
         { id: 'italic', label: 'Italic', token: '*', keywords: 'italic emphasis', aliases: ['이탤릭', '이탤릭체', '기울임', 'ㄱㅇ', 'ㅇㅌ'], run: () => applyInlineWrap('*', '*') },
         { id: 'underline', label: 'Underline', token: '<u>', keywords: 'underline', aliases: ['언더라인', '밑줄', 'ㅁㅈ', 'ㅇㄷ'], run: () => applyInlineWrap('<u>', '</u>') },
@@ -143,6 +155,19 @@ function getSlashCommands() {
         { id: 'latex', label: 'LaTeX', token: '$$', keywords: 'latex math equation', aliases: ['수식', '라텍스', '공식', 'ㅅㅅ'], run: () => insertLatex() },
         { id: 'emoji', label: 'Emoji', token: ':)', keywords: 'emoji emoticon smile', aliases: ['이모지', '이모티콘', '표정', 'ㅇㅁㅈ'], run: () => insertEmoji() },
     ];
+
+    if (!state.aiFeaturesDisabled && window.aiState?.generalToolbarEnabled) {
+        commands.unshift({
+            id: 'ask-ai',
+            label: 'Ask AI',
+            token: 'AI',
+            keywords: 'ask ai question prompt assistant',
+            aliases: ['ai', 'ask', '질문', '문의', '챗', '대화'],
+            run: () => showAskAIPrompt(),
+        });
+    }
+
+    return commands;
 }
 
 function filterSlashCommands(query = "") {
@@ -518,6 +543,7 @@ export function enterEditMode() {
     
     // Also dispatch an empty ghost text just in case
     if (window.aiState) window.aiState.ghostText = "";
+    syncAIControls();
     updateSlashMenu();
     cmView.focus();
     updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
@@ -535,6 +561,7 @@ export async function exitEditMode(didSave = false) {
     state.editingPreviewPath = "";
     state.editingPreviewFolder = "";
     el.editToolbar.classList.add('hidden');
+    syncAIControls();
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
     el.btnEdit.classList.remove('active');

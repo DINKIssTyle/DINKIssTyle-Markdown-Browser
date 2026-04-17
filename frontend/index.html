@@ -78,93 +78,86 @@
         </div>
 
         <div id="edit-toolbar" class="edit-toolbar hidden">
-            <div class="edit-tool-group">
-                <button id="ed-bold" title="Bold (**)" class="tool-btn"><span
-                        class="material-symbols-outlined">format_bold</span></button>
-                <button id="ed-italic" title="Italic (*)" class="tool-btn"><span
-                        class="material-symbols-outlined">format_italic</span></button>
-                <button id="ed-underline" title="Underline (&lt;u&gt;)" class="tool-btn"><span
-                        class="material-symbols-outlined">format_underlined</span></button>
-                <button id="ed-strike" title="Strikethrough (~~)" class="tool-btn"><span
-                        class="material-symbols-outlined">strikethrough_s</span></button>
-                <button id="ed-quote" title="Blockquote (>)" class="tool-btn"><span
-                        class="material-symbols-outlined">format_quote</span></button>
-            </div>
-            <div class="edit-separator"></div>
-            <div class="edit-tool-group">
-                <button id="ed-h1" title="Heading 1 (#)" class="tool-btn">H1</button>
-                <button id="ed-h2" title="Heading 2 (##)" class="tool-btn">H2</button>
-                <button id="ed-h3" title="Heading 3 (###)" class="tool-btn">H3</button>
-                <button id="ed-ul" title="Unordered List (•)" class="tool-btn"><span
-                        class="material-symbols-outlined">format_list_bulleted</span></button>
-                <button id="ed-ol" title="Ordered List (1.)" class="tool-btn"><span
-                        class="material-symbols-outlined">format_list_numbered</span></button>
-                <button id="ed-hr" title="Horizontal Rule (---)" class="tool-btn"><span
-                        class="material-symbols-outlined">horizontal_rule</span></button>
-            </div>
-            <div class="edit-separator"></div>
-            <div class="edit-tool-group">
-                <button id="ed-link" title="Link [title](url)" class="tool-btn"><span
-                        class="material-symbols-outlined">link</span></button>
-                <button id="ed-image" title="Image ![alt](url)" class="tool-btn"><span
-                        class="material-symbols-outlined">image</span></button>
-                <button id="ed-code" title="Code Block (```)" class="tool-btn"><span
-                        class="material-symbols-outlined">code</span></button>
-                <button id="ed-table" title="Table" class="tool-btn"><span
-                        class="material-symbols-outlined">table_chart</span></button>
-                <button id="ed-div" title="DIV Wrapper" class="tool-btn"><span
-                        class="material-symbols-outlined">border_inner</span></button>
-            </div>
-            <div class="edit-separator"></div>
-            <div class="edit-tool-group">
-                <button id="ed-task" title="Task List (- [ ])" class="tool-btn"><span
-                        class="material-symbols-outlined">checklist</span></button>
-                <button id="ed-latex" title="LaTeX ($/$$)" class="tool-btn"><span
-                        class="material-symbols-outlined">functions</span></button>
-                <button id="ed-emoji" title="Emoji" class="tool-btn"><span
-                        class="material-symbols-outlined">mood</span></button>
-            </div>
-            <div class="edit-separator"></div>
-            <div class="edit-tool-group">
-                <!-- <label for="ed-render-mode" class="edit-inline-label">Update:</label> -->
-                <span class="material-symbols-outlined">update</span><label for="ed-render-mode"
-                    class="edit-inline-label">:</label>
-                <select id="ed-render-mode" class="edit-select">
-                    <option value="realtime">Realtime</option>
-                    <option value="cursor-line-change">Line change</option>
-                </select>
-            </div>
-            <div class="edit-separator"></div>
-            <div class="edit-tool-group">
-                <button id="ed-font-minus" title="Decrease Editor Font Size" class="tool-btn">
-                    <span class="material-symbols-outlined">text_decrease</span>
-                    <!-- <span class="font-adjust-label">-</span> -->
-                </button>
-                <button id="ed-font-plus" title="Increase Editor Font Size" class="tool-btn">
-                    <span class="material-symbols-outlined">text_increase</span>
-                    <!-- <span class="font-adjust-label">+</span> -->
-                </button>
-            </div>
-            <div class="edit-tool-group">
-                <button id="ed-general-ai" title="Toggle General AI" class="tool-btn">
-                    <span class="material-symbols-outlined">wand_stars</span>
-                </button>
-                <button id="ed-fim" title="Toggle FIM (AI Autocomplete)" class="tool-btn">
-                    <span class="material-symbols-outlined">flash_auto</span>
-                </button>
-                <button id="ed-github-compatible" title="Toggle GitHub Compatible AI Edits" class="tool-btn">
-                    <span class="material-symbols-outlined">flag_check</span>
-                </button>
-                <button id="ed-settings" title="AI Settings" class="tool-btn">
-                    <span class="material-symbols-outlined">settings</span>
-                </button>
-            </div>
-            <div class="spacer"></div>
-            <div class="edit-tool-group">
-                <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span
-                        class="material-symbols-outlined">disabled_by_default</span></button>
-                <button id="ed-save" title="Save" class="tool-btn save-btn"><span
-                        class="material-symbols-outlined">save</span></button>
+            <div class="edit-toolbar-row edit-toolbar-row-primary">
+                <div class="edit-tool-group">
+                    <button id="ed-bold" title="Bold (**)" class="tool-btn"><span
+                            class="material-symbols-outlined">format_bold</span></button>
+                    <button id="ed-italic" title="Italic (*)" class="tool-btn"><span
+                            class="material-symbols-outlined">format_italic</span></button>
+                    <button id="ed-underline" title="Underline (&lt;u&gt;)" class="tool-btn"><span
+                            class="material-symbols-outlined">format_underlined</span></button>
+                    <button id="ed-strike" title="Strikethrough (~~)" class="tool-btn"><span
+                            class="material-symbols-outlined">strikethrough_s</span></button>
+                    <button id="ed-quote" title="Blockquote (>)" class="tool-btn"><span
+                            class="material-symbols-outlined">format_quote</span></button>
+                </div>
+                <div class="edit-separator"></div>
+                <div class="edit-tool-group">
+                    <button id="ed-h1" title="Heading 1 (#)" class="tool-btn">H1</button>
+                    <button id="ed-h2" title="Heading 2 (##)" class="tool-btn">H2</button>
+                    <button id="ed-h3" title="Heading 3 (###)" class="tool-btn">H3</button>
+                    <button id="ed-ul" title="Unordered List (•)" class="tool-btn"><span
+                            class="material-symbols-outlined">format_list_bulleted</span></button>
+                    <button id="ed-ol" title="Ordered List (1.)" class="tool-btn"><span
+                            class="material-symbols-outlined">format_list_numbered</span></button>
+                    <button id="ed-hr" title="Horizontal Rule (---)" class="tool-btn"><span
+                            class="material-symbols-outlined">horizontal_rule</span></button>
+                </div>
+                <div class="edit-separator"></div>
+                <div class="edit-tool-group">
+                    <button id="ed-link" title="Link [title](url)" class="tool-btn"><span
+                            class="material-symbols-outlined">link</span></button>
+                    <button id="ed-image" title="Image ![alt](url)" class="tool-btn"><span
+                            class="material-symbols-outlined">image</span></button>
+                    <button id="ed-code" title="Code Block (```)" class="tool-btn"><span
+                            class="material-symbols-outlined">code</span></button>
+                    <button id="ed-table" title="Table" class="tool-btn"><span
+                            class="material-symbols-outlined">table_chart</span></button>
+                    <button id="ed-div" title="DIV Wrapper" class="tool-btn"><span
+                            class="material-symbols-outlined">border_inner</span></button>
+                </div>
+                <div class="edit-separator"></div>
+                <div class="edit-tool-group">
+                    <button id="ed-task" title="Task List (- [ ])" class="tool-btn"><span
+                            class="material-symbols-outlined">checklist</span></button>
+                    <button id="ed-latex" title="LaTeX ($/$$)" class="tool-btn"><span
+                            class="material-symbols-outlined">functions</span></button>
+                    <button id="ed-emoji" title="Emoji" class="tool-btn"><span
+                            class="material-symbols-outlined">mood</span></button>
+                </div>
+                <div class="edit-separator"></div>
+                <div class="edit-tool-group">
+                    <!-- <label for="ed-render-mode" class="edit-inline-label">Update:</label> -->
+                    <span class="material-symbols-outlined">update</span><label for="ed-render-mode"
+                        class="edit-inline-label">:</label>
+                    <select id="ed-render-mode" class="edit-select">
+                        <option value="realtime">Realtime</option>
+                        <option value="cursor-line-change">Line change</option>
+                    </select>
+                </div>
+                <div class="edit-separator"></div>
+                <div class="edit-tool-group">
+                    <button id="ed-font-minus" title="Decrease Editor Font Size" class="tool-btn">
+                        <span class="material-symbols-outlined">text_decrease</span>
+                        <!-- <span class="font-adjust-label">-</span> -->
+                    </button>
+                    <button id="ed-font-plus" title="Increase Editor Font Size" class="tool-btn">
+                        <span class="material-symbols-outlined">text_increase</span>
+                        <!-- <span class="font-adjust-label">+</span> -->
+                    </button>
+                </div>
+                <div class="spacer"></div>
+                <div class="edit-tool-group">
+                    <button id="ed-settings" title="AI Settings" class="tool-btn">
+                        <span class="material-symbols-outlined">settings</span>
+                    </button>
+                </div>
+                <div class="edit-tool-group">
+                    <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span
+                            class="material-symbols-outlined">disabled_by_default</span></button>
+                    <button id="ed-save" title="Save" class="tool-btn save-btn"><span
+                            class="material-symbols-outlined">save</span></button>
+                </div>
             </div>
         </div>
 
@@ -249,6 +242,58 @@
             </aside>
         </main>
 
+        <div id="editor-ai-dock" class="editor-ai-dock hidden">
+            <div class="editor-ai-anchor">
+                <button id="ed-general-ai" title="Toggle General AI" class="editor-ai-trigger" type="button">
+                    <span class="material-symbols-outlined">wand_stars</span>
+                    <span class="editor-ai-trigger-text">AI</span>
+                </button>
+                <button id="ed-ai-toolbar-toggle" title="Hide AI Toolbar" class="editor-ai-toggle-btn hidden"
+                    type="button" aria-label="Hide AI Toolbar">
+                    <span class="material-symbols-outlined">expand_circle_right</span>
+                </button>
+            </div>
+            <div id="editor-ai-panel" class="editor-ai-panel hidden">
+                <div id="ed-general-temp-control" class="ed-temp-control editor-ai-temp-control"
+                    title="General AI Temperature">
+                    <!-- <label for="ed-general-temp-slider" class="ed-temp-label">Temperature</label> -->
+                    <span class="material-symbols-outlined">device_thermostat</span>
+                    <div class="ed-temp-slider-wrap">
+                        <input id="ed-general-temp-slider" class="ed-temp-slider" type="range" min="0" max="1"
+                            step="0.1" value="0" />
+                        <button id="ed-general-temp-value" class="ed-temp-value" type="button"
+                            aria-label="Set General AI temperature to Auto">Auto</button>
+                    </div>
+                </div>
+                <div id="ed-fim-group" class="edit-tool-group edit-tool-group-ai hidden">
+                    <button id="ed-fim" title="Toggle FIM (AI Autocomplete)" class="tool-btn tool-btn-labeled">
+                        <span class="material-symbols-outlined">flash_auto</span>
+                        <span class="tool-btn-text">Autocomplete</span>
+                    </button>
+                </div>
+                <div id="ed-context-plus-group" class="edit-tool-group edit-tool-group-ai hidden">
+                    <button id="ed-context-plus" title="Toggle surrounding context for AI edits"
+                        class="tool-btn tool-btn-labeled">
+                        <span class="material-symbols-outlined">contextual_token</span>
+                        <span class="tool-btn-text">Context+</span>
+                    </button>
+                </div>
+                <div id="ed-github-compatible-group" class="edit-tool-group edit-tool-group-ai hidden">
+                    <button id="ed-github-compatible" title="Toggle GitHub Compatible AI Edits"
+                        class="tool-btn tool-btn-labeled">
+                        <span class="material-symbols-outlined">flag_check</span>
+                        <span class="tool-btn-text">Github Compatible</span>
+                    </button>
+                </div>
+                <div id="ed-support-agent-group" class="edit-tool-group edit-tool-group-ai hidden">
+                    <button id="ed-support-agent" title="Toggle Support Agent" class="tool-btn tool-btn-labeled">
+                        <span class="material-symbols-outlined">support_agent</span>
+                        <span class="tool-btn-text">Talk to me</span>
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <!-- Floating highlight navigator -->
         <div id="highlight-nav" class="highlight-nav hidden">
             <button id="btn-hl-prev" title="Previous">↑</button>
@@ -312,10 +357,6 @@
                     <section class="ai-setting-group ai-setting-panel">
                         <div class="ai-setting-header">
                             <h4>General AI</h4>
-                            <label class="ai-enable-toggle" for="ai-general-enabled">
-                                <input type="checkbox" id="ai-general-enabled" />
-                                <span>Enable</span>
-                            </label>
                         </div>
                         <div class="ai-setting-lead">
                             <div class="ai-setting-note">
@@ -360,10 +401,6 @@
                     <section class="ai-setting-group ai-setting-panel">
                         <div class="ai-setting-header">
                             <h4>FIM (Ghost Text)</h4>
-                            <label class="ai-enable-toggle" for="ai-fim-enabled">
-                                <input type="checkbox" id="ai-fim-enabled" />
-                                <span>Enable</span>
-                            </label>
                         </div>
                         <div class="ai-setting-lead">
                             <div class="ai-setting-note">
@@ -393,13 +430,13 @@
                     </div>
                     <div class="ai-setting-grid ai-setting-grid-single-row">
                         <div class="ai-setting-option">
-                            <label class="ai-setting-checkbox-row" for="ai-selection-context">
-                                <input type="checkbox" id="ai-selection-context" />
-                                <span>Include surrounding context for AI edits</span>
+                            <label class="ai-setting-checkbox-row" for="ai-features-disabled">
+                                <input type="checkbox" id="ai-features-disabled" />
+                                <span>Disable AI Features</span>
                             </label>
                             <div class="ai-setting-note">
-                                Sends nearby text around the selection as reference only. This can improve tone and flow
-                                matching, but may make AI edits slightly slower.
+                                Hides editor AI controls and locks all AI settings below without clearing their saved
+                                values.
                             </div>
                         </div>
                         <div class="ai-setting-option">
@@ -424,7 +461,7 @@
 
         <div id="ai-prompt-box" class="ai-prompt-box hidden">
             <div class="ai-prompt-badge" aria-hidden="true">
-                <span class="material-symbols-outlined">wand_stars</span>
+                <span id="ai-prompt-badge-icon" class="material-symbols-outlined">wand_stars</span>
             </div>
             <div class="ai-prompt-shell">
                 <textarea id="ai-prompt-input" rows="1" placeholder="Press / to Ask AI..."></textarea>

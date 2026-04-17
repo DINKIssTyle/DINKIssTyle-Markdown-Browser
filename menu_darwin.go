@@ -20,6 +20,10 @@ func buildAppMenu(app *App) *menu.Menu {
 
 	// ── File menu ──────────────────────────────────────────────────────
 	fileMenu := appMenu.AddSubmenu("File")
+	fileMenu.AddText("Ask AI", keys.CmdOrCtrl("/"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:ask-ai")
+	})
+	fileMenu.AddSeparator()
 	fileMenu.AddText("New Window", keys.CmdOrCtrl("n"), func(_ *menu.CallbackData) {
 		runtime.Show(app.ctx)
 		runtime.WindowShow(app.ctx)

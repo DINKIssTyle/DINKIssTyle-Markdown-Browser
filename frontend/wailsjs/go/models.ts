@@ -25,8 +25,10 @@ export namespace main {
 	    fontSize: number;
 	    engine: string;
 	    editorRenderMode: string;
+	    aiFeaturesDisabled: boolean;
 	    aiGeneralEnabled: boolean;
 	    aiGeneralToolbarEnabled: boolean;
+	    aiToolbarCollapsed: boolean;
 	    aiGeneralEndpoint: string;
 	    aiGeneralModel: string;
 	    aiGeneralKey: string;
@@ -40,6 +42,7 @@ export namespace main {
 	    aiGeneralProvider: string;
 	    aiSelectionContext: boolean;
 	    aiGithubCompatible: boolean;
+	    aiSupportAgent: boolean;
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
 	
@@ -53,8 +56,10 @@ export namespace main {
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];
+	        this.aiFeaturesDisabled = source["aiFeaturesDisabled"];
 	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
 	        this.aiGeneralToolbarEnabled = source["aiGeneralToolbarEnabled"];
+	        this.aiToolbarCollapsed = source["aiToolbarCollapsed"];
 	        this.aiGeneralEndpoint = source["aiGeneralEndpoint"];
 	        this.aiGeneralModel = source["aiGeneralModel"];
 	        this.aiGeneralKey = source["aiGeneralKey"];
@@ -68,6 +73,7 @@ export namespace main {
 	        this.aiGeneralProvider = source["aiGeneralProvider"];
 	        this.aiSelectionContext = source["aiSelectionContext"];
 	        this.aiGithubCompatible = source["aiGithubCompatible"];
+	        this.aiSupportAgent = source["aiSupportAgent"];
 	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
 	        this.lastVersion = source["lastVersion"];
 	    }
