@@ -4,6 +4,8 @@
  */
 
 export const DEFAULT_CONTENT_FONT_SIZE = 16;
+// 스플래쉬 화면 최소시간
+export const MIN_SPLASH_MS = 300;
 // 시각적 매칭을 위해 조절함
 export const EDITOR_FONT_VISUAL_SCALE = 0.9;
 

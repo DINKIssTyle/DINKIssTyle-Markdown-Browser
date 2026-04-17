@@ -5,7 +5,7 @@
 
 import './style.css';
 import 'katex/dist/katex.min.css';
-import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
+import { DEFAULT_CONTENT_FONT_SIZE, MIN_SPLASH_MS } from './config.js';
 
 // ── Module Imports ─────────────────────────────────────────
 import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector } from './main-state.js';
@@ -42,53 +42,76 @@ import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
 // ── App Initialization ─────────────────────────────────────
 
 window.addEventListener('DOMContentLoaded', async () => {
+    const splashStartedAt = performance.now();
     document.documentElement.classList.toggle('platform-linux', isLinux());
 
-    // Step 1: Parallelize initial data fetching from Go backend
-    await Promise.all([loadSettings(), renderRecentFiles()]);
+    try {
+        // Step 1: Parallelize initial data fetching from Go backend
+        await Promise.all([loadSettings(), renderRecentFiles()]);
 
-    bindToolbar();
-    bindHomeScreen();
-    bindHighlightNav();
-    bindContextMenu();
-    setupDragAndDrop();
-    bindMenuEvents();
+        bindToolbar();
+        bindHomeScreen();
+        bindHighlightNav();
+        bindContextMenu();
+        setupDragAndDrop();
+        bindMenuEvents();
 
-    // AI Init
-    window.aiState = await initAI();
-    bindAIEvents();
+        // AI Init
+        window.aiState = await initAI();
+        bindAIEvents();
 
-    // Step 2: Check for pending startup files BEFORE rendering the first tab
-    const startupPaths = await FrontendReady();
-    const hasStartupFiles = (startupPaths && startupPaths.length > 0);
-    const initialPath = hasStartupFiles ? startupPaths[0] : HOME_SCREEN_PATH;
+        // Step 2: Check for pending startup files BEFORE rendering the first tab
+        const startupPaths = await FrontendReady();
+        const hasStartupFiles = (startupPaths && startupPaths.length > 0);
+        const initialPath = hasStartupFiles ? startupPaths[0] : HOME_SCREEN_PATH;
 
-    const initialTab = createTab({
-        path: initialPath,
-        title: hasStartupFiles ? 'Loading...' : 'Start'
-    });
-    state.tabs = [initialTab];
-    state.activeTabId = initialTab.id;
-    syncGlobalsFromTab(initialTab);
-    renderTabs();
+        const initialTab = createTab({
+            path: initialPath,
+            title: hasStartupFiles ? 'Loading...' : 'Start'
+        });
+        state.tabs = [initialTab];
+        state.activeTabId = initialTab.id;
+        syncGlobalsFromTab(initialTab);
+        renderTabs();
 
-    if (hasStartupFiles) {
-        // Step 3: Directly open the first startup file (skip redundant Home Screen render)
-        await openPath(startupPaths[0], { pushHistory: true, setHome: true });
-        if (startupPaths.length > 1) {
-            await openIncomingFiles(startupPaths.slice(1));
+        if (hasStartupFiles) {
+            // Step 3: Directly open the first startup file (skip redundant Home Screen render)
+            await openPath(startupPaths[0], { pushHistory: true, setHome: true });
+            if (startupPaths.length > 1) {
+                await openIncomingFiles(startupPaths.slice(1));
+            }
+        } else {
+            // No startup files, proceed to Home Screen
+            await renderActiveTab();
         }
-    } else {
-        // No startup files, proceed to Home Screen
-        await renderActiveTab();
+
+        updateNavButtons();
+
+        document.addEventListener('copy', () => {
+            showToast('Copied to clipboard.');
+        });
+    } finally {
+        await hideStartupSplash(splashStartedAt);
+    }
+});
+
+async function hideStartupSplash(startedAt) {
+    if (!el.startupSplash) {
+        return;
     }
 
-    updateNavButtons();
+    const elapsed = performance.now() - startedAt;
+    const remaining = Math.max(0, MIN_SPLASH_MS - elapsed);
 
-    document.addEventListener('copy', () => {
-        showToast('Copied to clipboard.');
-    });
-});
+    if (remaining > 0) {
+        await new Promise(resolve => window.setTimeout(resolve, remaining));
+    }
+
+    el.startupSplash.classList.add('is-hiding');
+    window.setTimeout(() => {
+        el.startupSplash?.remove();
+    }, 220);
+}
 
 // ── Settings ───────────────────────────────────────────────
 

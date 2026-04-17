@@ -169,20 +169,42 @@ function ensureTabDragBindings() {
 }
 
 function beginPointerDrag(tabNode, event) {
+    const tabId = tabNode.dataset.tabId;
+    let sourceNode = tabNode;
+
+    if (tabId !== state.activeTabId) {
+        const nextTab = state.tabs.find(tab => tab.id === tabId);
+        if (nextTab) {
+            saveCurrentScroll();
+            state.activeTabId = nextTab.id;
+            syncGlobalsFromTab(nextTab);
+            syncEditorSessionFromState();
+            renderTabs();
+            renderActiveTab().catch(error => {
+                console.error('Failed to render dragged tab:', error);
+            });
+            sourceNode = el.tabsList.querySelector(`[data-tab-id="${tabId}"]`);
+        }
+    }
+
+    if (!sourceNode) {
+        return;
+    }
+
     const stripRect = el.tabsList.getBoundingClientRect();
     const fixedY = stripRect.top + stripRect.height / 2;
-    const tabRect = tabNode.getBoundingClientRect();
+    const tabRect = sourceNode.getBoundingClientRect();
     dragState = {
-        tabId: tabNode.dataset.tabId,
+        tabId,
         pointerId: event.pointerId,
         startX: event.clientX,
         startY: fixedY,
         lastX: event.clientX,
         lastY: fixedY,
-        sourceNode: tabNode,
+        sourceNode,
         placeholderNode: null,
         pointerOffsetX: event.clientX - tabRect.left,
-        insertionIndex: state.tabs.findIndex(tab => tab.id === tabNode.dataset.tabId),
+        insertionIndex: state.tabs.findIndex(tab => tab.id === tabId),
         isDragging: false,
     };
 }
@@ -210,7 +232,7 @@ function handlePointerMove(event) {
     autoScrollTabs(event.clientX);
 }
 
-function handlePointerUp(event) {
+async function handlePointerUp(event) {
     if (!dragState || event.pointerId !== dragState.pointerId) {
         return;
     }
@@ -220,7 +242,7 @@ function handlePointerUp(event) {
     cleanupPointerDrag();
 
     if (isDragging) {
-        moveTabToIndex(tabId, insertionIndex);
+        await moveTabToIndex(tabId, insertionIndex);
         suppressClickUntil = Date.now() + 250;
     }
 }
@@ -247,7 +269,7 @@ function startVisualDrag() {
     const rect = dragState.sourceNode.getBoundingClientRect();
     const placeholderNode = document.createElement('div');
     placeholderNode.className = 'tab-drag-placeholder';
-    placeholderNode.style.width = `${Math.max(8, Math.min(14, rect.width * 0.08))}px`;
+    placeholderNode.style.width = `${rect.width}px`;
     placeholderNode.style.height = `${rect.height}px`;
     dragState.sourceNode.insertAdjacentElement('afterend', placeholderNode);
     dragState.placeholderNode = placeholderNode;
@@ -277,7 +299,8 @@ function updateDropIndicator(clientX, clientY) {
     clearDropIndicators();
 
     const sourceNode = dragState?.sourceNode;
-    if (!dragState?.isDragging || !sourceNode) {
+    const placeholderNode = dragState?.placeholderNode;
+    if (!dragState?.isDragging || !sourceNode || !placeholderNode) {
         return;
     }
 
@@ -286,12 +309,14 @@ function updateDropIndicator(clientX, clientY) {
 
     if (otherNodes.length === 0) {
         dragState.insertionIndex = 0;
+        el.tabsList.appendChild(placeholderNode);
+        dragState.sourceNode.classList.add('drag-lifted');
         return;
     }
 
     let insertionIndex = otherNodes.length;
     let anchorNode = otherNodes[otherNodes.length - 1];
-    let gapMode = 'after';
+    let insertBefore = false;
 
     for (let i = 0; i < otherNodes.length; i += 1) {
         const node = otherNodes[i];
@@ -299,19 +324,21 @@ function updateDropIndicator(clientX, clientY) {
         if (clientX < rect.left + rect.width / 2) {
             insertionIndex = i;
             anchorNode = node;
-            gapMode = 'before';
+            insertBefore = true;
             break;
         }
     }
 
     dragState.insertionIndex = insertionIndex;
-    anchorNode.classList.add(gapMode === 'before' ? 'drop-before' : 'drop-after');
+    if (insertBefore) {
+        anchorNode.insertAdjacentElement('beforebegin', placeholderNode);
+    } else {
+        anchorNode.insertAdjacentElement('afterend', placeholderNode);
+    }
     dragState.sourceNode.classList.add('drag-lifted');
 }
 
 function clearDropIndicators() {
-    el.tabsList.querySelectorAll('.tab-item.drop-before, .tab-item.drop-after')
-        .forEach(node => node.classList.remove('drop-before', 'drop-after'));
     el.tabsList.querySelectorAll('.tab-item.drag-lifted')
         .forEach(node => node.classList.remove('drag-lifted'));
 }
@@ -340,7 +367,7 @@ function autoScrollTabs(clientX) {
     }
 }
 
-function moveTabToIndex(sourceTabID, insertionIndex) {
+async function moveTabToIndex(sourceTabID, insertionIndex) {
     if (!sourceTabID) {
         return;
     }
@@ -353,7 +380,18 @@ function moveTabToIndex(sourceTabID, insertionIndex) {
     const [movedTab] = state.tabs.splice(sourceIndex, 1);
     const boundedIndex = Math.max(0, Math.min(insertionIndex, state.tabs.length));
     state.tabs.splice(boundedIndex, 0, movedTab);
+
+    if (state.activeTabId === movedTab.id) {
+        renderTabs();
+        return;
+    }
+
+    saveCurrentScroll();
+    state.activeTabId = movedTab.id;
+    syncGlobalsFromTab(movedTab);
+    syncEditorSessionFromState();
     renderTabs();
+    await renderActiveTab();
 }
 
 // ── Tab Close ──────────────────────────────────────────────

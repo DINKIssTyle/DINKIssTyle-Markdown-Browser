@@ -18,6 +18,7 @@ export const getScroller = () => document.getElementById('content-view');
 
 // ── Cached DOM Element References ──────────────────────────
 export const el = {
+    startupSplash: $('startup-splash'),
     currentPath: $('current-path'),
     tabsList: $('tabs-list'),
     btnNewTab: $('btn-new-tab'),

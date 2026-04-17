@@ -1,4 +1,4 @@
-# What's New in Version 2.0
+# What's New in Version 2.0 Beta 7
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -141,6 +141,13 @@ Proposal Writing    :after a1, 20d
 ### Bug Fixes & Polish
 * **Stability Enhancement**: Polished it again. Fixed an issue where the preview scroll position was not safely maintained while re-rendering in real-time rendering state.
 * **File Opening While Editing Issue**: Resolved an issue where opening certain files while editing caused them to open in the Markdown rendering viewer of the document being edited.
+
+
+## 2.0 Beta7
+### AI Feature Improvements
+
+### Bug Fixes & Polish
+* **Tab**: Make the tab functionality more intuitive
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

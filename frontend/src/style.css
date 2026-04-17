@@ -45,6 +45,37 @@ body {
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
+.startup-splash {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background:
+        radial-gradient(circle at center, color-mix(in srgb, var(--surface-elevated) 100%, transparent) 0%, var(--bg-color) 72%);
+    pointer-events: none;
+    opacity: 1;
+    transition: opacity 0.5s ease-in;
+}
+
+.startup-splash.is-hiding {
+    opacity: 0;
+}
+
+.startup-splash-logo {
+    width: 128;
+    height: 128px;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.18));
+}
+
+html.dark .startup-splash-logo {
+    filter: drop-shadow(0 12px 28px rgba(0, 0, 0, 0.34));
+}
+
 .material-symbols-outlined {
     font-family: "Material Symbols Outlined";
     font-weight: normal;
@@ -136,7 +167,7 @@ body {
     color: color-mix(in srgb, var(--text-color) 78%, transparent);
     cursor: pointer;
     touch-action: none;
-    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, margin 0.18s ease, box-shadow 0.18s ease;
+    transition: background 0.18s ease, color 0.18s ease, border-color 0.18s ease, transform 0.18s ease, box-shadow 0.18s ease;
     --wails-draggable: no-drag;
 }
 
@@ -174,14 +205,6 @@ html.dark .tab-item:hover {
     transform: none;
 }
 
-.tab-item.drop-before {
-    margin-left: 40px;
-}
-
-.tab-item.drop-after {
-    margin-right: 40px;
-}
-
 html.dark .tab-item.drag-lifted {
     box-shadow: 0 2px 10px rgba(0, 0, 0, 0.24);
 }
@@ -191,7 +214,14 @@ html.dark .tab-item.drag-lifted {
     flex: 0 0 auto;
     border-radius: 15px;
     pointer-events: none;
-    opacity: 0;
+    opacity: 0.32;
+    background: color-mix(in srgb, var(--accent-color) 16%, transparent);
+    border: 1px dashed color-mix(in srgb, var(--accent-color) 40%, transparent);
+    transition: width 0.18s ease, transform 0.18s ease;
+}
+
+html.dark .tab-drag-placeholder {
+    opacity: 0.38;
 }
 
 .tab-title {
