@@ -10,6 +10,7 @@ import { cmView, insertPlainTextAtCursor } from './main-editor.js';
 import { showToast } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
+import gfmReference from './prompts/GFM.md?raw';
 import { StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
 
@@ -431,6 +432,15 @@ function buildMarkdownSection(title, lines) {
     ];
 }
 
+function buildRawMarkdownSection(title, content) {
+    const body = String(content || '').trim();
+    if (!body) return [];
+    return [
+        `## ${title}`,
+        body,
+    ];
+}
+
 function buildTaggedDataSection(title, tagName, content) {
     return [
         `## ${title}`,
@@ -445,10 +455,24 @@ function buildInstructionSection(userPrompt) {
     ];
 }
 
+function getGithubCompatiblePromptSections() {
+    if (!state.aiGithubCompatibleEnabled) return [];
+    return [
+        buildMarkdownSection('GitHub Compatible Mode', [
+            'Use the bundled GFM examples as the style reference for Markdown output.',
+            'Prefer Markdown first; use simple GitHub-safe HTML only when the examples show it or Markdown cannot express the result clearly.',
+            'Do not use font tags, inline CSS layout, or unsupported Markdown extensions.',
+            'When content is wrapped in <div> tags, convert Markdown image syntax (e.g., ![alt](image.png)) into standard HTML <img> tags.',
+        ]),
+        buildRawMarkdownSection('GFM Examples', gfmReference),
+    ];
+}
+
 function buildAskAIQuestionPrompt(userPrompt) {
     return joinPromptSections(
         buildMarkdownSection('Shared Rules', getSharedRulePromptLines()),
         buildMarkdownSection('Rules', ASK_AI_PROMPT_LINES),
+        ...getGithubCompatiblePromptSections(),
         buildInstructionSection(userPrompt),
     );
 }
@@ -479,7 +503,10 @@ function joinPromptSections(...sections) {
 }
 
 function buildEditPromptSections({ selectedText, beforeContext, afterContext, instructionLines, includeContext, userPrompt }) {
-    const sections = [buildMarkdownSection('Rules', instructionLines)];
+    const sections = [
+        buildMarkdownSection('Rules', instructionLines),
+        ...getGithubCompatiblePromptSections(),
+    ];
 
     if (includeContext) {
         sections.push(buildTaggedDataSection('Before Context', 'before_context', beforeContext));
@@ -520,8 +547,8 @@ function getAIEditSystemPrompt() {
     const capabilityLines = [
         baseIdentity,
         ...(state.aiGithubCompatibleEnabled ? [
-            'When content is wrapped in <div> tags, convert Markdown image syntax (e.g., ![alt](image.png)) into standard HTML <img> tags.',
-            'Remove all font-related HTML tags and inline styles (e.g., <font>, style="font-family:...", style="font-size:...") to ensure clean, GitHub-compatible rendering.',
+            'GitHub-compatible mode is enabled. Follow the GFM examples provided with the user request.',
+            'Prefer Markdown first, and use simple GitHub-safe HTML only when Markdown cannot express the result clearly.',
         ] : []),
         contextInstruction,
         'Internally reason about whether the user wants a document edit or a general answer, but do not reveal the reasoning steps.',

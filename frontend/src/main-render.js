@@ -20,7 +20,7 @@ import {
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
 import { syncAIControls } from './main-ai.js';
-import { applyHighlight, clearHighlight } from './main-ui.js';
+import { applyHighlight, clearHighlight, copyTextToClipboard, showToast } from './main-ui.js';
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL } from '../wailsjs/go/main/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 
@@ -30,6 +30,13 @@ let htmlFrameResizeObserver = null;
 const MATH_DATA_ATTR = 'data-dkst-math';
 const MATH_DISPLAY_ATTR = 'data-dkst-math-display';
 const LIVE_BLOCK_ATTR = 'data-dkst-live-block-index';
+const MARKDOWN_ALERT_TYPES = Object.freeze({
+    note: { label: 'Note', icon: 'info' },
+    tip: { label: 'Tip', icon: 'lightbulb' },
+    important: { label: 'Important', icon: 'priority_high' },
+    warning: { label: 'Warning', icon: 'warning' },
+    caution: { label: 'Caution', icon: 'report' },
+});
 let previewRenderToken = 0;
 let livePreviewBlocks = [];
 
@@ -308,6 +315,107 @@ function syncEditingPreviewReturnButton() {
     el.editPreviewReturn.classList.toggle('hidden', !shouldShow);
 }
 
+function removeAlertMarkerFromElement(element, markerLength) {
+    let remaining = markerLength;
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    const emptyTextNodes = [];
+
+    while (remaining > 0) {
+        const node = walker.nextNode();
+        if (!node) break;
+
+        if (node.nodeValue.length <= remaining) {
+            remaining -= node.nodeValue.length;
+            node.nodeValue = '';
+            emptyTextNodes.push(node);
+            continue;
+        }
+
+        node.nodeValue = node.nodeValue.slice(remaining).replace(/^\s+/, '');
+        remaining = 0;
+    }
+
+    emptyTextNodes.forEach(node => node.remove());
+}
+
+function enhanceMarkdownAlerts(container) {
+    container.querySelectorAll('blockquote').forEach(blockquote => {
+        if (blockquote.classList.contains('markdown-alert')) return;
+
+        const firstElement = blockquote.firstElementChild;
+        if (!firstElement) return;
+
+        const text = firstElement.textContent || '';
+        const match = text.match(/^\s*\[!(NOTE|TIP|IMPORTANT|WARNING|CAUTION)\]\s*/i);
+        if (!match) return;
+
+        const type = match[1].toLowerCase();
+        const alertMeta = MARKDOWN_ALERT_TYPES[type];
+        if (!alertMeta) return;
+
+        blockquote.classList.add('markdown-alert', `markdown-alert-${type}`);
+        removeAlertMarkerFromElement(firstElement, match[0].length);
+
+        if (!firstElement.textContent.trim() && firstElement.childElementCount === 0) {
+            firstElement.remove();
+        }
+
+        const title = document.createElement('div');
+        title.className = 'markdown-alert-title';
+
+        const icon = document.createElement('span');
+        icon.className = 'material-symbols-outlined markdown-alert-icon';
+        icon.setAttribute('aria-hidden', 'true');
+        icon.textContent = alertMeta.icon;
+
+        const label = document.createElement('span');
+        label.textContent = alertMeta.label;
+
+        title.append(icon, label);
+        blockquote.prepend(title);
+    });
+}
+
+function enhanceCodeBlockCopyButtons(container) {
+    container.querySelectorAll('pre > code').forEach(codeBlock => {
+        const pre = codeBlock.parentElement;
+        if (!pre || pre.querySelector(':scope > .code-copy-button')) return;
+
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'code-copy-button';
+        button.title = 'Copy code';
+        button.setAttribute('aria-label', 'Copy code');
+        button.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">content_copy</span>';
+
+        button.addEventListener('click', async event => {
+            event.preventDefault();
+            event.stopPropagation();
+
+            try {
+                await copyTextToClipboard(codeBlock.textContent || '');
+                button.classList.add('is-copied');
+                button.title = 'Copied';
+                button.setAttribute('aria-label', 'Copied');
+                button.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">check</span>';
+                showToast('Copied code. 📋');
+
+                window.setTimeout(() => {
+                    button.classList.remove('is-copied');
+                    button.title = 'Copy code';
+                    button.setAttribute('aria-label', 'Copy code');
+                    button.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">content_copy</span>';
+                }, 1400);
+            } catch (error) {
+                LogError(`code block copy failed: ${error?.message || error}`);
+                showToast('Failed to copy code. ❌');
+            }
+        });
+
+        pre.appendChild(button);
+    });
+}
+
 // ── Mermaid Configuration ──────────────────────────────────
 
 function getMermaidConfig() {
@@ -385,6 +493,8 @@ function splitMarkdownIntoBlocks(content) {
 }
 
 async function postProcess(container = el.markdownContainer) {
+    enhanceMarkdownAlerts(container);
+
     container.querySelectorAll('a').forEach(anchor => {
         const href = anchor.getAttribute('href');
         if (!href) return;
@@ -442,6 +552,7 @@ async function postProcess(container = el.markdownContainer) {
     el.markdownContainer.style.fontSize = `${state.currentFontSize}px`;
 
     await renderMermaidSub(container);
+    enhanceCodeBlockCopyButtons(container);
 }
 
 async function renderMarkdownLiveBlocks(content, token) {

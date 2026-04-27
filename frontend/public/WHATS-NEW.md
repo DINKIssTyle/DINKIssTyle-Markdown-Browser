@@ -1,4 +1,4 @@
-# What's New in Version 2.0 Beta 7
+# What's New in Version 2.0 Beta 8
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -148,6 +148,19 @@ Proposal Writing    :after a1, 20d
 
 ### Bug Fixes & Polish
 * **Tab**: Make the tab functionality more intuitive
+
+
+## 2.0 Beta8
+### AI Feature Improvements
+
+* **Added GFM Guide .MD**: Allows the LLM to achieve better GFM compatibility by seeing examples directly.
+
+### Added & Polish
+* **Markdown Rendering**: Improved rendering quality for `> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION]`.
+* **Code Block Copy Button**: Added a copy button to code blocks.
+
+
+
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
