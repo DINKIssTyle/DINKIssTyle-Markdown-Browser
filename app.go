@@ -256,9 +256,10 @@ func (a *App) OpenFile() (FileResult, error) {
 }
 
 // SelectDocument opens a file dialog to select a document for insertion
-func (a *App) SelectDocument() (string, error) {
+func (a *App) SelectDocument(basePath string) (string, error) {
 	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Document",
+		Title:            "Select Document",
+		DefaultDirectory: defaultDirectoryForBasePath(basePath),
 		Filters: []runtime.FileFilter{
 			{DisplayName: "Document Files", Pattern: "*.md;*.markdown;*.html;*.htm"},
 		},
@@ -267,14 +268,35 @@ func (a *App) SelectDocument() (string, error) {
 }
 
 // SelectImage opens a file dialog to select an image for insertion
-func (a *App) SelectImage() (string, error) {
+func (a *App) SelectImage(basePath string) (string, error) {
 	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Image",
+		Title:            "Select Image",
+		DefaultDirectory: defaultDirectoryForBasePath(basePath),
 		Filters: []runtime.FileFilter{
 			{DisplayName: "Image Files", Pattern: "*.png;*.jpg;*.jpeg;*.gif;*.webp;*.svg;*.bmp;*.ico"},
 		},
 	})
 	return selection, err
+}
+
+func defaultDirectoryForBasePath(basePath string) string {
+	if basePath == "" {
+		return ""
+	}
+
+	cleanPath := filepath.Clean(basePath)
+	if info, err := os.Stat(cleanPath); err == nil {
+		if info.IsDir() {
+			return cleanPath
+		}
+		return filepath.Dir(cleanPath)
+	}
+
+	dir := filepath.Dir(cleanPath)
+	if info, err := os.Stat(dir); err == nil && info.IsDir() {
+		return dir
+	}
+	return ""
 }
 
 // ShowSaveFileDialog opens a dialog to save a new file

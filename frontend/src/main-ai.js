@@ -109,6 +109,9 @@ const AI_INTENT_VALUES = Object.freeze({
 
 const SUPPORT_AGENT_PROMPT_LINES = Object.freeze([
     'First decide whether the user request is an edit, a question, or ambiguous.',
+    'When <selected_text> exists, requests to translate, rewrite, summarize, shorten, expand, polish, fix grammar, change tone, change language, or convert format are edit requests.',
+    'Short commands such as "translate to Korean", "한국어로 번역", "번역", "교정", "요약", or "다듬어줘" must use <intent>edit</intent> and put the transformed text in <replacement>.',
+    'Do not answer that you will perform an edit; perform the edit by replacing <selected_text>.',
     'Return your response using exactly these XML blocks in this order:',
     '<intent>edit|question|ambiguous</intent>',
     '<support_report>short task review or answer for the user</support_report>',
@@ -455,24 +458,49 @@ function buildInstructionSection(userPrompt) {
     ];
 }
 
-function getGithubCompatiblePromptSections() {
+function shouldIncludeFullGfmReference(userPrompt) {
+    const prompt = String(userPrompt || '').toLowerCase();
+    return /\b(gfm|github flavored markdown|github-compatible|markdown|readme|table|code block|blockquote|alert|mermaid|html|div|image|checklist|task list|heading)\b/.test(prompt) ||
+        /(깃허브|마크다운|표|테이블|코드블록|코드 블록|인용|알림|이미지|체크리스트|작업 목록|제목|서식|형식|정렬|가운데|중앙|호환)/.test(prompt);
+}
+
+function isLikelySelectedTextTransformPrompt(userPrompt) {
+    const prompt = String(userPrompt || '').trim().toLowerCase();
+    return /\b(translate|rewrite|summarize|shorten|expand|polish|proofread|correct|fix grammar|change tone|convert|format)\b/.test(prompt) ||
+        /(번역|한국어|영어|일본어|중국어|요약|줄여|늘려|다듬|교정|수정|고쳐|바꿔|변환|정리|문체|톤|존댓말|반말)/.test(prompt);
+}
+
+function getGithubCompatiblePromptSections({ userPrompt } = {}) {
     if (!state.aiGithubCompatibleEnabled) return [];
-    return [
+
+    const sections = [
         buildMarkdownSection('GitHub Compatible Mode', [
-            'Use the bundled GFM examples as the style reference for Markdown output.',
-            'Prefer Markdown first; use simple GitHub-safe HTML only when the examples show it or Markdown cannot express the result clearly.',
-            'Do not use font tags, inline CSS layout, or unsupported Markdown extensions.',
+            'GitHub-compatible mode is only a formatting constraint. The user instruction remains the primary task.',
+            'For translation, correction, summarization, rewriting, or other content tasks, do the requested task normally and preserve the existing Markdown structure unless the user asks to change the format.',
+            'Use GFM-compatible syntax when generating or modifying Markdown markup.',
+            'Prefer Markdown first; use simple GitHub-safe HTML only when Markdown cannot express the result clearly.',
+            'Do not use font tags, inline CSS layout, or unsupported Markdown extensions unless the user explicitly asks for them.',
             'When content is wrapped in <div> tags, convert Markdown image syntax (e.g., ![alt](image.png)) into standard HTML <img> tags.',
         ]),
-        buildRawMarkdownSection('GFM Examples', gfmReference),
     ];
+
+    if (shouldIncludeFullGfmReference(userPrompt)) {
+        sections.push(
+            buildMarkdownSection('GFM Reference Priority', [
+                'The examples below are a style reference only. Do not imitate their content, topic, language, or structure unless the user asks for that kind of Markdown.',
+            ]),
+            buildRawMarkdownSection('GFM Examples', gfmReference),
+        );
+    }
+
+    return sections;
 }
 
 function buildAskAIQuestionPrompt(userPrompt) {
     return joinPromptSections(
         buildMarkdownSection('Shared Rules', getSharedRulePromptLines()),
         buildMarkdownSection('Rules', ASK_AI_PROMPT_LINES),
-        ...getGithubCompatiblePromptSections(),
+        ...getGithubCompatiblePromptSections({ userPrompt }),
         buildInstructionSection(userPrompt),
     );
 }
@@ -486,8 +514,13 @@ function getSharedRulePromptLines() {
         : [];
 }
 
-function getIntentAwareInstructionLines({ includeContext }) {
+function getIntentAwareInstructionLines({ includeContext, userPrompt }) {
     return [
+        ...(isLikelySelectedTextTransformPrompt(userPrompt) ? [
+            'The user instruction is a selected-text transformation request. Treat it as <intent>edit</intent>.',
+            'Transform <selected_text> directly and put the transformed text in <replacement>.',
+            'Do not answer that you will transform the text; perform the transformation.',
+        ] : []),
         AI_EDIT_RULES.selectedTextOnly,
         ...(includeContext ? [AI_CONTEXT_RULES.referenceOnlyReplacement] : []),
         ...getSharedRulePromptLines(),
@@ -505,7 +538,7 @@ function joinPromptSections(...sections) {
 function buildEditPromptSections({ selectedText, beforeContext, afterContext, instructionLines, includeContext, userPrompt }) {
     const sections = [
         buildMarkdownSection('Rules', instructionLines),
-        ...getGithubCompatiblePromptSections(),
+        ...getGithubCompatiblePromptSections({ userPrompt }),
     ];
 
     if (includeContext) {
@@ -532,7 +565,7 @@ function buildAIIntentPrompt(docText, from, to, userPrompt) {
     return {
         prompt: joinPromptSections(...buildEditPromptSections({
             ...context,
-            instructionLines: getIntentAwareInstructionLines({ includeContext }),
+            instructionLines: getIntentAwareInstructionLines({ includeContext, userPrompt }),
             includeContext,
             userPrompt,
         })),
@@ -556,6 +589,8 @@ function getAIEditSystemPrompt() {
     const responseLines = [
         'Return exactly three XML blocks in this order: <intent>...</intent><support_report>...</support_report><replacement>...</replacement>.',
         'Use <intent>edit</intent> only when the user clearly wants to modify <selected_text>.',
+        'Translation, rewriting, summarization, grammar correction, tone changes, language changes, and format conversion of <selected_text> are edit requests.',
+        'For short edit commands such as "한국어로 번역", return the translated text inside <replacement>; do not merely describe what you would do.',
         'Use <intent>question</intent> or <intent>ambiguous</intent> when the user is asking for an explanation, answer, or non-edit help.',
         'If intent is edit, <replacement> must contain only the replacement text for <selected_text>.',
         'If intent is question or ambiguous, leave <replacement></replacement> empty and answer briefly in <support_report>.',
@@ -1362,6 +1397,13 @@ async function sendPrompt() {
             });
             aiRequestInFlight = false;
             return;
+        }
+
+        const shouldForceEditIntent = hasSelection && isLikelySelectedTextTransformPrompt(userPrompt);
+        if ((structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) &&
+            shouldForceEditIntent &&
+            structuredPayload?.replacement?.trim()) {
+            structuredPayload.intent = AI_INTENT_VALUES.edit;
         }
 
         if (structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) {

@@ -57,9 +57,9 @@ export function SaveSettings(arg1:main.AppSettings):Promise<void>;
 
 export function SearchMarkdown(arg1:string,arg2:string):Promise<Array<Record<string, string>>>;
 
-export function SelectDocument():Promise<string>;
+export function SelectDocument(arg1:string):Promise<string>;
 
-export function SelectImage():Promise<string>;
+export function SelectImage(arg1:string):Promise<string>;
 
 export function ShowSaveFileDialog(arg1:string):Promise<string>;
 

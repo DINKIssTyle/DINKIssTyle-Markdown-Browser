@@ -28,6 +28,12 @@ let lastRenderedPreviewContent = "";
 export let cmView = null;
 export const themeCompartment = new Compartment();
 
+const HTML_VOID_TAGS = [
+    'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
+    'link', 'meta', 'param', 'source', 'track', 'wbr'
+];
+const HTML_VOID_TAG_CLOSE_REGEX = new RegExp(`(<(${HTML_VOID_TAGS.join('|')})\\b[^<>]*?>)<\\/\\2\\s*>`, 'gi');
+
 function applyEditorFontSize() {
     if (!cmView) return;
     cmView.contentDOM.style.fontSize = `${state.currentFontSize * EDITOR_FONT_VISUAL_SCALE}px`;
@@ -131,6 +137,36 @@ function updatePreviewForEditorChange(update) {
         schedulePreviewRender(nextDocText, 0);
     }
     lastPreviewCursorLine = nextCursorLine;
+}
+
+function removeVoidHtmlClosingTags(update) {
+    if (!cmView || !update.docChanged) return false;
+
+    const doc = update.state.doc;
+    const changes = [];
+    const seen = new Set();
+
+    update.changes.iterChangedRanges((fromA, toA, fromB, toB) => {
+        const scanFrom = Math.max(0, fromB - 200);
+        const scanTo = Math.min(doc.length, toB + 200);
+        const text = doc.sliceString(scanFrom, scanTo);
+
+        HTML_VOID_TAG_CLOSE_REGEX.lastIndex = 0;
+        for (const match of text.matchAll(HTML_VOID_TAG_CLOSE_REGEX)) {
+            const closeFrom = scanFrom + match.index + match[1].length;
+            const closeTo = closeFrom + match[0].length - match[1].length;
+            const key = `${closeFrom}:${closeTo}`;
+            if (seen.has(key)) continue;
+            seen.add(key);
+            changes.push({ from: closeFrom, to: closeTo, insert: '' });
+        }
+    });
+
+    if (!changes.length) return false;
+
+    changes.sort((a, b) => b.from - a.from);
+    cmView.dispatch({ changes });
+    return true;
 }
 
 function getSlashCommands() {
@@ -408,6 +444,10 @@ export function initCodeMirror() {
                 }
             }),
             EditorView.updateListener.of((update) => {
+                if (removeVoidHtmlClosingTags(update)) {
+                    return;
+                }
+
                 if (update.docChanged) {
                     const val = update.state.doc.toString();
                     state.currentMarkdownSource = val;
@@ -978,7 +1018,7 @@ export function getRedoDepth() {
 async function insertLink() {
     const choice = await AskConfirm("Insert Link", "Would you like to enter a URL manually or select a local file?", "Local File", "Manual URL");
     if (choice) {
-        const absPath = await SelectDocument();
+        const absPath = await SelectDocument(state.currentFilePath);
         if (absPath) {
             const relPath = await GetRelativePath(state.currentFilePath, absPath);
             insertTextAtCursor('[', `](${relPath})`);
@@ -993,7 +1033,7 @@ async function insertLink() {
 async function insertImage() {
     const choice = await AskConfirm("Insert Image", "Would you like to enter an image URL manually or select a local image?", "Local File", "Manual URL");
     if (choice) {
-        const absPath = await SelectImage();
+        const absPath = await SelectImage(state.currentFilePath);
         if (absPath) {
             const relPath = await GetRelativePath(state.currentFilePath, absPath);
             insertTextAtCursor('![', `](${relPath})`);

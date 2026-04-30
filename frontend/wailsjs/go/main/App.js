@@ -110,12 +110,12 @@ export function SearchMarkdown(arg1, arg2) {
   return window['go']['main']['App']['SearchMarkdown'](arg1, arg2);
 }
 
-export function SelectDocument() {
-  return window['go']['main']['App']['SelectDocument']();
+export function SelectDocument(arg1) {
+  return window['go']['main']['App']['SelectDocument'](arg1);
 }
 
-export function SelectImage() {
-  return window['go']['main']['App']['SelectImage']();
+export function SelectImage(arg1) {
+  return window['go']['main']['App']['SelectImage'](arg1);
 }
 
 export function ShowSaveFileDialog(arg1) {

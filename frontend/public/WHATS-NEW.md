@@ -155,10 +155,11 @@ Proposal Writing    :after a1, 20d
 
 * **Added GFM Guide .MD**: Allows the LLM to achieve better GFM compatibility by seeing examples directly.
 
-### Added & Polish
+### Added & Bug Fixes & Polish
 * **Markdown Rendering**: Improved rendering quality for `> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION]`.
 * **Code Block Copy Button**: Added a copy button to code blocks.
-
+* **HTML void element fix**: Fixed a bug where `</br>` was added to tags like `<br>`
+* **Insert Image, Link**: When adding an image or link, a file browser opens at that location in the document.
 
 
 
