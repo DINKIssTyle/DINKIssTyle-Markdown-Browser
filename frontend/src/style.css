@@ -3059,7 +3059,7 @@ html.dark .ai-prompt-shell:focus-within {
 
 .cm-scroller {
     overflow: auto;
-    padding: 16px 16px 16px 0;
+    padding: 16px 16px 8em 0;
 }
 
 .cm-content {
