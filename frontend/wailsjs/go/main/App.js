@@ -54,10 +54,6 @@ export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
 
-export function InstallSystemIntegration() {
-  return window['go']['main']['App']['InstallSystemIntegration']();
-}
-
 export function HandleFileDrop(arg1) {
   return window['go']['main']['App']['HandleFileDrop'](arg1);
 }
@@ -68,6 +64,10 @@ export function HandleSecondInstanceLaunch(arg1) {
 
 export function HandleSystemOpenFile(arg1) {
   return window['go']['main']['App']['HandleSystemOpenFile'](arg1);
+}
+
+export function InstallSystemIntegration() {
+  return window['go']['main']['App']['InstallSystemIntegration']();
 }
 
 export function MakeAIRequest(arg1, arg2, arg3) {

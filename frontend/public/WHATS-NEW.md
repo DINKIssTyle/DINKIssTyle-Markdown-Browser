@@ -165,6 +165,7 @@ Proposal Writing    :after a1, 20d
 ## 2.0 Beta9
 ### Added & Bug Fixes & Polish
 * **Added Print Button**: Added a print button. You can now print Markdown documents.
+* **Added Linux install feature**: Added an Install link visible only on Linux in the Start page Footer. Clicking it installs the app and icon to ~/.local/bin and ~/.local/share/, and creates a .desktop file.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
