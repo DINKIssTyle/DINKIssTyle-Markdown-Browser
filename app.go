@@ -15,6 +15,7 @@ import (
 	"errors"
 	"fmt"
 	"image"
+	"image/color"
 	"image/png"
 	"io"
 	"log"
@@ -1419,12 +1420,24 @@ func resizePNG(source []byte, size int) ([]byte, error) {
 		return nil, err
 	}
 	bounds := img.Bounds()
-	dst := image.NewRGBA(image.Rect(0, 0, size, size))
+	srcW := bounds.Dx()
+	srcH := bounds.Dy()
+	dst := image.NewNRGBA(image.Rect(0, 0, size, size))
 	for y := 0; y < size; y++ {
-		srcY := bounds.Min.Y + y*bounds.Dy()/size
+		srcY := (float64(y)+0.5)*float64(srcH)/float64(size) - 0.5
+		y0, y1, wy := sampleAxis(srcY, srcH)
 		for x := 0; x < size; x++ {
-			srcX := bounds.Min.X + x*bounds.Dx()/size
-			dst.Set(x, y, img.At(srcX, srcY))
+			srcX := (float64(x)+0.5)*float64(srcW)/float64(size) - 0.5
+			x0, x1, wx := sampleAxis(srcX, srcW)
+			dst.SetNRGBA(x, y, bilinearNRGBA(
+				img,
+				bounds.Min.X+x0,
+				bounds.Min.Y+y0,
+				bounds.Min.X+x1,
+				bounds.Min.Y+y1,
+				wx,
+				wy,
+			))
 		}
 	}
 	var output bytes.Buffer
@@ -1432,6 +1445,63 @@ func resizePNG(source []byte, size int) ([]byte, error) {
 		return nil, err
 	}
 	return output.Bytes(), nil
+}
+
+func sampleAxis(value float64, length int) (int, int, float64) {
+	if value <= 0 {
+		return 0, 0, 0
+	}
+	maxIndex := length - 1
+	if value >= float64(maxIndex) {
+		return maxIndex, maxIndex, 0
+	}
+	index := int(value)
+	return index, index + 1, value - float64(index)
+}
+
+func bilinearNRGBA(img image.Image, x0 int, y0 int, x1 int, y1 int, wx float64, wy float64) color.NRGBA {
+	r00, g00, b00, a00 := img.At(x0, y0).RGBA()
+	r10, g10, b10, a10 := img.At(x1, y0).RGBA()
+	r01, g01, b01, a01 := img.At(x0, y1).RGBA()
+	r11, g11, b11, a11 := img.At(x1, y1).RGBA()
+
+	topR := lerp(float64(r00), float64(r10), wx)
+	topG := lerp(float64(g00), float64(g10), wx)
+	topB := lerp(float64(b00), float64(b10), wx)
+	topA := lerp(float64(a00), float64(a10), wx)
+	bottomR := lerp(float64(r01), float64(r11), wx)
+	bottomG := lerp(float64(g01), float64(g11), wx)
+	bottomB := lerp(float64(b01), float64(b11), wx)
+	bottomA := lerp(float64(a01), float64(a11), wx)
+
+	r := lerp(topR, bottomR, wy)
+	g := lerp(topG, bottomG, wy)
+	b := lerp(topB, bottomB, wy)
+	a := lerp(topA, bottomA, wy)
+	if a <= 0 {
+		return color.NRGBA{}
+	}
+
+	return color.NRGBA{
+		R: uint8(clampFloat((r*65535/a)/257, 0, 255) + 0.5),
+		G: uint8(clampFloat((g*65535/a)/257, 0, 255) + 0.5),
+		B: uint8(clampFloat((b*65535/a)/257, 0, 255) + 0.5),
+		A: uint8(clampFloat(a/257, 0, 255) + 0.5),
+	}
+}
+
+func lerp(a float64, b float64, t float64) float64 {
+	return a + (b-a)*t
+}
+
+func clampFloat(value float64, min float64, max float64) float64 {
+	if value < min {
+		return min
+	}
+	if value > max {
+		return max
+	}
+	return value
 }
 
 func markdownMimePackage() string {
