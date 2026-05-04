@@ -1,4 +1,4 @@
-# What's New in Version 2.0 Beta 8
+# What's New in Version 2.0 Beta 9
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 

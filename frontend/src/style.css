@@ -966,13 +966,19 @@ html.dark .html-frame {
         background: #ffffff !important;
     }
 
+    #main-container.is-editing .content-view {
+        display: block !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
     .markdown-container {
         display: block !important;
-        max-width: none;
-        width: auto;
-        margin: 0;
-        color: #000000;
-        background: #ffffff;
+        max-width: none !important;
+        width: auto !important;
+        margin: 0 !important;
+        color: #000000 !important;
+        background: #ffffff !important;
         font-size: inherit;
     }
 
