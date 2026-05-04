@@ -201,6 +201,9 @@
 
                     <footer class="home-footer" aria-label="Version and Copyright Info">
                         <div class="home-footer-line">
+                            <a href="#" id="footer-install" class="footer-link footer-install hidden">Install</a>
+                            <span id="footer-install-dot" class="footer-dot footer-install hidden"
+                                aria-hidden="true">•</span>
                             <span id="app-version-footer">Version --</span>
                         </div>
                         <div class="home-footer-line">
@@ -351,6 +354,24 @@
                 <div class="modal-actions">
                     <button id="modal-btn-cancel" class="modal-btn secondary">Cancel</button>
                     <button id="modal-btn-ok" class="modal-btn primary">OK</button>
+                </div>
+            </div>
+        </div>
+
+        <!-- System Install Modal -->
+        <div id="system-install-modal" class="modal-overlay hidden">
+            <div class="modal-content system-install-content" role="dialog" aria-modal="true"
+                aria-labelledby="system-install-title">
+                <h3 id="system-install-title">System Install</h3>
+                <p class="system-install-copy">
+                    Install copies this app to your user profile, registers 1024px and 256px icons, and connects .md
+                    and .markdown files so Ubuntu can launch them from the app menu or file manager.
+                </p>
+                <p id="system-install-message" class="system-install-message" aria-live="polite"></p>
+                <div class="modal-actions">
+                    <button id="system-install-run" class="modal-btn primary">Install</button>
+                    <button id="system-install-remove" class="modal-btn danger">Uninstall</button>
+                    <button id="system-install-close" class="modal-btn secondary">Close</button>
                 </div>
             </div>
         </div>

@@ -7,11 +7,15 @@ package main
 
 import (
 	"bufio"
+	"bytes"
 	"context"
+	_ "embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
 	"fmt"
+	"image"
+	"image/png"
 	"io"
 	"log"
 	"mime"
@@ -27,6 +31,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
+
+//go:embed build/appicon.png
+var appIconPNG []byte
 
 // RecentFile represents a recently opened file
 type RecentFile struct {
@@ -1221,4 +1228,239 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 // GetVersion returns the application version
 func (a *App) GetVersion() string {
 	return AppVersion
+}
+
+func (a *App) InstallSystemIntegration() (string, error) {
+	if goruntime.GOOS != "linux" {
+		return "", errors.New("system integration is only available on Ubuntu/Linux")
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	exe, err := os.Executable()
+	if err != nil {
+		return "", err
+	}
+	if resolved, err := filepath.EvalSymlinks(exe); err == nil {
+		exe = resolved
+	}
+
+	binPath := filepath.Join(home, ".local", "bin", "dkst-markdown-browser")
+	iconPath := filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps", "dkst-markdown-browser.png")
+	icon1024Path := filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "apps", "dkst-markdown-browser.png")
+	mimeIconPath := filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "mimetypes", "text-markdown.png")
+	mimeIcon1024Path := filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "mimetypes", "text-markdown.png")
+	pixmapPath := filepath.Join(home, ".local", "share", "pixmaps", "dkst-markdown-browser.png")
+	desktopPath := filepath.Join(home, ".local", "share", "applications", "dkst-markdown-browser.desktop")
+	mimePackagePath := filepath.Join(home, ".local", "share", "mime", "packages", "dkst-markdown-browser.xml")
+
+	if err := os.MkdirAll(filepath.Dir(binPath), 0755); err != nil {
+		return "", err
+	}
+	if same, err := sameFile(exe, binPath); err != nil || !same {
+		if err := copyFile(exe, binPath, 0755); err != nil {
+			return "", err
+		}
+	}
+	if err := os.Chmod(binPath, 0755); err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(iconPath), 0755); err != nil {
+		return "", err
+	}
+	icon256, err := resizePNG(appIconPNG, 256)
+	if err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(iconPath, icon256, 0644); err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(icon1024Path), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(icon1024Path, appIconPNG, 0644); err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(mimeIconPath), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(mimeIconPath, icon256, 0644); err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(mimeIcon1024Path), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(mimeIcon1024Path, appIconPNG, 0644); err != nil {
+		return "", err
+	}
+	if err := os.MkdirAll(filepath.Dir(pixmapPath), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(pixmapPath, appIconPNG, 0644); err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(desktopPath), 0755); err != nil {
+		return "", err
+	}
+	entry := fmt.Sprintf(`[Desktop Entry]
+Type=Application
+Name=DKST Markdown Browser
+Comment=Lightweight Markdown viewer and editor
+Exec=%s %%f
+Icon=dkst-markdown-browser
+Terminal=false
+Categories=Utility;TextEditor;
+MimeType=text/markdown;text/x-markdown;application/x-markdown;application/x-extension-md;application/x-extension-markdown;
+StartupWMClass=DKST Markdown Browser
+`, quoteDesktopExec(binPath))
+	if err := os.WriteFile(desktopPath, []byte(entry), 0644); err != nil {
+		return "", err
+	}
+
+	if err := os.MkdirAll(filepath.Dir(mimePackagePath), 0755); err != nil {
+		return "", err
+	}
+	if err := os.WriteFile(mimePackagePath, []byte(markdownMimePackage()), 0644); err != nil {
+		return "", err
+	}
+
+	refreshDesktopIntegration(home)
+	setDefaultMarkdownApp()
+	return "Installed app launcher and Markdown file association to ~/.local.", nil
+}
+
+func (a *App) UninstallSystemIntegration() (string, error) {
+	if goruntime.GOOS != "linux" {
+		return "", errors.New("system integration is only available on Ubuntu/Linux")
+	}
+
+	home, err := os.UserHomeDir()
+	if err != nil {
+		return "", err
+	}
+
+	targets := []string{
+		filepath.Join(home, ".local", "bin", "dkst-markdown-browser"),
+		filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps", "dkst-markdown-browser.png"),
+		filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "apps", "dkst-markdown-browser.png"),
+		filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "mimetypes", "text-markdown.png"),
+		filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "mimetypes", "text-markdown.png"),
+		filepath.Join(home, ".local", "share", "pixmaps", "dkst-markdown-browser.png"),
+		filepath.Join(home, ".local", "share", "applications", "dkst-markdown-browser.desktop"),
+		filepath.Join(home, ".local", "share", "mime", "packages", "dkst-markdown-browser.xml"),
+	}
+	for _, target := range targets {
+		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
+			return "", err
+		}
+	}
+
+	refreshDesktopIntegration(home)
+	return "Removed installed files from ~/.local.", nil
+}
+
+func sameFile(source string, target string) (bool, error) {
+	sourceInfo, err := os.Stat(source)
+	if err != nil {
+		return false, err
+	}
+	targetInfo, err := os.Stat(target)
+	if err != nil {
+		return false, err
+	}
+	return os.SameFile(sourceInfo, targetInfo), nil
+}
+
+func copyFile(source string, target string, mode os.FileMode) error {
+	input, err := os.Open(source)
+	if err != nil {
+		return err
+	}
+	defer input.Close()
+
+	output, err := os.OpenFile(target, os.O_CREATE|os.O_WRONLY|os.O_TRUNC, mode)
+	if err != nil {
+		return err
+	}
+	defer output.Close()
+
+	if _, err := io.Copy(output, input); err != nil {
+		return err
+	}
+	return output.Chmod(mode)
+}
+
+func resizePNG(source []byte, size int) ([]byte, error) {
+	img, _, err := image.Decode(bytes.NewReader(source))
+	if err != nil {
+		return nil, err
+	}
+	bounds := img.Bounds()
+	dst := image.NewRGBA(image.Rect(0, 0, size, size))
+	for y := 0; y < size; y++ {
+		srcY := bounds.Min.Y + y*bounds.Dy()/size
+		for x := 0; x < size; x++ {
+			srcX := bounds.Min.X + x*bounds.Dx()/size
+			dst.Set(x, y, img.At(srcX, srcY))
+		}
+	}
+	var output bytes.Buffer
+	if err := png.Encode(&output, dst); err != nil {
+		return nil, err
+	}
+	return output.Bytes(), nil
+}
+
+func markdownMimePackage() string {
+	return `<?xml version="1.0" encoding="UTF-8"?>
+<mime-info xmlns="http://www.freedesktop.org/standards/shared-mime-info">
+  <mime-type type="text/markdown">
+    <comment>Markdown document</comment>
+    <sub-class-of type="text/plain"/>
+    <icon name="text-markdown"/>
+    <glob pattern="*.md"/>
+    <glob pattern="*.markdown"/>
+  </mime-type>
+</mime-info>
+`
+}
+
+func quoteDesktopExec(path string) string {
+	return `"` + strings.ReplaceAll(path, `"`, `\"`) + `"`
+}
+
+func refreshDesktopIntegration(home string) {
+	commands := [][]string{
+		{"update-mime-database", filepath.Join(home, ".local", "share", "mime")},
+		{"update-desktop-database", filepath.Join(home, ".local", "share", "applications")},
+		{"gtk-update-icon-cache", "-q", filepath.Join(home, ".local", "share", "icons", "hicolor")},
+	}
+	for _, command := range commands {
+		if _, err := exec.LookPath(command[0]); err != nil {
+			continue
+		}
+		_ = exec.Command(command[0], command[1:]...).Run()
+	}
+}
+
+func setDefaultMarkdownApp() {
+	desktopID := "dkst-markdown-browser.desktop"
+	mimeTypes := []string{
+		"text/markdown",
+		"text/x-markdown",
+		"application/x-markdown",
+		"application/x-extension-md",
+		"application/x-extension-markdown",
+	}
+	if _, err := exec.LookPath("xdg-mime"); err != nil {
+		return
+	}
+	for _, mimeType := range mimeTypes {
+		_ = exec.Command("xdg-mime", "default", desktopID, mimeType).Run()
+	}
 }

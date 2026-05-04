@@ -35,6 +35,8 @@ import {
     ClearRecentFiles,
     HandleFileDrop,
     GetVersion,
+    InstallSystemIntegration,
+    UninstallSystemIntegration,
     AskSaveDiscardCancel,
     PrintCurrentWindow,
     ShowPageSetup,
@@ -45,7 +47,9 @@ import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
 
 window.addEventListener('DOMContentLoaded', async () => {
     const splashStartedAt = performance.now();
-    document.documentElement.classList.toggle('platform-linux', isLinux());
+    const runningOnLinux = isLinux();
+    document.documentElement.classList.toggle('platform-linux', runningOnLinux);
+    updateLinuxInstallLink(runningOnLinux);
 
     try {
         // Step 1: Parallelize initial data fetching from Go backend
@@ -53,6 +57,7 @@ window.addEventListener('DOMContentLoaded', async () => {
 
         bindToolbar();
         bindHomeScreen();
+        bindSystemInstallModal();
         bindHighlightNav();
         bindContextMenu();
         setupDragAndDrop();
@@ -138,6 +143,50 @@ async function loadSettings() {
         }
     } catch (err) {
         console.error("Failed to get version:", err);
+    }
+}
+
+function updateLinuxInstallLink(runningOnLinux) {
+    el.footerInstall?.classList.toggle('hidden', !runningOnLinux);
+    el.footerInstallDot?.classList.toggle('hidden', !runningOnLinux);
+}
+
+function openSystemInstallModal() {
+    if (!isLinux() || !el.systemInstallModal) {
+        return;
+    }
+    if (el.systemInstallMessage) {
+        el.systemInstallMessage.textContent = '';
+        el.systemInstallMessage.classList.remove('is-error');
+    }
+    el.systemInstallModal.classList.remove('hidden');
+}
+
+function closeSystemInstallModal() {
+    el.systemInstallModal?.classList.add('hidden');
+}
+
+async function runSystemIntegration(action) {
+    if (!el.systemInstallMessage) {
+        return;
+    }
+
+    const buttons = [el.systemInstallRun, el.systemInstallRemove].filter(Boolean);
+    buttons.forEach(button => {
+        button.disabled = true;
+    });
+    el.systemInstallMessage.classList.remove('is-error');
+    el.systemInstallMessage.textContent = 'Working...';
+
+    try {
+        el.systemInstallMessage.textContent = await action();
+    } catch (error) {
+        el.systemInstallMessage.classList.add('is-error');
+        el.systemInstallMessage.textContent = String(error);
+    } finally {
+        buttons.forEach(button => {
+            button.disabled = false;
+        });
     }
 }
 
@@ -299,6 +348,24 @@ function bindHomeScreen() {
             await openAbout(true);
         };
     }
+}
+
+function bindSystemInstallModal() {
+    if (el.footerInstall) {
+        el.footerInstall.onclick = (e) => {
+            e.preventDefault();
+            openSystemInstallModal();
+        };
+    }
+
+    el.systemInstallRun?.addEventListener('click', () => runSystemIntegration(InstallSystemIntegration));
+    el.systemInstallRemove?.addEventListener('click', () => runSystemIntegration(UninstallSystemIntegration));
+    el.systemInstallClose?.addEventListener('click', closeSystemInstallModal);
+    el.systemInstallModal?.addEventListener('click', event => {
+        if (event.target === el.systemInstallModal) {
+            closeSystemInstallModal();
+        }
+    });
 }
 
 // ── Drag and Drop ──────────────────────────────────────────

@@ -54,6 +54,10 @@ export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
 
+export function InstallSystemIntegration() {
+  return window['go']['main']['App']['InstallSystemIntegration']();
+}
+
 export function HandleFileDrop(arg1) {
   return window['go']['main']['App']['HandleFileDrop'](arg1);
 }
@@ -136,6 +140,10 @@ export function SyncEditorState(arg1, arg2, arg3, arg4, arg5) {
 
 export function TouchRecentFile(arg1) {
   return window['go']['main']['App']['TouchRecentFile'](arg1);
+}
+
+export function UninstallSystemIntegration() {
+  return window['go']['main']['App']['UninstallSystemIntegration']();
 }
 
 export function UnloadAIModel(arg1, arg2, arg3) {

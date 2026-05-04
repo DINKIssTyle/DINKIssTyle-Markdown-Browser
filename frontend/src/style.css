@@ -618,6 +618,10 @@ html.dark .empty-state {
     font-weight: 500;
 }
 
+.footer-install {
+    font-weight: 700;
+}
+
 .action-btn {
     padding: 10px 20px;
     border-radius: 8px;
@@ -2264,6 +2268,16 @@ html.dark .context-menu-item:hover {
     box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
 }
 
+.modal-btn.danger {
+    background: #d92d20;
+    color: white;
+}
+
+.modal-btn.danger:hover {
+    background: #b42318;
+    box-shadow: 0 4px 12px rgba(217, 45, 32, 0.28);
+}
+
 .modal-btn.secondary {
     background: rgba(255, 255, 255, 0.1);
     color: var(--text-color);
@@ -2271,6 +2285,41 @@ html.dark .context-menu-item:hover {
 
 .modal-btn.secondary:hover {
     background: rgba(255, 255, 255, 0.15);
+}
+
+.modal-btn:disabled {
+    cursor: wait;
+    opacity: 0.58;
+}
+
+.system-install-content {
+    max-width: 460px;
+}
+
+#system-install-title {
+    margin: 0 0 12px;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--text-color);
+}
+
+.system-install-copy {
+    margin: 0;
+    font-size: 14px;
+    line-height: 1.55;
+    color: var(--text-muted);
+}
+
+.system-install-message {
+    min-height: 22px;
+    margin: 16px 0 0;
+    font-size: 13px;
+    line-height: 1.45;
+    color: var(--accent-color);
+}
+
+.system-install-message.is-error {
+    color: #d92d20;
 }
 
 .modal-emoji-grid {
