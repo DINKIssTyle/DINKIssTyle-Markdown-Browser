@@ -47,6 +47,8 @@ export function OpenExternalURL(arg1:string):Promise<void>;
 
 export function OpenFile():Promise<main.FileResult>;
 
+export function PrintCurrentWindow():Promise<void>;
+
 export function ReadFile(arg1:string):Promise<string>;
 
 export function ReadImageAsDataURL(arg1:string):Promise<string>;
@@ -60,6 +62,8 @@ export function SearchMarkdown(arg1:string,arg2:string):Promise<Array<Record<str
 export function SelectDocument(arg1:string):Promise<string>;
 
 export function SelectImage(arg1:string):Promise<string>;
+
+export function ShowPageSetup():Promise<void>;
 
 export function ShowSaveFileDialog(arg1:string):Promise<string>;
 

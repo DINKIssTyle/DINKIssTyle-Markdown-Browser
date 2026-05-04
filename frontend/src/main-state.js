@@ -37,6 +37,7 @@ export const el = {
     btnForward: $('btn-forward'),
     btnHome: $('btn-home'),
     btnRefresh: $('btn-refresh'),
+    btnPrint: $('btn-print'),
     btnOpen: $('btn-open'),
     btnOpenHome: $('btn-open-home'),
     btnClearRecent: $('btn-clear-recent'),

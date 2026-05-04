@@ -35,6 +35,12 @@ func buildAppMenu(app *App) *menu.Menu {
 		// 프론트엔드의 OpenFile 트리거 — 이벤트로 알린다
 		runtime.EventsEmit(app.ctx, "menu:open-file")
 	})
+	fileMenu.AddText("Page Setup...", keys.Combo("p", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:page-setup")
+	})
+	fileMenu.AddText("Print...", keys.CmdOrCtrl("p"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:print")
+	})
 	fileMenu.AddSeparator()
 	fileMenu.AddText("Quit", keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
 		runtime.Quit(app.ctx)

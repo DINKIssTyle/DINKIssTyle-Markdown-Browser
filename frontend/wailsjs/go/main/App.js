@@ -90,6 +90,10 @@ export function OpenFile() {
   return window['go']['main']['App']['OpenFile']();
 }
 
+export function PrintCurrentWindow() {
+  return window['go']['main']['App']['PrintCurrentWindow']();
+}
+
 export function ReadFile(arg1) {
   return window['go']['main']['App']['ReadFile'](arg1);
 }
@@ -116,6 +120,10 @@ export function SelectDocument(arg1) {
 
 export function SelectImage(arg1) {
   return window['go']['main']['App']['SelectImage'](arg1);
+}
+
+export function ShowPageSetup() {
+  return window['go']['main']['App']['ShowPageSetup']();
 }
 
 export function ShowSaveFileDialog(arg1) {

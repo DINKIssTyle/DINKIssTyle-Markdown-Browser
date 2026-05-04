@@ -162,6 +162,9 @@ Proposal Writing    :after a1, 20d
 * **Insert Image, Link**: When adding an image or link, a file browser opens at that location in the document.
 
 
+## 2.0 Beta9
+### Added & Bug Fixes & Polish
+* **Added Print Button**: Added a print button. You can now print Markdown documents.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

@@ -36,6 +36,8 @@ import {
     HandleFileDrop,
     GetVersion,
     AskSaveDiscardCancel,
+    PrintCurrentWindow,
+    ShowPageSetup,
 } from '../wailsjs/go/main/App';
 import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
 
@@ -180,6 +182,29 @@ function toggleTheme() {
     persist();
 }
 
+async function printRenderedMarkdown() {
+    if (!el.markdownContainer || el.markdownContainer.classList.contains('hidden')) {
+        showToast('Open a Markdown file before printing.');
+        return;
+    }
+
+    try {
+        await PrintCurrentWindow();
+    } catch (err) {
+        console.error('Print failed:', err);
+        showToast('Failed to open print dialog.');
+    }
+}
+
+async function showPageSetup() {
+    try {
+        await ShowPageSetup();
+    } catch (err) {
+        console.error('Page setup failed:', err);
+        showToast('Failed to open page setup.');
+    }
+}
+
 // ── Toolbar Binding ────────────────────────────────────────
 
 function bindToolbar() {
@@ -188,6 +213,7 @@ function bindToolbar() {
     el.btnForward.onclick = goForward;
     el.btnHome.onclick = goHome;
     el.btnRefresh.onclick = reloadCurrent;
+    el.btnPrint.onclick = printRenderedMarkdown;
     if (el.btnInfo) {
         el.btnInfo.onclick = () => openThirdPartyNotices(true);
     }
@@ -336,6 +362,8 @@ function bindMenuEvents() {
     EventsOn('menu:back', () => goBack());
     EventsOn('menu:forward', () => goForward());
     EventsOn('menu:open-file', () => handleOpenFile());
+    EventsOn('menu:page-setup', () => showPageSetup());
+    EventsOn('menu:print', () => printRenderedMarkdown());
     EventsOn('menu:refresh', () => reloadCurrent());
     EventsOn('system:open-file', async path => openIncomingFiles([path]));
     EventsOn('menu:toggle-search', () => toggleSearch());

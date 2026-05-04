@@ -921,6 +921,76 @@ html.dark .html-frame {
     text-decoration: underline;
 }
 
+@media print {
+    @page {
+        margin: 16mm;
+    }
+
+    html,
+    body {
+        width: auto;
+        height: auto;
+        overflow: visible;
+        background: #ffffff;
+        color: #000000;
+    }
+
+    body {
+        -webkit-print-color-adjust: exact;
+        print-color-adjust: exact;
+    }
+
+    #startup-splash,
+    #toolbar,
+    #tab-strip,
+    #home-screen,
+    #html-frame,
+    #editor-view,
+    #search-sidebar,
+    #editor-ai-dock,
+    #highlight-nav,
+    #toast,
+    #progress-widget,
+    #context-menu,
+    .code-copy-button {
+        display: none !important;
+    }
+
+    #app,
+    #main-container,
+    .content-view {
+        display: block !important;
+        height: auto !important;
+        overflow: visible !important;
+        padding: 0 !important;
+        background: #ffffff !important;
+    }
+
+    .markdown-container {
+        display: block !important;
+        max-width: none;
+        width: auto;
+        margin: 0;
+        color: #000000;
+        background: #ffffff;
+        font-size: inherit;
+    }
+
+    .markdown-container pre,
+    .markdown-container table {
+        break-inside: avoid;
+    }
+
+    .markdown-container pre {
+        white-space: pre-wrap;
+    }
+
+    .markdown-container a {
+        color: #000000;
+        text-decoration: underline;
+    }
+}
+
 .hidden {
     display: none !important;
 }

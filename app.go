@@ -706,6 +706,16 @@ func (a *App) OpenExternalPath(path string) error {
 	}
 }
 
+// PrintCurrentWindow opens the native print dialog for the current app window.
+func (a *App) PrintCurrentWindow() {
+	printCurrentWindow(a.ctx)
+}
+
+// ShowPageSetup opens the native page setup dialog for print paper and orientation.
+func (a *App) ShowPageSetup() {
+	showPageSetup(a.ctx)
+}
+
 // MakeAIRequest proxies a POST request to avoid CORS issues caused by local AI servers
 func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body string) (string, error) {
 	ctx, cancel, requestID := a.beginAIRequest()
