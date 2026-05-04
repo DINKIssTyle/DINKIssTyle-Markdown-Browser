@@ -1249,10 +1249,6 @@ func (a *App) InstallSystemIntegration() (string, error) {
 	}
 
 	binPath := filepath.Join(home, ".local", "bin", "dkst-markdown-browser")
-	iconPath := filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps", "dkst-markdown-browser.png")
-	icon1024Path := filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "apps", "dkst-markdown-browser.png")
-	mimeIconPath := filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "mimetypes", "text-markdown.png")
-	mimeIcon1024Path := filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "mimetypes", "text-markdown.png")
 	pixmapPath := filepath.Join(home, ".local", "share", "pixmaps", "dkst-markdown-browser.png")
 	desktopPath := filepath.Join(home, ".local", "share", "applications", "dkst-markdown-browser.desktop")
 	mimePackagePath := filepath.Join(home, ".local", "share", "mime", "packages", "dkst-markdown-browser.xml")
@@ -1269,32 +1265,13 @@ func (a *App) InstallSystemIntegration() (string, error) {
 		return "", err
 	}
 
-	if err := os.MkdirAll(filepath.Dir(iconPath), 0755); err != nil {
+	if err := installIconSet(home, "apps", "dkst-markdown-browser"); err != nil {
 		return "", err
 	}
-	icon256, err := resizePNG(appIconPNG, 256)
-	if err != nil {
+	if err := installIconSet(home, "mimetypes", "text-markdown"); err != nil {
 		return "", err
 	}
-	if err := os.WriteFile(iconPath, icon256, 0644); err != nil {
-		return "", err
-	}
-	if err := os.MkdirAll(filepath.Dir(icon1024Path), 0755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(icon1024Path, appIconPNG, 0644); err != nil {
-		return "", err
-	}
-	if err := os.MkdirAll(filepath.Dir(mimeIconPath), 0755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(mimeIconPath, icon256, 0644); err != nil {
-		return "", err
-	}
-	if err := os.MkdirAll(filepath.Dir(mimeIcon1024Path), 0755); err != nil {
-		return "", err
-	}
-	if err := os.WriteFile(mimeIcon1024Path, appIconPNG, 0644); err != nil {
+	if err := installIconSet(home, "mimetypes", "text-x-markdown"); err != nil {
 		return "", err
 	}
 	if err := os.MkdirAll(filepath.Dir(pixmapPath), 0755); err != nil {
@@ -1346,14 +1323,13 @@ func (a *App) UninstallSystemIntegration() (string, error) {
 
 	targets := []string{
 		filepath.Join(home, ".local", "bin", "dkst-markdown-browser"),
-		filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "apps", "dkst-markdown-browser.png"),
-		filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "apps", "dkst-markdown-browser.png"),
-		filepath.Join(home, ".local", "share", "icons", "hicolor", "256x256", "mimetypes", "text-markdown.png"),
-		filepath.Join(home, ".local", "share", "icons", "hicolor", "1024x1024", "mimetypes", "text-markdown.png"),
 		filepath.Join(home, ".local", "share", "pixmaps", "dkst-markdown-browser.png"),
 		filepath.Join(home, ".local", "share", "applications", "dkst-markdown-browser.desktop"),
 		filepath.Join(home, ".local", "share", "mime", "packages", "dkst-markdown-browser.xml"),
 	}
+	targets = append(targets, iconSetPaths(home, "apps", "dkst-markdown-browser")...)
+	targets = append(targets, iconSetPaths(home, "mimetypes", "text-markdown")...)
+	targets = append(targets, iconSetPaths(home, "mimetypes", "text-x-markdown")...)
 	for _, target := range targets {
 		if err := os.Remove(target); err != nil && !errors.Is(err, os.ErrNotExist) {
 			return "", err
@@ -1393,6 +1369,48 @@ func copyFile(source string, target string, mode os.FileMode) error {
 		return err
 	}
 	return output.Chmod(mode)
+}
+
+func iconSizes() []int {
+	return []int{16, 24, 32, 48, 64, 128, 256, 512, 1024}
+}
+
+func iconSetPaths(home string, context string, name string) []string {
+	paths := make([]string, 0, len(iconSizes()))
+	for _, size := range iconSizes() {
+		paths = append(paths, filepath.Join(
+			home,
+			".local",
+			"share",
+			"icons",
+			"hicolor",
+			fmt.Sprintf("%dx%d", size, size),
+			context,
+			name+".png",
+		))
+	}
+	return paths
+}
+
+func installIconSet(home string, context string, name string) error {
+	for index, path := range iconSetPaths(home, context, name) {
+		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
+			return err
+		}
+		size := iconSizes()[index]
+		icon := appIconPNG
+		if size != 1024 {
+			resized, err := resizePNG(appIconPNG, size)
+			if err != nil {
+				return err
+			}
+			icon = resized
+		}
+		if err := os.WriteFile(path, icon, 0644); err != nil {
+			return err
+		}
+	}
+	return nil
 }
 
 func resizePNG(source []byte, size int) ([]byte, error) {
@@ -1438,7 +1456,9 @@ func refreshDesktopIntegration(home string) {
 	commands := [][]string{
 		{"update-mime-database", filepath.Join(home, ".local", "share", "mime")},
 		{"update-desktop-database", filepath.Join(home, ".local", "share", "applications")},
-		{"gtk-update-icon-cache", "-q", filepath.Join(home, ".local", "share", "icons", "hicolor")},
+		{"gtk-update-icon-cache", "-f", "-t", "-q", filepath.Join(home, ".local", "share", "icons", "hicolor")},
+		{"xdg-icon-resource", "forceupdate", "--theme", "hicolor"},
+		{"xdg-desktop-menu", "forceupdate"},
 	}
 	for _, command := range commands {
 		if _, err := exec.LookPath(command[0]); err != nil {
