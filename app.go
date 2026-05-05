@@ -9,7 +9,7 @@ import (
 	"bufio"
 	"bytes"
 	"context"
-	_ "embed"
+	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -35,6 +35,9 @@ import (
 
 //go:embed build/appicon.png
 var appIconPNG []byte
+
+//go:embed build/linux/icon/*.png
+var linuxIconFS embed.FS
 
 // RecentFile represents a recently opened file
 type RecentFile struct {
@@ -1399,19 +1402,26 @@ func installIconSet(home string, context string, name string) error {
 			return err
 		}
 		size := iconSizes()[index]
-		icon := appIconPNG
-		if size != 1024 {
-			resized, err := resizePNG(appIconPNG, size)
-			if err != nil {
-				return err
-			}
-			icon = resized
+		icon, err := linuxIconPNG(size)
+		if err != nil {
+			return err
 		}
 		if err := os.WriteFile(path, icon, 0644); err != nil {
 			return err
 		}
 	}
 	return nil
+}
+
+func linuxIconPNG(size int) ([]byte, error) {
+	icon, err := linuxIconFS.ReadFile(fmt.Sprintf("build/linux/icon/%d.png", size))
+	if err == nil {
+		return icon, nil
+	}
+	if size == 1024 {
+		return appIconPNG, nil
+	}
+	return resizePNG(appIconPNG, size)
 }
 
 func resizePNG(source []byte, size int) ([]byte, error) {
