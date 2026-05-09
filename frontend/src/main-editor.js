@@ -78,6 +78,11 @@ function syncEditorStateToBackend() {
     });
 }
 
+function formatMarkdownDestination(destination) {
+    if (!/\s/.test(destination)) return destination;
+    return `<${destination}>`;
+}
+
 async function persistEditorPreferences() {
     await SaveSettings({
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
@@ -1021,13 +1026,13 @@ async function insertLink() {
         const absPath = await SelectDocument(state.currentFilePath);
         if (absPath) {
             const relPath = await GetRelativePath(state.currentFilePath, absPath);
-            insertTextAtCursor('[', `](${relPath})`);
+            insertTextAtCursor('[', `](${formatMarkdownDestination(relPath)})`);
         }
         return;
     }
 
     const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
-    if (url) insertTextAtCursor('[', `](${url})`);
+    if (url) insertTextAtCursor('[', `](${formatMarkdownDestination(url)})`);
 }
 
 async function insertImage() {
@@ -1036,13 +1041,13 @@ async function insertImage() {
         const absPath = await SelectImage(state.currentFilePath);
         if (absPath) {
             const relPath = await GetRelativePath(state.currentFilePath, absPath);
-            insertTextAtCursor('![', `](${relPath})`);
+            insertTextAtCursor('![', `](${formatMarkdownDestination(relPath)})`);
         }
         return;
     }
 
     const url = await showCustomPrompt("Insert Image", "Enter image URL:", "https://");
-    if (url) insertTextAtCursor('![', `](${url})`);
+    if (url) insertTextAtCursor('![', `](${formatMarkdownDestination(url)})`);
 }
 
 function insertCodeBlock() {

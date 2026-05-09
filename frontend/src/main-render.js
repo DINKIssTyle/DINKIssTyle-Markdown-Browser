@@ -443,6 +443,14 @@ mermaid.initialize(getMermaidConfig());
 
 // ── Markdown Rendering ─────────────────────────────────────
 
+function decodeLocalMarkdownPath(path) {
+    try {
+        return decodeURI(path);
+    } catch {
+        return path;
+    }
+}
+
 async function renderMarkdownToHTML(content) {
     const preparedContent = preprocessMarkdownMath(content);
     if (state.currentEngine === "marked") {
@@ -537,10 +545,11 @@ async function postProcess(container = el.markdownContainer) {
     container.querySelectorAll('img').forEach(img => {
         const src = img.getAttribute('src');
         if (src && !src.startsWith('http') && !src.startsWith('data:')) {
+            const imageSrc = decodeLocalMarkdownPath(src);
             const imageBaseFolder = state.isEditing
                 ? (state.editingPreviewFolder || state.editingSourceFolder || state.currentFolder)
                 : state.currentFolder;
-            const abs = joinPath(imageBaseFolder, src);
+            const abs = joinPath(imageBaseFolder, imageSrc);
             ReadImageAsDataURL(abs)
                 .then(dataUrl => {
                     if (dataUrl) img.src = dataUrl;

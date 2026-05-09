@@ -1,4 +1,4 @@
-# What's New in Version 2.0 Beta 9
+# What's New in Version 2.0 Beta 10
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -166,6 +166,11 @@ Proposal Writing    :after a1, 20d
 ### Added & Bug Fixes & Polish
 * **Added Print Button**: Added a print button. You can now print Markdown documents.
 * **Added Linux install feature**: Added an Install link visible only on Linux in the Start page Footer. Clicking it installs the app and icon to ~/.local/bin and ~/.local/share/, and creates a .desktop file.
+
+
+## 2.0 Beta10
+### Added & Bug Fixes & Polish
+* **File names and paths with spaces**: When inserting links or images, if a space is included in the path or file name, it must be wrapped in Angle Brackets (&lt; &gt;) to correctly apply Markdown format.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
