@@ -27,7 +27,7 @@ import {
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
-import { initSidebar } from './main-sidebar.js';
+import { initSidebar, toggleSidebar } from './main-sidebar.js';
 import { persistAppSettings } from './main-settings.js';
 
 import {
@@ -409,6 +409,12 @@ function bindMenuEvents() {
     EventsOn('menu:refresh', () => reloadCurrent());
     EventsOn('system:open-file', async path => openIncomingFiles([path]));
     EventsOn('menu:toggle-search', () => toggleSearch());
+    EventsOn('menu:save', async () => {
+        if (state.isEditing) {
+            await saveCurrentDocument({ confirm: false, exitAfterSave: false });
+        }
+    });
+    EventsOn('menu:toggle-sidebar', () => toggleSidebar());
     EventsOn('menu:toggle-theme', () => toggleTheme());
     EventsOn('menu:font-up', () => changeFontSize(2));
     EventsOn('menu:font-down', () => changeFontSize(-2));
@@ -505,6 +511,12 @@ async function handleGlobalKeydown(event) {
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'e') {
         event.preventDefault();
         await toggleEditModeFromShortcut();
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.altKey && event.key.toLowerCase() === 's') {
+        event.preventDefault();
+        toggleSidebar();
         return;
     }
 

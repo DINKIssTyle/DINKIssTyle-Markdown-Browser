@@ -35,6 +35,10 @@ func buildAppMenu(app *App) *menu.Menu {
 		// 프론트엔드의 OpenFile 트리거 — 이벤트로 알린다
 		runtime.EventsEmit(app.ctx, "menu:open-file")
 	})
+	fileMenu.AddText("Save", keys.CmdOrCtrl("s"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:save")
+	})
+	fileMenu.AddSeparator()
 	fileMenu.AddText("Page Setup...", keys.Combo("p", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:page-setup")
 	})
@@ -65,6 +69,9 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.EventsEmit(app.ctx, "menu:refresh")
 	})
 	viewMenu.AddSeparator()
+	viewMenu.AddText("Toggle Sidebar", keys.Combo("s", keys.CmdOrCtrlKey, keys.OptionOrAltKey), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:toggle-sidebar")
+	})
 	viewMenu.AddText("Toggle Search Panel", keys.CmdOrCtrl("f"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-search")
 	})
