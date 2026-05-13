@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
-import { state, el, getPathDirname, formatSaveDialogMessage, debounce } from './main-state.js';
+import { state, el, getPathDirname, basename, formatSaveDialogMessage, debounce } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
@@ -1351,7 +1351,7 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
 
     try {
         await SaveFile(targetPath, contentToSave);
-        showToast("File saved successfully. ✅");
+        showToast("File saved successfully.", "check_circle");
         if (savingTab) {
             savingTab.currentMarkdownSource = contentToSave;
             savingTab.editorOriginalContent = contentToSave;
@@ -1371,7 +1371,7 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
         return true;
     } catch (error) {
         LogError(`Save failed: ${error}`);
-        showToast("Failed to save file. ❌");
+        showToast("Failed to save file.", "error");
         return false;
     }
 }
@@ -1393,11 +1393,11 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
         tab.currentMarkdownSource = contentToSave;
         tab.editingPreviewPath = tab.editingSourcePath || targetPath;
         tab.editingPreviewFolder = tab.editingSourceFolder || getPathDirname(targetPath);
-        showToast("File saved successfully. ✅");
+        showToast("File saved successfully.", "check_circle");
         return true;
     } catch (error) {
         LogError(`Save failed: ${error}`);
-        showToast("Failed to save file. ❌");
+        showToast("Failed to save file.", "error");
         return false;
     }
 }
@@ -1542,6 +1542,36 @@ export function insertTextAtCursor(prefix, suffix) {
     });
     cmView.focus();
 }
+
+export async function insertFileLink(filePath, isImage = false) {
+    if (!cmView || !filePath) return;
+
+    let displayPath = filePath;
+    try {
+        const base = state.editingSourcePath || state.currentFilePath || "";
+        const rel = await GetRelativePath(base, filePath);
+        if (rel) {
+            displayPath = rel;
+        }
+    } catch (error) {
+        console.error("Failed to get relative path:", error);
+    }
+
+    const formattedPath = formatMarkdownDestination(displayPath);
+    const fileName = basename(filePath);
+    const prefix = isImage ? `![${fileName}](` : `[${fileName}](`;
+    const suffix = `)`;
+
+    insertTextAtCursor(prefix, suffix);
+    
+    // Replace the inner text (fileName) with the formatted path
+    const selection = cmView.state.selection.main;
+    cmView.dispatch({
+        changes: { from: selection.from, to: selection.to, insert: formattedPath },
+        selection: { anchor: selection.from + formattedPath.length }
+    });
+}
+
 
 export function insertPlainTextAtCursor(text) {
     if (!cmView || !text) return;

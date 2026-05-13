@@ -12,7 +12,7 @@ import {
     isSupportedPreviewPath,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
-import { renderActiveTab } from './main-render.js';
+import { renderActiveTab, hideLinkTooltip } from './main-render.js';
 import { undoAction, redoAction, getUndoDepth, getRedoDepth } from './main-editor.js';
 import {
     showToast, beginProgressTask, updateProgress,
@@ -71,6 +71,7 @@ export async function openPath(path, options = {}) {
         anchor = "",
         tabId = state.activeTabId,
     } = options;
+    hideLinkTooltip();
     path = normalizeFileURLPath(path);
 
     if (newTab) {

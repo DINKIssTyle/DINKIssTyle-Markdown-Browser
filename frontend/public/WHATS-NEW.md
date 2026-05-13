@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta2
+# What's New in Version 2.1 Beta3
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -75,6 +75,13 @@ done
 ```
 
 
+
+
+## 2.1 Beta3
+### Added & Bug Fixes & Polish
+
+- **Insert links and images** directly into the edited document from the file tree.
+- **Fixed address popup tooltip;** added multilingual support.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

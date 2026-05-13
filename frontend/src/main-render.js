@@ -403,7 +403,7 @@ function buildScrollAnchorMap() {
         const startLine = Number(node.getAttribute(LIVE_LINE_START_ATTR)) || 1;
         const endLine = Number(node.getAttribute(LIVE_LINE_END_ATTR)) || startLine;
         const nodeRect = node.getBoundingClientRect();
-        
+
         addAnchor(startLine, scroller.scrollTop + (nodeRect.top - scrollerRect.top));
         if (endLine > startLine) {
             addAnchor(endLine, scroller.scrollTop + (nodeRect.bottom - scrollerRect.top));
@@ -885,7 +885,7 @@ function enhanceCodeBlockCopyButtons(container) {
                 button.title = 'Copied';
                 button.setAttribute('aria-label', 'Copied');
                 button.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">check</span>';
-                showToast('Copied code. 📋');
+                showToast('Copied code.', 'content_copy');
 
                 window.setTimeout(() => {
                     button.classList.remove('is-copied');
@@ -895,7 +895,7 @@ function enhanceCodeBlockCopyButtons(container) {
                 }, 1400);
             } catch (error) {
                 LogError(`code block copy failed: ${error?.message || error}`);
-                showToast('Failed to copy code. ❌');
+                showToast('Failed to copy code.', 'error');
             }
         });
 
@@ -1034,6 +1034,7 @@ async function postProcess(container = el.markdownContainer) {
         hardenAnchorDropHandling(anchor);
 
         const handleLinkNavigation = event => {
+            hideLinkTooltip();
             event.preventDefault();
             event.stopPropagation();
 
@@ -1063,7 +1064,7 @@ async function postProcess(container = el.markdownContainer) {
             if (!el.linkTooltip) return;
             hideLinkTooltip();
             activeLinkTooltipAnchor = anchor;
-            el.linkTooltip.textContent = href;
+            el.linkTooltip.textContent = decodeLocalMarkdownPath(href);
             el.linkTooltip.classList.remove('hidden');
 
             const updatePosition = (e) => {
@@ -1281,9 +1282,9 @@ export async function renderActiveTab() {
     el.currentPath.innerText = formatDisplayPath(state.currentFilePath);
 
     // Update edit button state
-    const isMarkdown = state.currentDocumentType === 'markdown' && 
-                       state.currentFilePath !== HOME_SCREEN_PATH && 
-                       !isBundledDocumentPath(state.currentFilePath);
+    const isMarkdown = state.currentDocumentType === 'markdown' &&
+        state.currentFilePath !== HOME_SCREEN_PATH &&
+        !isBundledDocumentPath(state.currentFilePath);
     el.btnEdit.disabled = !isMarkdown;
 
     if (state.isEditing && !isMarkdown) {
@@ -1300,14 +1301,14 @@ export async function renderActiveTab() {
     }
 
     el.homeScreen.classList.add('hidden');
-    
+
     if (state.isEditing) {
         el.editToolbar.classList.remove('hidden');
         syncAIControls();
         el.editorView.classList.remove('hidden');
         el.mainContainer.classList.add('is-editing');
         el.btnEdit.classList.add('active');
-        el.contentView.classList.remove('hidden'); 
+        el.contentView.classList.remove('hidden');
         el.selectEngine.disabled = true;
     } else {
         el.editToolbar.classList.add('hidden');
@@ -1502,7 +1503,7 @@ function bindImageViewerControls(path) {
             if (action === 'zoom-out') {
                 imageViewerFit = false;
                 if (!img.complete || !img.naturalWidth) {
-                    await img.decode?.().catch(() => {});
+                    await img.decode?.().catch(() => { });
                 }
                 if (imageViewerZoom === 1 && img.classList.contains('is-fit')) {
                     imageViewerZoom = getImageViewerFitScale(img);
@@ -1514,7 +1515,7 @@ function bindImageViewerControls(path) {
             if (action === 'zoom-in') {
                 imageViewerFit = false;
                 if (!img.complete || !img.naturalWidth) {
-                    await img.decode?.().catch(() => {});
+                    await img.decode?.().catch(() => { });
                 }
                 if (imageViewerZoom === 1 && img.classList.contains('is-fit')) {
                     imageViewerZoom = getImageViewerFitScale(img);
@@ -1589,7 +1590,7 @@ function renderUnsupportedDocument(path) {
         <div class="unsupported-preview">
             <span class="material-symbols-outlined unsupported-preview-icon" aria-hidden="true">draft</span>
             <div class="unsupported-preview-name">${escapeHTML(basename(path))}</div>
-            <div class="unsupported-preview-message">지원하지 않는 형식입니다.</div>
+            <div class="unsupported-preview-message">Unsupported File Type</div>
         </div>
     `;
 }
@@ -1604,8 +1605,8 @@ async function renderMermaidSub(container = el.markdownContainer) {
     if (codeBlocks.length === 0) return;
 
     const mermaidKeywords = [
-        'graph', 'flowchart', 'sequenceDiagram', 'gantt', 'classDiagram', 
-        'stateDiagram', 'erDiagram', 'journey', 'pie', 'gitGraph', 
+        'graph', 'flowchart', 'sequenceDiagram', 'gantt', 'classDiagram',
+        'stateDiagram', 'erDiagram', 'journey', 'pie', 'gitGraph',
         'requirementDiagram', 'mindmap', 'timeline'
     ];
 
@@ -1625,17 +1626,17 @@ async function renderMermaidSub(container = el.markdownContainer) {
         if (hasMermaidClass || isMermaidKeyword) {
             // 고유 ID 생성 (Mermaid 렌더링용)
             const id = `mermaid_graph_${Date.now()}_${i}`;
-            
-            try {
-            // 렌더링 직전 테마를 한 번 더 동기화 (다크 모드 전환 대응)
-            mermaid.initialize(getMermaidConfig());
 
-            // 개별 블록을 직접 렌더링하여 SVG 획득
-            const { svg } = await mermaid.render(id, content);
+            try {
+                // 렌더링 직전 테마를 한 번 더 동기화 (다크 모드 전환 대응)
+                mermaid.initialize(getMermaidConfig());
+
+                // 개별 블록을 직접 렌더링하여 SVG 획득
+                const { svg } = await mermaid.render(id, content);
                 const container = document.createElement('div');
                 container.className = 'mermaid-rendered';
                 container.innerHTML = svg;
-                
+
                 // 기존 pre 블록을 결과 SVG로 교체
                 pre.replaceWith(container);
             } catch (err) {

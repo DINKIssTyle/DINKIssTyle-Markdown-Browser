@@ -17,8 +17,12 @@ let activeProgressTaskId = 0;
 
 // ── Toast ──────────────────────────────────────────────────
 
-export function showToast(msg, duration = 2400) {
-    el.toast.textContent = msg;
+export function showToast(msg, icon = null, duration = 2400) {
+    if (icon) {
+        el.toast.innerHTML = `<span class="material-symbols-outlined toast-icon">${icon}</span><span class="toast-text">${msg}</span>`;
+    } else {
+        el.toast.textContent = msg;
+    }
     el.toast.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.toast.classList.remove('show'), duration);
@@ -211,14 +215,14 @@ export async function handleSearchInputKeydown(event) {
     if (key === 'c' && hasSelection) {
         event.preventDefault();
         copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd))
-            .then(() => showToast('Copied selection. 📋'));
+            .then(() => showToast('Copied selection.', 'content_copy'));
         return;
     }
 
     if (key === 'x' && hasSelection) {
         event.preventDefault();
         copyTextToClipboard(el.searchInput.value.slice(el.searchInput.selectionStart, el.searchInput.selectionEnd))
-            .then(() => showToast('Cut selection. ✂️'));
+            .then(() => showToast('Cut selection.', 'content_cut'));
         el.searchInput.setRangeText("", el.searchInput.selectionStart, el.searchInput.selectionEnd, 'start');
         updateSearchClearButton();
         handleSearch();
@@ -376,7 +380,7 @@ export function bindHighlightNav() {
         hlCurrent = (hlCurrent + 1) % hlMatches.length;
         activateHl(hlCurrent);
         updateHlCounter();
-        if (wasLast) showToast('Last result. Returning to the start. 🔄');
+        if (wasLast) showToast('Last result. Returning to the start.', 'history');
     });
 
     el.btnHlPrev.addEventListener('click', () => {
@@ -385,7 +389,7 @@ export function bindHighlightNav() {
         hlCurrent = (hlCurrent - 1 + hlMatches.length) % hlMatches.length;
         activateHl(hlCurrent);
         updateHlCounter();
-        if (wasFirst) showToast('First result. Returning to the end. 🔄');
+        if (wasFirst) showToast('First result. Returning to the end.', 'history');
     });
 
     el.btnHlClose.addEventListener('click', () => clearHighlight());
@@ -407,7 +411,7 @@ export function bindContextMenu() {
         if (!contextMenuState?.selectionText) return;
         await copyTextToClipboard(contextMenuState.selectionText);
         closeContextMenu();
-        showToast('Copied selection. 📋');
+        showToast('Copied selection.', 'content_copy');
     });
 
     bindContextMenuAction(el.contextCut, async () => {
@@ -423,7 +427,7 @@ export function bindContextMenu() {
                         changes: { from: selection.from, to: selection.to, insert: '' },
                         selection: { anchor: selection.from }
                     });
-                    showToast('Cut selection. ✂️');
+                    showToast('Cut selection.', 'content_cut');
                 }
             }
         } catch (error) {
@@ -441,7 +445,7 @@ export function bindContextMenu() {
                     if (mod.cmView) {
                         mod.cmView.focus();
                         mod.insertTextAtCursor(text, '');
-                        showToast('Pasted. 📋');
+                        showToast('Pasted.', 'content_paste');
                     }
                 }
             } catch (error) {

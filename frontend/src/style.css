@@ -684,7 +684,7 @@ html.dark .nav-btn:hover {
 }
 
 .file-tree-item.has-refresh {
-    grid-template-columns: 18px 20px minmax(0, 1fr) 26px;
+    grid-template-columns: 18px 20px minmax(0, 1fr) 26px 26px;
 }
 
 .file-tree-item:hover {
@@ -749,6 +749,41 @@ html.dark .nav-btn:hover {
 }
 
 .file-tree-refresh-btn .material-symbols-outlined {
+    font-size: 18px;
+    line-height: 1;
+}
+
+.file-tree-filter-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: var(--muted-color);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.72;
+    transition: background 0.16s ease, color 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
+}
+
+.file-tree-filter-btn:hover {
+    background: rgba(128, 128, 128, 0.14);
+    color: var(--accent-color);
+    opacity: 1;
+}
+
+.file-tree-filter-btn.active {
+    color: var(--accent-color);
+    opacity: 1;
+}
+
+.file-tree-filter-btn:active {
+    transform: scale(0.96);
+}
+
+.file-tree-filter-btn .material-symbols-outlined {
     font-size: 18px;
     line-height: 1;
 }
@@ -2646,6 +2681,19 @@ html.dark .search-highlight.active {
     pointer-events: none;
     z-index: 600;
     white-space: nowrap;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.toast-icon {
+    font-size: 18px !important;
+}
+
+.toast-text {
+    line-height: 1;
 }
 
 html:not(.dark) .toast {

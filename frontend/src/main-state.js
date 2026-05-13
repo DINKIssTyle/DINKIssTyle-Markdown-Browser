@@ -194,6 +194,7 @@ export const el = {
     footerThirdPartyNotices: $('footer-third-party-notices'),
     footerWhatsNew: $('footer-whats-new'),
     footerCopyright: $('footer-copyright'),
+    btnFileTreeFilter: $('btn-file-tree-filter'),
 };
 
 // ── Shared Mutable State ───────────────────────────────────
@@ -232,6 +233,7 @@ export const state = {
     aiToolbarCollapsed: false,
     koreanImeFixEnabled: false,
     lastVersion: "",
+    fileTreeFilterEnabled: false,
 };
 
 // ── Pure Utility Functions ─────────────────────────────────

@@ -7,12 +7,14 @@ import {
     state, el, HOME_SCREEN_PATH,
     getPathDirname, documentTypeFromPath, basename,
     escapeHTML, escapeAttr, isBundledDocumentPath, getScroller,
+    isSupportedPreviewPath, isImagePath,
 } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
-import { scrollEditorToLine } from './main-editor.js';
-import { ListFileTree } from '../wailsjs/go/main/App';
+import { scrollEditorToLine, insertFileLink } from './main-editor.js';
+import { ListFileTree, GetRelativePath } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
+import { copyTextToClipboard, showToast } from './main-ui.js';
 
 let isSidebarOpen = false;
 let activeSidebarTab = 'files';
@@ -20,6 +22,7 @@ const expandedFileTreePaths = new Set();
 const loadingFileTreePaths = new Set();
 let fileTreeRootPath = "";
 let fileTreeRootNode = null;
+let fileTreeContextMenu = null;
 
 export function initSidebar() {
     if (!el.btnSidebarToggle) return;
@@ -51,6 +54,10 @@ export function initSidebar() {
     if (el.sidebarResizer) {
         bindResizer();
     }
+
+    // Bind global click to close context menu
+    document.addEventListener('click', () => closeFileTreeContextMenu());
+    window.addEventListener('blur', () => closeFileTreeContextMenu());
 }
 
 function bindResizer() {
@@ -269,6 +276,13 @@ function renderFileTree(node, depth, isRoot = false) {
     const icon = isDir ? (isExpanded ? 'folder_open' : 'folder') : iconForFile(node.name);
     const current = !isDir && node.path === state.currentFilePath;
     const isLoading = loadingFileTreePaths.has(node.path);
+    const filterButton = isRoot ? `
+            <button class="file-tree-filter-btn ${state.fileTreeFilterEnabled ? 'active' : ''}" id="btn-file-tree-filter" type="button" 
+                title="${state.fileTreeFilterEnabled ? 'Show all files' : 'Show readable files only'}" 
+                aria-label="Filter readable files">
+                <span class="material-symbols-outlined" aria-hidden="true">${state.fileTreeFilterEnabled ? 'filter_list_off' : 'filter_list'}</span>
+            </button>
+        ` : '';
     const refreshButton = isRoot ? `
             <button class="file-tree-refresh-btn" type="button" title="Refresh file tree" aria-label="Refresh file tree">
                 <span class="material-symbols-outlined" aria-hidden="true">cached</span>
@@ -284,6 +298,7 @@ function renderFileTree(node, depth, isRoot = false) {
             <span class="file-tree-toggle material-symbols-outlined" aria-hidden="true">${canExpand ? (isExpanded ? 'expand_more' : 'chevron_right') : ''}</span>
             <span class="file-tree-icon material-symbols-outlined" aria-hidden="true">${icon}</span>
             <span class="file-tree-name">${escapeHTML(node.name || basename(node.path))}</span>
+            ${filterButton}
             ${refreshButton}
         </div>
     `;
@@ -296,7 +311,14 @@ function renderFileTree(node, depth, isRoot = false) {
         return row + `<div class="file-tree-loading" style="--tree-depth: ${depth + 1};">Loading...</div>`;
     }
 
-    return row + (node.children || []).map(child => renderFileTree(child, depth + 1)).join('');
+    return row + (node.children || [])
+        .filter(child => {
+            if (!state.fileTreeFilterEnabled) return true;
+            if (child.isDir) return true; // Always show directories
+            return isSupportedPreviewPath(child.path);
+        })
+        .map(child => renderFileTree(child, depth + 1))
+        .join('');
 }
 
 function bindFileTreeEvents() {
@@ -305,6 +327,15 @@ function bindFileTreeEvents() {
             event.preventDefault();
             event.stopPropagation();
             await updateFileTree({ forceRefresh: true });
+        });
+    });
+
+    el.fileTree.querySelectorAll('.file-tree-filter-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            state.fileTreeFilterEnabled = !state.fileTreeFilterEnabled;
+            updateFileTree();
         });
     });
 
@@ -332,7 +363,76 @@ function bindFileTreeEvents() {
                 newTab: state.isEditing,
             });
         });
+
+        item.addEventListener('contextmenu', (event) => {
+            if (!state.isEditing) return;
+            const path = item.dataset.path;
+            const kind = item.dataset.kind;
+            if (!path) return;
+
+            event.preventDefault();
+            event.stopPropagation();
+            showFileTreeContextMenu(event, path, kind === 'dir');
+        });
     });
+}
+
+function showFileTreeContextMenu(event, path, isDir) {
+    if (!fileTreeContextMenu) {
+        fileTreeContextMenu = document.createElement('div');
+        fileTreeContextMenu.className = 'context-menu file-tree-context-menu';
+        document.body.appendChild(fileTreeContextMenu);
+    }
+
+    const isImage = isImagePath(path);
+
+    fileTreeContextMenu.innerHTML = `
+        ${!isDir ? `<button class="context-menu-item" id="ft-ctx-insert">Insert</button>` : ''}
+        <button class="context-menu-item" id="ft-ctx-copy-path">Copy Path</button>
+    `;
+
+    const insertBtn = fileTreeContextMenu.querySelector('#ft-ctx-insert');
+    if (insertBtn) {
+        insertBtn.onclick = () => {
+            insertFileLink(path, isImage);
+            closeFileTreeContextMenu();
+        };
+    }
+
+    const copyBtn = fileTreeContextMenu.querySelector('#ft-ctx-copy-path');
+    if (copyBtn) {
+        copyBtn.onclick = async () => {
+            let copyText = path;
+            try {
+                const base = state.editingSourcePath || state.currentFilePath || "";
+                const rel = await GetRelativePath(base, path);
+                if (rel) {
+                    copyText = rel;
+                }
+            } catch (error) {
+                console.error("Failed to get relative path for copy:", error);
+            }
+            await copyTextToClipboard(copyText);
+            showToast('Relative path copied to clipboard.', 'content_copy');
+            closeFileTreeContextMenu();
+        };
+    }
+
+    fileTreeContextMenu.classList.add('show');
+    
+    // Position menu
+    const menuRect = fileTreeContextMenu.getBoundingClientRect();
+    const x = Math.min(event.clientX, window.innerWidth - menuRect.width - 10);
+    const y = Math.min(event.clientY, window.innerHeight - menuRect.height - 10);
+    
+    fileTreeContextMenu.style.left = `${x}px`;
+    fileTreeContextMenu.style.top = `${y}px`;
+}
+
+function closeFileTreeContextMenu() {
+    if (fileTreeContextMenu) {
+        fileTreeContextMenu.classList.remove('show');
+    }
 }
 
 async function ensureDirectoryChildrenLoaded(path) {
