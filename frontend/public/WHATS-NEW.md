@@ -1,4 +1,4 @@
-# What's New in Version 2.0 Beta 11
+# What's New in Version 2.1 Beta 1
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -8,188 +8,32 @@
 
 ## 🚀 Key Changes
 
-### 1. Create or Edit Markdown Documents
-<div style="display: block; margin: 0 auto; text-align: center; width: 100%; font-size: 1.5em;">
-“Now you can create or edit markdown documents.”
-</div>
+### Introduction of the Sidebar
 
-<div align="center"><img src="img/200_new_edit.png"></div>
+A button to open the sidebar on the left side of the tab bar has appeared. `Shortcut: CTRL+ALT+S (macOS: CMD+OPT+S)`  
+* **Sidebar Composition**:
+  * **File Tree**: Displays the home folder of open files as a file directory structure. You can view markdown and image files directly by selecting them.
+  * **Outline**: View the outline of your markdown document.
+  * **Search**: The search function, previously located in the main toolbar up to version 2.0, has been merged here.
 
-- Conveniently use Markdown features without taking your hands off the keyboard while editing.
-- Typing `/` brings up Markdown code functionalities, which you can select with arrow keys or execute by typing the feature name directly.
-- Easily link to local assets like hyperlinks and images! It completes them using relative paths from the current file.
+### Small but Changed Things
 
-
-### 2. <span style="color:#007bff;">✨AI Assists You!</span>
-- Select the text block where you need an assistant. An AI call button will appear. (Press `/` to type immediately!)Type what you want. It can correct rambling paragraphs, translate to another language, or even convert it into appropriate markdown.
-
-<div align="center"><img src="img/200_ai_01.gif" width="95%"></div>
-<div align="center"><img src="img/200_ai_02.gif" width="95%"></div>
-<div align="center"><img src="img/200_ai_03.gif" width="95%"></div>
-
-
-**💡 Note:** To use new AI features, you need an LM Studio (recommended) or OpenAI-compatible LLM API endpoint.
-
-### 3. LaTeX, Mermaid Rendering Support
-
-#### LaTeX Example
-  
-* $a^2 + b^2 = c^2$
-* $\frac{1}{2} + \frac{1}{4} = \frac{3}{4}$
-* $\sqrt{x^2 + y^2}$
-
-$$\int_{a}^{b} f(x) \,dx$$
-$$\lim_{n \to \infty} \frac{1}{n} = 0$$
-$$\log_{2} 8 = 3$$
-  
-$$
-\begin{matrix}
-1 & 0 \\
-0 & 1
-\end{matrix}
-$$
-  
-$$
-\begin{pmatrix}
-a & b \\
-c & d
-\end{pmatrix}
-$$
-  
-$\alpha, \beta, \gamma, \delta, \pi, \sigma$
-$\sum_{i=1}^{n} i$
-$\prod_{i=1}^{n} a_i$
-$x \neq y, x \leq y, x \geq y$
-  
-#### Mermaid Example
-
-```
-graph TD
-A[Start] --> B{Decision}
-B -- Yes --> C[Result 1]
-B -- No --> D[Result 2]
-```
-
-
-```
-sequenceDiagram
-user->>server: Login request
-server-->>database: Check user
-database-->>server: Confirmation complete
-server-->>user: Login successful
-```
-
-
-```
-gantt
-title Project Schedule
-dateFormat YYYY-MM-DD
-section Planning
-Idea Conception     :a1, 2024-01-01, 30d
-Proposal Writing    :after a1, 20d
-```
+* **Popup Tooltip**: When hover your mouse cursor over a hyperlink, the destination address is displayed.
 
 ---
+
+## New Feature and Improvement Plan
+
+- [ ] Use file tree for hyperlinks and image insertion
+
+To be continued.
+
 # Recent Changes
 
-## 2.0 Beta2
-
-### Bug Fixes & Improvements
-- Partially fixed the issue where the app frame was lost during drag and drop; investigating the cause of occasional occurrences.
-- Merged the progress bar into the prompt window.
-- The AI prompt window now opens from a fixed location. / Easily accessible with the / key.
-
-### Feature Additions
-- Added Cut to the right-click menu in the editor window.
-
-## 2.0 Beta3
-
-### UI/UX Improvements
-* Redesign the tab interface for better compactness and modern aesthetics.
-* Fixed an issue where clicking 'Close' on a deactivated tab would close it unexpectedly.
-* Display the document name (title) in all save dialogs to indicate which document is being worked on.
-
-### Bug Fixes & Polish
-* Fixed an issue where the background color of dropdown menus was indistinguishable from the text, causing poor readability, specifically on Ubuntu in dark mode.
-* Implement visual feedback using a border when the keyboard has focus in the AI prompt input field.
-
-
-## 2.0 Beta4
-### AI Feature Improvements
-* Added option to send surrounding context
-### Bug Fixes & Polish
-* Fixed issue where formulas were not rendering correctly
-* Font size shortcut used while editing should now be reflected in the editor.
-* Resolved an issue where the editing screen failed to update when switching between tabs with multiple open tabs
-* Enabled GitHub-compatible syntax in Remark mode.
-
-
-## 2.0 Beta5
-### AI Feature Improvements
-* **Introduction of AI-specific toolbar:** With enhanced AI features, an AI-dedicated toolbar has been added at the bottom, making it easier to change Temperature and improving access to various AI functions.
-* **Added GitHub compatibility mode**: When enabled, it prompts the LLM to respond only with GitHub-compatible code.
-* **Talk to Me**: When this feature is enabled, AI leaves brief comments after the task.
-
-### Bug Fixes & Polish
-* **Stability Enhancement**: Fixed an issue where the preview scroll position was not being safely maintained during re-rendering in realtime rendering states.
-
-
-## 2.0 Beta6
-### AI Feature Improvements
-* **Intelligent Support Agent:** Ask the AI agent simple questions through the `/ menu` without selecting text, or ask about selected text. You can also receive answers without editing.
-
-### Bug Fixes & Polish
-* **Stability Enhancement**: Polished it again. Fixed an issue where the preview scroll position was not safely maintained while re-rendering in real-time rendering state.
-* **File Opening While Editing Issue**: Resolved an issue where opening certain files while editing caused them to open in the Markdown rendering viewer of the document being edited.
-
-
-## 2.0 Beta7
-### AI Feature Improvements
-
-### Bug Fixes & Polish
-* **Tab**: Make the tab functionality more intuitive
-
-
-## 2.0 Beta8
-### AI Feature Improvements
-
-* **Added GFM Guide .MD**: Allows the LLM to achieve better GFM compatibility by seeing examples directly.
-
+## 2.1 Beta1
 ### Added & Bug Fixes & Polish
-* **Markdown Rendering**: Improved rendering quality for `> [!NOTE], > [!TIP], > [!IMPORTANT], > [!WARNING], > [!CAUTION]`.
-* **Code Block Copy Button**: Added a copy button to code blocks.
-* **HTML void element fix**: Fixed a bug where `</br>` was added to tags like `<br>`
-* **Insert Image, Link**: When adding an image or link, a file browser opens at that location in the document.
 
-
-## 2.0 Beta9
-### Added & Bug Fixes & Polish
-* **Added Print Button**: Added a print button. You can now print Markdown documents.
-* **Added Linux install feature**: Added an Install link visible only on Linux in the Start page Footer. Clicking it installs the app and icon to ~/.local/bin and ~/.local/share/, and creates a .desktop file.
-
-
-## 2.0 Beta10
-### Added & Bug Fixes & Polish
-* **File names and paths with spaces**: When inserting links or images, if a space is included in the path or file name, it must be wrapped in Angle Brackets (&lt; &gt;) to correctly apply Markdown format.
-
-
-## 2.0 Beta11
-### Added & Polish
-
-* **Find & Replace**: Search text within the editor and replace matches in one action.
-
-* **Editor and Preview Scroll Synchronization**: The editor's position is now synchronized with the Markdown preview scroll. You can disable this in settings.
-* **Syntax Highlighting and Presets**: Enhances readability and facilitates smooth markdown document creation and editing. Several predefined presets are available, which you can also disable from settings if needed.
-
-### Bug Fixes
-
-* **Moved documents during editing**: Added an "Open in new tab" button.
-* **Editor-Preview mismatch**: Resolved issues where saving caused inconsistencies between the editor and preview views.
-* **Image drag crash**: Prevented crashes caused by the drag-and-drop functionality.
-
-
-
-
+Not yet!
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
