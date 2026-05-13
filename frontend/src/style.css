@@ -1029,14 +1029,14 @@ html.dark ::-webkit-scrollbar-thumb {
 
 /* ── Edit Toolbar ─────────────────────────────────────── */
 .edit-toolbar {
-    min-height: 48px;
+    min-height: 40px;
     background: var(--surface-elevated);
     border-bottom: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     align-items: stretch;
-    padding: 10px 16px;
-    gap: 8px;
+    padding: 6px 12px;
+    gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
     z-index: 90;
@@ -1051,7 +1051,7 @@ html.dark ::-webkit-scrollbar-thumb {
 .edit-toolbar-row {
     display: flex;
     align-items: center;
-    gap: 4px;
+    gap: 2px;
     min-width: max-content;
     white-space: nowrap;
 }
@@ -1127,15 +1127,17 @@ html.platform-linux .edit-select option {
 
 .edit-separator {
     width: 1px;
-    margin: 0 8px;
+    height: 18px;
+    background: var(--border-color);
+    margin: 0 2px;
 }
 
 /* Find/Replace Bar */
 .editor-find-bar {
     display: flex;
     flex-direction: column;
-    gap: 8px;
-    padding: 8px 4px;
+    gap: 6px;
+    padding: 4px 0;
     border-top: 1px solid var(--border-color);
     background: var(--surface-base);
     border-radius: 8px;
