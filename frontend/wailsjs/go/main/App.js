@@ -70,6 +70,10 @@ export function InstallSystemIntegration() {
   return window['go']['main']['App']['InstallSystemIntegration']();
 }
 
+export function ListFileTree(arg1) {
+  return window['go']['main']['App']['ListFileTree'](arg1);
+}
+
 export function MakeAIRequest(arg1, arg2, arg3) {
   return window['go']['main']['App']['MakeAIRequest'](arg1, arg2, arg3);
 }

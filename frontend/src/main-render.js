@@ -16,13 +16,13 @@ import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
     joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector, getPathDirname,
     isBundledDocumentPath, normalizeAppLocalFileHref, normalizeFileURLPath, isActiveMarkdownEditTab,
-    decodeLocalMarkdownPath,
+    decodeLocalMarkdownPath, basename, isImagePath, escapeHTML,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
 import { syncAIControls } from './main-ai.js';
 import { applyHighlight, clearHighlight, copyTextToClipboard, showToast } from './main-ui.js';
-import { GetRecentFiles, ReadFile, ReadImageAsDataURL } from '../wailsjs/go/main/App';
+import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../wailsjs/go/main/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 import { refreshSidebarContent } from './main-sidebar.js';
 
@@ -45,6 +45,8 @@ const MARKDOWN_ALERT_TYPES = Object.freeze({
 });
 let previewRenderToken = 0;
 let livePreviewBlocks = [];
+let imageViewerZoom = 1;
+let imageViewerFit = true;
 
 function captureLivePreviewScrollAnchor() {
     if (!state.isEditing || state.currentEditorRenderMode !== 'realtime') {
@@ -1254,12 +1256,17 @@ export async function renderActiveTab() {
         el.editorView.classList.add('hidden');
         el.mainContainer.classList.remove('is-editing');
         el.btnEdit.classList.remove('active');
-        el.selectEngine.disabled = false;
+        el.selectEngine.disabled = state.currentDocumentType !== 'markdown';
     }
 
     getScroller().classList.toggle('html-mode', state.currentDocumentType === 'html');
+    getScroller().classList.toggle('image-mode', state.currentDocumentType === 'image');
     if (state.currentDocumentType === 'html') {
         await renderHTMLDocument(state.currentFilePath);
+    } else if (state.currentDocumentType === 'image') {
+        await renderImageDocument(state.currentFilePath);
+    } else if (state.currentDocumentType === 'unsupported') {
+        renderUnsupportedDocument(state.currentFilePath);
     } else {
         el.htmlFrame.classList.add('hidden');
         el.markdownContainer.classList.remove('hidden');
@@ -1281,6 +1288,12 @@ export async function renderActiveTab() {
 
     if (state.currentDocumentType === 'html') {
         clearHighlight();
+        return;
+    }
+
+    if (state.currentDocumentType === 'image' || state.currentDocumentType === 'unsupported') {
+        clearHighlight();
+        refreshSidebarContent();
         return;
     }
 
@@ -1313,6 +1326,7 @@ async function renderHomeScreen() {
     el.htmlFrame.classList.add('hidden');
     el.homeScreen.classList.remove('hidden');
     getScroller().scrollTop = state.navHistory[state.navIndex]?.scroll ?? 0;
+    getScroller().classList.remove('image-mode');
     syncEditingPreviewReturnButton();
 
     const { updateNavButtons } = await import('./main-navigation.js');
@@ -1374,6 +1388,151 @@ export async function openEditingPreviewInNewTab() {
     const path = state.editingPreviewPath;
     const { openPath } = await import('./main-navigation.js');
     await openPath(path, { newTab: true, pushHistory: true, setHome: true });
+}
+
+async function renderImageDocument(path) {
+    cleanupHTMLFrame({ resetSource: true });
+    clearHighlight();
+    el.homeScreen.classList.add('hidden');
+    el.htmlFrame.classList.add('hidden');
+    el.markdownContainer.classList.remove('hidden');
+
+    const imageSrc = await ReadImageAsDataURL(path);
+    const imageName = basename(path);
+    el.markdownContainer.innerHTML = `
+        <div class="image-viewer-shell">
+            <div class="image-viewer-stage">
+                <div class="image-viewer-canvas">
+                    <img id="image-viewer-img" class="image-viewer-img is-fit" alt="${escapeHTML(imageName)}" src="${imageSrc}">
+                </div>
+            </div>
+            <div class="image-viewer-hud" role="toolbar" aria-label="Image viewer controls">
+                <button type="button" class="image-hud-btn" data-image-action="prev" title="Previous Image" aria-label="Previous Image">
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_left</span>
+                </button>
+                <button type="button" class="image-hud-btn" data-image-action="next" title="Next Image" aria-label="Next Image">
+                    <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                </button>
+                <span class="image-hud-divider" aria-hidden="true"></span>
+                <button type="button" class="image-hud-btn" data-image-action="zoom-out" title="Zoom Out" aria-label="Zoom Out">
+                    <span class="material-symbols-outlined" aria-hidden="true">zoom_out</span>
+                </button>
+                <button type="button" class="image-hud-btn" data-image-action="zoom-in" title="Zoom In" aria-label="Zoom In">
+                    <span class="material-symbols-outlined" aria-hidden="true">zoom_in</span>
+                </button>
+                <button type="button" class="image-hud-btn" data-image-action="fit" title="Fit to Screen" aria-label="Fit to Screen">
+                    <span class="material-symbols-outlined" aria-hidden="true">fit_screen</span>
+                </button>
+            </div>
+        </div>
+    `;
+    imageViewerZoom = 1;
+    imageViewerFit = true;
+    bindImageViewerControls(path);
+}
+
+function bindImageViewerControls(path) {
+    const img = el.markdownContainer.querySelector('#image-viewer-img');
+    if (!img) {
+        return;
+    }
+
+    el.markdownContainer.querySelectorAll('[data-image-action]').forEach(button => {
+        button.addEventListener('click', async () => {
+            const action = button.dataset.imageAction;
+            if (action === 'zoom-out') {
+                imageViewerFit = false;
+                if (!img.complete || !img.naturalWidth) {
+                    await img.decode?.().catch(() => {});
+                }
+                if (imageViewerZoom === 1 && img.classList.contains('is-fit')) {
+                    imageViewerZoom = getImageViewerFitScale(img);
+                }
+                imageViewerZoom = Math.max(0.1, imageViewerZoom - 0.1);
+                applyImageViewerZoom(img);
+                return;
+            }
+            if (action === 'zoom-in') {
+                imageViewerFit = false;
+                if (!img.complete || !img.naturalWidth) {
+                    await img.decode?.().catch(() => {});
+                }
+                if (imageViewerZoom === 1 && img.classList.contains('is-fit')) {
+                    imageViewerZoom = getImageViewerFitScale(img);
+                }
+                imageViewerZoom = Math.min(8, imageViewerZoom + 0.1);
+                applyImageViewerZoom(img);
+                return;
+            }
+            if (action === 'fit') {
+                imageViewerFit = true;
+                imageViewerZoom = 1;
+                applyImageViewerZoom(img);
+                return;
+            }
+            if (action === 'prev' || action === 'next') {
+                const nextPath = await getAdjacentImagePath(path, action === 'next' ? 1 : -1);
+                if (nextPath) {
+                    const { openPath } = await import('./main-navigation.js');
+                    await openPath(nextPath, { pushHistory: true, setHome: false });
+                }
+            }
+        });
+    });
+}
+
+function applyImageViewerZoom(img) {
+    img.classList.toggle('is-fit', imageViewerFit);
+    if (imageViewerFit) {
+        img.style.width = '';
+        img.style.height = '';
+        return;
+    }
+    img.style.width = `${Math.max(1, img.naturalWidth * imageViewerZoom)}px`;
+    img.style.height = 'auto';
+}
+
+function getImageViewerFitScale(img) {
+    const stage = img.closest('.image-viewer-stage');
+    const naturalWidth = img.naturalWidth || 1;
+    const naturalHeight = img.naturalHeight || 1;
+    const availableWidth = Math.max(1, (stage?.clientWidth || 1) - 48);
+    const availableHeight = Math.max(1, (stage?.clientHeight || 1) - 120);
+    return Math.min(1, availableWidth / naturalWidth, availableHeight / naturalHeight);
+}
+
+async function getAdjacentImagePath(path, direction) {
+    try {
+        const tree = await ListFileTree(getPathDirname(path));
+        const images = (tree.children || [])
+            .filter(item => !item.isDir && isImagePath(item.path))
+            .map(item => item.path)
+            .sort((a, b) => basename(a).localeCompare(basename(b), undefined, { sensitivity: 'base' }));
+        if (images.length === 0) {
+            return "";
+        }
+        const currentIndex = images.findIndex(item => item === path);
+        const safeIndex = currentIndex >= 0 ? currentIndex : 0;
+        return images[(safeIndex + direction + images.length) % images.length];
+    } catch (error) {
+        LogError(`getAdjacentImagePath failed path=${path}: ${error?.message || error}`);
+        return "";
+    }
+}
+
+function renderUnsupportedDocument(path) {
+    cleanupHTMLFrame({ resetSource: true });
+    clearHighlight();
+    el.homeScreen.classList.add('hidden');
+    el.htmlFrame.classList.add('hidden');
+    el.markdownContainer.classList.remove('hidden');
+    el.markdownContainer.innerHTML = `
+        <div class="unsupported-preview">
+            <span class="material-symbols-outlined unsupported-preview-icon" aria-hidden="true">draft</span>
+            <div class="unsupported-preview-name">${escapeHTML(basename(path))}</div>
+            <div class="unsupported-preview-message">지원하지 않는 형식입니다.</div>
+        </div>
+    `;
 }
 
 // ── Mermaid Rendering ──────────────────────────────────────

@@ -9,6 +9,7 @@ import {
     documentTypeFromPath, splitLinkTarget, isExternalURL,
     joinPath, getScroller, syncEngineSelector, deriveTabTitle,
     isMacOS, isEditableTarget, isBundledDocumentPath, isActiveMarkdownEditTab,
+    isSupportedPreviewPath,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab } from './main-render.js';
@@ -114,8 +115,15 @@ export async function openPath(path, options = {}) {
             return;
         }
 
-        updateProgress('Reading markdown file', 42);
-        const fileContent = content ?? await ReadFile(path);
+        const documentType = documentTypeFromPath(path);
+        const shouldReadContent = documentType === 'markdown';
+        let fileContent = content ?? "";
+        if (shouldReadContent) {
+            updateProgress('Reading markdown file', 42);
+            fileContent = await ReadFile(path);
+        } else {
+            updateProgress('Preparing preview', 42);
+        }
         throwIfTaskCancelled(taskId);
         updateProgress('Rendering document', 82);
         const { yieldToUI } = await import('./main-ui.js');
@@ -221,10 +229,10 @@ async function loadFile(path, content, pushHistory = true, setHome = false) {
     state.currentFilePath = path;
     state.currentDocumentType = documentTypeFromPath(path);
     state.currentFolder = getPathDirname(path);
-    state.currentMarkdownSource = content;
+    state.currentMarkdownSource = state.currentDocumentType === 'markdown' ? content : "";
     syncEngineSelector();
 
-    if (!isBundledDocumentPath(path)) {
+    if (!isBundledDocumentPath(path) && isSupportedPreviewPath(path)) {
         TouchRecentFile(path).catch(error => {
             LogError(`TouchRecentFile failed path=${path}: ${error?.message || error}`);
         });
@@ -272,9 +280,14 @@ export async function reloadCurrent() {
             return;
         }
 
-        updateProgress('Reading markdown file', 48);
-        state.currentMarkdownSource = await ReadFile(state.currentFilePath);
-        throwIfTaskCancelled(taskId);
+        if (state.currentDocumentType === 'markdown') {
+            updateProgress('Reading markdown file', 48);
+            state.currentMarkdownSource = await ReadFile(state.currentFilePath);
+            throwIfTaskCancelled(taskId);
+        } else {
+            updateProgress('Preparing preview', 48);
+            state.currentMarkdownSource = "";
+        }
         syncTabFromGlobals(tab);
         updateProgress('Rendering document', 82);
         const { yieldToUI } = await import('./main-ui.js');

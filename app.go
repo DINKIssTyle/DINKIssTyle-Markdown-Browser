@@ -25,6 +25,7 @@ import (
 	"os/exec"
 	"path/filepath"
 	goruntime "runtime"
+	"sort"
 	"strings"
 	"sync"
 	"time"
@@ -49,6 +50,14 @@ type RecentFile struct {
 type FileResult struct {
 	Path    string `json:"path"`
 	Content string `json:"content"`
+}
+
+type FileTreeNode struct {
+	Name     string         `json:"name"`
+	Path     string         `json:"path"`
+	IsDir    bool           `json:"isDir"`
+	HasItems bool           `json:"hasItems"`
+	Children []FileTreeNode `json:"children,omitempty"`
 }
 
 type AIModelInfo struct {
@@ -374,6 +383,93 @@ func (a *App) ReadImageAsDataURL(path string) (string, error) {
 
 	encoded := base64.StdEncoding.EncodeToString(data)
 	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded), nil
+}
+
+func (a *App) ListFileTree(root string) (FileTreeNode, error) {
+	root = strings.TrimSpace(root)
+	if root == "" {
+		return FileTreeNode{}, errors.New("root path is empty")
+	}
+
+	cleanRoot := filepath.Clean(root)
+	info, err := os.Stat(cleanRoot)
+	if err != nil {
+		return FileTreeNode{}, err
+	}
+	if !info.IsDir() {
+		cleanRoot = filepath.Dir(cleanRoot)
+		info, err = os.Stat(cleanRoot)
+		if err != nil {
+			return FileTreeNode{}, err
+		}
+	}
+	if !info.IsDir() {
+		return FileTreeNode{}, fmt.Errorf("root path is not a directory")
+	}
+
+	return buildFileTreeNode(cleanRoot, true)
+}
+
+func buildFileTreeNode(path string, includeChildren bool) (FileTreeNode, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return FileTreeNode{}, err
+	}
+
+	node := FileTreeNode{
+		Name:     info.Name(),
+		Path:     path,
+		IsDir:    info.IsDir(),
+		HasItems: info.IsDir() && directoryHasItems(path),
+	}
+
+	if !info.IsDir() || !includeChildren {
+		return node, nil
+	}
+
+	entries, err := os.ReadDir(path)
+	if err != nil {
+		return node, nil
+	}
+
+	sort.SliceStable(entries, func(i, j int) bool {
+		left := entries[i]
+		right := entries[j]
+		if left.IsDir() != right.IsDir() {
+			return left.IsDir()
+		}
+		return strings.ToLower(left.Name()) < strings.ToLower(right.Name())
+	})
+
+	for _, entry := range entries {
+		childPath := filepath.Join(path, entry.Name())
+		if entry.Type()&os.ModeSymlink != 0 {
+			info, err := entry.Info()
+			if err != nil {
+				continue
+			}
+			node.Children = append(node.Children, FileTreeNode{
+				Name:     entry.Name(),
+				Path:     childPath,
+				IsDir:    info.IsDir(),
+				HasItems: info.IsDir() && directoryHasItems(childPath),
+			})
+			continue
+		}
+
+		child, err := buildFileTreeNode(childPath, false)
+		if err != nil {
+			continue
+		}
+		node.Children = append(node.Children, child)
+	}
+
+	return node, nil
+}
+
+func directoryHasItems(path string) bool {
+	entries, err := os.ReadDir(path)
+	return err == nil && len(entries) > 0
 }
 
 // SearchMarkdown searches for a query in all .md files in the directory recursively

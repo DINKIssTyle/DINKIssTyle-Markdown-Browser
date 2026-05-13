@@ -37,6 +37,8 @@ export function HandleSystemOpenFile(arg1:string):Promise<void>;
 
 export function InstallSystemIntegration():Promise<string>;
 
+export function ListFileTree(arg1:string):Promise<main.FileTreeNode>;
+
 export function MakeAIRequest(arg1:string,arg2:Record<string, string>,arg3:string):Promise<string>;
 
 export function MakeLMStudioRequest(arg1:string,arg2:Record<string, string>,arg3:string):Promise<string>;

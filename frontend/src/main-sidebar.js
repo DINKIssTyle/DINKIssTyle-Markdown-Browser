@@ -3,13 +3,23 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { state, el, getPathDirname, documentTypeFromPath } from './main-state.js';
+import {
+    state, el, HOME_SCREEN_PATH,
+    getPathDirname, documentTypeFromPath, basename,
+    escapeHTML, escapeAttr, isBundledDocumentPath,
+} from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
 import { scrollEditorToLine } from './main-editor.js';
+import { ListFileTree } from '../wailsjs/go/main/App';
+import { LogError } from '../wailsjs/runtime/runtime';
 
 let isSidebarOpen = false;
 let activeSidebarTab = 'files';
+const expandedFileTreePaths = new Set();
+const loadingFileTreePaths = new Set();
+let fileTreeRootPath = "";
+let fileTreeRootNode = null;
 
 export function initSidebar() {
     if (!el.btnSidebarToggle) return;
@@ -159,26 +169,136 @@ export function updateOutline() {
 async function updateFileTree() {
     if (!el.fileTree) return;
 
-    if (!state.currentFolder) {
+    const rootPath = getFileTreeRootPath();
+    if (!rootPath) {
         el.fileTree.innerHTML = '<div class="sidebar-hint">Open a folder or file to view tree.</div>';
         return;
     }
 
-    // For now, just show the current folder name and a placeholder
-    // In a real implementation, we would call a backend function to list files.
-    // We can reuse the "Recent Files" style or similar.
-    const folderName = basename(state.currentFolder);
-    el.fileTree.innerHTML = `
-        <div class="file-tree-header">
-            <span class="material-symbols-outlined">folder_open</span>
-            <span class="folder-name">${folderName}</span>
-        </div>
-        <div class="sidebar-hint">File tree implementation coming soon...</div>
-    `;
+    expandedFileTreePaths.add(rootPath);
+    if (rootPath === fileTreeRootPath && fileTreeRootNode) {
+        el.fileTree.innerHTML = renderFileTree(fileTreeRootNode, 0, true);
+        bindFileTreeEvents();
+        return;
+    }
+
+    fileTreeRootPath = rootPath;
+    fileTreeRootNode = null;
+    el.fileTree.innerHTML = '<div class="sidebar-hint">Loading files...</div>';
+
+    try {
+        fileTreeRootNode = await ListFileTree(rootPath);
+        el.fileTree.innerHTML = renderFileTree(fileTreeRootNode, 0, true);
+        bindFileTreeEvents();
+    } catch (error) {
+        console.error('updateFileTree failed:', error);
+        LogError(`updateFileTree failed root=${rootPath}: ${error?.message || error}`);
+        el.fileTree.innerHTML = '<div class="sidebar-hint">Failed to load file tree.</div>';
+    }
 }
 
-function basename(path) {
-    const normalized = (path || '').replace(/\\/g, '/');
-    const parts = normalized.split('/');
-    return parts[parts.length - 1] || path;
+function getFileTreeRootPath() {
+    if (state.homeTargetPath && state.homeTargetPath !== HOME_SCREEN_PATH && !isBundledDocumentPath(state.homeTargetPath)) {
+        return getPathDirname(state.homeTargetPath) || state.homeTargetPath;
+    }
+    return state.currentFolder || "";
+}
+
+function renderFileTree(node, depth, isRoot = false) {
+    if (!node) return "";
+
+    const isDir = !!node.isDir;
+    const isExpanded = isRoot || expandedFileTreePaths.has(node.path);
+    const hasLoadedChildren = isDir && Array.isArray(node.children) && node.children.length > 0;
+    const canExpand = isDir && (hasLoadedChildren || node.hasItems);
+    const icon = isDir ? (isExpanded ? 'folder_open' : 'folder') : iconForFile(node.name);
+    const current = !isDir && node.path === state.currentFilePath;
+    const isLoading = loadingFileTreePaths.has(node.path);
+
+    const row = `
+        <div class="file-tree-item ${isDir ? 'is-dir' : 'is-file'} ${current ? 'active' : ''}"
+            data-path="${escapeAttr(node.path)}"
+            data-kind="${isDir ? 'dir' : 'file'}"
+            style="--tree-depth: ${depth};"
+            title="${escapeAttr(node.path)}">
+            <span class="file-tree-toggle material-symbols-outlined" aria-hidden="true">${canExpand ? (isExpanded ? 'expand_more' : 'chevron_right') : ''}</span>
+            <span class="file-tree-icon material-symbols-outlined" aria-hidden="true">${icon}</span>
+            <span class="file-tree-name">${escapeHTML(node.name || basename(node.path))}</span>
+        </div>
+    `;
+
+    if (!canExpand || !isExpanded) {
+        return row;
+    }
+
+    if (isLoading && !hasLoadedChildren) {
+        return row + `<div class="file-tree-loading" style="--tree-depth: ${depth + 1};">Loading...</div>`;
+    }
+
+    return row + (node.children || []).map(child => renderFileTree(child, depth + 1)).join('');
+}
+
+function bindFileTreeEvents() {
+    el.fileTree.querySelectorAll('.file-tree-item').forEach(item => {
+        item.addEventListener('click', async () => {
+            const path = item.dataset.path;
+            if (!path) return;
+
+            if (item.dataset.kind === 'dir') {
+                if (expandedFileTreePaths.has(path)) {
+                    expandedFileTreePaths.delete(path);
+                } else {
+                    expandedFileTreePaths.add(path);
+                    await ensureDirectoryChildrenLoaded(path);
+                }
+                updateFileTree();
+                return;
+            }
+
+            const { openPath } = await import('./main-navigation.js');
+            await openPath(path, { pushHistory: true, setHome: false });
+        });
+    });
+}
+
+async function ensureDirectoryChildrenLoaded(path) {
+    const node = findFileTreeNode(fileTreeRootNode, path);
+    if (!node || !node.isDir || Array.isArray(node.children)) {
+        return;
+    }
+
+    loadingFileTreePaths.add(path);
+    el.fileTree.innerHTML = renderFileTree(fileTreeRootNode, 0, true);
+    bindFileTreeEvents();
+
+    try {
+        const loaded = await ListFileTree(path);
+        node.children = loaded.children || [];
+        node.hasItems = loaded.hasItems;
+    } catch (error) {
+        LogError(`ensureDirectoryChildrenLoaded failed path=${path}: ${error?.message || error}`);
+        node.children = [];
+        node.hasItems = false;
+    } finally {
+        loadingFileTreePaths.delete(path);
+    }
+}
+
+function findFileTreeNode(node, path) {
+    if (!node) return null;
+    if (node.path === path) return node;
+    for (const child of node.children || []) {
+        const found = findFileTreeNode(child, path);
+        if (found) return found;
+    }
+    return null;
+}
+
+function iconForFile(path) {
+    const lower = String(path || '').toLowerCase();
+    if (/\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(lower)) return 'image';
+    if (/\.html?$/i.test(lower)) return 'html';
+    if (/\.(md|markdown)$/i.test(lower)) return 'article';
+    if (/\.txt$/i.test(lower)) return 'description';
+    return 'draft';
 }

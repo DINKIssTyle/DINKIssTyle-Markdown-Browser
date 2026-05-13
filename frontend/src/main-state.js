@@ -300,7 +300,26 @@ export function kindFromPath(path) {
 export function documentTypeFromPath(path) {
     if (path === HOME_SCREEN_PATH) return 'home';
     if (isBundledDocumentPath(path)) return 'markdown';
-    return /\.html?$/i.test(path) ? 'html' : 'markdown';
+    if (isImagePath(path)) return 'image';
+    if (/\.html?$/i.test(path)) return 'html';
+    if (isMarkdownPath(path) || /\.txt$/i.test(path)) return 'markdown';
+    return 'unsupported';
+}
+
+export function isMarkdownPath(path) {
+    return /\.(md|markdown)$/i.test(path || "");
+}
+
+export function isImagePath(path) {
+    return /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(path || "");
+}
+
+export function isTextPreviewPath(path) {
+    return /\.(md|markdown|txt)$/i.test(path || "");
+}
+
+export function isSupportedPreviewPath(path) {
+    return isTextPreviewPath(path) || /\.html?$/i.test(path || "") || isImagePath(path);
 }
 
 export function normalizeFileURLPath(path) {
@@ -484,6 +503,11 @@ export function syncEngineSelector() {
     if (state.currentDocumentType === 'html') {
         state.currentEngine = 'html';
         el.selectEngine.value = 'html';
+        el.selectEngine.disabled = true;
+        return;
+    }
+
+    if (state.currentDocumentType !== 'markdown') {
         el.selectEngine.disabled = true;
         return;
     }

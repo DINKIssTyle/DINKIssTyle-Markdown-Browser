@@ -565,6 +565,7 @@ html.dark .nav-btn:hover {
 .file-tree {
     flex: 1;
     overflow-y: auto;
+    padding: 4px 0 10px;
 }
 
 .file-tree-header {
@@ -576,6 +577,62 @@ html.dark .nav-btn:hover {
     font-size: 13px;
     border-bottom: 1px solid var(--border-color);
     background: var(--surface-elevated);
+}
+
+.file-tree-item {
+    --tree-depth: 0;
+    display: grid;
+    grid-template-columns: 18px 20px minmax(0, 1fr);
+    align-items: center;
+    gap: 4px;
+    min-height: 30px;
+    padding: 4px 10px 4px calc(8px + (var(--tree-depth) * 16px));
+    color: var(--text-color);
+    cursor: pointer;
+    font-size: 13px;
+    line-height: 1.25;
+}
+
+.file-tree-item:hover {
+    background: rgba(128, 128, 128, 0.1);
+}
+
+.file-tree-item.active {
+    background: rgba(0, 113, 227, 0.12);
+    color: var(--accent-color);
+}
+
+.file-tree-toggle,
+.file-tree-icon {
+    font-size: 18px;
+    line-height: 1;
+    opacity: 0.72;
+}
+
+.file-tree-toggle {
+    color: var(--muted-color);
+}
+
+.file-tree-icon {
+    color: var(--muted-color);
+}
+
+.file-tree-item.is-dir .file-tree-icon {
+    color: var(--accent-color);
+    opacity: 0.85;
+}
+
+.file-tree-name {
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.file-tree-loading {
+    padding: 5px 10px 5px calc(8px + (var(--tree-depth) * 16px));
+    color: var(--muted-color);
+    font-size: 12px;
 }
 
 .clear-search-btn {
@@ -649,6 +706,17 @@ html.dark .nav-btn:hover {
 
 .content-view.html-mode {
     padding: 0;
+}
+
+.content-view.image-mode {
+    padding: 0;
+    background: #fff;
+    position: relative;
+    overflow: hidden;
+}
+
+html.dark .content-view.image-mode {
+    background: #111;
 }
 
 /* Home Screen */
@@ -881,6 +949,133 @@ html.dark .recent-item:hover {
     overflow: hidden;
 }
 
+.image-viewer-shell {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    min-height: calc(100vh - 110px);
+    overflow: hidden;
+    background: #fff;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+html.dark .image-viewer-shell {
+    background: #111;
+}
+
+.image-viewer-stage {
+    position: absolute;
+    inset: 0;
+    overflow: auto;
+}
+
+.image-viewer-canvas {
+    box-sizing: border-box;
+    width: max-content;
+    min-width: 100%;
+    height: max-content;
+    min-height: 100%;
+    padding: 24px 24px 96px;
+    display: grid;
+    place-items: center;
+}
+
+.image-viewer-img {
+    display: block;
+    max-width: none;
+    max-height: none;
+    margin: auto;
+}
+
+.image-viewer-img.is-fit {
+    max-width: calc(100% - 48px);
+    max-height: calc(100vh - 160px);
+    object-fit: contain;
+}
+
+.image-viewer-hud {
+    position: absolute;
+    left: 50%;
+    bottom: 24px;
+    transform: translateX(-50%);
+    width: max-content;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    padding: 7px;
+    border-radius: 10px;
+    background: rgba(24, 24, 24, 0.82);
+    border: 1px solid rgba(255, 255, 255, 0.14);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.28);
+    backdrop-filter: blur(14px);
+    z-index: 30;
+}
+
+.content-view.image-mode .markdown-container {
+    max-width: none;
+    margin: 0;
+    width: 100%;
+    height: 100%;
+    flex: 1;
+}
+
+.image-hud-btn {
+    width: 34px;
+    height: 34px;
+    border: none;
+    border-radius: 6px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    color: #fff;
+    background: transparent;
+    cursor: pointer;
+}
+
+.image-hud-btn:hover {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.image-hud-btn .material-symbols-outlined {
+    font-size: 21px;
+}
+
+.image-hud-divider {
+    width: 1px;
+    height: 22px;
+    background: rgba(255, 255, 255, 0.2);
+    margin: 0 2px;
+}
+
+.unsupported-preview {
+    min-height: 440px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    color: var(--text-color);
+    text-align: center;
+}
+
+.unsupported-preview-icon {
+    font-size: 44px;
+    color: var(--muted-color);
+}
+
+.unsupported-preview-name {
+    max-width: min(520px, 90%);
+    font-size: 18px;
+    font-weight: 700;
+    overflow-wrap: anywhere;
+}
+
+.unsupported-preview-message {
+    color: var(--muted-color);
+    font-size: 14px;
+}
+
 html.dark .html-frame {
     background: transparent;
 }
@@ -1069,6 +1264,14 @@ html.dark .html-frame {
     max-width: 100%;
     -webkit-user-drag: none;
     user-select: none;
+}
+
+.markdown-container .image-viewer-img {
+    max-width: none;
+}
+
+.markdown-container .image-viewer-img.is-fit {
+    max-width: calc(100% - 48px);
 }
 
 .markdown-container .katex-display {
