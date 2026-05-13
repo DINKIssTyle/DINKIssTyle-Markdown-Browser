@@ -385,6 +385,21 @@ html.dark .nav-btn:hover {
     flex: 1;
     overflow: hidden;
     position: relative;
+    flex-direction: row;
+}
+
+.main-workspace {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    overflow: hidden;
+}
+
+.document-area {
+    display: flex;
+    flex: 1;
+    overflow: hidden;
+    position: relative;
 }
 
 /* Sidebar - LEFT side */
