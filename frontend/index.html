@@ -86,6 +86,11 @@
         <div id="edit-toolbar" class="edit-toolbar hidden">
             <div class="edit-toolbar-row edit-toolbar-row-primary">
                 <div class="edit-tool-group">
+                    <button id="ed-find-replace" title="Find & Replace (⌘F)" class="tool-btn"><span
+                            class="material-symbols-outlined">find_replace</span></button>
+                </div>
+                <div class="edit-separator"></div>
+                <div class="edit-tool-group">
                     <button id="ed-bold" title="Bold (**)" class="tool-btn"><span
                             class="material-symbols-outlined">format_bold</span></button>
                     <button id="ed-italic" title="Italic (*)" class="tool-btn"><span
@@ -163,6 +168,40 @@
                             class="material-symbols-outlined">disabled_by_default</span></button>
                     <button id="ed-save" title="Save" class="tool-btn save-btn"><span
                             class="material-symbols-outlined">save</span></button>
+                </div>
+            </div>
+            <div id="editor-find-bar" class="editor-find-bar hidden">
+                <div class="editor-find-bar-row">
+                    <div class="editor-find-input-group">
+                        <span class="material-symbols-outlined editor-find-icon" aria-hidden="true">search</span>
+                        <input type="text" id="editor-find-input" class="editor-find-input" placeholder="Find"
+                            spellcheck="false" autocomplete="off" />
+                    </div>
+                    <div class="editor-find-nav">
+                        <button id="editor-find-prev" class="editor-find-nav-btn" title="Previous (⇧⏎)"
+                            type="button"><span class="material-symbols-outlined"
+                                aria-hidden="true">keyboard_arrow_up</span></button>
+                        <button id="editor-find-next" class="editor-find-nav-btn" title="Next (⏎)"
+                            type="button"><span class="material-symbols-outlined"
+                                aria-hidden="true">keyboard_arrow_down</span></button>
+                    </div>
+                    <span id="editor-find-count" class="editor-find-count"></span>
+                    <label class="editor-find-replace-toggle" for="editor-find-replace-check">
+                        <input type="checkbox" id="editor-find-replace-check" />
+                        <span>Replace</span>
+                    </label>
+                    <button id="editor-find-done" class="editor-find-done-btn" type="button">Done</button>
+                </div>
+                <div id="editor-replace-row" class="editor-find-bar-row editor-replace-row hidden">
+                    <div class="editor-find-input-group">
+                        <span class="material-symbols-outlined editor-find-icon" aria-hidden="true">swap_horiz</span>
+                        <input type="text" id="editor-replace-input" class="editor-find-input" placeholder="Replace"
+                            spellcheck="false" autocomplete="off" />
+                    </div>
+                    <div class="editor-replace-actions">
+                        <button id="editor-replace-one" class="editor-find-action-btn" type="button">Replace</button>
+                        <button id="editor-replace-all" class="editor-find-action-btn" type="button">All</button>
+                    </div>
                 </div>
             </div>
         </div>

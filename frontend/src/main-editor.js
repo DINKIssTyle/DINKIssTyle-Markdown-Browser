@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
-import { state, el, getPathDirname, formatSaveDialogMessage } from './main-state.js';
+import { state, el, getPathDirname, formatSaveDialogMessage, debounce } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines } from './main-render.js';
@@ -16,6 +16,7 @@ import { LogError } from '../wailsjs/runtime/runtime';
 import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
+import { SearchCursor } from '@codemirror/search';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
@@ -28,6 +29,9 @@ let slashMenuState = null;
 let slashMenuEventsBound = false;
 let lastPreviewCursorLine = 1;
 let lastPreviewTopLine = 1;
+let findMatches = [];
+let currentMatchIndex = -1;
+let isFindBarOpen = false;
 let previewScrollSyncFrame = 0;
 let editorScrollEventsBound = false;
 let lastRenderedPreviewContent = "";
@@ -475,6 +479,176 @@ export function triggerImmediateScrollSync() {
     }
 }
 
+
+// ── Search Logic ──────────────────────────────────────────
+function openFindBar(withReplace = false) {
+    if (!state.isEditing || !el.editorFindBar) return;
+
+    isFindBarOpen = true;
+    el.editorFindBar.classList.remove('hidden');
+    el.editorFindInput.focus();
+    el.editorFindInput.select();
+
+    if (withReplace) {
+        el.editorFindReplaceCheck.checked = true;
+        el.editorReplaceRow.classList.remove('hidden');
+    }
+
+    updateFindMatches();
+}
+
+function closeFindBar() {
+    if (!el.editorFindBar) return;
+    isFindBarOpen = false;
+    el.editorFindBar.classList.add('hidden');
+    if (cmView) cmView.focus();
+}
+
+const updateFindMatchesDebounced = debounce(() => {
+    if (!cmView || !isFindBarOpen) return;
+    const query = el.editorFindInput.value;
+    findMatches = [];
+    currentMatchIndex = -1;
+
+    if (!query) {
+        el.editorFindCount.textContent = '';
+        return;
+    }
+
+    const cursor = new SearchCursor(cmView.state.doc, query);
+    while (!cursor.next().done) {
+        findMatches.push({ from: cursor.value.from, to: cursor.value.to });
+    }
+
+    if (findMatches.length > 0) {
+        const pos = cmView.state.selection.main.from;
+        currentMatchIndex = findMatches.findIndex(m => m.from >= pos);
+        if (currentMatchIndex === -1) currentMatchIndex = 0;
+        
+        el.editorFindCount.textContent = `${currentMatchIndex + 1} of ${findMatches.length}`;
+        highlightMatch(currentMatchIndex, false); // Don't jump while typing
+    } else {
+        el.editorFindCount.textContent = 'No results';
+    }
+}, 150);
+
+function updateFindMatches() {
+    if (!cmView) return;
+    const query = el.editorFindInput.value;
+    findMatches = [];
+    currentMatchIndex = -1;
+
+    if (!query) {
+        el.editorFindCount.textContent = '';
+        return;
+    }
+
+    const cursor = new SearchCursor(cmView.state.doc, query);
+    while (!cursor.next().done) {
+        findMatches.push({ from: cursor.value.from, to: cursor.value.to });
+    }
+
+    if (findMatches.length > 0) {
+        const pos = cmView.state.selection.main.from;
+        currentMatchIndex = findMatches.findIndex(m => m.from >= pos);
+        if (currentMatchIndex === -1) currentMatchIndex = 0;
+        
+        highlightMatch(currentMatchIndex, true);
+    } else {
+        el.editorFindCount.textContent = 'No results';
+    }
+}
+
+function highlightMatch(index, scrollIntoView = true) {
+    if (!cmView || index < 0 || index >= findMatches.length) return;
+    const match = findMatches[index];
+    
+    cmView.dispatch({
+        selection: { anchor: match.from, head: match.to },
+        scrollIntoView: scrollIntoView
+    });
+    
+    el.editorFindCount.textContent = `${index + 1} of ${findMatches.length}`;
+}
+
+function findNext() {
+    if (findMatches.length === 0) return;
+    currentMatchIndex = (currentMatchIndex + 1) % findMatches.length;
+    highlightMatch(currentMatchIndex);
+}
+
+function findPrev() {
+    if (findMatches.length === 0) return;
+    currentMatchIndex = (currentMatchIndex - 1 + findMatches.length) % findMatches.length;
+    highlightMatch(currentMatchIndex);
+}
+
+function performReplace() {
+    if (!cmView || currentMatchIndex === -1) return;
+    const match = findMatches[currentMatchIndex];
+    const replacement = el.editorReplaceInput.value;
+
+    cmView.dispatch({
+        changes: { from: match.from, to: match.to, insert: replacement },
+        selection: { anchor: match.from, head: match.from + replacement.length }
+    });
+
+    updateFindMatches();
+}
+
+function performReplaceAll() {
+    if (!cmView || findMatches.length === 0) return;
+    const query = el.editorFindInput.value;
+    const replacement = el.editorReplaceInput.value;
+    
+    let changes = [];
+    const cursor = new SearchCursor(cmView.state.doc, query);
+    while (!cursor.next().done) {
+        changes.push({ from: cursor.value.from, to: cursor.value.to, insert: replacement });
+    }
+
+    cmView.dispatch({
+        changes,
+        sequential: true
+    });
+
+    updateFindMatches();
+    showToast(`Replaced ${changes.length} occurrences.`);
+}
+
+function bindEditorSearchEvents() {
+    if (!el.edFindReplace) return;
+
+    el.edFindReplace.onclick = () => {
+        if (isFindBarOpen) closeFindBar();
+        else openFindBar();
+    };
+
+    el.editorFindInput.oninput = () => updateFindMatches();
+    el.editorFindInput.onkeydown = (e) => {
+        if (e.key === 'Enter') {
+            if (e.shiftKey) findPrev();
+            else findNext();
+        } else if (e.key === 'Escape') {
+            closeFindBar();
+        }
+    };
+
+    el.editorFindPrev.onclick = () => findPrev();
+    el.editorFindNext.onclick = () => findNext();
+    el.editorFindDone.onclick = () => closeFindBar();
+
+    el.editorFindReplaceCheck.onchange = (e) => {
+        el.editorReplaceRow.classList.toggle('hidden', !e.target.checked);
+    };
+
+    el.editorReplaceOne.onclick = () => performReplace();
+    el.editorReplaceAll.onclick = () => performReplaceAll();
+    el.editorReplaceInput.onkeydown = (e) => {
+        if (e.key === 'Enter') performReplace();
+    };
+}
+
 function bindEditorScrollSync() {
     if (!cmView || editorScrollEventsBound) {
         return;
@@ -805,6 +979,20 @@ export function initCodeMirror() {
                         return true;
                     }
                 },
+                {
+                    key: 'Mod-f',
+                    run: () => {
+                        openFindBar();
+                        return true;
+                    }
+                },
+                {
+                    key: 'Mod-h',
+                    run: () => {
+                        openFindBar(true);
+                        return true;
+                    }
+                },
                 ...defaultKeymap,
                 ...historyKeymap,
                 indentWithTab
@@ -853,6 +1041,10 @@ export function initCodeMirror() {
                     const tab = getActiveTab();
                     if (tab) tab.currentMarkdownSource = val;
                     syncEditorStateToBackend();
+
+                    if (isFindBarOpen) {
+                        updateFindMatchesDebounced();
+                    }
                 }
 
                 if (update.docChanged || update.selectionSet) {
@@ -873,6 +1065,7 @@ export function initCodeMirror() {
         parent: el.editorView
     });
     bindEditorScrollSync();
+    bindEditorSearchEvents();
     
     // hide old textarea
     if (el.markdownEditor) el.markdownEditor.style.display = 'none';
