@@ -179,6 +179,8 @@ export const el = {
     modalInput: $('modal-input'),
     modalOptionGrid: $('modal-option-grid'),
     modalEmojiGrid: $('modal-emoji-grid'),
+    modalEmojiCategories: $('modal-emoji-categories'),
+    modalEmojiContainer: $('modal-emoji-container'),
     modalBtnOk: $('modal-btn-ok'),
     modalBtnCancel: $('modal-btn-cancel'),
     systemInstallModal: $('system-install-modal'),

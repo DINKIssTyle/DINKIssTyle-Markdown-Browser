@@ -2020,25 +2020,120 @@ export function showOptionGridPrompt(title, message, options, defaultValue = "")
     });
 }
 
+const emojiData = [
+    {
+        name: "GitHub",
+        emojis: ["👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀", "✅", "❌", "📝", "💡", "⚠️", "⭐", "✨"]
+    },
+    {
+        name: "Smileys",
+        emojis: [
+            "😀", "😃", "😄", "😁", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😋", "😛", "😜", "🤪",
+            "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺",
+            "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫",
+            "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢",
+            "🤮", "🤧", "😷", "🤒", "🤕"
+        ]
+    },
+    {
+        name: "People",
+        emojis: [
+            "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️",
+            "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦿",
+            "🦶", "👣", "👂", "🦻", "👃", "🧠", "🫀", "🫁", "🦷", "🦴", "👀", "👁️", "👅", "👄"
+        ]
+    },
+    {
+        name: "Animals",
+        emojis: [
+            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐽", "🐸", "🐵", "🙈", "🙉",
+            "🙊", "🐒", "🐔", "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛",
+            "🦋", "🐌", "🐞", "🐜", "🪰", "🪲", "🪳", "🦟", "🦗", "🕷️", "🕸️", "🦂", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑",
+            "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐊", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏",
+            "🐪", "🐫", "🦒", "🦘", "🦬", "🐃", "🐂", "🐄", "🐎", "🐖", "🐏", "🐑", "🐐", "🦌", "🐕", "🐩", "🦮", "🐕‍🦺", "🐈",
+            "🐈‍⬛", "🐓", "🦃", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦨", "🦡", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"
+        ]
+    },
+    {
+        name: "Food",
+        emojis: [
+            "🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🍆",
+            "🥑", "🥦", "🥬", "🥒", "🌶️", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🥐", "🥯", "🍞", "🥖", "🥨", "🧀",
+            "🥚", "🍳", "🧈", "🥞", "🧇", "🥓", "🥩", "🍗", "🍖", "🦴", "🌭", "🍔", "🍟", "🍕", "🫓", "🥪", "🥙", "🧆", "🌮",
+            "🌯", "🫔", "🥗", "🥘", "🫕", "🥣", "🍝", "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🦪", "🍤", "🍙", "🍚", "🍘", "🍥",
+            "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰",
+            "🥜", "🍯", "🥛", "🍼", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🧉", "🍾",
+            "🧊", "🥄", "🍴", "🍽️", "🥣", "🥡", "🥢", "🧂"
+        ]
+    },
+    {
+        name: "Symbols",
+        emojis: [
+            "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟",
+            "☮️", "✝️", "☪️", "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐", "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎",
+            "♏", "♐", "♑", "♒", "♓", "🆔", "⚛️", "🉑", "☢️", "☣️", "📴", "📳", "🈶", "🈚", "🈸", "🈺", "🈷️", "✴️", "🆚",
+            "💮", "🉐", "㊙️", "㊗️", "🈴", "🈵", "🈹", "🈲", "🅰️", "🅱️", "🆑", "🅾️", "🆘", "❌", "⭕", "🛑", "⛔", "📛", "🚫",
+            "💯", "💢", "♨️", "🚷", "🚯", "🚳", "🚱", "🔞", "📵", "🚭", "❗", "❕", "❓", "❔", "‼️", "⁉️", "🔅", "🔆", "〽️",
+            "⚠️", "🚸", "🔱", "⚜️", "🔰", "♻️", "✅", "🈯", "💹", "❇️", "✳️", "❎", "🌐", "💠", "Ⓜ️", "🌀", "💤", "🏧", "🚾",
+            "♿", "🅿️", "🈳", "🈂️", "🛂", "🛃", "🛄", "🛅", "🚹", "🚺", "🚼", "⚧️", "🚻", "🚮", "🎦", "📶", "🈁", "🔣", "ℹ️",
+            "🔤", "🔡", "🔠", "🆖", "🆗", "🆙", "🆒", "🆕", "🆓", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣",
+            "9️⃣", "🔟", "🔢", "#️⃣", "*️⃣", "⏏️", "▶️", "⏸️", "⏯️", "⏹️", "⏺️", "⏭️", "⏮️", "⏩", "⏪", "⏫", "⏬", "◀️", "🔼",
+            "🔽", "➡️", "⬅️", "⬆️", "⬇️", "↗️", "↘️", "↙️", "↖️", "↕️", "↔️", "↪️", "↩️", "⤴️", "⤵️", "🔀", "🔁", "🔂", "🔄",
+            "🔃", "🎵", "🎶", "➕", "➖", "➗", "✖️", "♾️", "💲", "💱", "™️", "©️", "®️", "🔚", "🔙", "🔛", "🔝", "🔜", "〰️",
+            "➰", "➿", "✔️", "☑️", "🔘", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "🟤", "🔺", "🔻", "🔸", "🔹", "🔶",
+            "🔷", "🔳", "🔲", "▪️", "▫️", "◾", "◽", "◼️", "◻️", "🟥", "🟧", "🟨", "🟩", "🟦", "🟪", "⬛", "⬜", "🟫", "🔈",
+            "🔇", "🔉", "🔊", "🔔", "🔕", "📣", "📢", "💬", "💭", "🗯️", "♠️", "♣️", "♥️", "♦️", "🃏", "🎴", "🀄"
+        ]
+    }
+];
+
 export function showEmojiPicker() {
     return new Promise((resolve) => {
+        let currentCategoryIndex = 0;
+        let selectedEmojiIndex = -1;
+
         el.modalTitle.textContent = "Select Emoji";
-        el.modalMessage.textContent = "Click an emoji to insert it.";
+        el.modalMessage.textContent = "Browse categories and select an emoji to insert.";
         el.modalInputGroup.classList.add('hidden');
         el.modalOptionGrid.classList.add('hidden');
-        el.modalEmojiGrid.classList.remove('hidden');
+        el.modalEmojiContainer.classList.remove('hidden');
         el.modalOverlay.classList.remove('hidden');
 
-        const emojiList = [
-            '😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '🙃', '😉',
-            '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '😜', '🤪',
-            '🚀', '🔥', '✅', '❌', '📝', '📂', '💡', '⚠️', '⭐', '✨',
-            '❤️', '🎉', '👍', '👎', '🙌', '👏', '🤝', '🙏', '💻', '📷'
-        ];
+        const renderCategories = () => {
+            el.modalEmojiCategories.innerHTML = emojiData.map((cat, idx) => `
+                <button class="emoji-category-btn ${idx === currentCategoryIndex ? 'active' : ''}" 
+                        data-index="${idx}" tabindex="0">${cat.name}</button>
+            `).join('');
+        };
 
-        el.modalEmojiGrid.innerHTML = emojiList.map(emoji => `
-            <div class="emoji-item" data-emoji="${emoji}">${emoji}</div>
-        `).join('');
+        const renderEmojis = () => {
+            const emojis = emojiData[currentCategoryIndex].emojis;
+            el.modalEmojiGrid.innerHTML = emojis.map((emoji, idx) => `
+                <div class="emoji-item ${idx === selectedEmojiIndex ? 'selected' : ''}" 
+                     data-emoji="${emoji}" data-index="${idx}" tabindex="0">${emoji}</div>
+            `).join('');
+        };
+
+        const updateSelection = () => {
+            const items = el.modalEmojiGrid.querySelectorAll('.emoji-item');
+            items.forEach((item, idx) => {
+                item.classList.toggle('selected', idx === selectedEmojiIndex);
+                if (idx === selectedEmojiIndex) {
+                    item.focus();
+                    item.scrollIntoView({ block: 'nearest' });
+                }
+            });
+        };
+
+        const handleCategoryClick = (e) => {
+            const btn = e.target.closest('.emoji-category-btn');
+            if (btn) {
+                currentCategoryIndex = parseInt(btn.dataset.index);
+                selectedEmojiIndex = -1;
+                renderCategories();
+                renderEmojis();
+            }
+        };
 
         const handleEmojiClick = (e) => {
             const item = e.target.closest('.emoji-item');
@@ -2049,6 +2144,79 @@ export function showEmojiPicker() {
             }
         };
 
+        const handleKeyDown = (e) => {
+            const emojis = emojiData[currentCategoryIndex].emojis;
+            const cols = 6;
+
+            if (e.key === 'Tab') {
+                // Let native tab handle focusing between categories and grid
+                return;
+            }
+
+            if (document.activeElement.classList.contains('emoji-category-btn')) {
+                if (e.key === 'ArrowRight') {
+                    currentCategoryIndex = (currentCategoryIndex + 1) % emojiData.length;
+                    renderCategories();
+                    renderEmojis();
+                    el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowLeft') {
+                    currentCategoryIndex = (currentCategoryIndex - 1 + emojiData.length) % emojiData.length;
+                    renderCategories();
+                    renderEmojis();
+                    el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowDown') {
+                    selectedEmojiIndex = 0;
+                    updateSelection();
+                    e.preventDefault();
+                }
+            } else if (document.activeElement.classList.contains('emoji-item') || selectedEmojiIndex >= 0) {
+                if (selectedEmojiIndex === -1) selectedEmojiIndex = 0;
+
+                if (e.key === 'ArrowRight') {
+                    selectedEmojiIndex = (selectedEmojiIndex + 1) % emojis.length;
+                    updateSelection();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowLeft') {
+                    selectedEmojiIndex = (selectedEmojiIndex - 1 + emojis.length) % emojis.length;
+                    updateSelection();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowDown') {
+                    if (selectedEmojiIndex + cols < emojis.length) {
+                        selectedEmojiIndex += cols;
+                    } else {
+                        // Stay on last row? Or wrap?
+                    }
+                    updateSelection();
+                    e.preventDefault();
+                } else if (e.key === 'ArrowUp') {
+                    if (selectedEmojiIndex - cols >= 0) {
+                        selectedEmojiIndex -= cols;
+                    } else {
+                        // Go back to categories?
+                        selectedEmojiIndex = -1;
+                        renderEmojis();
+                        el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
+                    }
+                    updateSelection();
+                    e.preventDefault();
+                } else if (e.key === 'Enter' || e.key === ' ') {
+                    const emoji = emojis[selectedEmojiIndex];
+                    if (emoji) {
+                        cleanup();
+                        resolve(emoji);
+                    }
+                    e.preventDefault();
+                }
+            }
+
+            if (e.key === 'Escape') {
+                handleCancelClick();
+                e.preventDefault();
+            }
+        };
+
         const handleCancelClick = () => {
             cleanup();
             resolve(null);
@@ -2056,14 +2224,27 @@ export function showEmojiPicker() {
 
         const cleanup = () => {
             el.modalOverlay.classList.add('hidden');
+            el.modalEmojiContainer.classList.add('hidden');
+            el.modalEmojiCategories.removeEventListener('click', handleCategoryClick);
             el.modalEmojiGrid.removeEventListener('click', handleEmojiClick);
             el.modalBtnCancel.removeEventListener('click', handleCancelClick);
+            document.removeEventListener('keydown', handleKeyDown, true);
             el.modalBtnOk.classList.remove('hidden');
         };
 
         el.modalBtnOk.classList.add('hidden');
+        renderCategories();
+        renderEmojis();
+
+        el.modalEmojiCategories.addEventListener('click', handleCategoryClick);
         el.modalEmojiGrid.addEventListener('click', handleEmojiClick);
         el.modalBtnCancel.addEventListener('click', handleCancelClick);
+        document.addEventListener('keydown', handleKeyDown, true);
+        
+        // Initial focus
+        setTimeout(() => {
+            el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
+        }, 10);
     });
 }
 

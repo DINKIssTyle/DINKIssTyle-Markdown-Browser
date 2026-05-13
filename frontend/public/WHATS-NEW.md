@@ -81,7 +81,8 @@ done
 ### Added & Bug Fixes & Polish
 
 - **Insert links and images** directly into the edited document from the file tree.
-- **Fixed address popup tooltip;** added multilingual support.
+- **Fixed popup tooltip;** added multilingual support.
+- **Remove emoji toast**: Now change emojis in toast messages to Google Material Symbols.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
