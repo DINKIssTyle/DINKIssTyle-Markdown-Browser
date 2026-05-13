@@ -295,7 +295,7 @@ function bindHomeScreen() {
         openPath(item.dataset.path, {
             pushHistory: true,
             keyword: item.dataset.keyword || "",
-            newTab: event.metaKey || event.ctrlKey,
+            newTab: event.metaKey || event.ctrlKey || state.isEditing,
         });
     });
 

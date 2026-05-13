@@ -6,6 +6,7 @@
 import { state, el, getPathDirname, documentTypeFromPath } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
+import { scrollEditorToLine } from './main-editor.js';
 
 let isSidebarOpen = false;
 let activeSidebarTab = 'files';
@@ -141,7 +142,16 @@ export function updateOutline() {
     el.markdownOutline.querySelectorAll('.outline-item').forEach(item => {
         item.onclick = () => {
             const index = item.dataset.index;
-            headings[index].scrollIntoView({ behavior: 'smooth', block: 'start' });
+            const heading = headings[index];
+            heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+
+            // 에디터 상태면 에디터 스크롤도 이동
+            if (state.isEditing) {
+                const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
+                if (!isNaN(line)) {
+                    scrollEditorToLine(line);
+                }
+            }
         };
     });
 }

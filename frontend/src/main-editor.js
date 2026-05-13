@@ -2080,3 +2080,15 @@ export function bindEditorEvents() {
     el.edCancel.onclick = handleCancel;
     el.edSave.onclick = handleSave;
 }
+
+export function scrollEditorToLine(lineNumber) {
+    if (!cmView) return;
+    try {
+        const line = cmView.state.doc.line(Math.max(1, Math.min(lineNumber, cmView.state.doc.lines)));
+        cmView.dispatch({
+            effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 20 })
+        });
+    } catch (e) {
+        console.warn('Failed to scroll editor to line:', lineNumber, e);
+    }
+}
