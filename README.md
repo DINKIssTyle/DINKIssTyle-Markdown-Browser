@@ -85,6 +85,14 @@ Press `Enter` after entering the command to remove the isolation.
 After launching the executable file, click the Install link at the bottom of the Start page to complete installation.
 
 
+## Sponsorship
+<div>
+<a href="https://github.com/sponsors/DINKIssTyle">
+    <img src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="Sponsor">
+  </a>
+  <br> Your sponsorship helps me keep improving this project — and gives me a perfectly valid excuse to work on it late at night, even from bed, without getting in trouble at home.
+</p><br></div>
+
 
 ## License
 

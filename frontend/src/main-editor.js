@@ -676,12 +676,62 @@ function bindEditorSearchEvents() {
     };
 
     el.editorFindInput.oninput = () => updateFindMatches();
+
+    // Overall Find Bar Keyboard handling
+    el.editorFindBar.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeFindBar();
+            e.preventDefault();
+            e.stopPropagation();
+            return;
+        }
+
+        if (e.key === 'Tab') {
+            const focusableElements = [
+                el.editorFindInput,
+                el.editorFindPrev,
+                el.editorFindNext,
+                el.editorFindReplaceCheck,
+                el.editorFindDone,
+                el.editorReplaceInput,
+                el.editorReplaceOne,
+                el.editorReplaceAll
+            ].filter(element => {
+                if (!element) return false;
+                // Check if element or its parent row is hidden
+                const isReplaceElement = [el.editorReplaceInput, el.editorReplaceOne, el.editorReplaceAll].includes(element);
+                if (isReplaceElement && el.editorReplaceRow.classList.contains('hidden')) {
+                    return false;
+                }
+                return true;
+            });
+
+            const currentIndex = focusableElements.indexOf(document.activeElement);
+            
+            if (currentIndex !== -1) {
+                e.preventDefault();
+                if (e.shiftKey) {
+                    // Shift+Tab: move to previous, or wrap to last
+                    const prevIndex = (currentIndex - 1 + focusableElements.length) % focusableElements.length;
+                    focusableElements[prevIndex].focus();
+                } else {
+                    // Tab: move to next, or wrap to first
+                    const nextIndex = (currentIndex + 1) % focusableElements.length;
+                    focusableElements[nextIndex].focus();
+                }
+            } else {
+                // If focus is somewhere else in the bar (like the label), go to first element
+                e.preventDefault();
+                focusableElements[0].focus();
+            }
+        }
+    });
+
     el.editorFindInput.onkeydown = (e) => {
         if (e.key === 'Enter') {
             if (e.shiftKey) findPrev();
             else findNext();
-        } else if (e.key === 'Escape') {
-            closeFindBar();
+            e.preventDefault();
         }
     };
 
@@ -691,12 +741,18 @@ function bindEditorSearchEvents() {
 
     el.editorFindReplaceCheck.onchange = (e) => {
         el.editorReplaceRow.classList.toggle('hidden', !e.target.checked);
+        if (e.target.checked) {
+            setTimeout(() => el.editorReplaceInput.focus(), 50);
+        }
     };
 
     el.editorReplaceOne.onclick = () => performReplace();
     el.editorReplaceAll.onclick = () => performReplaceAll();
     el.editorReplaceInput.onkeydown = (e) => {
-        if (e.key === 'Enter') performReplace();
+        if (e.key === 'Enter') {
+            performReplace();
+            e.preventDefault();
+        }
     };
 }
 
@@ -811,6 +867,7 @@ function getSlashCommands() {
         { id: 'table', label: 'Table', token: '| |', keywords: 'table grid', aliases: ['테이블', '표', 'ㅌㅇㅂ'], run: () => insertTable() },
         { id: 'div', label: 'DIV Wrapper', token: '<div>', keywords: 'div wrapper align', aliases: ['디브', '박스', '정렬박스', 'ㄷㅂ'], run: () => insertDivWrapper() },
         { id: 'task', label: 'Task List', token: '- [ ]', keywords: 'task checklist todo', aliases: ['체크리스트', '할일', '할일목록', '작업목록', 'ㅊㅋ'], run: () => applyBlockMarker('task') },
+        { id: 'find', label: 'Find', token: '/find', keywords: 'find search', aliases: ['찾기', '검색', 'ㅋㄷ', 'ㄱㅅ'], run: () => openFindBar() },
         { id: 'latex', label: 'LaTeX', token: '$$', keywords: 'latex math equation', aliases: ['수식', '라텍스', '공식', 'ㅅㅅ'], run: () => insertLatex() },
         { id: 'emoji', label: 'Emoji', token: ':)', keywords: 'emoji emoticon smile', aliases: ['이모지', '이모티콘', '표정', 'ㅇㅁㅈ'], run: () => insertEmoji() },
     ];
