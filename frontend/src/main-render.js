@@ -16,6 +16,7 @@ import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
     joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector, getPathDirname,
     isBundledDocumentPath, normalizeAppLocalFileHref, normalizeFileURLPath, isActiveMarkdownEditTab,
+    decodeLocalMarkdownPath,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
@@ -911,13 +912,6 @@ mermaid.initialize(getMermaidConfig());
 
 // ── Markdown Rendering ─────────────────────────────────────
 
-function decodeLocalMarkdownPath(path) {
-    try {
-        return decodeURI(path);
-    } catch {
-        return path;
-    }
-}
 
 async function renderMarkdownToHTML(content) {
     const preparedContent = preprocessMarkdownMath(content);

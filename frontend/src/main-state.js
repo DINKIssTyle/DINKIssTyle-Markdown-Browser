@@ -422,14 +422,27 @@ export function escapeRegex(str) {
     return str.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
 }
 
+export function decodeLocalMarkdownPath(path) {
+    if (!path) return "";
+    try {
+        return decodeURIComponent(path);
+    } catch {
+        try {
+            return decodeURI(path);
+        } catch {
+            return path;
+        }
+    }
+}
+
 export function splitLinkTarget(href) {
     const hashIndex = href.indexOf('#');
-    if (hashIndex === -1) {
-        return { pathPart: href, anchor: "" };
-    }
+    const rawPath = hashIndex === -1 ? href : href.slice(0, hashIndex);
+    const anchor = hashIndex === -1 ? "" : decodeURIComponent(href.slice(hashIndex + 1));
+
     return {
-        pathPart: href.slice(0, hashIndex),
-        anchor: decodeURIComponent(href.slice(hashIndex + 1)),
+        pathPart: decodeLocalMarkdownPath(rawPath),
+        anchor,
     };
 }
 
