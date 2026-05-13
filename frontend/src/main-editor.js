@@ -522,7 +522,7 @@ function updatePreviewForEditorChange(update) {
             lastRenderedPreviewContent = nextDocText;
         }
         lastPreviewCursorLine = nextCursorLine;
-        if (update.viewportChanged || update.docChanged) {
+        if (update.viewportChanged && !update.docChanged) {
             schedulePreviewScrollSync(update.view);
         }
         return;

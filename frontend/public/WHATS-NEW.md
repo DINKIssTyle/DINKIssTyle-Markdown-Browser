@@ -174,9 +174,12 @@ Proposal Writing    :after a1, 20d
 
 
 ## 2.0 Beta11
-### Added & Bug Fixes & Polish
+### Added & Polish
 
-* **에디터와 프리뷰 간 스크롤 동기화**: 이제 에디터의 위치가 마크다운 프리뷰의 스크롤과 동기화됩니다. 설정에서 이를 비활성화할 수 있습니다.
+* **Editor and Preview Scroll Synchronization**: The editor's position is now synchronized with the Markdown preview scroll. You can disable this in settings.
+* **Syntax Highlighting and Presets**: Enhances readability and facilitates smooth markdown document creation and editing. Several predefined presets are available, which you can also disable from settings if needed.
+
+### Bug Fixes
 
 * **Moved documents during editing**: Added an "Open in new tab" button.
 * **Editor-Preview mismatch**: Resolved issues where saving caused inconsistencies between the editor and preview views.

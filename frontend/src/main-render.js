@@ -13,7 +13,7 @@ import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
 
 import {
-    state, el, getScroller, HOME_SCREEN_PATH,
+    state, el, getScroller, HOME_SCREEN_PATH, debounce,
     joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector, getPathDirname,
     isBundledDocumentPath, normalizeAppLocalFileHref, normalizeFileURLPath, isActiveMarkdownEditTab,
 } from './main-state.js';
