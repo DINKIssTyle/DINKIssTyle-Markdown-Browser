@@ -45,6 +45,7 @@ export function initSidebar() {
 
     // Initial state
     updateSidebarUI();
+    syncSidebarOffset();
 
     // Bind resizer
     if (el.sidebarResizer) {
@@ -69,6 +70,7 @@ function bindResizer() {
             if (newWidth > 600) newWidth = 600;
             
             document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
+            syncSidebarOffset();
         };
 
         const onMouseUp = () => {
@@ -88,10 +90,18 @@ export function toggleSidebar() {
     isSidebarOpen = !isSidebarOpen;
     el.appSidebar.classList.toggle('hidden', !isSidebarOpen);
     el.btnSidebarToggle.classList.toggle('active', isSidebarOpen);
+    syncSidebarOffset();
     
     if (isSidebarOpen) {
         refreshSidebarContent();
     }
+}
+
+function syncSidebarOffset() {
+    document.documentElement.style.setProperty(
+        '--active-sidebar-offset',
+        isSidebarOpen ? 'var(--sidebar-width)' : '0px'
+    );
 }
 
 export function switchSidebarTab(tabId) {

@@ -17,6 +17,7 @@
     --code-font: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --header-height: 56px;
     --sidebar-width: 300px;
+    --active-sidebar-offset: 0px;
     --editor-ai-dock-height: 42px;
 }
 
@@ -1988,7 +1989,7 @@ html.dark .ed-temp-value {
 /* ── Editor AI Dock ───────────────────────────────────────── */
 .editor-ai-dock {
     position: absolute;
-    left: 0;
+    left: var(--active-sidebar-offset);
     right: 0;
     bottom: 0;
     z-index: 35;
@@ -2024,7 +2025,7 @@ html.dark .ed-temp-value {
     opacity: 0;
     transform: translateY(300px);
     pointer-events: none;
-    transition: opacity 0.18s ease, transform 0.22s ease;
+    transition: left 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease, transform 0.22s ease;
 }
 
 .editor-ai-dock.is-visible {
@@ -2047,11 +2048,11 @@ html.dark .ed-temp-value {
 }
 
 .editor-ai-dock.is-collapsed {
-    left: 0;
+    left: var(--active-sidebar-offset);
     right: 0;
     bottom: 0;
     min-height: var(--editor-ai-dock-height);
-    width: 100%;
+    width: auto;
     max-width: none;
     padding: 5px 12px;
     border-top: none;
@@ -2151,10 +2152,10 @@ html.dark .ed-temp-value {
 }
 
 .editor-ai-dock.is-toolbar-collapsed {
-    left: 0;
+    left: var(--active-sidebar-offset);
     right: 0;
     bottom: 0;
-    width: 100%;
+    width: auto;
     max-width: none;
     min-height: var(--editor-ai-dock-height);
     padding: 5px 12px;
