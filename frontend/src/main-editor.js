@@ -46,6 +46,7 @@ export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
     { key: 'link', label: 'Links' },
     { key: 'quote', label: 'Blockquotes' },
     { key: 'code', label: 'Inline Code' },
+    { key: 'codeBg', label: 'Code Background' },
     { key: 'marker', label: 'Markers' },
     { key: 'htmlTag', label: 'HTML Tags' },
     { key: 'attribute', label: 'Attributes' },
@@ -68,6 +69,7 @@ const EDITOR_TOKEN_COLOR_DEFAULTS = Object.freeze({
         link: '#0071e3',
         quote: '#5b6f8f',
         code: '#d14',
+        codeBg: '#dfe3eaff',
         marker: '#0071e3',
         htmlTag: '#0a7f8f',
         attribute: '#8f5f00',
@@ -83,6 +85,7 @@ const EDITOR_TOKEN_COLOR_DEFAULTS = Object.freeze({
         link: '#7db7ff',
         quote: '#9ab3d5',
         code: '#ff8aa1',
+        codeBg: 'rgba(255, 255, 255, 0.1)',
         marker: '#7db7ff',
         htmlTag: '#6ee7f2',
         attribute: '#ffd166',
@@ -109,8 +112,9 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
             heading: '#f8f8f2',
             emphasis: '#bd93f9',
             link: '#8be9fd',
-            quote: '#6272a4',
+            quote: '#aeb7d4ff',
             code: '#ff79c6',
+            codeBg: 'rgba(68, 71, 90, 0.5)',
             marker: '#50fa7b',
             htmlTag: '#ff79c6',
             attribute: '#ffb86c',
@@ -121,16 +125,17 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
         }),
     },
     {
-        key: 'tokyo-night',
-        label: 'Tokyo Night',
+        key: 'night',
+        label: 'Night',
         background: '#1a1b26',
         colors: Object.freeze({
             plain: '#c0caf5',
             heading: '#c0caf5',
             emphasis: '#7aa2f7',
             link: '#7dcfff',
-            quote: '#565f89',
+            quote: '#6b718cff',
             code: '#f7768e',
+            codeBg: 'rgba(41, 46, 66, 0.6)',
             marker: '#7aa2f7',
             htmlTag: '#2ac3de',
             attribute: '#e0af68',
@@ -151,6 +156,7 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
             link: '#88c0d0',
             quote: '#4c566a',
             code: '#d08770',
+            codeBg: 'rgba(76, 86, 106, 0.4)',
             marker: '#5e81ac',
             htmlTag: '#8fbcbb',
             attribute: '#ebcb8b',
@@ -171,6 +177,7 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
             link: '#89b4fa',
             quote: '#6c7086',
             code: '#f5c2e7',
+            codeBg: 'rgba(49, 50, 68, 0.6)',
             marker: '#89b4fa',
             htmlTag: '#94e2d5',
             attribute: '#f9e2af',
@@ -191,6 +198,7 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
             link: '#56b6c2',
             quote: '#5c6370',
             code: '#e06c75',
+            codeBg: 'rgba(44, 50, 60, 0.7)',
             marker: '#61afef',
             htmlTag: '#e06c75',
             attribute: '#d19a66',
@@ -211,6 +219,7 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
             link: '#2aa198',
             quote: '#93a1a1',
             code: '#d33682',
+            codeBg: 'rgba(238, 232, 213, 0.6)',
             marker: '#268bd2',
             htmlTag: '#2aa198',
             attribute: '#b58900',
@@ -290,7 +299,7 @@ function buildEditorMarkdownHighlight(colors) {
         { tag: tags.link, color: colors.link, textDecoration: 'underline', textUnderlineOffset: '2px' },
         { tag: tags.url, color: colors.link },
         { tag: tags.quote, color: colors.quote, fontStyle: 'italic' },
-        { tag: tags.monospace, color: colors.code, backgroundColor: 'color-mix(in srgb, var(--surface-color) 72%, var(--accent-color) 8%)' },
+        { tag: tags.monospace, color: colors.code, backgroundColor: colors.codeBg },
         { tag: tags.contentSeparator, color: colors.comment, fontWeight: '700' },
         { tag: tags.list, color: colors.marker, fontWeight: '700' },
         { tag: tags.meta, color: colors.comment },
@@ -524,7 +533,7 @@ const updateFindMatchesDebounced = debounce(() => {
         const pos = cmView.state.selection.main.from;
         currentMatchIndex = findMatches.findIndex(m => m.from >= pos);
         if (currentMatchIndex === -1) currentMatchIndex = 0;
-        
+
         el.editorFindCount.textContent = `${currentMatchIndex + 1} of ${findMatches.length}`;
         highlightMatch(currentMatchIndex, false); // Don't jump while typing
     } else {
@@ -552,7 +561,7 @@ function updateFindMatches() {
         const pos = cmView.state.selection.main.from;
         currentMatchIndex = findMatches.findIndex(m => m.from >= pos);
         if (currentMatchIndex === -1) currentMatchIndex = 0;
-        
+
         highlightMatch(currentMatchIndex, true);
     } else {
         el.editorFindCount.textContent = 'No results';
@@ -562,12 +571,12 @@ function updateFindMatches() {
 function highlightMatch(index, scrollIntoView = true) {
     if (!cmView || index < 0 || index >= findMatches.length) return;
     const match = findMatches[index];
-    
+
     cmView.dispatch({
         selection: { anchor: match.from, head: match.to },
         scrollIntoView: scrollIntoView
     });
-    
+
     el.editorFindCount.textContent = `${index + 1} of ${findMatches.length}`;
 }
 
@@ -600,7 +609,7 @@ function performReplaceAll() {
     if (!cmView || findMatches.length === 0) return;
     const query = el.editorFindInput.value;
     const replacement = el.editorReplaceInput.value;
-    
+
     let changes = [];
     const cursor = new SearchCursor(cmView.state.doc, query);
     while (!cursor.next().done) {
@@ -888,7 +897,7 @@ const koreanImeEnterFix = [
             if (!ime) return false;
             const delta = Date.now() - ime.justEndedAt;
             if (ime.composing || delta < 100) {
-                return true; 
+                return true;
             }
             return false;
         }
@@ -939,7 +948,7 @@ const koreanImeEnterFix = [
 
 export function initCodeMirror() {
     if (cmView) return;
-    
+
     // Create new CodeMirror view
     const startState = EditorState.create({
         doc: state.currentMarkdownSource || "",
@@ -1066,7 +1075,7 @@ export function initCodeMirror() {
     });
     bindEditorScrollSync();
     bindEditorSearchEvents();
-    
+
     // hide old textarea
     if (el.markdownEditor) el.markdownEditor.style.display = 'none';
 
@@ -1130,7 +1139,7 @@ export async function createNewDocument() {
     try {
         const selectedPath = await ShowSaveFileDialog(defaultName);
         if (selectedPath) {
-            await SaveFile(selectedPath, ""); 
+            await SaveFile(selectedPath, "");
             await openPath(selectedPath, { pushHistory: true, setHome: true, newTab: true });
             enterEditMode();
             showToast("New document created.");
@@ -1146,7 +1155,7 @@ export function enterEditMode() {
         return;
     }
     if (state.currentDocumentType !== 'markdown') return;
-    
+
     initCodeMirror();
 
     state.isEditing = true;
@@ -1155,7 +1164,7 @@ export function enterEditMode() {
     state.editingSourceFolder = state.currentFolder;
     state.editingPreviewPath = state.currentFilePath;
     state.editingPreviewFolder = state.currentFolder;
-    
+
     cmView.dispatch({
         changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource }
     });
@@ -1164,22 +1173,22 @@ export function enterEditMode() {
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
     }
-    
+
     el.editToolbar.classList.remove('hidden');
     el.editorView.classList.remove('hidden');
     el.mainContainer.classList.add('is-editing');
     el.btnEdit.classList.add('active');
-    
-    el.contentView.classList.remove('hidden'); 
-    
+
+    el.contentView.classList.remove('hidden');
+
     el.btnSearchToggle.disabled = true;
     el.selectEngine.disabled = true;
-    
-    
+
+
     el.btnBack.disabled = true;
     el.btnForward.disabled = true;
     el.btnHome.disabled = true;
-    
+
     // Also dispatch an empty ghost text just in case
     if (window.aiState) window.aiState.ghostText = "";
     syncAIControls();
@@ -1194,7 +1203,7 @@ export async function exitEditMode(didSave = false) {
     if (!state.isEditing) return;
     closeSlashMenu();
     clearTimeout(window._renderTimer);
-    
+
     state.isEditing = false;
     state.editingSourcePath = "";
     state.editingSourceFolder = "";
@@ -1205,12 +1214,12 @@ export async function exitEditMode(didSave = false) {
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
     el.btnEdit.classList.remove('active');
-    
+
     el.btnSearchToggle.disabled = false;
     el.selectEngine.disabled = false;
-    
+
     updateNavButtons();
-    
+
     if (didSave) {
         const { reloadCurrent } = await import('./main-navigation.js');
         await reloadCurrent();
@@ -1243,7 +1252,7 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
         const ok = await AskConfirm("Save Changes", dialogMessage, "Save", "Cancel");
         if (!ok) return false;
     }
-    
+
     try {
         await SaveFile(targetPath, contentToSave);
         showToast("File saved successfully. ✅");
@@ -1429,7 +1438,7 @@ export function insertTextAtCursor(prefix, suffix) {
     const stateObj = cmView.state;
     const selection = stateObj.selection.main;
     const text = stateObj.sliceDoc(selection.from, selection.to);
-    
+
     const insertText = prefix + text + suffix;
     cmView.dispatch({
         changes: { from: selection.from, to: selection.to, insert: insertText },
@@ -1730,7 +1739,7 @@ export function showCustomPrompt(title, message, defaultValue = "") {
         el.modalInput.value = defaultValue;
         el.modalOverlay.classList.remove('hidden');
         el.modalBtnOk.classList.remove('hidden');
-        
+
         setTimeout(() => el.modalInput.focus(), 50);
 
         const handleOk = () => {
@@ -1759,7 +1768,7 @@ export function showCustomPrompt(title, message, defaultValue = "") {
         el.modalBtnOk.addEventListener('click', handleOk);
         el.modalBtnCancel.addEventListener('click', handleCancel);
         el.modalInput.addEventListener('keydown', handleKey);
-        
+
         el.modalInputGroup.classList.remove('hidden');
         el.modalOptionGrid.classList.add('hidden');
         el.modalEmojiGrid.classList.add('hidden');
@@ -1893,9 +1902,9 @@ export function showEmojiPicker() {
         el.modalOptionGrid.classList.add('hidden');
         el.modalEmojiGrid.classList.remove('hidden');
         el.modalOverlay.classList.remove('hidden');
-        
+
         const emojiList = [
-            '😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '🙃', '😉', 
+            '😀', '😃', '😄', '😁', '😅', '🤣', '😂', '🙂', '🙃', '😉',
             '😊', '😇', '🥰', '😍', '🤩', '😘', '😋', '😛', '😜', '🤪',
             '🚀', '🔥', '✅', '❌', '📝', '📂', '💡', '⚠️', '⭐', '✨',
             '❤️', '🎉', '👍', '👎', '🙌', '👏', '🤝', '🙏', '💻', '📷'
@@ -1947,15 +1956,15 @@ export function bindEditorEvents() {
     el.edUl.onclick = () => applyBlockMarker('ul');
     el.edOl.onclick = () => applyBlockMarker('ol');
     el.edHr.onclick = () => insertHorizontalRule();
-    
+
     el.edLink.onclick = insertLink;
     el.edImage.onclick = insertImage;
     el.edCode.onclick = insertCodeBlock;
     el.edTable.onclick = insertTable;
-    
+
     el.edTask.onclick = () => applyBlockMarker('task');
     el.edLatex.onclick = insertLatex;
-    
+
     el.edEmoji.onclick = insertEmoji;
 
     el.edDiv.onclick = insertDivWrapper;
@@ -1973,7 +1982,7 @@ export function bindEditorEvents() {
     el.edFontPlus.onclick = () => {
         changeEditorFontSize(1);
     };
-    
+
     el.edCancel.onclick = handleCancel;
     el.edSave.onclick = handleSave;
 }

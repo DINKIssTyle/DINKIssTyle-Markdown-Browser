@@ -176,6 +176,8 @@ Proposal Writing    :after a1, 20d
 ## 2.0 Beta11
 ### Added & Polish
 
+* **Find & Replace**: Search text within the editor and replace matches in one action.
+
 * **Editor and Preview Scroll Synchronization**: The editor's position is now synchronized with the Markdown preview scroll. You can disable this in settings.
 * **Syntax Highlighting and Presets**: Enhances readability and facilitates smooth markdown document creation and editing. Several predefined presets are available, which you can also disable from settings if needed.
 
