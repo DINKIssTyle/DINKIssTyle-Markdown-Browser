@@ -134,15 +134,14 @@ html.dark .startup-splash-logo {
 
 .tabs-list {
     flex: 1;
+    height: 36px;
     display: flex;
     align-items: center;
     gap: 4px;
     overflow-x: auto;
     overflow-y: hidden;
     scroll-behavior: smooth;
-    padding: 3px;
-    padding-left: 4px;
-    padding-right: 4px;
+    padding: 0 4px;
     border-radius: 18px;
     background: rgba(128, 128, 128, 0.13);
 }
@@ -265,6 +264,35 @@ html.dark .tab-add-btn:hover {
     font-size: 17px;
 }
 
+.tab-sidebar-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    width: 32px;
+    height: 32px;
+    border-radius: 8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.72;
+    transition: background 0.2s ease, opacity 0.2s ease;
+    margin-right: 4px;
+}
+
+.tab-sidebar-btn:hover {
+    background: rgba(0, 0, 0, 0.05);
+    opacity: 1;
+}
+
+html.dark .tab-sidebar-btn:hover {
+    background: rgba(255, 255, 255, 0.1);
+}
+
+.tab-sidebar-btn .material-symbols-outlined {
+    font-size: 22px;
+}
+
 .nav-group,
 .action-group {
     display: flex;
@@ -359,34 +387,116 @@ html.dark .nav-btn:hover {
     position: relative;
 }
 
-/* Sidebar - RIGHT side */
-.sidebar {
+/* Sidebar - LEFT side */
+.app-sidebar {
     width: var(--sidebar-width);
     background: var(--surface-color);
-    border-left: 1px solid var(--border-color);
-    /* left border since it's on the right */
+    border-right: 1px solid var(--border-color);
     display: flex;
     flex-direction: column;
     flex-shrink: 0;
-    overflow: hidden;
-    order: 2;
-    /* push to right */
+    overflow: visible; /* Changed to visible to allow handle overlap if needed, but relative + right:0 should be enough */
+    position: relative;
     user-select: none;
     -webkit-user-select: none;
 }
 
-.sidebar.hidden {
+.app-sidebar.hidden {
     display: none;
 }
 
-.search-header {
-    padding: 12px 16px;
+.sidebar-header {
+    height: 48px;
     display: flex;
-    gap: 8px;
+    align-items: center;
+    justify-content: space-around;
+    padding: 0 8px;
     border-bottom: 1px solid var(--border-color);
-    flex-shrink: 0;
-    user-select: none;
-    -webkit-user-select: none;
+    background: var(--surface-elevated);
+}
+
+.sidebar-tab-btn {
+    background: transparent;
+    border: none;
+    color: var(--text-color);
+    width: 40px;
+    height: 40px;
+    border-radius: 8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.6;
+    transition: all 0.2s;
+}
+
+.sidebar-tab-btn:hover {
+    opacity: 1;
+    background: rgba(128, 128, 128, 0.1);
+}
+
+.sidebar-tab-btn.active {
+    opacity: 1;
+    color: var(--accent-color);
+    background: rgba(0, 113, 227, 0.1);
+}
+
+.sidebar-content {
+    flex: 1;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+}
+
+.sidebar-panel {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+}
+
+.sidebar-panel.hidden {
+    display: none;
+}
+
+/* Resizer */
+.sidebar-resizer {
+    position: absolute;
+    top: 0;
+    right: -5px;
+    width: 10px;
+    height: 100%;
+    cursor: col-resize;
+    z-index: 1000; /* 매우 높은 z-index 부여 */
+    background: transparent;
+}
+
+.sidebar-resizer:hover,
+.sidebar-resizer.is-resizing {
+    background: var(--accent-color);
+    opacity: 0.3;
+}
+
+.sidebar-panel-header {
+    padding: 12px 16px;
+    font-size: 11px;
+    font-weight: 700;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--text-color);
+    opacity: 0.5;
+}
+
+.sidebar-hint {
+    padding: 24px 16px;
+    font-size: 13px;
+    opacity: 0.5;
+    text-align: center;
+}
+
+.search-input-container {
+    padding: 12px 16px;
+    border-bottom: 1px solid var(--border-color);
 }
 
 .search-input-wrap {
@@ -405,6 +515,52 @@ html.dark .nav-btn:hover {
     font-family: var(--font-stack);
     user-select: text;
     -webkit-user-select: text;
+}
+
+.markdown-outline {
+    flex: 1;
+    overflow-y: auto;
+    padding: 8px 0;
+}
+
+.outline-item {
+    padding: 6px 16px;
+    cursor: pointer;
+    font-size: 13px;
+    transition: background 0.2s;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    color: var(--text-color);
+    opacity: 0.8;
+}
+
+.outline-item:hover {
+    background: rgba(128, 128, 128, 0.1);
+    opacity: 1;
+}
+
+.outline-item.level-1 { font-weight: 700; padding-left: 16px; }
+.outline-item.level-2 { padding-left: 28px; }
+.outline-item.level-3 { padding-left: 40px; }
+.outline-item.level-4 { padding-left: 52px; }
+.outline-item.level-5 { padding-left: 64px; }
+.outline-item.level-6 { padding-left: 76px; }
+
+.file-tree {
+    flex: 1;
+    overflow-y: auto;
+}
+
+.file-tree-header {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 12px 16px;
+    font-weight: 600;
+    font-size: 13px;
+    border-bottom: 1px solid var(--border-color);
+    background: var(--surface-elevated);
 }
 
 .clear-search-btn {

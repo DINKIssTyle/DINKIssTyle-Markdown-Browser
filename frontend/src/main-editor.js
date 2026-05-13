@@ -1279,10 +1279,7 @@ export function enterEditMode() {
     el.btnEdit.classList.add('active');
 
     el.contentView.classList.remove('hidden');
-
-    el.btnSearchToggle.disabled = true;
     el.selectEngine.disabled = true;
-
 
     el.btnBack.disabled = true;
     el.btnForward.disabled = true;
@@ -1313,8 +1310,6 @@ export async function exitEditMode(didSave = false) {
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
     el.btnEdit.classList.remove('active');
-
-    el.btnSearchToggle.disabled = false;
     el.selectEngine.disabled = false;
 
     updateNavButtons();

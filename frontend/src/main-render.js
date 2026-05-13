@@ -24,6 +24,7 @@ import { syncAIControls } from './main-ai.js';
 import { applyHighlight, clearHighlight, copyTextToClipboard, showToast } from './main-ui.js';
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL } from '../wailsjs/go/main/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
+import { refreshSidebarContent } from './main-sidebar.js';
 
 // ── Module-level State ─────────────────────────────────────
 let recentFilesCache = [];
@@ -1047,6 +1048,7 @@ async function renderMarkdownLiveBlocks(content, token) {
     restoreLivePreviewScrollAnchor(scrollAnchor);
     syncEditingPreviewReturnButton();
     livePreviewBlocks = blocks;
+    refreshSidebarContent();
     return blocks;
 }
 
@@ -1102,6 +1104,7 @@ async function updateChangedLivePreviewBlocks(content, token) {
     restoreLivePreviewScrollAnchor(scrollAnchor);
     syncEditingPreviewReturnButton();
     livePreviewBlocks = blocks;
+    refreshSidebarContent();
 }
 
 export function queueEditorPreviewRender(content, editorTopLine, { delay = 100, syncScroll = true } = {}) {
@@ -1142,6 +1145,7 @@ export async function renderMarkdown(content, options = {}) {
     if (!preserveLiveBlocks) {
         livePreviewBlocks = [];
     }
+    refreshSidebarContent();
 }
 
 // ── Recent Files Rendering ─────────────────────────────────
@@ -1205,7 +1209,6 @@ export async function renderActiveTab() {
         el.mainContainer.classList.add('is-editing');
         el.btnEdit.classList.add('active');
         el.contentView.classList.remove('hidden'); 
-        el.btnSearchToggle.disabled = true;
         el.selectEngine.disabled = true;
     } else {
         el.editToolbar.classList.add('hidden');
@@ -1213,7 +1216,6 @@ export async function renderActiveTab() {
         el.editorView.classList.add('hidden');
         el.mainContainer.classList.remove('is-editing');
         el.btnEdit.classList.remove('active');
-        el.btnSearchToggle.disabled = false;
         el.selectEngine.disabled = false;
     }
 
@@ -1252,6 +1254,9 @@ export async function renderActiveTab() {
     } else {
         clearHighlight();
     }
+
+    // Update sidebar content (e.g., Markdown Outline)
+    refreshSidebarContent();
 }
 
 async function renderHomeScreen() {
@@ -1261,7 +1266,6 @@ async function renderHomeScreen() {
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
     el.btnEdit.classList.remove('active');
-    el.btnSearchToggle.disabled = false;
     el.selectEngine.disabled = false;
     await renderRecentFiles();
     cleanupHTMLFrame();

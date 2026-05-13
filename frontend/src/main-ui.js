@@ -150,8 +150,10 @@ export async function copyTextToClipboard(text) {
 // ── Search ─────────────────────────────────────────────────
 
 export function toggleSearch() {
-    el.searchSidebar.classList.toggle('hidden');
-    updateSearchClearButton();
+    import('./main-sidebar.js').then(mod => {
+        mod.toggleSidebar();
+        mod.switchSidebarTab('search');
+    });
 }
 
 export async function handleSearch() {
@@ -241,7 +243,13 @@ export async function handleSearchInputKeydown(event) {
 export async function searchForQuery(query) {
     const trimmed = query.trim();
     if (!trimmed) return;
-    el.searchSidebar.classList.remove('hidden');
+    
+    const mod = await import('./main-sidebar.js');
+    mod.switchSidebarTab('search');
+    if (el.appSidebar.classList.contains('hidden')) {
+        mod.toggleSidebar();
+    }
+    
     el.searchInput.value = trimmed;
     await handleSearch();
 }

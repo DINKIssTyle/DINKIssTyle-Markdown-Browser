@@ -54,9 +54,6 @@
                     disabled>
                     <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                 </button>
-                <!-- <button id="btn-info" title="Open Source Notices" aria-label="Open Source Notices" class="info-btn">
-                    <span class="material-symbols-outlined info-btn-icon" aria-hidden="true">info</span> -->
-                </button>
                 <button id="btn-font-minus" title="Decrease Font Size" aria-label="Decrease Font Size"
                     class="nav-btn icon-btn font-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
@@ -70,13 +67,13 @@
                 <button id="btn-theme-toggle" title="Toggle Theme" aria-label="Toggle Theme" class="nav-btn icon-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
                 </button>
-                <button id="btn-search-toggle" title="Search" aria-label="Search" class="nav-btn icon-btn">
-                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
-                </button>
             </div>
         </header>
 
         <div id="tab-strip" class="tab-strip">
+            <button id="btn-sidebar-toggle" class="tab-sidebar-btn" title="Toggle Sidebar">
+                <span class="material-symbols-outlined">dock_to_left</span>
+            </button>
             <div id="tabs-list" class="tabs-list"></div>
             <button id="btn-new-tab" title="New Tab" aria-label="New Tab" class="tab-add-btn">
                 <span class="material-symbols-outlined" aria-hidden="true">add</span>
@@ -207,6 +204,55 @@
         </div>
 
         <main id="main-container">
+            <!-- Sidebar -->
+            <aside id="app-sidebar" class="app-sidebar hidden">
+                <div class="sidebar-header">
+                    <button id="sidebar-tab-files" title="Files" class="sidebar-tab-btn active">
+                        <span class="material-symbols-outlined">folder</span>
+                    </button>
+                    <button id="sidebar-tab-outline" title="Outline" class="sidebar-tab-btn">
+                        <span class="material-symbols-outlined">list_alt</span>
+                    </button>
+                    <button id="sidebar-tab-search" title="Search" class="sidebar-tab-btn">
+                        <span class="material-symbols-outlined">search</span>
+                    </button>
+                </div>
+                <div class="sidebar-content">
+                    <div id="sidebar-panel-files" class="sidebar-panel">
+                        <div class="sidebar-panel-header">Files</div>
+                        <div id="file-tree" class="file-tree">
+                            <div class="sidebar-hint">Open a folder or file to view tree.</div>
+                        </div>
+                    </div>
+                    <div id="sidebar-panel-outline" class="sidebar-panel hidden">
+                        <div class="sidebar-panel-header">Outline</div>
+                        <div id="markdown-outline" class="markdown-outline">
+                            <div class="sidebar-hint">Open a Markdown file to view outline.</div>
+                        </div>
+                    </div>
+                    <div id="sidebar-panel-search" class="sidebar-panel hidden">
+                        <div class="sidebar-panel-header">Search</div>
+                        <div class="search-input-container">
+                            <div class="search-input-wrap">
+                                <input type="text" id="search-input" placeholder="Search keyword..." />
+                                <button id="btn-clear-search" class="clear-search-btn hidden" type="button"
+                                    aria-label="Clear search">
+                                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                                </button>
+                            </div>
+                        </div>
+                        <label class="search-scope-option">
+                            <input type="checkbox" id="search-open-tab-folders" />
+                            <span>Search open tab folders too</span>
+                        </label>
+                        <div id="search-results" class="search-results">
+                            <div class="search-hint">Open a file then type to search.</div>
+                        </div>
+                    </div>
+                </div>
+                <div id="sidebar-resizer" class="sidebar-resizer"></div>
+            </aside>
+
             <button id="edit-preview-return" class="edit-preview-return hidden" type="button"
                 title="Return to editing preview" aria-label="Return to editing preview">
                 <span class="material-symbols-outlined" aria-hidden="true">arrow_back_ios_new</span>
@@ -272,26 +318,6 @@
                 <div id="editor-slash-menu" class="editor-slash-menu hidden" role="listbox"
                     aria-label="Editor slash commands"></div>
             </article>
-
-            <!-- Sidebar (Search) - on the RIGHT -->
-            <aside id="search-sidebar" class="sidebar hidden">
-                <div class="search-header">
-                    <div class="search-input-wrap">
-                        <input type="text" id="search-input" placeholder="Search keyword..." />
-                        <button id="btn-clear-search" class="clear-search-btn hidden" type="button"
-                            aria-label="Clear search">
-                            <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                        </button>
-                    </div>
-                </div>
-                <label class="search-scope-option">
-                    <input type="checkbox" id="search-open-tab-folders" />
-                    <span>Search open tab folders too</span>
-                </label>
-                <div id="search-results" class="search-results">
-                    <div class="search-hint">Open a file then type to search.</div>
-                </div>
-            </aside>
         </main>
 
         <div id="editor-ai-dock" class="editor-ai-dock hidden">

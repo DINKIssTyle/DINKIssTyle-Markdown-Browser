@@ -27,6 +27,7 @@ import {
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
+import { initSidebar } from './main-sidebar.js';
 import { persistAppSettings } from './main-settings.js';
 
 import {
@@ -62,6 +63,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         bindContextMenu();
         setupDragAndDrop();
         bindMenuEvents();
+        initSidebar();
 
         // AI Init
         window.aiState = await initAI();
@@ -247,7 +249,6 @@ function bindToolbar() {
     el.btnFontMinus.onclick = () => changeFontSize(-2);
     el.btnFontPlus.onclick = () => changeFontSize(2);
     el.btnThemeToggle.onclick = toggleTheme;
-    el.btnSearchToggle.onclick = toggleSearch;
     el.btnNewTab.onclick = () => createAndSwitchToNewTab();
     el.btnNewDoc.onclick = createNewDocument;
     el.btnEdit.onclick = enterEditMode;
@@ -264,11 +265,6 @@ function bindToolbar() {
             await renderActiveTab();
         }
     };
-    el.searchInput.addEventListener('input', debounce(handleSearch, 300));
-    el.searchInput.addEventListener('input', updateSearchClearButton);
-    el.searchInput.addEventListener('keydown', handleSearchInputKeydown);
-    el.btnClearSearch.onclick = clearSearchInput;
-    el.searchOpenTabFolders.addEventListener('change', () => handleSearch());
     el.btnProgressCancel.onclick = cancelCurrentTask;
     el.editPreviewReturn.onclick = () => restoreEditingPreview();
     el.editPreviewOpenTab.onclick = () => openEditingPreviewInNewTab();
