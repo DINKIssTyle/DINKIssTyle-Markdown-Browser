@@ -199,7 +199,7 @@ async function updateFileTree() {
 
     const rootPath = getFileTreeRootPath();
     if (!rootPath) {
-        el.fileTree.innerHTML = '<div class="sidebar-hint">Open a folder or file to view tree.</div>';
+        el.fileTree.innerHTML = renderFileTreeHint();
         return;
     }
 
@@ -226,10 +226,22 @@ async function updateFileTree() {
 }
 
 function getFileTreeRootPath() {
+    if (state.currentFilePath === HOME_SCREEN_PATH) {
+        return "";
+    }
     if (state.homeTargetPath && state.homeTargetPath !== HOME_SCREEN_PATH && !isBundledDocumentPath(state.homeTargetPath)) {
         return getPathDirname(state.homeTargetPath) || state.homeTargetPath;
     }
     return state.currentFolder || "";
+}
+
+function renderFileTreeHint() {
+    return `
+        <div class="sidebar-hint file-tree-empty-hint">
+            <span class="material-symbols-outlined" aria-hidden="true">folder_limited</span>
+            <span>Open a folder or file to view tree.</span>
+        </div>
+    `;
 }
 
 function renderFileTree(node, depth, isRoot = false) {
@@ -284,7 +296,11 @@ function bindFileTreeEvents() {
             }
 
             const { openPath } = await import('./main-navigation.js');
-            await openPath(path, { pushHistory: true, setHome: false });
+            await openPath(path, {
+                pushHistory: true,
+                setHome: false,
+                newTab: state.isEditing,
+            });
         });
     });
 }
