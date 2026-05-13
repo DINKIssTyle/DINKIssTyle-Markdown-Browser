@@ -7,7 +7,7 @@ import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js
 import { state, el, getPathDirname, formatSaveDialogMessage } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
-import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine } from './main-render.js';
+import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines } from './main-render.js';
 import { showToast } from './main-ui.js';
 import { SaveFile, SaveSettings, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
@@ -17,6 +17,8 @@ import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
+import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { ghostTextField, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 
@@ -36,6 +38,36 @@ const HTML_VOID_TAGS = [
     'link', 'meta', 'param', 'source', 'track', 'wbr'
 ];
 const HTML_VOID_TAG_CLOSE_REGEX = new RegExp(`(<(${HTML_VOID_TAGS.join('|')})\\b[^<>]*?>)<\\/\\2\\s*>`, 'gi');
+const editorMarkdownHighlight = HighlightStyle.define([
+    { tag: tags.heading1, color: 'var(--text-color)', fontSize: '1.5em', fontWeight: '800' },
+    { tag: tags.heading2, color: 'var(--text-color)', fontSize: '1.35em', fontWeight: '800' },
+    { tag: tags.heading3, color: 'var(--text-color)', fontSize: '1.22em', fontWeight: '760' },
+    { tag: tags.heading4, color: 'var(--text-color)', fontSize: '1.12em', fontWeight: '740' },
+    { tag: tags.heading5, color: 'var(--text-color)', fontSize: '1.06em', fontWeight: '720' },
+    { tag: tags.heading6, color: 'var(--text-color)', fontSize: '1.02em', fontWeight: '700' },
+    { tag: tags.strong, color: 'var(--text-color)', fontWeight: '800' },
+    { tag: tags.emphasis, color: 'color-mix(in srgb, var(--text-color) 88%, var(--accent-color))', fontStyle: 'italic' },
+    { tag: tags.strikethrough, color: 'var(--text-muted)', textDecoration: 'line-through' },
+    { tag: tags.link, color: 'var(--accent-color)', textDecoration: 'underline', textUnderlineOffset: '2px' },
+    { tag: tags.url, color: 'color-mix(in srgb, var(--accent-color) 82%, var(--text-color))' },
+    { tag: tags.quote, color: 'color-mix(in srgb, var(--accent-color) 70%, var(--text-muted))', fontStyle: 'italic' },
+    { tag: tags.monospace, color: '#d14', backgroundColor: 'color-mix(in srgb, var(--surface-color) 72%, var(--accent-color) 8%)' },
+    { tag: tags.contentSeparator, color: 'var(--text-muted)', fontWeight: '700' },
+    { tag: tags.list, color: 'var(--accent-color)', fontWeight: '700' },
+    { tag: tags.meta, color: 'var(--text-muted)' },
+    { tag: tags.processingInstruction, color: 'var(--accent-color)', fontWeight: '700' },
+    { tag: tags.tagName, color: '#0a7f8f', fontWeight: '700' },
+    { tag: tags.angleBracket, color: 'var(--text-muted)' },
+    { tag: tags.attributeName, color: '#8f5f00' },
+    { tag: tags.attributeValue, color: '#0f7b32' },
+    { tag: tags.string, color: '#0f7b32' },
+    { tag: tags.keyword, color: '#8a3ffc', fontWeight: '700' },
+    { tag: tags.atom, color: '#a14f00' },
+    { tag: tags.bool, color: '#a14f00', fontWeight: '700' },
+    { tag: tags.comment, color: 'var(--text-muted)', fontStyle: 'italic' },
+    { tag: tags.escape, color: '#b00020', fontWeight: '700' },
+    { tag: tags.invalid, color: '#d92d20', textDecoration: 'underline wavy #d92d20' },
+]);
 
 function applyEditorFontSize() {
     if (!cmView) return;
@@ -121,9 +153,34 @@ function getCursorLineNumber(editorState = cmView?.state) {
 }
 
 function getTopVisibleLineNumber(view = cmView) {
-    if (!view) return 1;
-    const topBlock = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
-    return view.state.doc.lineAt(topBlock.from).number;
+    return getVisibleLineNumbers(view, { maxLines: 1 })[0] || 1;
+}
+
+function getVisibleLineNumbers(view = cmView, { maxLines = 12, scanPixels = 180 } = {}) {
+    if (!view) return [1];
+
+    const contentRect = view.contentDOM.getBoundingClientRect();
+    const scrollerRect = view.scrollDOM.getBoundingClientRect();
+    const x = Math.max(contentRect.left + 4, scrollerRect.left + 4);
+    const startY = Math.max(scrollerRect.top + 1, contentRect.top);
+    const endY = Math.min(scrollerRect.bottom - 1, startY + scanPixels);
+    const lines = [];
+
+    for (let y = startY; y <= endY && lines.length < maxLines; y += 6) {
+        const pos = view.posAtCoords({ x, y });
+        if (pos != null) {
+            const lineNumber = view.state.doc.lineAt(pos).number;
+            if (!lines.includes(lineNumber)) {
+                lines.push(lineNumber);
+            }
+        }
+    }
+
+    if (lines.length > 0) {
+        return lines;
+    }
+    const fallbackBlock = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
+    return [view.state.doc.lineAt(fallbackBlock.from).number];
 }
 
 function schedulePreviewScrollSync(view = cmView) {
@@ -136,9 +193,10 @@ function schedulePreviewScrollSync(view = cmView) {
     }
     previewScrollSyncFrame = requestAnimationFrame(() => {
         previewScrollSyncFrame = 0;
-        const nextTopLine = getTopVisibleLineNumber(view);
+        const visibleLines = getVisibleLineNumbers(view);
+        const nextTopLine = visibleLines[0] || 1;
         lastPreviewTopLine = nextTopLine;
-        scrollPreviewToEditorLine(nextTopLine);
+        scrollPreviewToEditorLines(visibleLines);
     });
 }
 
@@ -471,6 +529,7 @@ export function initCodeMirror() {
             ]),
             markdown({ base: markdownLanguage, codeLanguages: languages }),
             themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
+            syntaxHighlighting(editorMarkdownHighlight),
             koreanImeEnterFix,
             ghostTextField,
             drawSelection(),

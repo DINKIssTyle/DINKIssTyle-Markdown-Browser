@@ -150,6 +150,10 @@ function setLiveLineRange(node, startLine, endLine = startLine) {
     node.setAttribute(LIVE_LINE_END_ATTR, String(endLine));
 }
 
+function hasLiveLineRange(node) {
+    return !!node?.hasAttribute?.(LIVE_LINE_START_ATTR);
+}
+
 function isFenceStart(line) {
     return /^(\s*)(`{3,}|~{3,})/.test(line);
 }
@@ -261,6 +265,35 @@ function annotateLivePreviewBlockLineAnchors(section, block) {
         }
         setLiveLineRange(paragraphs[paragraphIndex++], block.startLine + startIndex, block.startLine + index);
     }
+
+    const topLevelNodes = Array.from(section.children).filter(node => !hasLiveLineRange(node));
+    const sourceRanges = [];
+    for (let index = 0; index < lines.length; index += 1) {
+        if (!lines[index].trim()) continue;
+        const startIndex = index;
+        if (isFenceStart(lines[index])) {
+            index = findFenceEnd(lines, index);
+        } else {
+            while (
+                index + 1 < lines.length &&
+                lines[index + 1].trim() &&
+                !isBlockStarter(lines[index + 1])
+            ) {
+                index += 1;
+            }
+        }
+        sourceRanges.push({
+            startLine: block.startLine + startIndex,
+            endLine: block.startLine + index,
+        });
+    }
+
+    topLevelNodes.forEach((node, index) => {
+        const range = sourceRanges[index] || sourceRanges[sourceRanges.length - 1];
+        if (range) {
+            setLiveLineRange(node, range.startLine, range.endLine);
+        }
+    });
 }
 
 function annotateLivePreviewLineAnchors(blocks, container = el.markdownContainer) {
@@ -270,7 +303,7 @@ function annotateLivePreviewLineAnchors(blocks, container = el.markdownContainer
     });
 }
 
-function getLivePreviewLineTarget(lineNumber) {
+function getLivePreviewLineTarget(lineNumber, { exact = false } = {}) {
     const targetLine = Math.max(1, Number(lineNumber) || 1);
     const nodes = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_LINE_START_ATTR}]`));
     if (nodes.length === 0) {
@@ -294,7 +327,41 @@ function getLivePreviewLineTarget(lineNumber) {
         }
     }
 
+    if (exact) {
+        return null;
+    }
     return closestAfter || closestBefore;
+}
+
+export function scrollPreviewToEditorLines(lineNumbers) {
+    const candidates = Array.from(new Set((Array.isArray(lineNumbers) ? lineNumbers : [lineNumbers])
+        .map(line => Math.max(1, Number(line) || 1))));
+    if (candidates.length === 0) {
+        return;
+    }
+
+    const exactTarget = candidates
+        .map(line => getLivePreviewLineTarget(line, { exact: true }))
+        .find(Boolean);
+    if (exactTarget) {
+        scrollPreviewToNode(exactTarget);
+        return;
+    }
+
+    scrollPreviewToEditorLine(candidates[0]);
+}
+
+function scrollPreviewToNode(targetNode) {
+    if (!targetNode) {
+        return;
+    }
+
+    const scroller = getScroller();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = targetNode.getBoundingClientRect();
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const desiredScrollTop = scroller.scrollTop + (targetRect.top - scrollerRect.top);
+    scroller.scrollTop = Math.min(maxScrollTop, Math.max(0, desiredScrollTop));
 }
 
 export function scrollPreviewToEditorLine(lineNumber) {
@@ -310,12 +377,7 @@ export function scrollPreviewToEditorLine(lineNumber) {
         return;
     }
 
-    const scroller = getScroller();
-    const scrollerRect = scroller.getBoundingClientRect();
-    const targetRect = targetNode.getBoundingClientRect();
-    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-    const desiredScrollTop = scroller.scrollTop + (targetRect.top - scrollerRect.top);
-    scroller.scrollTop = Math.min(maxScrollTop, Math.max(0, desiredScrollTop));
+    scrollPreviewToNode(targetNode);
 }
 
 function isEscaped(text, index) {
