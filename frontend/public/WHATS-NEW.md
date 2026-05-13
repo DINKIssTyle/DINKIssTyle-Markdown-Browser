@@ -78,9 +78,15 @@ done
 
 
 ## 2.1 Beta3
-### Added & Bug Fixes & Polish
+### Added
 
 - **Insert links and images** directly into the edited document from the file tree.
+- **Table Insertion Visualization**: Try inserting a table with `/table`. You can insert it intuitively using keyboard arrow keys.
+- **Emoji Insertion Advanced** A modal window categorized by category allows you to navigate and select items using only the keyboard for insertion.
+
+### Bug Fixes & Polish
+
+
 - **Fixed popup tooltip;** added multilingual support.
 - **Remove emoji toast**: Now change emojis in toast messages to Google Material Symbols.
 

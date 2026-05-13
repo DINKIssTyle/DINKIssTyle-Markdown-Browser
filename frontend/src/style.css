@@ -3232,6 +3232,51 @@ html.dark .context-menu-item:hover {
     border-radius: 3px;
 }
 
+.modal-table-container {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    margin-bottom: 24px;
+}
+
+.modal-table-grid {
+    display: grid;
+    grid-template-columns: repeat(10, 1fr);
+    gap: 4px;
+    padding: 8px;
+    background: rgba(0, 0, 0, 0.2);
+    border-radius: 8px;
+    border: 1px solid var(--border-color);
+}
+
+.table-grid-cell {
+    width: 24px;
+    height: 24px;
+    background: rgba(255, 255, 255, 0.08);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    border-radius: 4px;
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.table-grid-cell.highlighted {
+    background: rgba(0, 113, 227, 0.4);
+    border-color: var(--accent-color);
+    box-shadow: 0 0 8px rgba(0, 113, 227, 0.3);
+}
+
+.modal-table-info {
+    font-size: 14px;
+    font-weight: 700;
+    color: var(--accent-color);
+    background: rgba(0, 113, 227, 0.1);
+    padding: 4px 12px;
+    border-radius: 20px;
+    min-width: 80px;
+    text-align: center;
+}
+
 /* ── Mermaid ────────────────────────────────────────── */
 .mermaid-rendered {
     display: flex;

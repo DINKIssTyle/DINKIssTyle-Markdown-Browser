@@ -1790,26 +1790,122 @@ function insertCodeBlock() {
     insertTextAtCursor('\n\`\`\`\n', '\n\`\`\`\n');
 }
 
-async function insertTable() {
-    const rowStr = await showCustomPrompt("Insert Table", "Rows (행 수):", "3");
-    if (!rowStr) return;
-    const colStr = await showCustomPrompt("Insert Table", "Columns (열 수):", "3");
-    if (!colStr) return;
+export function showTablePicker() {
+    return new Promise((resolve) => {
+        let rows = 0;
+        let cols = 0;
+        const maxRows = 10;
+        const maxCols = 10;
 
-    const rows = parseInt(rowStr || "0");
-    const cols = parseInt(colStr || "0");
-    if (rows > 0 && cols > 0) {
-        let table = '\n|';
-        for (let c = 0; c < cols; c++) table += ` Header ${c + 1} |`;
-        table += '\n|';
-        for (let c = 0; c < cols; c++) table += ' --- |';
-        for (let r = 0; r < rows; r++) {
-            table += '\n|';
-            for (let c = 0; c < cols; c++) table += ' Cell |';
+        el.modalTitle.textContent = "Insert Table";
+        el.modalMessage.textContent = "Select table size (Rows x Columns).";
+        el.modalInputGroup.classList.add('hidden');
+        el.modalOptionGrid.classList.add('hidden');
+        el.modalEmojiContainer.classList.add('hidden');
+        el.modalTableContainer.classList.remove('hidden');
+        el.modalOverlay.classList.remove('hidden');
+
+        const grid = el.modalTableGrid;
+        grid.innerHTML = '';
+        for (let r = 1; r <= maxRows; r++) {
+            for (let c = 1; c <= maxCols; c++) {
+                const cell = document.createElement('div');
+                cell.className = 'table-grid-cell';
+                cell.dataset.row = r;
+                cell.dataset.col = c;
+                grid.appendChild(cell);
+            }
         }
-        table += '\n';
-        insertTextAtCursor(table, '');
+
+        const updateHighlight = (r, c) => {
+            rows = r;
+            cols = c;
+            const cells = grid.querySelectorAll('.table-grid-cell');
+            cells.forEach(cell => {
+                const cr = parseInt(cell.dataset.row);
+                const cc = parseInt(cell.dataset.col);
+                cell.classList.toggle('highlighted', cr <= rows && cc <= cols);
+            });
+            el.modalTableInfo.textContent = `${rows} x ${cols} Table`;
+        };
+
+        const handleMouseOver = (e) => {
+            const cell = e.target.closest('.table-grid-cell');
+            if (cell) {
+                updateHighlight(parseInt(cell.dataset.row), parseInt(cell.dataset.col));
+            }
+        };
+
+        const handleClick = (e) => {
+            if (rows > 0 && cols > 0) {
+                cleanup();
+                resolve({ rows, cols });
+            }
+        };
+
+        const handleKeyDown = (e) => {
+            if (e.key === 'ArrowRight') {
+                updateHighlight(rows, Math.min(cols + 1, maxCols));
+                e.preventDefault();
+            } else if (e.key === 'ArrowLeft') {
+                updateHighlight(rows, Math.max(cols - 1, 1));
+                e.preventDefault();
+            } else if (e.key === 'ArrowDown') {
+                updateHighlight(Math.min(rows + 1, maxRows), cols);
+                e.preventDefault();
+            } else if (e.key === 'ArrowUp') {
+                updateHighlight(Math.max(rows - 1, 1), cols);
+                e.preventDefault();
+            } else if (e.key === 'Enter' || e.key === ' ') {
+                if (rows > 0 && cols > 0) {
+                    cleanup();
+                    resolve({ rows, cols });
+                }
+                e.preventDefault();
+            } else if (e.key === 'Escape') {
+                handleCancelClick();
+                e.preventDefault();
+            }
+        };
+
+        const handleCancelClick = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalTableContainer.classList.add('hidden');
+            grid.removeEventListener('mouseover', handleMouseOver);
+            grid.removeEventListener('click', handleClick);
+            el.modalBtnCancel.removeEventListener('click', handleCancelClick);
+            document.removeEventListener('keydown', handleKeyDown, true);
+        };
+
+        grid.addEventListener('mouseover', handleMouseOver);
+        grid.addEventListener('click', handleClick);
+        el.modalBtnCancel.addEventListener('click', handleCancelClick);
+        document.addEventListener('keydown', handleKeyDown, true);
+
+        updateHighlight(3, 3);
+    });
+}
+
+async function insertTable() {
+    const result = await showTablePicker();
+    if (!result) return;
+    const { rows, cols } = result;
+
+    let table = '\n|';
+    for (let c = 0; c < cols; c++) table += ` Header ${c + 1} |`;
+    table += '\n|';
+    for (let c = 0; c < cols; c++) table += ' --- |';
+    for (let r = 0; r < rows; r++) {
+        table += '\n|';
+        for (let c = 0; c < cols; c++) table += ' Cell |';
     }
+    table += '\n';
+    insertTextAtCursor(table, '');
 }
 
 async function insertLatex() {
