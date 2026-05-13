@@ -19,7 +19,7 @@ import {
     goBack, goForward, goHome, reloadCurrent, updateNavButtons,
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
-import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview } from './main-render.js';
+import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
 import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
@@ -293,6 +293,7 @@ function bindToolbar() {
     el.searchOpenTabFolders.addEventListener('change', () => handleSearch());
     el.btnProgressCancel.onclick = cancelCurrentTask;
     el.editPreviewReturn.onclick = () => restoreEditingPreview();
+    el.editPreviewOpenTab.onclick = () => openEditingPreviewInNewTab();
     document.addEventListener('keydown', handleGlobalKeydown, true);
     bindHistoryMouseNavigation(document);
     bindEditorEvents();

@@ -30,6 +30,10 @@ let htmlFrameResizeObserver = null;
 const MATH_DATA_ATTR = 'data-dkst-math';
 const MATH_DISPLAY_ATTR = 'data-dkst-math-display';
 const LIVE_BLOCK_ATTR = 'data-dkst-live-block-index';
+const LIVE_BLOCK_START_LINE_ATTR = 'data-dkst-live-block-start-line';
+const LIVE_BLOCK_END_LINE_ATTR = 'data-dkst-live-block-end-line';
+const LIVE_LINE_START_ATTR = 'data-dkst-live-line-start';
+const LIVE_LINE_END_ATTR = 'data-dkst-live-line-end';
 const MARKDOWN_ALERT_TYPES = Object.freeze({
     note: { label: 'Note', icon: 'info' },
     tip: { label: 'Tip', icon: 'lightbulb' },
@@ -105,6 +109,213 @@ function restoreLivePreviewScrollAnchor(snapshot) {
     scroller.scrollTop = shouldPreferBottomGap
         ? desiredByBottomGap
         : Math.min(maxScrollTop, Math.max(0, desiredByAnchor));
+}
+
+function getLivePreviewBlockForLine(lineNumber) {
+    const targetLine = Math.max(1, Number(lineNumber) || 1);
+    const liveBlocks = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_ATTR}]`));
+    if (liveBlocks.length === 0) {
+        return null;
+    }
+
+    let closestBefore = liveBlocks[0];
+    let closestAfter = null;
+    for (const block of liveBlocks) {
+        const startLine = Number(block.getAttribute(LIVE_BLOCK_START_LINE_ATTR)) || 1;
+        const endLine = Number(block.getAttribute(LIVE_BLOCK_END_LINE_ATTR)) || startLine;
+        if (targetLine >= startLine && targetLine <= endLine) {
+            return { node: block, startLine, endLine, targetLine };
+        }
+        if (startLine <= targetLine) {
+            closestBefore = block;
+        }
+        if (startLine > targetLine) {
+            closestAfter = block;
+            break;
+        }
+    }
+
+    const fallback = closestAfter || closestBefore;
+    return {
+        node: fallback,
+        startLine: Number(fallback.getAttribute(LIVE_BLOCK_START_LINE_ATTR)) || 1,
+        endLine: Number(fallback.getAttribute(LIVE_BLOCK_END_LINE_ATTR)) || 1,
+        targetLine,
+    };
+}
+
+function setLiveLineRange(node, startLine, endLine = startLine) {
+    if (!node) return;
+    node.setAttribute(LIVE_LINE_START_ATTR, String(startLine));
+    node.setAttribute(LIVE_LINE_END_ATTR, String(endLine));
+}
+
+function isFenceStart(line) {
+    return /^(\s*)(`{3,}|~{3,})/.test(line);
+}
+
+function findFenceEnd(lines, startIndex) {
+    const match = lines[startIndex]?.match(/^(\s*)(`{3,}|~{3,})/);
+    if (!match) return startIndex;
+    const fence = match[2][0];
+    const fenceLength = match[2].length;
+    for (let index = startIndex + 1; index < lines.length; index += 1) {
+        const closeMatch = lines[index].match(/^(\s*)(`{3,}|~{3,})\s*$/);
+        if (closeMatch && closeMatch[2][0] === fence && closeMatch[2].length >= fenceLength) {
+            return index;
+        }
+    }
+    return lines.length - 1;
+}
+
+function isTableLine(line) {
+    return /\|/.test(line) && !isFenceStart(line);
+}
+
+function isBlockStarter(line) {
+    return /^#{1,6}\s+/.test(line) ||
+        /^-{3,}\s*$/.test(line) ||
+        /^_{3,}\s*$/.test(line) ||
+        /^\*{3,}\s*$/.test(line) ||
+        /^\s*(?:[-*+]\s+|\d+\.\s+)/.test(line) ||
+        /^>\s?/.test(line) ||
+        isFenceStart(line) ||
+        isTableLine(line);
+}
+
+function annotateLivePreviewBlockLineAnchors(section, block) {
+    if (!section || !block) return;
+
+    const lines = String(block.content || '').split('\n');
+    const headings = Array.from(section.querySelectorAll(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6'));
+    const listItems = Array.from(section.querySelectorAll('li'));
+    const horizontalRules = Array.from(section.querySelectorAll(':scope > hr'));
+    const codeBlocks = Array.from(section.querySelectorAll(':scope > pre, :scope > .mermaid-rendered'));
+    const tables = Array.from(section.querySelectorAll(':scope > table'));
+    const blockquotes = Array.from(section.querySelectorAll(':scope > blockquote'));
+    const paragraphs = Array.from(section.querySelectorAll(':scope > p'));
+
+    let headingIndex = 0;
+    let listItemIndex = 0;
+    let hrIndex = 0;
+    let codeIndex = 0;
+    let tableIndex = 0;
+    let blockquoteIndex = 0;
+    let paragraphIndex = 0;
+
+    for (let index = 0; index < lines.length; index += 1) {
+        const line = lines[index];
+        const trimmed = line.trim();
+        if (!trimmed) {
+            continue;
+        }
+
+        const sourceLine = block.startLine + index;
+        if (isFenceStart(line)) {
+            const endIndex = findFenceEnd(lines, index);
+            setLiveLineRange(codeBlocks[codeIndex++], sourceLine, block.startLine + endIndex);
+            index = endIndex;
+            continue;
+        }
+
+        if (/^#{1,6}\s+/.test(line)) {
+            setLiveLineRange(headings[headingIndex++], sourceLine);
+            continue;
+        }
+
+        if (/^-{3,}\s*$/.test(line) || /^_{3,}\s*$/.test(line) || /^\*{3,}\s*$/.test(line)) {
+            setLiveLineRange(horizontalRules[hrIndex++], sourceLine);
+            continue;
+        }
+
+        if (/^\s*(?:[-*+]\s+|\d+\.\s+)/.test(line)) {
+            setLiveLineRange(listItems[listItemIndex++], sourceLine);
+            continue;
+        }
+
+        if (/^>\s?/.test(line)) {
+            const startIndex = index;
+            while (index + 1 < lines.length && /^>\s?/.test(lines[index + 1])) {
+                index += 1;
+            }
+            setLiveLineRange(blockquotes[blockquoteIndex++], block.startLine + startIndex, block.startLine + index);
+            continue;
+        }
+
+        if (isTableLine(line)) {
+            const startIndex = index;
+            while (index + 1 < lines.length && isTableLine(lines[index + 1])) {
+                index += 1;
+            }
+            setLiveLineRange(tables[tableIndex++], block.startLine + startIndex, block.startLine + index);
+            continue;
+        }
+
+        const startIndex = index;
+        while (
+            index + 1 < lines.length &&
+            lines[index + 1].trim() &&
+            !isBlockStarter(lines[index + 1])
+        ) {
+            index += 1;
+        }
+        setLiveLineRange(paragraphs[paragraphIndex++], block.startLine + startIndex, block.startLine + index);
+    }
+}
+
+function annotateLivePreviewLineAnchors(blocks, container = el.markdownContainer) {
+    blocks.forEach((block, index) => {
+        const section = container.querySelector(`[${LIVE_BLOCK_ATTR}="${index}"]`);
+        annotateLivePreviewBlockLineAnchors(section, block);
+    });
+}
+
+function getLivePreviewLineTarget(lineNumber) {
+    const targetLine = Math.max(1, Number(lineNumber) || 1);
+    const nodes = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_LINE_START_ATTR}]`));
+    if (nodes.length === 0) {
+        return null;
+    }
+
+    let closestBefore = nodes[0];
+    let closestAfter = null;
+    for (const node of nodes) {
+        const startLine = Number(node.getAttribute(LIVE_LINE_START_ATTR)) || 1;
+        const endLine = Number(node.getAttribute(LIVE_LINE_END_ATTR)) || startLine;
+        if (targetLine >= startLine && targetLine <= endLine) {
+            return node;
+        }
+        if (startLine <= targetLine) {
+            closestBefore = node;
+        }
+        if (startLine > targetLine) {
+            closestAfter = node;
+            break;
+        }
+    }
+
+    return closestAfter || closestBefore;
+}
+
+export function scrollPreviewToEditorLine(lineNumber) {
+    if (!state.isEditing || !isActiveMarkdownEditTab()) {
+        return;
+    }
+    if (state.editingPreviewPath && state.editingSourcePath && state.editingPreviewPath !== state.editingSourcePath) {
+        return;
+    }
+
+    const targetNode = getLivePreviewLineTarget(lineNumber) || getLivePreviewBlockForLine(lineNumber)?.node;
+    if (!targetNode) {
+        return;
+    }
+
+    const scroller = getScroller();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = targetNode.getBoundingClientRect();
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const desiredScrollTop = scroller.scrollTop + (targetRect.top - scrollerRect.top);
+    scroller.scrollTop = Math.min(maxScrollTop, Math.max(0, desiredScrollTop));
 }
 
 function isEscaped(text, index) {
@@ -307,12 +518,56 @@ function hardenAnchorDropHandling(anchor) {
     anchor.addEventListener('dragstart', prevent, true);
 }
 
+function hardenImageDragHandling(img) {
+    if (!img?.addEventListener) {
+        return;
+    }
+
+    img.draggable = false;
+    img.setAttribute('draggable', 'false');
+    img.style.webkitUserDrag = 'none';
+
+    const prevent = event => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (event.dataTransfer) {
+            event.dataTransfer.dropEffect = 'none';
+            event.dataTransfer.effectAllowed = 'none';
+        }
+    };
+
+    img.addEventListener('dragstart', prevent, true);
+    img.addEventListener('dragenter', prevent, true);
+    img.addEventListener('dragover', prevent, true);
+    img.addEventListener('drop', prevent, true);
+}
+
 function syncEditingPreviewReturnButton() {
     const shouldShow = state.isEditing &&
         !!state.editingSourcePath &&
         !!state.editingPreviewPath &&
         state.editingPreviewPath !== state.editingSourcePath;
     el.editPreviewReturn.classList.toggle('hidden', !shouldShow);
+
+    const shouldShowOpen = shouldShow && isPreviewInEditingFolder();
+    el.editPreviewOpenTab.classList.toggle('hidden', !shouldShowOpen);
+}
+
+function normalizeFolderPath(path) {
+    return String(path || '').replace(/\\/g, '/').replace(/\/+$/g, '');
+}
+
+function isPreviewInEditingFolder() {
+    if (!state.editingSourceFolder || !state.editingPreviewPath) {
+        return false;
+    }
+    if (isBundledDocumentPath(state.editingPreviewPath)) {
+        return false;
+    }
+
+    const sourceFolder = normalizeFolderPath(state.editingSourceFolder);
+    const previewFolder = normalizeFolderPath(getPathDirname(state.editingPreviewPath));
+    return previewFolder === sourceFolder || previewFolder.startsWith(`${sourceFolder}/`);
 }
 
 function removeAlertMarkerFromElement(element, markerLength) {
@@ -543,6 +798,8 @@ async function postProcess(container = el.markdownContainer) {
     });
 
     container.querySelectorAll('img').forEach(img => {
+        hardenImageDragHandling(img);
+
         const src = img.getAttribute('src');
         if (src && !src.startsWith('http') && !src.startsWith('data:')) {
             const imageSrc = decodeLocalMarkdownPath(src);
@@ -568,7 +825,7 @@ async function renderMarkdownLiveBlocks(content, token) {
     const blocks = splitMarkdownIntoBlocks(content);
     const blockMarkup = await Promise.all(blocks.map(async (block, index) => {
         const html = await renderMarkdownToHTML(block.content);
-        return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}">${html}</section>`;
+        return `<section class="markdown-live-block" ${LIVE_BLOCK_ATTR}="${index}" ${LIVE_BLOCK_START_LINE_ATTR}="${block.startLine}" ${LIVE_BLOCK_END_LINE_ATTR}="${block.endLine}">${html}</section>`;
     }));
     if (token !== previewRenderToken) {
         return null;
@@ -578,6 +835,7 @@ async function renderMarkdownLiveBlocks(content, token) {
     el.markdownContainer.innerHTML = blockMarkup.join('');
     renderMathPlaceholders(el.markdownContainer);
     await postProcess(el.markdownContainer);
+    annotateLivePreviewLineAnchors(blocks, el.markdownContainer);
     restoreLivePreviewScrollAnchor(scrollAnchor);
     syncEditingPreviewReturnButton();
     livePreviewBlocks = blocks;
@@ -629,6 +887,7 @@ async function updateChangedLivePreviewBlocks(content, token) {
         targetNode.innerHTML = html;
         renderMathPlaceholders(targetNode);
         await postProcess(targetNode);
+        annotateLivePreviewBlockLineAnchors(targetNode, blocks[index]);
     }
 
     restoreLivePreviewScrollAnchor(scrollAnchor);
@@ -636,14 +895,17 @@ async function updateChangedLivePreviewBlocks(content, token) {
     livePreviewBlocks = blocks;
 }
 
-export function queueEditorPreviewRender(content, cursorLine, { delay = 100 } = {}) {
-    void cursorLine;
+export function queueEditorPreviewRender(content, editorTopLine, { delay = 100 } = {}) {
     const token = ++previewRenderToken;
     clearTimeout(window._renderTimer);
     window._renderTimer = setTimeout(() => {
-        updateChangedLivePreviewBlocks(content, token).catch(error => {
-            LogError(`Block preview render failed: ${error?.message || error}`);
-        });
+        updateChangedLivePreviewBlocks(content, token)
+            .then(() => {
+                scrollPreviewToEditorLine(editorTopLine);
+            })
+            .catch(error => {
+                LogError(`Block preview render failed: ${error?.message || error}`);
+            });
     }, delay);
 }
 
@@ -653,7 +915,7 @@ export async function renderMarkdown(content, options = {}) {
         preserveLiveBlocks = false,
     } = options;
 
-    if (state.isEditing && state.currentEditorRenderMode === 'realtime' && !preserveLiveBlocks) {
+    if (state.isEditing && !preserveLiveBlocks) {
         await renderMarkdownLiveBlocks(content, token);
         return;
     }
@@ -849,6 +1111,16 @@ export async function restoreEditingPreview() {
     state.editingPreviewPath = state.editingSourcePath || state.currentFilePath;
     state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
     await renderMarkdown(getCurrentEditorText());
+}
+
+export async function openEditingPreviewInNewTab() {
+    if (!state.isEditing || !state.editingPreviewPath || !isPreviewInEditingFolder()) {
+        return;
+    }
+
+    const path = state.editingPreviewPath;
+    const { openPath } = await import('./main-navigation.js');
+    await openPath(path, { newTab: true, pushHistory: true, setHome: true });
 }
 
 // ── Mermaid Rendering ──────────────────────────────────────

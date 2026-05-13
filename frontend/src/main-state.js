@@ -26,6 +26,7 @@ export const el = {
     recentList: $('recent-files-list'),
     markdownContainer: $('markdown-container'),
     editPreviewReturn: $('edit-preview-return'),
+    editPreviewOpenTab: $('edit-preview-open-tab'),
     htmlFrame: $('html-frame'),
     searchSidebar: $('search-sidebar'),
     searchInput: $('search-input'),

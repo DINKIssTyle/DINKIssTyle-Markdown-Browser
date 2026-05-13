@@ -443,6 +443,7 @@ export async function closeTab(tabID) {
         const fallback = state.tabs[Math.max(0, idx - 1)] || state.tabs[0];
         state.activeTabId = fallback.id;
         syncGlobalsFromTab(fallback);
+        syncEditorSessionFromState();
         renderTabs();
         renderActiveTab();
         return;

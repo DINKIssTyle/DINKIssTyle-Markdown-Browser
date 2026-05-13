@@ -7,7 +7,7 @@ import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js
 import { state, el, getPathDirname, formatSaveDialogMessage } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
-import { renderActiveTab, renderMarkdown, queueEditorPreviewRender } from './main-render.js';
+import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine } from './main-render.js';
 import { showToast } from './main-ui.js';
 import { SaveFile, SaveSettings, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
@@ -24,6 +24,9 @@ import { ghostTextField, showAskAIPrompt, showPromptBoxAtSelection, syncAIContro
 let slashMenuState = null;
 let slashMenuEventsBound = false;
 let lastPreviewCursorLine = 1;
+let lastPreviewTopLine = 1;
+let previewScrollSyncFrame = 0;
+let editorScrollEventsBound = false;
 let lastRenderedPreviewContent = "";
 export let cmView = null;
 export const themeCompartment = new Compartment();
@@ -73,7 +76,8 @@ function syncEditorStateToBackend() {
     const hasUnsaved = state.isEditing && content !== state.editorOriginalContent;
     const activeTab = getActiveTab();
     const tabTitle = activeTab?.title || "";
-    SyncEditorState(state.isEditing, hasUnsaved, state.currentFilePath || "", content, tabTitle).catch((error) => {
+    const savePath = state.editingSourcePath || state.currentFilePath || "";
+    SyncEditorState(state.isEditing, hasUnsaved, savePath, content, tabTitle).catch((error) => {
         LogError(`SyncEditorState failed: ${error}`);
     });
 }
@@ -116,11 +120,52 @@ function getCursorLineNumber(editorState = cmView?.state) {
     return editorState.doc.lineAt(editorState.selection.main.head).number;
 }
 
-function schedulePreviewRender(content, delay = 100) {
+function getTopVisibleLineNumber(view = cmView) {
+    if (!view) return 1;
+    const topBlock = view.lineBlockAtHeight(view.scrollDOM.scrollTop);
+    return view.state.doc.lineAt(topBlock.from).number;
+}
+
+function schedulePreviewScrollSync(view = cmView) {
+    if (!view || !state.isEditing) {
+        return;
+    }
+
+    if (previewScrollSyncFrame) {
+        cancelAnimationFrame(previewScrollSyncFrame);
+    }
+    previewScrollSyncFrame = requestAnimationFrame(() => {
+        previewScrollSyncFrame = 0;
+        const nextTopLine = getTopVisibleLineNumber(view);
+        lastPreviewTopLine = nextTopLine;
+        scrollPreviewToEditorLine(nextTopLine);
+    });
+}
+
+function bindEditorScrollSync() {
+    if (!cmView || editorScrollEventsBound) {
+        return;
+    }
+    editorScrollEventsBound = true;
+    cmView.scrollDOM.addEventListener('scroll', () => {
+        schedulePreviewScrollSync(cmView);
+    }, { passive: true });
+}
+
+function schedulePreviewRender(content, delay = 100, editorTopLine = getTopVisibleLineNumber()) {
     clearTimeout(window._renderTimer);
     window._renderTimer = setTimeout(() => {
-        if (content === lastRenderedPreviewContent) return;
-        renderMarkdown(content);
+        if (content === lastRenderedPreviewContent) {
+            scrollPreviewToEditorLine(editorTopLine);
+            return;
+        }
+        renderMarkdown(content)
+            .then(() => {
+                scrollPreviewToEditorLine(editorTopLine);
+            })
+            .catch(error => {
+                LogError(`Preview render failed: ${error?.message || error}`);
+            });
         lastRenderedPreviewContent = content;
     }, delay);
 }
@@ -131,15 +176,23 @@ function updatePreviewForEditorChange(update) {
 
     if (state.currentEditorRenderMode === 'realtime') {
         if (update.docChanged) {
-            queueEditorPreviewRender(nextDocText, nextCursorLine, { delay: 80 });
+            const nextTopLine = getTopVisibleLineNumber(update.view);
+            queueEditorPreviewRender(nextDocText, nextTopLine, { delay: 80 });
+            lastPreviewTopLine = nextTopLine;
             lastRenderedPreviewContent = nextDocText;
         }
         lastPreviewCursorLine = nextCursorLine;
+        if (update.viewportChanged || update.docChanged) {
+            schedulePreviewScrollSync(update.view);
+        }
         return;
     }
 
     if (update.selectionSet && nextCursorLine !== lastPreviewCursorLine) {
-        schedulePreviewRender(nextDocText, 0);
+        schedulePreviewRender(nextDocText, 0, getTopVisibleLineNumber(update.view));
+    }
+    if (update.viewportChanged) {
+        schedulePreviewScrollSync(update.view);
     }
     lastPreviewCursorLine = nextCursorLine;
 }
@@ -478,6 +531,7 @@ export function initCodeMirror() {
         state: startState,
         parent: el.editorView
     });
+    bindEditorScrollSync();
     
     // hide old textarea
     if (el.markdownEditor) el.markdownEditor.style.display = 'none';
@@ -525,6 +579,7 @@ export function syncEditorSessionFromState() {
 
     lastRenderedPreviewContent = nextContent;
     lastPreviewCursorLine = getCursorLineNumber(cmView.state);
+    lastPreviewTopLine = getTopVisibleLineNumber(cmView);
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
     }
@@ -567,6 +622,7 @@ export function enterEditMode() {
         changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource }
     });
     lastPreviewCursorLine = getCursorLineNumber(cmView.state);
+    lastPreviewTopLine = 0;
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
     }
@@ -591,6 +647,7 @@ export function enterEditMode() {
     syncAIControls();
     updateSlashMenu();
     cmView.focus();
+    schedulePreviewScrollSync(cmView);
     updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
     syncEditorStateToBackend();
 }
@@ -641,8 +698,9 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
     if (!cmView) return;
     const contentToSave = cmView.state.doc.toString();
     const targetPath = state.editingSourcePath || state.currentFilePath;
-    const activeTab = getActiveTab();
-    const dialogMessage = formatSaveDialogMessage(activeTab?.title, "Do you want to save changes to the file?");
+    const savingTabId = state.activeTabId;
+    const savingTab = getActiveTab();
+    const dialogMessage = formatSaveDialogMessage(savingTab?.title, "Do you want to save changes to the file?");
     if (confirm) {
         const ok = await AskConfirm("Save Changes", dialogMessage, "Save", "Cancel");
         if (!ok) return false;
@@ -651,18 +709,21 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
     try {
         await SaveFile(targetPath, contentToSave);
         showToast("File saved successfully. ✅");
-        state.editorOriginalContent = contentToSave;
-        state.currentMarkdownSource = contentToSave;
-        state.editingPreviewPath = state.editingSourcePath || targetPath;
-        state.editingPreviewFolder = state.editingSourceFolder || getPathDirname(targetPath);
-        const tab = getActiveTab();
-        if (tab) {
-            tab.currentMarkdownSource = contentToSave;
-            tab.editorOriginalContent = contentToSave;
+        if (savingTab) {
+            savingTab.currentMarkdownSource = contentToSave;
+            savingTab.editorOriginalContent = contentToSave;
+            savingTab.editingPreviewPath = savingTab.editingSourcePath || targetPath;
+            savingTab.editingPreviewFolder = savingTab.editingSourceFolder || getPathDirname(targetPath);
         }
-        syncEditorStateToBackend();
-        if (exitAfterSave) {
-            await exitEditMode(true);
+        if (state.activeTabId === savingTabId) {
+            state.editorOriginalContent = contentToSave;
+            state.currentMarkdownSource = contentToSave;
+            state.editingPreviewPath = state.editingSourcePath || targetPath;
+            state.editingPreviewFolder = state.editingSourceFolder || getPathDirname(targetPath);
+            syncEditorStateToBackend();
+            if (exitAfterSave) {
+                await exitEditMode(true);
+            }
         }
         return true;
     } catch (error) {
@@ -675,7 +736,7 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
 export async function saveTabDocument(tab, { confirm = true } = {}) {
     if (!tab) return false;
     const contentToSave = tab.currentMarkdownSource || "";
-    const targetPath = tab.path;
+    const targetPath = tab.editingSourcePath || tab.path;
     const dialogMessage = formatSaveDialogMessage(tab.title, "Do you want to save changes to the file?");
 
     if (confirm) {
@@ -687,6 +748,8 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
         await SaveFile(targetPath, contentToSave);
         tab.editorOriginalContent = contentToSave;
         tab.currentMarkdownSource = contentToSave;
+        tab.editingPreviewPath = tab.editingSourcePath || targetPath;
+        tab.editingPreviewFolder = tab.editingSourceFolder || getPathDirname(targetPath);
         showToast("File saved successfully. ✅");
         return true;
     } catch (error) {

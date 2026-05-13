@@ -896,6 +896,8 @@ html.dark .html-frame {
 
 .markdown-container img {
     max-width: 100%;
+    -webkit-user-drag: none;
+    user-select: none;
 }
 
 .markdown-container .katex-display {
@@ -1736,9 +1738,9 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
     border-radius: 999px;
 }
 
-.edit-preview-return {
+.edit-preview-return,
+.edit-preview-open-tab {
     position: absolute;
-    left: 75%;
     bottom: 28px;
     transform: translateX(-50%);
     z-index: 8;
@@ -1756,18 +1758,46 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
     transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
 }
 
-#main-container:not(.is-editing) .edit-preview-return {
+.edit-preview-return {
+    left: 75%;
+    border-color: rgba(217, 45, 32, 0.16);
+    background: rgba(254, 243, 242, 0.96);
+    color: #d92d20;
+    box-shadow: 0 10px 24px rgba(217, 45, 32, 0.12);
+}
+
+.edit-preview-open-tab {
+    left: calc(75% + 50px);
+    border-color: rgba(18, 183, 106, 0.18);
+    background: rgba(236, 253, 243, 0.96);
+    color: #039855;
+    box-shadow: 0 10px 24px rgba(18, 183, 106, 0.12);
+}
+
+#main-container:not(.is-editing) .edit-preview-return,
+#main-container:not(.is-editing) .edit-preview-open-tab {
     display: none;
 }
 
-.edit-preview-return:hover {
+.edit-preview-return:hover,
+.edit-preview-open-tab:hover {
     transform: translateX(-50%) translateY(-1px);
+}
+
+.edit-preview-return:hover {
     box-shadow: 0 14px 28px rgba(217, 45, 32, 0.18);
     background: rgba(254, 228, 226, 0.98);
     border-color: rgba(217, 45, 32, 0.24);
 }
 
-.edit-preview-return .material-symbols-outlined {
+.edit-preview-open-tab:hover {
+    box-shadow: 0 14px 28px rgba(18, 183, 106, 0.18);
+    background: rgba(209, 250, 229, 0.98);
+    border-color: rgba(18, 183, 106, 0.26);
+}
+
+.edit-preview-return .material-symbols-outlined,
+.edit-preview-open-tab .material-symbols-outlined {
     font-size: 21px;
 }
 
@@ -1775,6 +1805,13 @@ html.dark .edit-preview-return {
     border-color: rgba(253, 162, 155, 0.24);
     background: rgba(69, 10, 10, 0.42);
     color: #fda29b;
+    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.34);
+}
+
+html.dark .edit-preview-open-tab {
+    border-color: rgba(50, 213, 131, 0.28);
+    background: rgba(5, 46, 22, 0.42);
+    color: #32d583;
     box-shadow: 0 12px 26px rgba(2, 6, 23, 0.34);
 }
 

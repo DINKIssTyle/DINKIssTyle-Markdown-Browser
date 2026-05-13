@@ -1,4 +1,4 @@
-# What's New in Version 2.0 Beta 10
+# What's New in Version 2.0 Beta 11
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -172,5 +172,11 @@ Proposal Writing    :after a1, 20d
 ### Added & Bug Fixes & Polish
 * **File names and paths with spaces**: When inserting links or images, if a space is included in the path or file name, it must be wrapped in Angle Brackets (&lt; &gt;) to correctly apply Markdown format.
 
+
+## 2.0 Beta11
+### Added & Bug Fixes & Polish
+* **Moved documents during editing**: Added an "Open in new tab" button.
+* **Editor-Preview mismatch**: Resolved issues where saving caused inconsistencies between the editor and preview views.
+* **Image drag crash**: Prevented crashes caused by the drag-and-drop functionality.
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
