@@ -11,6 +11,7 @@ import remarkParse from 'remark-parse';
 import remarkGfm from 'remark-gfm';
 import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
+import hljs from './vendor/highlight.js/highlight.common.js';
 
 import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
@@ -902,6 +903,20 @@ function enhanceCodeBlockCopyButtons(container) {
     });
 }
 
+function enhanceCodeBlockSyntaxHighlighting(container) {
+    container.querySelectorAll('pre > code').forEach(codeBlock => {
+        const pre = codeBlock.parentElement;
+        if (!pre || pre.classList.contains('mermaid') || codeBlock.classList.contains('mermaid')) return;
+        if (codeBlock.dataset.highlighted === 'yes') return;
+
+        try {
+            hljs.highlightElement(codeBlock);
+        } catch (error) {
+            LogError(`code block highlight failed: ${error?.message || error}`);
+        }
+    });
+}
+
 // ── Mermaid Configuration ──────────────────────────────────
 
 function getMermaidConfig() {
@@ -947,12 +962,26 @@ async function renderMarkdownToHTML(content) {
 function splitMarkdownIntoBlocks(content) {
     const normalized = String(content || '').replace(/\r\n/g, '\n');
     const blocks = [];
-    const separatorRegex = /\n{2,}/g;
-    let lastIndex = 0;
-    let currentLine = 1;
+    const lines = normalized.split('\n');
+    let blockLines = [];
+    let blockStartLine = 1;
+    let activeFence = null;
 
-    const pushBlock = (rawContent, startLine) => {
+    const getFence = line => {
+        const match = line.match(/^(\s*)(`{3,}|~{3,})/);
+        if (!match) return null;
+        return { marker: match[2][0], length: match[2].length };
+    };
+
+    const isFenceClose = (line, fence) => {
+        if (!fence) return false;
+        const match = line.match(/^(\s*)(`{3,}|~{3,})\s*$/);
+        return !!match && match[2][0] === fence.marker && match[2].length >= fence.length;
+    };
+
+    const pushBlock = (rawContent, startLine, allowEmpty = false) => {
         const normalizedBlock = rawContent.replace(/\n+$/g, '');
+        if (!allowEmpty && !normalizedBlock.trim()) return;
         const blockLineCount = normalizedBlock ? normalizedBlock.split('\n').length : 1;
         blocks.push({
             content: normalizedBlock,
@@ -961,19 +990,36 @@ function splitMarkdownIntoBlocks(content) {
         });
     };
 
-    for (const match of normalized.matchAll(separatorRegex)) {
-        const segment = normalized.slice(lastIndex, match.index);
-        const segmentLineCount = segment ? segment.split('\n').length : 1;
-        if (segment.trim()) {
-            pushBlock(segment, currentLine);
+    lines.forEach((line, index) => {
+        const lineNumber = index + 1;
+        if (blockLines.length === 0) {
+            if (!line.trim()) return;
+            blockStartLine = lineNumber;
         }
-        currentLine += (segmentLineCount - 1) + match[0].length;
-        lastIndex = match.index + match[0].length;
-    }
 
-    const tail = normalized.slice(lastIndex);
-    if (tail.trim() || blocks.length === 0) {
-        pushBlock(tail, currentLine);
+        blockLines.push(line);
+
+        if (activeFence) {
+            if (isFenceClose(line, activeFence)) {
+                activeFence = null;
+            }
+            return;
+        }
+
+        const fence = getFence(line);
+        if (fence) {
+            activeFence = fence;
+            return;
+        }
+
+        if (!line.trim()) {
+            pushBlock(blockLines.join('\n'), blockStartLine);
+            blockLines = [];
+        }
+    });
+
+    if (blockLines.length > 0 || blocks.length === 0) {
+        pushBlock(blockLines.join('\n'), blockStartLine, blocks.length === 0);
     }
 
     return blocks;
@@ -1077,6 +1123,7 @@ async function postProcess(container = el.markdownContainer) {
     el.markdownContainer.style.fontSize = `${state.currentFontSize}px`;
 
     await renderMermaidSub(container);
+    enhanceCodeBlockSyntaxHighlighting(container);
     enhanceCodeBlockCopyButtons(container);
 }
 

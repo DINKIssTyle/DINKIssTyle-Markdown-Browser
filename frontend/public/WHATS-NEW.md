@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta 1
+# What's New in Version 2.1 Beta2
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -30,10 +30,51 @@ To be continued.
 
 # Recent Changes
 
-## 2.1 Beta1
+## 2.1 Beta2
 ### Added & Bug Fixes & Polish
 
-Not yet!
+* **Added: Syntax Highlight for Markdown Rendering**
+
+### Python
+```python
+# Fibonacci sequence
+def fibonacci(n: int) -> list[int]:
+    result = []
+    a, b = 0, 1
+
+    while len(result) < n:
+        result.append(a)
+        a, b = b, a + b
+
+    return result
+
+
+if __name__ == "__main__":
+    print("Fibonacci:", fibonacci(10))
+```
+
+### Bash
+
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+NAME="${1:-World}"
+
+if [[ "$NAME" == "admin" ]]; then
+  echo "Welcome, administrator."
+else
+  echo "Hello, $NAME!"
+fi
+
+for file in *.txt; do
+  [[ -e "$file" ]] || continue
+  echo "Found text file: $file"
+done
+```
+
+
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
