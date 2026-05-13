@@ -9,7 +9,8 @@ import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines } from './main-render.js';
 import { showToast } from './main-ui.js';
-import { SaveFile, SaveSettings, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
+import { persistAppSettings } from './main-settings.js';
+import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
@@ -32,42 +33,329 @@ let editorScrollEventsBound = false;
 let lastRenderedPreviewContent = "";
 export let cmView = null;
 export const themeCompartment = new Compartment();
+export const tokenColorCompartment = new Compartment();
+
+export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
+    { key: 'plain', label: 'Plain Text' },
+    { key: 'heading', label: 'Headings' },
+    { key: 'emphasis', label: 'Emphasis' },
+    { key: 'link', label: 'Links' },
+    { key: 'quote', label: 'Blockquotes' },
+    { key: 'code', label: 'Inline Code' },
+    { key: 'marker', label: 'Markers' },
+    { key: 'htmlTag', label: 'HTML Tags' },
+    { key: 'attribute', label: 'Attributes' },
+    { key: 'string', label: 'Strings' },
+    { key: 'keyword', label: 'Keywords' },
+    { key: 'comment', label: 'Comments' },
+    { key: 'invalid', label: 'Invalid' },
+]);
+
+const EDITOR_BACKGROUND_DEFAULTS = Object.freeze({
+    light: '#ffffff',
+    dark: '#1f2937',
+});
+
+const EDITOR_TOKEN_COLOR_DEFAULTS = Object.freeze({
+    light: Object.freeze({
+        plain: '#1f2937',
+        heading: '#1f2937',
+        emphasis: '#375d99',
+        link: '#0071e3',
+        quote: '#5b6f8f',
+        code: '#d14',
+        marker: '#0071e3',
+        htmlTag: '#0a7f8f',
+        attribute: '#8f5f00',
+        string: '#0f7b32',
+        keyword: '#8a3ffc',
+        comment: '#6b7280',
+        invalid: '#d92d20',
+    }),
+    dark: Object.freeze({
+        plain: '#e5e7eb',
+        heading: '#e5e7eb',
+        emphasis: '#c8d8ff',
+        link: '#7db7ff',
+        quote: '#9ab3d5',
+        code: '#ff8aa1',
+        marker: '#7db7ff',
+        htmlTag: '#6ee7f2',
+        attribute: '#ffd166',
+        string: '#8ee6a1',
+        keyword: '#d8b4fe',
+        comment: '#9ca3af',
+        invalid: '#fda29b',
+    }),
+});
+
+export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
+    {
+        key: 'default',
+        label: 'Default',
+        colors: null,
+        background: null,
+    },
+    {
+        key: 'dracula',
+        label: 'Dracula',
+        background: '#282a36',
+        colors: Object.freeze({
+            plain: '#f8f8f2',
+            heading: '#f8f8f2',
+            emphasis: '#bd93f9',
+            link: '#8be9fd',
+            quote: '#6272a4',
+            code: '#ff79c6',
+            marker: '#50fa7b',
+            htmlTag: '#ff79c6',
+            attribute: '#ffb86c',
+            string: '#f1fa8c',
+            keyword: '#bd93f9',
+            comment: '#6272a4',
+            invalid: '#ff5555',
+        }),
+    },
+    {
+        key: 'tokyo-night',
+        label: 'Tokyo Night',
+        background: '#1a1b26',
+        colors: Object.freeze({
+            plain: '#c0caf5',
+            heading: '#c0caf5',
+            emphasis: '#7aa2f7',
+            link: '#7dcfff',
+            quote: '#565f89',
+            code: '#f7768e',
+            marker: '#7aa2f7',
+            htmlTag: '#2ac3de',
+            attribute: '#e0af68',
+            string: '#9ece6a',
+            keyword: '#bb9af7',
+            comment: '#565f89',
+            invalid: '#f7768e',
+        }),
+    },
+    {
+        key: 'nord',
+        label: 'Nord',
+        background: '#2e3440',
+        colors: Object.freeze({
+            plain: '#d8dee9',
+            heading: '#eceff4',
+            emphasis: '#81a1c1',
+            link: '#88c0d0',
+            quote: '#4c566a',
+            code: '#d08770',
+            marker: '#5e81ac',
+            htmlTag: '#8fbcbb',
+            attribute: '#ebcb8b',
+            string: '#a3be8c',
+            keyword: '#b48ead',
+            comment: '#616e88',
+            invalid: '#bf616a',
+        }),
+    },
+    {
+        key: 'catppuccin',
+        label: 'Catppuccin',
+        background: '#1e1e2e',
+        colors: Object.freeze({
+            plain: '#cdd6f4',
+            heading: '#cdd6f4',
+            emphasis: '#cba6f7',
+            link: '#89b4fa',
+            quote: '#6c7086',
+            code: '#f5c2e7',
+            marker: '#89b4fa',
+            htmlTag: '#94e2d5',
+            attribute: '#f9e2af',
+            string: '#a6e3a1',
+            keyword: '#cba6f7',
+            comment: '#7f849c',
+            invalid: '#f38ba8',
+        }),
+    },
+    {
+        key: 'one-dark-pro',
+        label: 'One Dark Pro',
+        background: '#282c34',
+        colors: Object.freeze({
+            plain: '#abb2bf',
+            heading: '#abb2bf',
+            emphasis: '#61afef',
+            link: '#56b6c2',
+            quote: '#5c6370',
+            code: '#e06c75',
+            marker: '#61afef',
+            htmlTag: '#e06c75',
+            attribute: '#d19a66',
+            string: '#98c379',
+            keyword: '#c678dd',
+            comment: '#5c6370',
+            invalid: '#e06c75',
+        }),
+    },
+    {
+        key: 'solarized-light',
+        label: 'Solarized',
+        background: '#fdf6e3',
+        colors: Object.freeze({
+            plain: '#657b83',
+            heading: '#586e75',
+            emphasis: '#268bd2',
+            link: '#2aa198',
+            quote: '#93a1a1',
+            code: '#d33682',
+            marker: '#268bd2',
+            htmlTag: '#2aa198',
+            attribute: '#b58900',
+            string: '#859900',
+            keyword: '#6c71c4',
+            comment: '#93a1a1',
+            invalid: '#dc322f',
+        }),
+    },
+]);
 
 const HTML_VOID_TAGS = [
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
     'link', 'meta', 'param', 'source', 'track', 'wbr'
 ];
 const HTML_VOID_TAG_CLOSE_REGEX = new RegExp(`(<(${HTML_VOID_TAGS.join('|')})\\b[^<>]*?>)<\\/\\2\\s*>`, 'gi');
-const editorMarkdownHighlight = HighlightStyle.define([
-    { tag: tags.heading1, color: 'var(--text-color)', fontSize: '1.5em', fontWeight: '800' },
-    { tag: tags.heading2, color: 'var(--text-color)', fontSize: '1.35em', fontWeight: '800' },
-    { tag: tags.heading3, color: 'var(--text-color)', fontSize: '1.22em', fontWeight: '760' },
-    { tag: tags.heading4, color: 'var(--text-color)', fontSize: '1.12em', fontWeight: '740' },
-    { tag: tags.heading5, color: 'var(--text-color)', fontSize: '1.06em', fontWeight: '720' },
-    { tag: tags.heading6, color: 'var(--text-color)', fontSize: '1.02em', fontWeight: '700' },
-    { tag: tags.strong, color: 'var(--text-color)', fontWeight: '800' },
-    { tag: tags.emphasis, color: 'color-mix(in srgb, var(--text-color) 88%, var(--accent-color))', fontStyle: 'italic' },
-    { tag: tags.strikethrough, color: 'var(--text-muted)', textDecoration: 'line-through' },
-    { tag: tags.link, color: 'var(--accent-color)', textDecoration: 'underline', textUnderlineOffset: '2px' },
-    { tag: tags.url, color: 'color-mix(in srgb, var(--accent-color) 82%, var(--text-color))' },
-    { tag: tags.quote, color: 'color-mix(in srgb, var(--accent-color) 70%, var(--text-muted))', fontStyle: 'italic' },
-    { tag: tags.monospace, color: '#d14', backgroundColor: 'color-mix(in srgb, var(--surface-color) 72%, var(--accent-color) 8%)' },
-    { tag: tags.contentSeparator, color: 'var(--text-muted)', fontWeight: '700' },
-    { tag: tags.list, color: 'var(--accent-color)', fontWeight: '700' },
-    { tag: tags.meta, color: 'var(--text-muted)' },
-    { tag: tags.processingInstruction, color: 'var(--accent-color)', fontWeight: '700' },
-    { tag: tags.tagName, color: '#0a7f8f', fontWeight: '700' },
-    { tag: tags.angleBracket, color: 'var(--text-muted)' },
-    { tag: tags.attributeName, color: '#8f5f00' },
-    { tag: tags.attributeValue, color: '#0f7b32' },
-    { tag: tags.string, color: '#0f7b32' },
-    { tag: tags.keyword, color: '#8a3ffc', fontWeight: '700' },
-    { tag: tags.atom, color: '#a14f00' },
-    { tag: tags.bool, color: '#a14f00', fontWeight: '700' },
-    { tag: tags.comment, color: 'var(--text-muted)', fontStyle: 'italic' },
-    { tag: tags.escape, color: '#b00020', fontWeight: '700' },
-    { tag: tags.invalid, color: '#d92d20', textDecoration: 'underline wavy #d92d20' },
-]);
+function getEditorThemeName() {
+    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
+}
+
+export function getEditorDefaultTokenColors(themeName = getEditorThemeName()) {
+    return { ...(EDITOR_TOKEN_COLOR_DEFAULTS[themeName] || EDITOR_TOKEN_COLOR_DEFAULTS.light) };
+}
+
+export function getEditorDefaultBackgroundColor(themeName = getEditorThemeName()) {
+    return EDITOR_BACKGROUND_DEFAULTS[themeName] || EDITOR_BACKGROUND_DEFAULTS.light;
+}
+
+function normalizeTokenColors(colors = {}, themeName = getEditorThemeName()) {
+    const defaults = getEditorDefaultTokenColors(themeName);
+    return Object.fromEntries(
+        EDITOR_TOKEN_COLOR_FIELDS.map(({ key }) => [key, isValidHexColor(colors[key]) ? colors[key] : defaults[key]])
+    );
+}
+
+function normalizeBackgroundColor(color, themeName = getEditorThemeName()) {
+    return isValidHexColor(color) ? color : getEditorDefaultBackgroundColor(themeName);
+}
+
+function isValidHexColor(value) {
+    return /^#[0-9a-f]{6}$/i.test(String(value || ''));
+}
+
+function hexToRgb(hex) {
+    const normalized = String(hex || '').replace('#', '');
+    if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
+    return {
+        r: parseInt(normalized.slice(0, 2), 16),
+        g: parseInt(normalized.slice(2, 4), 16),
+        b: parseInt(normalized.slice(4, 6), 16),
+    };
+}
+
+function getRelativeLuminance(hex) {
+    const rgb = hexToRgb(hex);
+    if (!rgb) return 1;
+    const channel = value => {
+        const normalized = value / 255;
+        return normalized <= 0.03928
+            ? normalized / 12.92
+            : Math.pow((normalized + 0.055) / 1.055, 2.4);
+    };
+    return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
+}
+
+function buildEditorMarkdownHighlight(colors) {
+    return HighlightStyle.define([
+        { tag: tags.heading1, color: colors.heading, fontSize: '1.5em', fontWeight: '800' },
+        { tag: tags.heading2, color: colors.heading, fontSize: '1.35em', fontWeight: '800' },
+        { tag: tags.heading3, color: colors.heading, fontSize: '1.22em', fontWeight: '760' },
+        { tag: tags.heading4, color: colors.heading, fontSize: '1.12em', fontWeight: '740' },
+        { tag: tags.heading5, color: colors.heading, fontSize: '1.06em', fontWeight: '720' },
+        { tag: tags.heading6, color: colors.heading, fontSize: '1.02em', fontWeight: '700' },
+        { tag: tags.strong, color: colors.heading, fontWeight: '800' },
+        { tag: tags.emphasis, color: colors.emphasis, fontStyle: 'italic' },
+        { tag: tags.strikethrough, color: colors.comment, textDecoration: 'line-through' },
+        { tag: tags.link, color: colors.link, textDecoration: 'underline', textUnderlineOffset: '2px' },
+        { tag: tags.url, color: colors.link },
+        { tag: tags.quote, color: colors.quote, fontStyle: 'italic' },
+        { tag: tags.monospace, color: colors.code, backgroundColor: 'color-mix(in srgb, var(--surface-color) 72%, var(--accent-color) 8%)' },
+        { tag: tags.contentSeparator, color: colors.comment, fontWeight: '700' },
+        { tag: tags.list, color: colors.marker, fontWeight: '700' },
+        { tag: tags.meta, color: colors.comment },
+        { tag: tags.processingInstruction, color: colors.marker, fontWeight: '700' },
+        { tag: tags.tagName, color: colors.htmlTag, fontWeight: '700' },
+        { tag: tags.angleBracket, color: colors.comment },
+        { tag: tags.attributeName, color: colors.attribute },
+        { tag: tags.attributeValue, color: colors.string },
+        { tag: tags.string, color: colors.string },
+        { tag: tags.keyword, color: colors.keyword, fontWeight: '700' },
+        { tag: tags.atom, color: colors.attribute },
+        { tag: tags.bool, color: colors.attribute, fontWeight: '700' },
+        { tag: tags.comment, color: colors.comment, fontStyle: 'italic' },
+        { tag: tags.escape, color: colors.invalid, fontWeight: '700' },
+        { tag: tags.invalid, color: colors.invalid, textDecoration: `underline wavy ${colors.invalid}` },
+    ]);
+}
+
+function getTokenColorExtension() {
+    if (!state.editorTokenColorsEnabled) {
+        return [];
+    }
+    return syntaxHighlighting(buildEditorMarkdownHighlight(state.editorTokenColors));
+}
+
+function applyEditorPlainTextColor() {
+    const plainTextColor = state.editorTokenColors?.plain || getEditorDefaultTokenColors().plain;
+    el.editorView?.style.setProperty('--editor-plain-text-color', plainTextColor);
+}
+
+export function applyEditorPreferencesFromSettings(settings = {}) {
+    state.editorPreviewScrollSyncEnabled = settings.editorPreviewScrollSync !== false;
+    state.editorTokenColorsEnabled = settings.editorTokenColorsEnabled !== false;
+    state.editorTokenColors = normalizeTokenColors(settings.editorTokenColors || {});
+    state.editorBackgroundColor = normalizeBackgroundColor(settings.editorBackgroundColor);
+    applyEditorTokenColors();
+    applyEditorBackgroundColor();
+}
+
+export function applyEditorTokenColors() {
+    state.editorTokenColors = normalizeTokenColors(state.editorTokenColors);
+    applyEditorPlainTextColor();
+    if (cmView) {
+        cmView.dispatch({
+            effects: tokenColorCompartment.reconfigure(getTokenColorExtension())
+        });
+    }
+}
+
+export function applyEditorBackgroundColor() {
+    state.editorBackgroundColor = normalizeBackgroundColor(state.editorBackgroundColor);
+    el.editorView?.style.setProperty('--editor-background-color', state.editorBackgroundColor);
+    applyEditorPlainTextColor();
+    const isDarkBackground = getRelativeLuminance(state.editorBackgroundColor) < 0.45;
+    el.editorView?.style.setProperty(
+        '--editor-gutter-background-color',
+        isDarkBackground
+            ? 'color-mix(in srgb, var(--editor-background-color) 88%, black 12%)'
+            : 'color-mix(in srgb, var(--editor-background-color) 88%, white 12%)'
+    );
+    el.editorView?.style.setProperty(
+        '--editor-gutter-text-color',
+        isDarkBackground ? 'rgba(226, 232, 240, 0.62)' : 'rgba(31, 41, 55, 0.62)'
+    );
+    el.editorView?.style.setProperty(
+        '--editor-gutter-border-color',
+        isDarkBackground ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
+    );
+}
 
 function applyEditorFontSize() {
     if (!cmView) return;
@@ -120,31 +408,7 @@ function formatMarkdownDestination(destination) {
 }
 
 async function persistEditorPreferences() {
-    await SaveSettings({
-        theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
-        fontSize: state.currentFontSize,
-        engine: state.currentMarkdownEngine,
-        editorRenderMode: state.currentEditorRenderMode,
-        aiFeaturesDisabled: state.aiFeaturesDisabled,
-        aiGeneralEnabled: window.aiState?.generalAvailable ?? true,
-        aiGeneralToolbarEnabled: window.aiState?.generalToolbarEnabled ?? true,
-        aiToolbarCollapsed: state.aiToolbarCollapsed,
-        aiGeneralProvider: window.aiState?.generalProvider || "openai",
-        aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
-        aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
-        aiGeneralKey: window.aiState?.generalKey || "",
-        aiGeneralTemp: window.aiState?.generalTemp || 0,
-        aiFimEnabled: window.aiState?.fimAvailable ?? true,
-        aiFimToolbarEnabled: window.aiState?.fimEnabled ?? false,
-        aiFimEndpoint: window.aiState?.fimEndpoint || "",
-        aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
-        aiFimKey: window.aiState?.fimKey || "",
-        aiFimTemp: window.aiState?.fimTemp || 0,
-        aiSelectionContext: state.aiSelectionContextEnabled,
-        aiGithubCompatible: state.aiGithubCompatibleEnabled,
-        aiSupportAgent: state.aiSupportAgentEnabled,
-        koreanImeEnterFix: state.koreanImeFixEnabled,
-    });
+    await persistAppSettings();
 }
 
 function getCursorLineNumber(editorState = cmView?.state) {
@@ -184,7 +448,7 @@ function getVisibleLineNumbers(view = cmView, { maxLines = 12, scanPixels = 180 
 }
 
 function schedulePreviewScrollSync(view = cmView) {
-    if (!view || !state.isEditing) {
+    if (!view || !state.isEditing || !state.editorPreviewScrollSyncEnabled) {
         return;
     }
 
@@ -225,12 +489,16 @@ function schedulePreviewRender(content, delay = 100, editorTopLine = getTopVisib
     clearTimeout(window._renderTimer);
     window._renderTimer = setTimeout(() => {
         if (content === lastRenderedPreviewContent) {
-            scrollPreviewToEditorLine(editorTopLine);
+            if (state.editorPreviewScrollSyncEnabled) {
+                scrollPreviewToEditorLine(editorTopLine);
+            }
             return;
         }
         renderMarkdown(content)
             .then(() => {
-                scrollPreviewToEditorLine(editorTopLine);
+                if (state.editorPreviewScrollSyncEnabled) {
+                    scrollPreviewToEditorLine(editorTopLine);
+                }
             })
             .catch(error => {
                 LogError(`Preview render failed: ${error?.message || error}`);
@@ -246,7 +514,10 @@ function updatePreviewForEditorChange(update) {
     if (state.currentEditorRenderMode === 'realtime') {
         if (update.docChanged) {
             const nextTopLine = getTopVisibleLineNumber(update.view);
-            queueEditorPreviewRender(nextDocText, nextTopLine, { delay: 80 });
+            queueEditorPreviewRender(nextDocText, nextTopLine, {
+                delay: 80,
+                syncScroll: state.editorPreviewScrollSyncEnabled,
+            });
             lastPreviewTopLine = nextTopLine;
             lastRenderedPreviewContent = nextDocText;
         }
@@ -540,7 +811,7 @@ export function initCodeMirror() {
             ]),
             markdown({ base: markdownLanguage, codeLanguages: languages }),
             themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
-            syntaxHighlighting(editorMarkdownHighlight),
+            tokenColorCompartment.of(getTokenColorExtension()),
             koreanImeEnterFix,
             ghostTextField,
             drawSelection(),
@@ -617,6 +888,10 @@ export function setEditorTheme(isDark) {
             effects: themeCompartment.reconfigure(isDark ? oneDark : [])
         });
     }
+    state.editorTokenColors = normalizeTokenColors(state.editorTokenColors, isDark ? 'dark' : 'light');
+    state.editorBackgroundColor = normalizeBackgroundColor(state.editorBackgroundColor, isDark ? 'dark' : 'light');
+    applyEditorTokenColors();
+    applyEditorBackgroundColor();
 }
 
 export function syncEditorSessionFromState() {

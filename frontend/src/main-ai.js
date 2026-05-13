@@ -4,9 +4,10 @@
  */
 
 import { state, el } from './main-state.js';
-import { GetSettings, SaveSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/main/App';
+import { persistAppSettings } from './main-settings.js';
+import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { cmView, insertPlainTextAtCursor } from './main-editor.js';
+import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor } from './main-editor.js';
 import { showToast } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
@@ -804,31 +805,84 @@ function refreshPromptForSelection({ focusInput = false, preserveInput = true } 
 }
 
 async function persistAISettings() {
-    await SaveSettings({
-        theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
-        fontSize: state.currentFontSize,
-        engine: state.currentMarkdownEngine,
-        editorRenderMode: state.currentEditorRenderMode,
-        aiFeaturesDisabled: state.aiFeaturesDisabled,
-        aiGeneralEnabled: window.aiState.generalAvailable,
-        aiGeneralToolbarEnabled: window.aiState.generalToolbarEnabled,
-        aiToolbarCollapsed: state.aiToolbarCollapsed,
-        aiGeneralProvider: window.aiState.generalProvider,
-        aiGeneralEndpoint: window.aiState.generalEndpoint,
-        aiGeneralModel: window.aiState.generalModel,
-        aiGeneralKey: window.aiState.generalKey,
-        aiGeneralTemp: window.aiState.generalTemp,
-        aiFimEnabled: window.aiState.fimAvailable,
-        aiFimToolbarEnabled: window.aiState.fimEnabled,
-        aiFimEndpoint: window.aiState.fimEndpoint,
-        aiFimModel: window.aiState.fimModel,
-        aiFimKey: window.aiState.fimKey,
-        aiFimTemp: window.aiState.fimTemp,
-        aiSelectionContext: state.aiSelectionContextEnabled,
-        aiGithubCompatible: state.aiGithubCompatibleEnabled,
-        aiSupportAgent: state.aiSupportAgentEnabled,
-        koreanImeEnterFix: el.aiToggleImeFix.checked,
+    await persistAppSettings();
+}
+
+function syncSettingsTabs(activeTab = 'editor') {
+    const isEditor = activeTab === 'editor';
+    el.settingsTabEditor?.classList.toggle('active', isEditor);
+    el.settingsTabAi?.classList.toggle('active', !isEditor);
+    el.settingsTabEditor?.setAttribute('aria-selected', String(isEditor));
+    el.settingsTabAi?.setAttribute('aria-selected', String(!isEditor));
+    el.settingsPanelEditor?.classList.toggle('hidden', !isEditor);
+    el.settingsPanelAi?.classList.toggle('hidden', isEditor);
+}
+
+function renderEditorTokenColorControls() {
+    if (!el.editorTokenColorGrid) return;
+    if (el.editorTokenPresetList) {
+        el.editorTokenPresetList.innerHTML = EDITOR_TOKEN_COLOR_PRESETS.map(({ key, label }) => `
+            <button type="button" class="editor-token-preset-btn" data-token-preset-key="${key}">${label}</button>
+        `).join('');
+    }
+    el.editorTokenColorGrid.innerHTML = EDITOR_TOKEN_COLOR_FIELDS.map(({ key, label }) => {
+        const value = state.editorTokenColors[key] || getEditorDefaultTokenColors()[key];
+        return `
+            <label class="editor-token-color-field">
+                <span>${label}</span>
+                <input type="color" data-token-color-key="${key}" value="${value}" />
+            </label>
+        `;
+    }).join('');
+}
+
+function syncEditorSettingsControls() {
+    if (el.editorPreviewScrollSync) {
+        el.editorPreviewScrollSync.checked = state.editorPreviewScrollSyncEnabled;
+    }
+    if (el.editorTokenColorsEnabled) {
+        el.editorTokenColorsEnabled.checked = state.editorTokenColorsEnabled;
+    }
+    if (el.editorBackgroundColor) {
+        el.editorBackgroundColor.value = state.editorBackgroundColor || getEditorDefaultBackgroundColor();
+    }
+    renderEditorTokenColorControls();
+    syncEditorTokenColorAvailability();
+}
+
+function syncEditorTokenColorAvailability() {
+    const enabled = el.editorTokenColorsEnabled?.checked ?? true;
+    el.editorTokenColorGrid?.classList.toggle('is-locked', !enabled);
+    el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
+        input.disabled = !enabled;
     });
+}
+
+function applyEditorTokenColorPreset(presetKey) {
+    const preset = EDITOR_TOKEN_COLOR_PRESETS.find(item => item.key === presetKey);
+    if (!preset) return;
+    const presetColors = preset.colors || getEditorDefaultTokenColors();
+    const presetBackground = preset.background || getEditorDefaultBackgroundColor();
+    el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
+        const key = input.dataset.tokenColorKey;
+        input.value = presetColors[key] || input.value;
+    });
+    if (el.editorBackgroundColor) {
+        el.editorBackgroundColor.value = presetBackground;
+    }
+}
+
+function collectEditorSettingsFromControls() {
+    state.editorPreviewScrollSyncEnabled = el.editorPreviewScrollSync?.checked ?? true;
+    state.editorTokenColorsEnabled = el.editorTokenColorsEnabled?.checked ?? true;
+    const nextColors = {};
+    el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
+        nextColors[input.dataset.tokenColorKey] = input.value;
+    });
+    state.editorTokenColors = nextColors;
+    state.editorBackgroundColor = el.editorBackgroundColor?.value || getEditorDefaultBackgroundColor();
+    applyEditorTokenColors();
+    applyEditorBackgroundColor();
 }
 
 export async function initAI() {
@@ -882,6 +936,14 @@ export async function initAI() {
 }
 
 export function bindAIEvents() {
+    el.settingsTabEditor?.addEventListener('click', () => syncSettingsTabs('editor'));
+    el.settingsTabAi?.addEventListener('click', () => syncSettingsTabs('ai'));
+    el.editorTokenColorsEnabled?.addEventListener('change', syncEditorTokenColorAvailability);
+    el.editorTokenPresetList?.addEventListener('click', event => {
+        const button = event.target.closest('[data-token-preset-key]');
+        if (!button || button.disabled) return;
+        applyEditorTokenColorPreset(button.dataset.tokenPresetKey);
+    });
     el.aiFeaturesDisabled.addEventListener('change', syncAISettingsSections);
     el.aiGeneralProvider.addEventListener('change', handleGeneralProviderChange);
     el.aiGeneralEndpoint.addEventListener('change', handleGeneralEndpointChange);
@@ -910,6 +972,8 @@ export function bindAIEvents() {
 
     // Settings Modal
     el.edSettings.onclick = () => {
+        syncSettingsTabs('editor');
+        syncEditorSettingsControls();
         syncAISettingsSections();
         syncGeneralModelControl();
         if (el.aiGeneralProvider.value === 'lmstudio') {
@@ -935,15 +999,16 @@ export function bindAIEvents() {
         window.aiState.fimModel = el.aiFimModel.value || "qwen2.5-coder-0.5b-instruct-mlx";
         window.aiState.fimKey = el.aiFimKey.value;
         window.aiState.fimTemp = parseFloat(el.aiFimTemp.value) || 0;
+        state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
+        collectEditorSettingsFromControls();
         await persistAISettings();
 
-        state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
         syncAIControls();
         syncGeneralTemperatureControl();
 
         closeGeneralModelPopover();
         el.aiSettingsModal.classList.add('hidden');
-        showToast("AI Settings Saved.");
+        showToast("Settings saved.");
     };
 
     // AI Progress Events from Go
@@ -1575,15 +1640,15 @@ function syncAISettingsSections() {
 
     for (const control of lockedControls) {
         if (control) {
-            control.disabled = aiDisabled || control.disabled;
+            control.disabled = aiDisabled;
         }
     }
 
     document.querySelectorAll('.ai-settings-panels .ai-setting-group').forEach((group) => {
         group.classList.toggle('is-locked', aiDisabled);
     });
-    document.querySelectorAll('.ai-setting-group-editor .ai-setting-option').forEach((option) => {
-        const containsUnlockedControl = option.contains(el.aiFeaturesDisabled) || option.contains(el.aiToggleImeFix);
+    document.querySelectorAll('#settings-panel-ai .ai-setting-option').forEach((option) => {
+        const containsUnlockedControl = option.contains(el.aiFeaturesDisabled);
         option.classList.toggle('is-locked', aiDisabled && !containsUnlockedControl);
     });
 }

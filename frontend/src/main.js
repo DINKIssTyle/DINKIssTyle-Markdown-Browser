@@ -20,18 +20,18 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
+import { persistAppSettings } from './main-settings.js';
 
 import {
     FrontendReady,
     GetSettings,
-    SaveSettings,
     ClearRecentFiles,
     HandleFileDrop,
     GetVersion,
@@ -128,8 +128,10 @@ async function loadSettings() {
     state.currentMarkdownEngine = s.engine || "marked";
     state.currentEngine = state.currentMarkdownEngine;
     state.currentEditorRenderMode = s.editorRenderMode || "realtime";
+    state.lastVersion = s.lastVersion || "";
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
+    applyEditorPreferencesFromSettings(s);
     syncEngineSelector();
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
@@ -191,31 +193,7 @@ async function runSystemIntegration(action) {
 }
 
 async function persist() {
-    await SaveSettings({
-        theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
-        fontSize: state.currentFontSize,
-        engine: state.currentMarkdownEngine,
-        editorRenderMode: state.currentEditorRenderMode,
-        aiFeaturesDisabled: state.aiFeaturesDisabled,
-        aiGeneralEnabled: window.aiState?.generalAvailable ?? true,
-        aiGeneralToolbarEnabled: window.aiState?.generalToolbarEnabled ?? true,
-        aiToolbarCollapsed: state.aiToolbarCollapsed,
-        aiGeneralProvider: window.aiState?.generalProvider || "openai",
-        aiGeneralEndpoint: window.aiState?.generalEndpoint || "",
-        aiGeneralModel: window.aiState?.generalModel || "qwen3.5-35b-a3b",
-        aiGeneralKey: window.aiState?.generalKey || "",
-        aiGeneralTemp: window.aiState?.generalTemp || 0,
-        aiFimEnabled: window.aiState?.fimAvailable ?? true,
-        aiFimToolbarEnabled: window.aiState?.fimEnabled ?? false,
-        aiFimEndpoint: window.aiState?.fimEndpoint || "",
-        aiFimModel: window.aiState?.fimModel || "qwen2.5-coder-0.5b-instruct-mlx",
-        aiFimKey: window.aiState?.fimKey || "",
-        aiFimTemp: window.aiState?.fimTemp || 0,
-        aiSelectionContext: state.aiSelectionContextEnabled,
-        aiGithubCompatible: state.aiGithubCompatibleEnabled,
-        aiSupportAgent: state.aiSupportAgentEnabled,
-        koreanImeEnterFix: state.koreanImeFixEnabled,
-    });
+    await persistAppSettings();
 }
 
 function changeFontSize(delta) {

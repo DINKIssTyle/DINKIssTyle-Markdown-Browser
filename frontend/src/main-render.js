@@ -1110,13 +1110,15 @@ async function updateChangedLivePreviewBlocks(content, token) {
     livePreviewBlocks = blocks;
 }
 
-export function queueEditorPreviewRender(content, editorTopLine, { delay = 100 } = {}) {
+export function queueEditorPreviewRender(content, editorTopLine, { delay = 100, syncScroll = true } = {}) {
     const token = ++previewRenderToken;
     clearTimeout(window._renderTimer);
     window._renderTimer = setTimeout(() => {
         updateChangedLivePreviewBlocks(content, token)
             .then(() => {
-                scrollPreviewToEditorLine(editorTopLine);
+                if (syncScroll) {
+                    scrollPreviewToEditorLine(editorTopLine);
+                }
             })
             .catch(error => {
                 LogError(`Block preview render failed: ${error?.message || error}`);

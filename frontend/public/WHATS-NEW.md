@@ -175,8 +175,16 @@ Proposal Writing    :after a1, 20d
 
 ## 2.0 Beta11
 ### Added & Bug Fixes & Polish
+
+* **에디터와 프리뷰 간 스크롤 동기화**: 이제 에디터의 위치가 마크다운 프리뷰의 스크롤과 동기화됩니다. 설정에서 이를 비활성화할 수 있습니다.
+
 * **Moved documents during editing**: Added an "Open in new tab" button.
 * **Editor-Preview mismatch**: Resolved issues where saving caused inconsistencies between the editor and preview views.
 * **Image drag crash**: Prevented crashes caused by the drag-and-drop functionality.
+
+
+
+
+
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

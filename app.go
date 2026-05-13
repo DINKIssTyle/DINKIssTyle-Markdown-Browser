@@ -61,30 +61,34 @@ type AIModelInfo struct {
 
 // AppSettings represents the application settings
 type AppSettings struct {
-	Theme                   string  `json:"theme"`
-	FontSize                int     `json:"fontSize"`
-	Engine                  string  `json:"engine"`
-	EditorRenderMode        string  `json:"editorRenderMode"`
-	AIFeaturesDisabled      bool    `json:"aiFeaturesDisabled"`
-	AIGeneralEnabled        bool    `json:"aiGeneralEnabled"`
-	AIGeneralToolbarEnabled bool    `json:"aiGeneralToolbarEnabled"`
-	AIToolbarCollapsed      bool    `json:"aiToolbarCollapsed"`
-	AIGeneralEndpoint       string  `json:"aiGeneralEndpoint"`
-	AIGeneralModel          string  `json:"aiGeneralModel"`
-	AIGeneralKey            string  `json:"aiGeneralKey"`
-	AIGeneralTemp           float64 `json:"aiGeneralTemp"`
-	AIFIMEnabled            bool    `json:"aiFimEnabled"`
-	AIFIMToolbarEnabled     bool    `json:"aiFimToolbarEnabled"`
-	AIFIMEndpoint           string  `json:"aiFimEndpoint"`
-	AIFIMModel              string  `json:"aiFimModel"`
-	AIFIMKey                string  `json:"aiFimKey"`
-	AIFIMTemp               float64 `json:"aiFimTemp"`
-	AIGeneralProvider       string  `json:"aiGeneralProvider"` // "openai" or "lmstudio"
-	AISelectionContext      bool    `json:"aiSelectionContext"`
-	AIGithubCompatible      bool    `json:"aiGithubCompatible"`
-	AISupportAgent          bool    `json:"aiSupportAgent"`
-	KoreanImeEnterFix       bool    `json:"koreanImeEnterFix"`
-	LastVersion             string  `json:"lastVersion"`
+	Theme                    string            `json:"theme"`
+	FontSize                 int               `json:"fontSize"`
+	Engine                   string            `json:"engine"`
+	EditorRenderMode         string            `json:"editorRenderMode"`
+	EditorPreviewScrollSync  bool              `json:"editorPreviewScrollSync"`
+	EditorTokenColorsEnabled bool              `json:"editorTokenColorsEnabled"`
+	EditorTokenColors        map[string]string `json:"editorTokenColors"`
+	EditorBackgroundColor    string            `json:"editorBackgroundColor"`
+	AIFeaturesDisabled       bool              `json:"aiFeaturesDisabled"`
+	AIGeneralEnabled         bool              `json:"aiGeneralEnabled"`
+	AIGeneralToolbarEnabled  bool              `json:"aiGeneralToolbarEnabled"`
+	AIToolbarCollapsed       bool              `json:"aiToolbarCollapsed"`
+	AIGeneralEndpoint        string            `json:"aiGeneralEndpoint"`
+	AIGeneralModel           string            `json:"aiGeneralModel"`
+	AIGeneralKey             string            `json:"aiGeneralKey"`
+	AIGeneralTemp            float64           `json:"aiGeneralTemp"`
+	AIFIMEnabled             bool              `json:"aiFimEnabled"`
+	AIFIMToolbarEnabled      bool              `json:"aiFimToolbarEnabled"`
+	AIFIMEndpoint            string            `json:"aiFimEndpoint"`
+	AIFIMModel               string            `json:"aiFimModel"`
+	AIFIMKey                 string            `json:"aiFimKey"`
+	AIFIMTemp                float64           `json:"aiFimTemp"`
+	AIGeneralProvider        string            `json:"aiGeneralProvider"` // "openai" or "lmstudio"
+	AISelectionContext       bool              `json:"aiSelectionContext"`
+	AIGithubCompatible       bool              `json:"aiGithubCompatible"`
+	AISupportAgent           bool              `json:"aiSupportAgent"`
+	KoreanImeEnterFix        bool              `json:"koreanImeEnterFix"`
+	LastVersion              string            `json:"lastVersion"`
 }
 
 // App struct
@@ -454,6 +458,10 @@ func (a *App) GetSettings() AppSettings {
 	settings.FontSize = 16
 	settings.Engine = "marked"             // "marked" | "html"
 	settings.EditorRenderMode = "realtime" // "realtime" | "cursor"
+	settings.EditorPreviewScrollSync = true
+	settings.EditorTokenColorsEnabled = true
+	settings.EditorTokenColors = map[string]string{}
+	settings.EditorBackgroundColor = ""
 	settings.AIGeneralEnabled = true
 	settings.AIGeneralToolbarEnabled = true
 	settings.AIToolbarCollapsed = false

@@ -154,7 +154,7 @@
                 </div>
                 <div class="spacer"></div>
                 <div class="edit-tool-group">
-                    <button id="ed-settings" title="AI Settings" class="tool-btn">
+                    <button id="ed-settings" title="Settings" class="tool-btn">
                         <span class="material-symbols-outlined">settings</span>
                     </button>
                 </div>
@@ -380,109 +380,166 @@
             </div>
         </div>
 
-        <!-- AI Settings Modal -->
+        <!-- Settings Modal -->
         <div id="ai-settings-modal" class="modal-overlay hidden">
             <div class="modal-content ai-settings-content">
-                <h3>AI Settings</h3>
-                <div class="ai-settings-panels">
-                    <section class="ai-setting-group ai-setting-panel">
-                        <div class="ai-setting-header">
-                            <h4>General AI</h4>
-                        </div>
-                        <div class="ai-setting-lead">
-                            <div class="ai-setting-note">
-                                Recommends using LM Studio and requires the use of an <b>Instruct LLM model</b>. *It
-                                will not function correctly when using a Reasoning model.<br>
+                <h3 id="settings-title">Settings</h3>
+                <div class="settings-shell">
+                    <nav class="settings-tabs" role="tablist" aria-label="Settings sections">
+                        <button id="settings-tab-editor" class="settings-tab active" type="button" role="tab"
+                            aria-selected="true" aria-controls="settings-panel-editor">
+                            <span class="material-symbols-outlined" aria-hidden="true">border_color</span>
+                            <span>Editor</span>
+                        </button>
+                        <button id="settings-tab-ai" class="settings-tab" type="button" role="tab" aria-selected="false"
+                            aria-controls="settings-panel-ai">
+                            <span class="material-symbols-outlined" aria-hidden="true">wand_stars</span>
+                            <span>AI</span>
+                        </button>
+                    </nav>
+
+                    <section id="settings-panel-editor" class="settings-panel" role="tabpanel"
+                        aria-labelledby="settings-tab-editor">
+                        <section class="ai-setting-group ai-setting-group-editor">
+                            <div class="ai-setting-header">
+                                <h4>General</h4>
                             </div>
-                        </div>
-                        <div class="ai-setting-grid">
-                            <label class="ai-setting-field">Endpoint
-                                <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
-                            </label>
-                            <label class="ai-setting-field">Model
-                                <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
-                                <div id="ai-general-model-picker" class="ai-model-picker hidden">
-                                    <button type="button" id="ai-general-model-trigger" class="ai-model-trigger"
-                                        aria-haspopup="dialog" aria-expanded="false">
-                                        <span id="ai-general-model-trigger-label" class="ai-model-trigger-label">Choose
-                                            a model...</span>
-                                        <span class="ai-model-trigger-caret">▾</span>
-                                    </button>
-                                    <div id="ai-general-model-popover" class="ai-model-popover hidden">
-                                        <div id="ai-general-model-status" class="ai-model-popover-status">Loading
-                                            models...</div>
-                                        <div id="ai-general-model-list" class="ai-model-popover-list"></div>
+                            <div class="ai-setting-grid ai-setting-grid-single-row">
+                                <div class="ai-setting-option">
+                                    <label class="ai-setting-checkbox-row" for="editor-preview-scroll-sync">
+                                        <input type="checkbox" id="editor-preview-scroll-sync" />
+                                        <span>Sync editor and Markdown preview scrolling</span>
+                                    </label>
+                                    <div class="ai-setting-note">
+                                        Keeps the preview aligned with the visible editor lines while editing.
                                     </div>
                                 </div>
-                            </label>
-                            <label class="ai-setting-field">API Key
-                                <input type="password" id="ai-general-key" placeholder="Bearer Token" />
-                            </label>
-                            <label class="ai-setting-field">Temperature
-                                <input type="number" id="ai-general-temp" min="0" max="1" step="0.1" value="0" />
-                            </label>
-                            <label class="ai-setting-field ai-setting-field-full">Provider
-                                <select id="ai-general-provider">
-                                    <option value="openai">OpenAI (Compatible)</option>
-                                    <option value="lmstudio">LM Studio (Native)</option>
-                                </select>
-                            </label>
-                        </div>
-                    </section>
-                    <section class="ai-setting-group ai-setting-panel">
-                        <div class="ai-setting-header">
-                            <h4>FIM (Ghost Text)</h4>
-                        </div>
-                        <div class="ai-setting-lead">
-                            <div class="ai-setting-note">
-                                Real-time, context-aware code autocomplete. For a seamless typing experience with zero
-                                latency, we highly recommend using a fast, small Instruct model.
+                                <div class="ai-setting-option">
+                                    <label class="ai-setting-checkbox-row" for="ai-toggle-ime-fix">
+                                        <input type="checkbox" id="ai-toggle-ime-fix" />
+                                        <span>CJK IME Enter Fix</span>
+                                    </label>
+                                    <div class="ai-setting-note">
+                                        Helps prevent extra blank lines while typing with a CJK IME. In some cases, you
+                                        may need to press Enter once to commit the final character and a second time to
+                                        insert a new line.
+                                    </div>
+                                </div>
                             </div>
+                        </section>
+                        <section class="ai-setting-group ai-setting-group-editor">
+                            <div class="ai-setting-header">
+                                <h4>Syntax Highlighting</h4>
+                            </div>
+                            <div class="ai-setting-option">
+                                <label class="ai-setting-checkbox-row" for="editor-token-colors-enabled">
+                                    <input type="checkbox" id="editor-token-colors-enabled" />
+                                    <span>Use syntax highlighting</span>
+                                </label>
+                            </div>
+                            <div id="editor-token-preset-list" class="editor-token-preset-list"></div>
+                            <label class="editor-background-color-field" for="editor-background-color">
+                                <span>Editor Background</span>
+                                <input type="color" id="editor-background-color" />
+                            </label>
+                            <div id="editor-token-color-grid" class="editor-token-color-grid"></div>
+                        </section>
+                    </section>
+
+                    <section id="settings-panel-ai" class="settings-panel hidden" role="tabpanel"
+                        aria-labelledby="settings-tab-ai">
+                        <div class="ai-settings-panels">
+                            <section class="ai-setting-group ai-setting-panel">
+                                <div class="ai-setting-header">
+                                    <h4>General AI</h4>
+                                </div>
+                                <div class="ai-setting-lead">
+                                    <div class="ai-setting-note">
+                                        Recommends using LM Studio and requires the use of an <b>Instruct LLM
+                                            model</b>. *It will not function correctly when using a Reasoning
+                                        model.<br>
+                                    </div>
+                                </div>
+                                <div class="ai-setting-grid">
+                                    <label class="ai-setting-field">Endpoint
+                                        <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
+                                    </label>
+                                    <label class="ai-setting-field">Model
+                                        <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
+                                        <div id="ai-general-model-picker" class="ai-model-picker hidden">
+                                            <button type="button" id="ai-general-model-trigger" class="ai-model-trigger"
+                                                aria-haspopup="dialog" aria-expanded="false">
+                                                <span id="ai-general-model-trigger-label"
+                                                    class="ai-model-trigger-label">Choose a model...</span>
+                                                <span class="ai-model-trigger-caret">▾</span>
+                                            </button>
+                                            <div id="ai-general-model-popover" class="ai-model-popover hidden">
+                                                <div id="ai-general-model-status" class="ai-model-popover-status">
+                                                    Loading models...</div>
+                                                <div id="ai-general-model-list" class="ai-model-popover-list"></div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                    <label class="ai-setting-field">API Key
+                                        <input type="password" id="ai-general-key" placeholder="Bearer Token" />
+                                    </label>
+                                    <label class="ai-setting-field">Temperature
+                                        <input type="number" id="ai-general-temp" min="0" max="1" step="0.1"
+                                            value="0" />
+                                    </label>
+                                    <label class="ai-setting-field ai-setting-field-full">Provider
+                                        <select id="ai-general-provider">
+                                            <option value="openai">OpenAI (Compatible)</option>
+                                            <option value="lmstudio">LM Studio (Native)</option>
+                                        </select>
+                                    </label>
+                                </div>
+                            </section>
+                            <section class="ai-setting-group ai-setting-panel">
+                                <div class="ai-setting-header">
+                                    <h4>FIM (Ghost Text)</h4>
+                                </div>
+                                <div class="ai-setting-lead">
+                                    <div class="ai-setting-note">
+                                        Real-time, context-aware code autocomplete. For a seamless typing experience
+                                        with zero latency, we highly recommend using a fast, small Instruct model.
+                                    </div>
+                                </div>
+                                <div class="ai-setting-grid">
+                                    <label class="ai-setting-field">Endpoint
+                                        <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
+                                    </label>
+                                    <label class="ai-setting-field">Model
+                                        <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
+                                    </label>
+                                    <label class="ai-setting-field">API Key
+                                        <input type="password" id="ai-fim-key" placeholder="Bearer Token" />
+                                    </label>
+                                    <label class="ai-setting-field">Temperature
+                                        <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
+                                    </label>
+                                </div>
+                            </section>
                         </div>
-                        <div class="ai-setting-grid">
-                            <label class="ai-setting-field">Endpoint
-                                <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
-                            </label>
-                            <label class="ai-setting-field">Model
-                                <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
-                            </label>
-                            <label class="ai-setting-field">API Key
-                                <input type="password" id="ai-fim-key" placeholder="Bearer Token" />
-                            </label>
-                            <label class="ai-setting-field">Temperature
-                                <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
-                            </label>
-                        </div>
+                        <section class="ai-setting-group ai-advanced-options">
+                            <div class="ai-setting-header ai-setting-header-tight">
+                                <h4>Advanced Options</h4>
+                            </div>
+                            <div class="ai-setting-grid ai-setting-grid-single-row">
+                                <div class="ai-setting-option">
+                                    <label class="ai-setting-checkbox-row" for="ai-features-disabled">
+                                        <input type="checkbox" id="ai-features-disabled" />
+                                        <span>Disable AI Features</span>
+                                    </label>
+                                    <div class="ai-setting-note">
+                                        Hides editor AI controls and locks all AI settings below without clearing their
+                                        saved values.
+                                    </div>
+                                </div>
+                            </div>
+                        </section>
                     </section>
                 </div>
-                <section class="ai-setting-group ai-setting-group-editor">
-                    <div class="ai-setting-header ai-setting-header-tight">
-                        <h4>Advanced Options</h4>
-                    </div>
-                    <div class="ai-setting-grid ai-setting-grid-single-row">
-                        <div class="ai-setting-option">
-                            <label class="ai-setting-checkbox-row" for="ai-features-disabled">
-                                <input type="checkbox" id="ai-features-disabled" />
-                                <span>Disable AI Features</span>
-                            </label>
-                            <div class="ai-setting-note">
-                                Hides editor AI controls and locks all AI settings below without clearing their saved
-                                values.
-                            </div>
-                        </div>
-                        <div class="ai-setting-option">
-                            <label class="ai-setting-checkbox-row" for="ai-toggle-ime-fix">
-                                <input type="checkbox" id="ai-toggle-ime-fix" />
-                                <span>CJK IME Enter Fix</span>
-                            </label>
-                            <div class="ai-setting-note">
-                                Helps prevent extra blank lines while typing with a CJK IME. In some cases, you may
-                                need to press Enter once to commit the final character and a second time to insert a new
-                                line.
-                            </div>
-                        </div>
-                    </div>
-                </section>
                 <div class="modal-actions">
                     <button id="ai-settings-cancel" class="modal-btn secondary">Cancel</button>
                     <button id="ai-settings-save" class="modal-btn primary">Save</button>

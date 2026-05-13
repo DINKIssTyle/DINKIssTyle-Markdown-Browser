@@ -25,6 +25,10 @@ export namespace main {
 	    fontSize: number;
 	    engine: string;
 	    editorRenderMode: string;
+	    editorPreviewScrollSync: boolean;
+	    editorTokenColorsEnabled: boolean;
+	    editorTokenColors: Record<string, string>;
+	    editorBackgroundColor: string;
 	    aiFeaturesDisabled: boolean;
 	    aiGeneralEnabled: boolean;
 	    aiGeneralToolbarEnabled: boolean;
@@ -56,6 +60,10 @@ export namespace main {
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];
+	        this.editorPreviewScrollSync = source["editorPreviewScrollSync"];
+	        this.editorTokenColorsEnabled = source["editorTokenColorsEnabled"];
+	        this.editorTokenColors = source["editorTokenColors"];
+	        this.editorBackgroundColor = source["editorBackgroundColor"];
 	        this.aiFeaturesDisabled = source["aiFeaturesDisabled"];
 	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
 	        this.aiGeneralToolbarEnabled = source["aiGeneralToolbarEnabled"];
