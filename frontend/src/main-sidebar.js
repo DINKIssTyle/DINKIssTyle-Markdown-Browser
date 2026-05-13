@@ -6,7 +6,7 @@
 import {
     state, el, HOME_SCREEN_PATH,
     getPathDirname, documentTypeFromPath, basename,
-    escapeHTML, escapeAttr, isBundledDocumentPath,
+    escapeHTML, escapeAttr, isBundledDocumentPath, getScroller,
 } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
@@ -139,7 +139,13 @@ export function updateOutline() {
         return;
     }
 
-    el.markdownOutline.innerHTML = headings.map((h, index) => {
+    const topItemHTML = `
+        <div class="outline-item outline-top-item" data-action="top">
+            <span class="outline-text">Top of document</span>
+        </div>
+    `;
+
+    el.markdownOutline.innerHTML = topItemHTML + headings.map((h, index) => {
         const level = parseInt(h.tagName.substring(1));
         const text = h.innerText || h.textContent;
         return `
@@ -151,9 +157,17 @@ export function updateOutline() {
 
     el.markdownOutline.querySelectorAll('.outline-item').forEach(item => {
         item.onclick = () => {
+            if (item.dataset.action === 'top') {
+                getScroller().scrollTo({ top: 0, behavior: 'smooth' });
+                if (state.isEditing) {
+                    scrollEditorToLine(1);
+                }
+                return;
+            }
+
             const index = item.dataset.index;
             const heading = headings[index];
-            heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            scrollPreviewHeadingToTop(heading);
 
             // 에디터 상태면 에디터 스크롤도 이동
             if (state.isEditing) {
@@ -163,6 +177,20 @@ export function updateOutline() {
                 }
             }
         };
+    });
+}
+
+function scrollPreviewHeadingToTop(heading) {
+    const scroller = getScroller();
+    if (!heading || !scroller) return;
+
+    const scrollerRect = scroller.getBoundingClientRect();
+    const headingRect = heading.getBoundingClientRect();
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const targetTop = scroller.scrollTop + (headingRect.top - scrollerRect.top);
+    scroller.scrollTo({
+        top: Math.min(maxScrollTop, Math.max(0, targetTop)),
+        behavior: 'smooth',
     });
 }
 

@@ -47,6 +47,20 @@ let previewRenderToken = 0;
 let livePreviewBlocks = [];
 let imageViewerZoom = 1;
 let imageViewerFit = true;
+let activeLinkTooltipAnchor = null;
+
+export function hideLinkTooltip() {
+    if (el.linkTooltip) {
+        el.linkTooltip.classList.add('hidden');
+        el.linkTooltip.textContent = "";
+    }
+
+    if (activeLinkTooltipAnchor?._updateTooltipPos) {
+        activeLinkTooltipAnchor.removeEventListener('mousemove', activeLinkTooltipAnchor._updateTooltipPos);
+        delete activeLinkTooltipAnchor._updateTooltipPos;
+    }
+    activeLinkTooltipAnchor = null;
+}
 
 function captureLivePreviewScrollAnchor() {
     if (!state.isEditing || state.currentEditorRenderMode !== 'realtime') {
@@ -1001,6 +1015,8 @@ async function postProcess(container = el.markdownContainer) {
 
         const handleMouseEnter = (event) => {
             if (!el.linkTooltip) return;
+            hideLinkTooltip();
+            activeLinkTooltipAnchor = anchor;
             el.linkTooltip.textContent = href;
             el.linkTooltip.classList.remove('hidden');
 
@@ -1027,12 +1043,7 @@ async function postProcess(container = el.markdownContainer) {
         };
 
         const handleMouseLeave = () => {
-            if (!el.linkTooltip) return;
-            el.linkTooltip.classList.add('hidden');
-            if (anchor._updateTooltipPos) {
-                anchor.removeEventListener('mousemove', anchor._updateTooltipPos);
-                delete anchor._updateTooltipPos;
-            }
+            hideLinkTooltip();
         };
 
         anchor.addEventListener('click', handleLinkNavigation);
@@ -1218,6 +1229,7 @@ export async function renderActiveTab() {
     const tab = getActiveTab();
     if (!tab) return;
 
+    hideLinkTooltip();
     syncEngineSelector();
     el.currentPath.innerText = formatDisplayPath(state.currentFilePath);
 

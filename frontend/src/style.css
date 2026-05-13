@@ -555,6 +555,14 @@ html.dark .nav-btn:hover {
     opacity: 1;
 }
 
+.outline-top-item {
+    font-weight: 600;
+    color: var(--accent-color);
+    border-bottom: 1px solid var(--border-color);
+    margin-bottom: 4px;
+    padding-bottom: 9px;
+}
+
 .outline-item.level-1 { font-weight: 700; padding-left: 16px; }
 .outline-item.level-2 { padding-left: 28px; }
 .outline-item.level-3 { padding-left: 40px; }

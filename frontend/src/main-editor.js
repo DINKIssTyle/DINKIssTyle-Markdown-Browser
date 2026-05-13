@@ -7,7 +7,7 @@ import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js
 import { state, el, getPathDirname, formatSaveDialogMessage, debounce } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab } from './main-tabs.js';
-import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines } from './main-render.js';
+import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
 import { showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
@@ -1255,6 +1255,7 @@ export function enterEditMode() {
     }
     if (state.currentDocumentType !== 'markdown') return;
 
+    hideLinkTooltip();
     initCodeMirror();
 
     state.isEditing = true;
@@ -1297,6 +1298,7 @@ export function enterEditMode() {
 
 export async function exitEditMode(didSave = false) {
     if (!state.isEditing) return;
+    hideLinkTooltip();
     closeSlashMenu();
     clearTimeout(window._renderTimer);
 
@@ -2084,9 +2086,16 @@ export function bindEditorEvents() {
 export function scrollEditorToLine(lineNumber) {
     if (!cmView) return;
     try {
-        const line = cmView.state.doc.line(Math.max(1, Math.min(lineNumber, cmView.state.doc.lines)));
+        const targetLine = Math.max(1, Math.min(lineNumber, cmView.state.doc.lines));
+        const line = cmView.state.doc.line(targetLine);
         cmView.dispatch({
             effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 20 })
+        });
+        requestAnimationFrame(() => {
+            scrollPreviewToEditorLine(targetLine);
+            requestAnimationFrame(() => {
+                scrollPreviewToEditorLine(targetLine);
+            });
         });
     } catch (e) {
         console.warn('Failed to scroll editor to line:', lineNumber, e);
