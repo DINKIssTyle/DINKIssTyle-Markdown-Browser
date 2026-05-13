@@ -139,32 +139,35 @@ export function updateOutline() {
         return;
     }
 
-    const topItemHTML = `
-        <div class="outline-item outline-top-item" data-action="top">
-            <span class="outline-text">Top of document</span>
-        </div>
-    `;
-
-    el.markdownOutline.innerHTML = topItemHTML + headings.map((h, index) => {
+    el.markdownOutline.innerHTML = headings.map((h, index) => {
         const level = parseInt(h.tagName.substring(1));
         const text = h.innerText || h.textContent;
+        const topButton = index === 0 ? `
+                <button class="outline-top-btn" type="button" title="Top of document" aria-label="Top of document">
+                    <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
+                </button>
+            ` : '';
         return `
-            <div class="outline-item level-${level}" data-index="${index}">
-                <span class="outline-text">${text}</span>
+            <div class="outline-item level-${level} ${index === 0 ? 'has-top-button' : ''}" data-index="${index}">
+                <span class="outline-text">${escapeHTML(text)}</span>
+                ${topButton}
             </div>
         `;
     }).join('');
 
+    el.markdownOutline.querySelectorAll('.outline-top-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            getScroller().scrollTo({ top: 0, behavior: 'smooth' });
+            if (state.isEditing) {
+                scrollEditorToLine(1);
+            }
+        });
+    });
+
     el.markdownOutline.querySelectorAll('.outline-item').forEach(item => {
         item.onclick = () => {
-            if (item.dataset.action === 'top') {
-                getScroller().scrollTo({ top: 0, behavior: 'smooth' });
-                if (state.isEditing) {
-                    scrollEditorToLine(1);
-                }
-                return;
-            }
-
             const index = item.dataset.index;
             const heading = headings[index];
             scrollPreviewHeadingToTop(heading);
@@ -194,9 +197,10 @@ function scrollPreviewHeadingToTop(heading) {
     });
 }
 
-async function updateFileTree() {
+async function updateFileTree(options = {}) {
     if (!el.fileTree) return;
 
+    const forceRefresh = !!options.forceRefresh;
     const rootPath = getFileTreeRootPath();
     if (!rootPath) {
         el.fileTree.innerHTML = renderFileTreeHint();
@@ -204,7 +208,7 @@ async function updateFileTree() {
     }
 
     expandedFileTreePaths.add(rootPath);
-    if (rootPath === fileTreeRootPath && fileTreeRootNode) {
+    if (!forceRefresh && rootPath === fileTreeRootPath && fileTreeRootNode) {
         el.fileTree.innerHTML = renderFileTree(fileTreeRootNode, 0, true);
         bindFileTreeEvents();
         return;
@@ -212,6 +216,7 @@ async function updateFileTree() {
 
     fileTreeRootPath = rootPath;
     fileTreeRootNode = null;
+    loadingFileTreePaths.clear();
     el.fileTree.innerHTML = '<div class="sidebar-hint">Loading files...</div>';
 
     try {
@@ -254,9 +259,14 @@ function renderFileTree(node, depth, isRoot = false) {
     const icon = isDir ? (isExpanded ? 'folder_open' : 'folder') : iconForFile(node.name);
     const current = !isDir && node.path === state.currentFilePath;
     const isLoading = loadingFileTreePaths.has(node.path);
+    const refreshButton = isRoot ? `
+            <button class="file-tree-refresh-btn" type="button" title="Refresh file tree" aria-label="Refresh file tree">
+                <span class="material-symbols-outlined" aria-hidden="true">cached</span>
+            </button>
+        ` : '';
 
     const row = `
-        <div class="file-tree-item ${isDir ? 'is-dir' : 'is-file'} ${current ? 'active' : ''}"
+        <div class="file-tree-item ${isDir ? 'is-dir' : 'is-file'} ${isRoot ? 'is-root has-refresh' : ''} ${current ? 'active' : ''}"
             data-path="${escapeAttr(node.path)}"
             data-kind="${isDir ? 'dir' : 'file'}"
             style="--tree-depth: ${depth};"
@@ -264,6 +274,7 @@ function renderFileTree(node, depth, isRoot = false) {
             <span class="file-tree-toggle material-symbols-outlined" aria-hidden="true">${canExpand ? (isExpanded ? 'expand_more' : 'chevron_right') : ''}</span>
             <span class="file-tree-icon material-symbols-outlined" aria-hidden="true">${icon}</span>
             <span class="file-tree-name">${escapeHTML(node.name || basename(node.path))}</span>
+            ${refreshButton}
         </div>
     `;
 
@@ -279,8 +290,17 @@ function renderFileTree(node, depth, isRoot = false) {
 }
 
 function bindFileTreeEvents() {
+    el.fileTree.querySelectorAll('.file-tree-refresh-btn').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            await updateFileTree({ forceRefresh: true });
+        });
+    });
+
     el.fileTree.querySelectorAll('.file-tree-item').forEach(item => {
-        item.addEventListener('click', async () => {
+        item.addEventListener('click', async (event) => {
+            if (event.target.closest('.file-tree-refresh-btn')) return;
             const path = item.dataset.path;
             if (!path) return;
 
