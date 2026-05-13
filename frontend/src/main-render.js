@@ -192,7 +192,7 @@ function annotateLivePreviewBlockLineAnchors(section, block) {
 
     const lines = String(block.content || '').split('\n');
     const headings = Array.from(section.querySelectorAll(':scope > h1, :scope > h2, :scope > h3, :scope > h4, :scope > h5, :scope > h6'));
-    const listItems = Array.from(section.querySelectorAll('li'));
+    const listItems = Array.from(section.querySelectorAll(':scope > ul > li, :scope > ol > li, :scope > li'));
     const horizontalRules = Array.from(section.querySelectorAll(':scope > hr'));
     const codeBlocks = Array.from(section.querySelectorAll(':scope > pre, :scope > .mermaid-rendered'));
     const tables = Array.from(section.querySelectorAll(':scope > table'));
@@ -333,35 +333,170 @@ function getLivePreviewLineTarget(lineNumber, { exact = false } = {}) {
     return closestAfter || closestBefore;
 }
 
-export function scrollPreviewToEditorLines(lineNumbers) {
+function setupImageLoadScrollSync(container) {
+    const images = container.querySelectorAll('img');
+    if (images.length === 0) return;
+
+    const handleImageLoad = debounce(() => {
+        if (state.isEditing && isActiveMarkdownEditTab()) {
+            import('./main-editor.js').then(mod => {
+                mod.triggerImmediateScrollSync();
+            });
+        }
+    }, 100);
+
+    images.forEach(img => {
+        if (img.complete) return;
+        img.addEventListener('load', handleImageLoad, { once: true });
+        img.addEventListener('error', handleImageLoad, { once: true });
+    });
+}
+
+function buildScrollAnchorMap() {
+    const scroller = getScroller();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const anchors = [];
+    const seenLines = new Set();
+
+    const addAnchor = (line, pos) => {
+        if (line <= 0 || seenLines.has(line)) return;
+        seenLines.add(line);
+        anchors.push({ line, pos });
+    };
+
+    // 1. Add all live block sections (coarse but very reliable)
+    const sections = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_ATTR}]`));
+    for (const section of sections) {
+        const startLine = Number(section.getAttribute(LIVE_BLOCK_START_LINE_ATTR));
+        const endLine = Number(section.getAttribute(LIVE_BLOCK_END_LINE_ATTR));
+        if (isNaN(startLine)) continue;
+
+        const rect = section.getBoundingClientRect();
+        addAnchor(startLine, scroller.scrollTop + (rect.top - scrollerRect.top));
+        if (endLine > startLine) {
+            addAnchor(endLine, scroller.scrollTop + (rect.bottom - scrollerRect.top));
+        }
+    }
+
+    // 2. Add granular line-level nodes (fine-grained matching)
+    const nodes = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_LINE_START_ATTR}]`));
+    for (const node of nodes) {
+        const startLine = Number(node.getAttribute(LIVE_LINE_START_ATTR)) || 1;
+        const endLine = Number(node.getAttribute(LIVE_LINE_END_ATTR)) || startLine;
+        const nodeRect = node.getBoundingClientRect();
+        
+        addAnchor(startLine, scroller.scrollTop + (nodeRect.top - scrollerRect.top));
+        if (endLine > startLine) {
+            addAnchor(endLine, scroller.scrollTop + (nodeRect.bottom - scrollerRect.top));
+        }
+    }
+
+    anchors.sort((a, b) => a.line - b.line);
+    return anchors;
+}
+
+function interpolateScrollPosition(anchors, targetLine, totalLines) {
+    const scroller = getScroller();
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+
+    if (anchors.length === 0) {
+        const ratio = Math.max(0, (targetLine - 1)) / Math.max(1, totalLines - 1);
+        return Math.round(ratio * maxScrollTop);
+    }
+
+    // Build full anchor list with boundary anchors
+    const fullAnchors = [];
+    if (anchors[0].line > 1) {
+        fullAnchors.push({ line: 1, pos: 0 });
+    }
+    fullAnchors.push(...anchors);
+    if (fullAnchors[fullAnchors.length - 1].line < totalLines) {
+        fullAnchors.push({ line: totalLines, pos: maxScrollTop });
+    }
+
+    // Clamp at boundaries
+    if (targetLine <= fullAnchors[0].line) {
+        return Math.max(0, fullAnchors[0].pos);
+    }
+    if (targetLine >= fullAnchors[fullAnchors.length - 1].line) {
+        return maxScrollTop;
+    }
+
+    // Find bracketing pair and interpolate
+    for (let i = 0; i < fullAnchors.length - 1; i++) {
+        if (fullAnchors[i].line <= targetLine && fullAnchors[i + 1].line >= targetLine) {
+            const span = fullAnchors[i + 1].line - fullAnchors[i].line;
+            if (span === 0) return fullAnchors[i].pos;
+            const t = (targetLine - fullAnchors[i].line) / span;
+            const pos = fullAnchors[i].pos + t * (fullAnchors[i + 1].pos - fullAnchors[i].pos);
+            return Math.min(maxScrollTop, Math.max(0, pos));
+        }
+    }
+
+    return Math.min(maxScrollTop, Math.max(0, fullAnchors[fullAnchors.length - 1].pos));
+}
+
+function estimateTotalLines() {
+    const nodes = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_LINE_END_ATTR}]`));
+    let maxLine = 1;
+    for (const node of nodes) {
+        const endLine = Number(node.getAttribute(LIVE_LINE_END_ATTR)) || 1;
+        if (endLine > maxLine) maxLine = endLine;
+    }
+    const blockNodes = Array.from(el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_END_LINE_ATTR}]`));
+    for (const node of blockNodes) {
+        const endLine = Number(node.getAttribute(LIVE_BLOCK_END_LINE_ATTR)) || 1;
+        if (endLine > maxLine) maxLine = endLine;
+    }
+    return maxLine;
+}
+
+export function scrollPreviewToEditorLines(lineNumbers, editorScrollInfo) {
     const candidates = Array.from(new Set((Array.isArray(lineNumbers) ? lineNumbers : [lineNumbers])
         .map(line => Math.max(1, Number(line) || 1))));
     if (candidates.length === 0) {
         return;
     }
 
-    const exactTarget = candidates
-        .map(line => getLivePreviewLineTarget(line, { exact: true }))
-        .find(Boolean);
-    if (exactTarget) {
-        scrollPreviewToNode(exactTarget);
+    if (!state.isEditing || !isActiveMarkdownEditTab()) {
         return;
     }
-
-    scrollPreviewToEditorLine(candidates[0]);
-}
-
-function scrollPreviewToNode(targetNode) {
-    if (!targetNode) {
+    if (state.editingPreviewPath && state.editingSourcePath && state.editingPreviewPath !== state.editingSourcePath) {
         return;
     }
 
     const scroller = getScroller();
-    const scrollerRect = scroller.getBoundingClientRect();
-    const targetRect = targetNode.getBoundingClientRect();
     const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-    const desiredScrollTop = scroller.scrollTop + (targetRect.top - scrollerRect.top);
-    scroller.scrollTop = Math.min(maxScrollTop, Math.max(0, desiredScrollTop));
+    if (maxScrollTop <= 0) {
+        return;
+    }
+
+    // Edge-snap: if editor is at the very top or very bottom, snap preview accordingly
+    if (editorScrollInfo) {
+        if (editorScrollInfo.scrollTop <= 0) {
+            scroller.scrollTop = 0;
+            return;
+        }
+        if (editorScrollInfo.scrollTop >= editorScrollInfo.maxScrollTop && editorScrollInfo.maxScrollTop > 0) {
+            scroller.scrollTop = maxScrollTop;
+            return;
+        }
+    }
+
+    const primaryLine = candidates[0];
+    const totalLines = editorScrollInfo?.totalLines || estimateTotalLines();
+    const anchors = buildScrollAnchorMap();
+
+    if (anchors.length > 0) {
+        scroller.scrollTop = interpolateScrollPosition(anchors, primaryLine, totalLines);
+        return;
+    }
+
+    // Fallback: use editor scroll ratio
+    if (editorScrollInfo && editorScrollInfo.maxScrollTop > 0) {
+        const ratio = editorScrollInfo.scrollTop / editorScrollInfo.maxScrollTop;
+        scroller.scrollTop = Math.round(ratio * maxScrollTop);
+    }
 }
 
 export function scrollPreviewToEditorLine(lineNumber) {
@@ -372,12 +507,28 @@ export function scrollPreviewToEditorLine(lineNumber) {
         return;
     }
 
+    const targetLine = Math.max(1, Number(lineNumber) || 1);
+    const totalLines = estimateTotalLines();
+    const anchors = buildScrollAnchorMap();
+
+    if (anchors.length > 0) {
+        const scroller = getScroller();
+        scroller.scrollTop = interpolateScrollPosition(anchors, targetLine, totalLines);
+        return;
+    }
+
+    // Fallback to block-level
     const targetNode = getLivePreviewLineTarget(lineNumber) || getLivePreviewBlockForLine(lineNumber)?.node;
     if (!targetNode) {
         return;
     }
 
-    scrollPreviewToNode(targetNode);
+    const scroller = getScroller();
+    const scrollerRect = scroller.getBoundingClientRect();
+    const targetRect = targetNode.getBoundingClientRect();
+    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+    const desiredScrollTop = scroller.scrollTop + (targetRect.top - scrollerRect.top);
+    scroller.scrollTop = Math.min(maxScrollTop, Math.max(0, desiredScrollTop));
 }
 
 function isEscaped(text, index) {
@@ -805,7 +956,7 @@ function splitMarkdownIntoBlocks(content) {
         if (segment.trim()) {
             pushBlock(segment, currentLine);
         }
-        currentLine += segmentLineCount + match[0].length;
+        currentLine += (segmentLineCount - 1) + match[0].length;
         lastIndex = match.index + match[0].length;
     }
 
@@ -897,6 +1048,7 @@ async function renderMarkdownLiveBlocks(content, token) {
     el.markdownContainer.innerHTML = blockMarkup.join('');
     renderMathPlaceholders(el.markdownContainer);
     await postProcess(el.markdownContainer);
+    setupImageLoadScrollSync(el.markdownContainer);
     annotateLivePreviewLineAnchors(blocks, el.markdownContainer);
     restoreLivePreviewScrollAnchor(scrollAnchor);
     syncEditingPreviewReturnButton();
@@ -949,6 +1101,7 @@ async function updateChangedLivePreviewBlocks(content, token) {
         targetNode.innerHTML = html;
         renderMathPlaceholders(targetNode);
         await postProcess(targetNode);
+        setupImageLoadScrollSync(targetNode);
         annotateLivePreviewBlockLineAnchors(targetNode, blocks[index]);
     }
 

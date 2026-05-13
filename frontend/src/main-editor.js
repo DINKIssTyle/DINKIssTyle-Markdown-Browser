@@ -196,8 +196,19 @@ function schedulePreviewScrollSync(view = cmView) {
         const visibleLines = getVisibleLineNumbers(view);
         const nextTopLine = visibleLines[0] || 1;
         lastPreviewTopLine = nextTopLine;
-        scrollPreviewToEditorLines(visibleLines);
+        const editorScrollInfo = {
+            scrollTop: view.scrollDOM.scrollTop,
+            maxScrollTop: Math.max(0, view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight),
+            totalLines: view.state.doc.lines,
+        };
+        scrollPreviewToEditorLines(visibleLines, editorScrollInfo);
     });
+}
+
+export function triggerImmediateScrollSync() {
+    if (cmView) {
+        schedulePreviewScrollSync(cmView);
+    }
 }
 
 function bindEditorScrollSync() {
