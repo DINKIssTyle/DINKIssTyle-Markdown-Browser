@@ -997,7 +997,45 @@ async function postProcess(container = el.markdownContainer) {
             import('./main-navigation.js').then(mod => mod.resolveLink(href, { newTab: wantsNewTab }));
         };
 
+        const handleMouseEnter = (event) => {
+            if (!el.linkTooltip) return;
+            el.linkTooltip.textContent = href;
+            el.linkTooltip.classList.remove('hidden');
+
+            const updatePosition = (e) => {
+                const padding = 16;
+                let x = e.clientX + 15;
+                let y = e.clientY + 15;
+
+                const rect = el.linkTooltip.getBoundingClientRect();
+                if (x + rect.width > window.innerWidth - padding) {
+                    x = e.clientX - rect.width - 5;
+                }
+                if (y + rect.height > window.innerHeight - padding) {
+                    y = e.clientY - rect.height - 5;
+                }
+
+                el.linkTooltip.style.left = `${x}px`;
+                el.linkTooltip.style.top = `${y}px`;
+            };
+
+            updatePosition(event);
+            anchor.addEventListener('mousemove', updatePosition);
+            anchor._updateTooltipPos = updatePosition;
+        };
+
+        const handleMouseLeave = () => {
+            if (!el.linkTooltip) return;
+            el.linkTooltip.classList.add('hidden');
+            if (anchor._updateTooltipPos) {
+                anchor.removeEventListener('mousemove', anchor._updateTooltipPos);
+                delete anchor._updateTooltipPos;
+            }
+        };
+
         anchor.addEventListener('click', handleLinkNavigation);
+        anchor.addEventListener('mouseenter', handleMouseEnter);
+        anchor.addEventListener('mouseleave', handleMouseLeave);
         anchor.addEventListener('auxclick', event => {
             if (event.button === 1) {
                 handleLinkNavigation(event);

@@ -3783,3 +3783,32 @@ html.dark .ai-prompt-shell:focus-within {
 .cm-line {
     color: inherit;
 }
+
+/* Link Tooltip */
+.link-tooltip {
+    position: fixed;
+    z-index: 10000;
+    background: rgba(0, 0, 0, 0.85);
+    color: white;
+    padding: 6px 12px;
+    border-radius: 6px;
+    font-size: 12px;
+    pointer-events: none;
+    transition: opacity 0.15s ease;
+    max-width: 450px;
+    word-break: break-all;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4);
+    border: 1px solid rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
+}
+
+.link-tooltip.hidden {
+    opacity: 0;
+    visibility: hidden;
+}
+
+.dark .link-tooltip {
+    background: rgba(45, 45, 45, 0.9);
+    border-color: rgba(255, 255, 255, 0.05);
+}

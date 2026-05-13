@@ -103,6 +103,7 @@ export const el = {
     edFontPlus: $('ed-font-plus'),
     edCancel: $('ed-cancel'),
     edSave: $('ed-save'),
+    linkTooltip: $('link-tooltip'),
     btnNewDoc: $('btn-new-doc'),
     edDiv: $('ed-div'),
     edGeneralAi: $('ed-general-ai'),
