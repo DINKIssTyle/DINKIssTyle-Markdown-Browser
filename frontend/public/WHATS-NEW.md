@@ -89,6 +89,8 @@ done
 
 - **Fixed popup tooltip;** added multilingual support.
 - **Remove emoji toast**: Now change emojis in toast messages to Google Material Symbols.
+- **File tree filter**: Clicking the filter icon will show only supported files.
+
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
