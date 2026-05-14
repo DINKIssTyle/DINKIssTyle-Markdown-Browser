@@ -239,6 +239,7 @@ export const state = {
     koreanImeFixEnabled: false,
     lastVersion: "",
     fileTreeFilterEnabled: false,
+    outlineHeadingFormatEnabled: false,
 };
 
 // ── Pure Utility Functions ─────────────────────────────────

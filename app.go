@@ -78,6 +78,8 @@ type AppSettings struct {
 	EditorTokenColorsEnabled bool              `json:"editorTokenColorsEnabled"`
 	EditorTokenColors        map[string]string `json:"editorTokenColors"`
 	EditorBackgroundColor    string            `json:"editorBackgroundColor"`
+	FileTreeFilterEnabled    bool              `json:"fileTreeFilterEnabled"`
+	OutlineHeadingFormat     bool              `json:"outlineHeadingFormat"`
 	AIFeaturesDisabled       bool              `json:"aiFeaturesDisabled"`
 	AIGeneralEnabled         bool              `json:"aiGeneralEnabled"`
 	AIGeneralToolbarEnabled  bool              `json:"aiGeneralToolbarEnabled"`
@@ -558,6 +560,8 @@ func (a *App) GetSettings() AppSettings {
 	settings.EditorTokenColorsEnabled = true
 	settings.EditorTokenColors = map[string]string{}
 	settings.EditorBackgroundColor = ""
+	settings.FileTreeFilterEnabled = false
+	settings.OutlineHeadingFormat = false
 	settings.AIGeneralEnabled = true
 	settings.AIGeneralToolbarEnabled = true
 	settings.AIToolbarCollapsed = false

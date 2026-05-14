@@ -29,6 +29,8 @@ export namespace main {
 	    editorTokenColorsEnabled: boolean;
 	    editorTokenColors: Record<string, string>;
 	    editorBackgroundColor: string;
+	    fileTreeFilterEnabled: boolean;
+	    outlineHeadingFormat: boolean;
 	    aiFeaturesDisabled: boolean;
 	    aiGeneralEnabled: boolean;
 	    aiGeneralToolbarEnabled: boolean;
@@ -64,6 +66,8 @@ export namespace main {
 	        this.editorTokenColorsEnabled = source["editorTokenColorsEnabled"];
 	        this.editorTokenColors = source["editorTokenColors"];
 	        this.editorBackgroundColor = source["editorBackgroundColor"];
+	        this.fileTreeFilterEnabled = source["fileTreeFilterEnabled"];
+	        this.outlineHeadingFormat = source["outlineHeadingFormat"];
 	        this.aiFeaturesDisabled = source["aiFeaturesDisabled"];
 	        this.aiGeneralEnabled = source["aiGeneralEnabled"];
 	        this.aiGeneralToolbarEnabled = source["aiGeneralToolbarEnabled"];

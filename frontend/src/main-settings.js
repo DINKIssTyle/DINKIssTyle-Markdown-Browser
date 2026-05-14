@@ -16,6 +16,8 @@ export function buildSettingsPayload(overrides = {}) {
         editorTokenColorsEnabled: state.editorTokenColorsEnabled,
         editorTokenColors: state.editorTokenColors,
         editorBackgroundColor: state.editorBackgroundColor,
+        fileTreeFilterEnabled: state.fileTreeFilterEnabled,
+        outlineHeadingFormat: state.outlineHeadingFormatEnabled,
         aiFeaturesDisabled: state.aiFeaturesDisabled,
         aiGeneralEnabled: window.aiState?.generalAvailable ?? true,
         aiGeneralToolbarEnabled: window.aiState?.generalToolbarEnabled ?? true,

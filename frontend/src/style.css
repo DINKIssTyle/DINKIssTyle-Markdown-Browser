@@ -578,9 +578,9 @@ html.dark .nav-btn:hover {
     opacity: 0.8;
 }
 
-.outline-item.has-top-button {
+.outline-item.has-tools {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 26px;
+    grid-template-columns: minmax(0, 1fr) 26px 26px;
     align-items: center;
     gap: 6px;
 }
@@ -605,6 +605,7 @@ html.dark .nav-btn:hover {
     white-space: nowrap;
 }
 
+.outline-format-btn,
 .outline-top-btn {
     width: 24px;
     height: 24px;
@@ -620,19 +621,64 @@ html.dark .nav-btn:hover {
     transition: background 0.16s ease, color 0.16s ease, opacity 0.16s ease, transform 0.16s ease;
 }
 
+.outline-format-btn:hover,
 .outline-top-btn:hover {
     background: rgba(128, 128, 128, 0.14);
     color: var(--accent-color);
     opacity: 1;
 }
 
+.outline-format-btn.active {
+    color: var(--accent-color);
+    opacity: 1;
+}
+
+.outline-format-btn:active,
 .outline-top-btn:active {
     transform: translateY(-1px) scale(0.96);
 }
 
+.outline-format-btn .material-symbols-outlined,
 .outline-top-btn .material-symbols-outlined {
     font-size: 18px;
     line-height: 1;
+}
+
+.markdown-outline.is-heading-formatted .outline-item {
+    opacity: 0.86;
+}
+
+.markdown-outline.is-heading-formatted .outline-text {
+    font-weight: inherit;
+}
+
+.markdown-outline.is-heading-formatted .outline-item.level-1 {
+    font-size: 14.5px;
+    font-weight: 700;
+    opacity: 0.95;
+}
+
+.markdown-outline.is-heading-formatted .outline-item.level-2 {
+    font-size: 13.5px;
+    font-weight: 700;
+    opacity: 0.95;
+}
+
+.markdown-outline.is-heading-formatted .outline-item.level-3 {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.markdown-outline.is-heading-formatted .outline-item.level-4 {
+    font-size: 13px;
+    font-weight: 500;
+}
+
+.markdown-outline.is-heading-formatted .outline-item.level-5,
+.markdown-outline.is-heading-formatted .outline-item.level-6 {
+    font-size: 13px;
+    font-weight: 500;
+    opacity: 0.78;
 }
 
 .outline-item.level-1 {

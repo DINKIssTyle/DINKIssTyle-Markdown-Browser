@@ -15,6 +15,7 @@ import { scrollEditorToLine, insertFileLink, focusEditor } from './main-editor.j
 import { ListFileTree, GetRelativePath } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 import { copyTextToClipboard, showToast } from './main-ui.js';
+import { persistAppSettings } from './main-settings.js';
 
 let isSidebarOpen = false;
 let activeSidebarTab = 'files';
@@ -256,21 +257,42 @@ export function updateOutline() {
         return;
     }
 
+    el.markdownOutline.classList.toggle('is-heading-formatted', state.outlineHeadingFormatEnabled);
     el.markdownOutline.innerHTML = headings.map((h, index) => {
         const level = parseInt(h.tagName.substring(1));
         const text = h.innerText || h.textContent;
+        const formatButton = index === 0 ? `
+                <button class="outline-format-btn ${state.outlineHeadingFormatEnabled ? 'active' : ''}" type="button"
+                    tabindex="-1"
+                    title="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
+                    aria-label="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
+                    aria-pressed="${state.outlineHeadingFormatEnabled}">
+                    <span class="material-symbols-outlined" aria-hidden="true">${state.outlineHeadingFormatEnabled ? 'format_paint_off' : 'format_paint'}</span>
+                </button>
+            ` : '';
         const topButton = index === 0 ? `
                 <button class="outline-top-btn" type="button" tabindex="-1" title="Top of document" aria-label="Top of document">
                     <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
                 </button>
             ` : '';
         return `
-            <div class="outline-item level-${level} ${index === 0 ? 'has-top-button' : ''}" data-index="${index}" tabindex="0">
+            <div class="outline-item level-${level} ${index === 0 ? 'has-tools' : ''}" data-index="${index}" tabindex="0">
                 <span class="outline-text">${escapeHTML(text)}</span>
+                ${formatButton}
                 ${topButton}
             </div>
         `;
     }).join('');
+
+    el.markdownOutline.querySelectorAll('.outline-format-btn').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            state.outlineHeadingFormatEnabled = !state.outlineHeadingFormatEnabled;
+            updateOutline();
+            await persistAppSettings();
+        });
+    });
 
     el.markdownOutline.querySelectorAll('.outline-top-btn').forEach(button => {
         button.addEventListener('click', (event) => {
@@ -438,6 +460,7 @@ function bindFileTreeEvents() {
             event.stopPropagation();
             state.fileTreeFilterEnabled = !state.fileTreeFilterEnabled;
             updateFileTree();
+            persistAppSettings();
         });
     });
 

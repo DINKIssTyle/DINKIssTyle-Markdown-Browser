@@ -131,6 +131,8 @@ async function loadSettings() {
     state.currentEngine = state.currentMarkdownEngine;
     state.currentEditorRenderMode = s.editorRenderMode || "realtime";
     state.lastVersion = s.lastVersion || "";
+    state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
+    state.outlineHeadingFormatEnabled = !!s.outlineHeadingFormat;
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
     applyEditorPreferencesFromSettings(s);
