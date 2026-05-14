@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta3
+# What's New in Version 2.1 Beta4
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -6,7 +6,7 @@
 
 <div align="center">DKST Markdown Browser has become even more powerful! Check out the major features added in this version.</div>
 
-## 🚀 Key Changes
+## 🚀 Version 2.1 Key Changes
 
 ### Introduction of the Sidebar
 
@@ -90,6 +90,19 @@ done
 - **Fixed popup tooltip;** added multilingual support.
 - **Remove emoji toast**: Now change emojis in toast messages to Google Material Symbols.
 - **File tree filter**: Clicking the filter icon will show only supported files.
+
+
+
+## 2.1 Beta4
+
+### Bug Fixes & Polish
+
+
+
+- **Add Sidebar Shortcuts**: File Tree is ALT+1, Outline is ALT+2, Search is ALT+3.
+- **Sidebar Keyboard Navigation**: Tab key moves to child elements; arrow keys move through the entire sidebar.
+- **Improve Sidebar - Outline Formatting**: Bold text and font size are differentiated based on headings, which can be toggled on or off using format buttons.
+- **TASK format rendering**: Unnecessary • was attached. It has now been removed and renders as intended.
 
 
 ---

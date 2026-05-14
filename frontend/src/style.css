@@ -1325,6 +1325,19 @@ html.dark .html-frame {
     margin-top: 0.25em;
 }
 
+.markdown-container .contains-task-list {
+    padding-left: 1.3em;
+}
+
+.markdown-container .task-list-item {
+    list-style-type: none;
+}
+
+.markdown-container .task-list-item>input[type="checkbox"] {
+    margin: 0 0.45em 0 -1.3em;
+    vertical-align: -0.12em;
+}
+
 /* Tables - GitHub Style */
 .markdown-container table {
     display: block;

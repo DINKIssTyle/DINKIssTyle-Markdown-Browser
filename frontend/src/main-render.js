@@ -863,6 +863,16 @@ function enhanceMarkdownAlerts(container) {
     });
 }
 
+function enhanceTaskLists(container) {
+    container.querySelectorAll('li').forEach(item => {
+        const checkbox = item.querySelector(':scope > input[type="checkbox"]');
+        if (!checkbox) return;
+
+        item.classList.add('task-list-item');
+        item.parentElement?.classList.add('contains-task-list');
+    });
+}
+
 function enhanceCodeBlockCopyButtons(container) {
     container.querySelectorAll('pre > code').forEach(codeBlock => {
         const pre = codeBlock.parentElement;
@@ -1027,6 +1037,7 @@ function splitMarkdownIntoBlocks(content) {
 
 async function postProcess(container = el.markdownContainer) {
     enhanceMarkdownAlerts(container);
+    enhanceTaskLists(container);
 
     container.querySelectorAll('a').forEach(anchor => {
         const href = anchor.getAttribute('href');
