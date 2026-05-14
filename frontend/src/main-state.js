@@ -8,6 +8,7 @@ import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
 // ── Constants ──────────────────────────────────────────────
 export const HOME_SCREEN_PATH = '__home__';
 export const ABOUT_PATH = '/ABOUT.md';
+export const FEATURES_PATH = '/FEATURES.md';
 export const SHORTCUTS_PATH = '/SHORTCUTS.md';
 export const THIRD_PARTY_NOTICES_PATH = '/THIRD-PARTY-NOTICES.md';
 export const WHATS_NEW_PATH = '/WHATS-NEW.md';
@@ -195,6 +196,7 @@ export const el = {
     appVersionFooter: $('app-version-footer'),
     footerInstall: $('footer-install'),
     footerInstallDot: $('footer-install-dot'),
+    footerFeatures: $('footer-features'),
     footerShortcuts: $('footer-shortcuts'),
     footerThirdPartyNotices: $('footer-third-party-notices'),
     footerWhatsNew: $('footer-whats-new'),
@@ -403,6 +405,7 @@ export function isExternalURL(href) {
 export function formatDisplayPath(path) {
     if (path === HOME_SCREEN_PATH) return 'DKST Markdown Browser';
     if (path === ABOUT_PATH) return 'ABOUT.md';
+    if (path === FEATURES_PATH) return 'FEATURES.md';
     if (path === SHORTCUTS_PATH) return 'SHORTCUTS.md';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'THIRD-PARTY-NOTICES.md';
     if (path === WHATS_NEW_PATH) return 'WHATS-NEW.md';
@@ -412,6 +415,7 @@ export function formatDisplayPath(path) {
 export function deriveTabTitle(path, content) {
     if (path === HOME_SCREEN_PATH) return 'Start';
     if (path === ABOUT_PATH) return 'About';
+    if (path === FEATURES_PATH) return 'Features';
     if (path === SHORTCUTS_PATH) return 'Shortcuts';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
     if (path === WHATS_NEW_PATH) return "What's New";
@@ -493,6 +497,7 @@ export function debounce(fn, ms) {
 
 export function isBundledDocumentPath(path) {
     return path === ABOUT_PATH ||
+        path === FEATURES_PATH ||
         path === SHORTCUTS_PATH ||
         path === THIRD_PARTY_NOTICES_PATH ||
         path === WHATS_NEW_PATH;

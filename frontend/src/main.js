@@ -14,7 +14,7 @@ import {
     createAndSwitchToNewTab, closeTab, activateTabByShortcut,
 } from './main-tabs.js';
 import {
-    handleOpenFile, openPath, openIncomingFiles, openAbout, openShortcuts, openThirdPartyNotices,
+    handleOpenFile, openPath, openIncomingFiles, openAbout, openFeatures, openShortcuts, openThirdPartyNotices,
     openWhatsNew, shouldOpenAdditionalFileInNewTab,
     goBack, goForward, goHome, reloadCurrent, updateNavButtons,
     bindHistoryMouseNavigation,
@@ -332,6 +332,12 @@ function bindHomeScreen() {
             await openWhatsNew(true);
         };
     }
+    if (el.footerFeatures) {
+        el.footerFeatures.onclick = async (e) => {
+            e.preventDefault();
+            await openFeatures(true);
+        };
+    }
     if (el.footerShortcuts) {
         el.footerShortcuts.onclick = async (e) => {
             e.preventDefault();
@@ -426,6 +432,7 @@ function setupDragAndDrop() {
 
 function bindMenuEvents() {
     EventsOn('menu:new-window', () => createAndSwitchToNewTab());
+    EventsOn('menu:new-document', () => createNewDocument());
     EventsOn('menu:ask-ai', () => showAskAIPrompt());
     EventsOn('menu:home', () => goHome());
     EventsOn('menu:back', () => goBack());
@@ -489,23 +496,42 @@ async function handleGlobalKeydown(event) {
             event.code === 'Numpad2' ||
             event.code === 'Numpad3'
         );
+    const isSidebarToggleShortcut = event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey
+        && (event.key.toLowerCase() === 's' || event.code === 'KeyS');
     const isSearchShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
         && event.key.toLowerCase() === 'f';
+    const isNewTabShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && event.key.toLowerCase() === 't';
+    const isNewDocumentShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && event.key.toLowerCase() === 'n';
+    const isToggleThemeShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && event.key.toLowerCase() === 'k';
 
     // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)
-            && (['w', 's', 'e', 'f'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
+            && (['w', 's', 'e', 'f', 't', 'n', 'k'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
         if (isSidebarTabShortcut) {
             event.preventDefault();
             toggleSidebarTabFromShortcut(event.code);
             return;
         }
+        if (isSidebarToggleShortcut) {
+            event.preventDefault();
+            toggleSidebar();
+            return;
+        }
         if (!isGlobalKey) {
             return;
         }
+    }
+
+    if (isSidebarToggleShortcut) {
+        event.preventDefault();
+        toggleSidebar();
+        return;
     }
 
     if (isSidebarTabShortcut) {
@@ -517,6 +543,24 @@ async function handleGlobalKeydown(event) {
     if (isSearchShortcut) {
         event.preventDefault();
         toggleSearch();
+        return;
+    }
+
+    if (isNewTabShortcut) {
+        event.preventDefault();
+        await createAndSwitchToNewTab();
+        return;
+    }
+
+    if (isNewDocumentShortcut) {
+        event.preventDefault();
+        await createNewDocument();
+        return;
+    }
+
+    if (isToggleThemeShortcut) {
+        event.preventDefault();
+        toggleTheme();
         return;
     }
 
@@ -569,12 +613,6 @@ async function handleGlobalKeydown(event) {
     if ((event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey && event.key.toLowerCase() === 'e') {
         event.preventDefault();
         await toggleEditModeFromShortcut();
-        return;
-    }
-
-    if ((event.metaKey || event.ctrlKey) && !event.shiftKey && event.altKey && event.key.toLowerCase() === 's') {
-        event.preventDefault();
-        toggleSidebar();
         return;
     }
 

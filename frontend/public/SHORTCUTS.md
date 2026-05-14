@@ -4,10 +4,15 @@ This is the list of shortcuts for the DKST Markdown Browser.
 ## Common Shortcuts
 | Action | Windows/Linux | macOS |
 | :--- | :--- | :--- |
+| New Document | Ctrl+N | ⌘+N |
 | Open New Tab | Ctrl+T | ⌘+T |
 | Close Current Tab | Ctrl+W | ⌘+W |
 | Go to Tab | Ctrl+1~9 | ⌘+1~9 |
-| Open Sidebar | Ctrl+Alt+S | ⌘+Alt+S |
+| Toggle Sidebar | Alt+S | ⌥+S |
+| Toggle File Tree Sidebar | Alt+1 | ⌥+1 |
+| Toggle Outline Sidebar | Alt+2 | ⌥+2 |
+| Toggle Search Sidebar | Alt+3 | ⌥+3 |
+| Search | Ctrl+F | ⌘+F |
 
 ## Reader Mode
 | Action | Windows/Linux | macOS |
@@ -15,11 +20,7 @@ This is the list of shortcuts for the DKST Markdown Browser.
 | Open File | Ctrl+O | ⌘+O |
 | Go to Home | Ctrl+⇧+H | ⌘+⇧+H |
 | Refresh | Ctrl+R | ⌘+R |
-| Search | Ctrl+F | ⌘+F |
-| Toggle File Tree Sidebar | Alt+1 | ⌥+1 |
-| Toggle Outline Sidebar | Alt+2 | ⌥+2 |
-| Toggle Search Sidebar | Alt+3 | ⌥+3 |
-| Change Theme | Ctrl+T | ⌘+T |
+| Change Theme | Ctrl+K | ⌘+K |
 | History Navigation | Ctrl+[ , Ctrl+] | ⌘+[ , ⌘+] |
 | Font Size | Ctrl++, Ctrl+- | ⌘++, ⌘+- |
 

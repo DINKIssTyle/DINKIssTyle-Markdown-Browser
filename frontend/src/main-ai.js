@@ -126,11 +126,14 @@ const SUPPORT_AGENT_PROMPT_LINES = Object.freeze([
 
 const ASK_AI_PROMPT_LINES = Object.freeze([
     'There is no <selected_text> in this request.',
-    'First decide whether the user request is a question or ambiguous.',
+    'First decide whether the user request is an insertion edit, a question, or ambiguous.',
+    'If the user asks you to write, create, generate, insert, draft, compose, or make content for the document, use <intent>edit</intent> and put that new content in <replacement>.',
+    'For requests such as "write a table", "insert a list", "마크다운 역사 100자", "표로 입력", "작성", or "생성", create the requested document content in <replacement>.',
     'Return your response using exactly these XML blocks in this order:',
-    '<intent>question|ambiguous</intent>',
+    '<intent>edit|question|ambiguous</intent>',
     '<support_report>short answer for the user</support_report>',
-    '<replacement></replacement>',
+    '<replacement>new document content only when intent is edit</replacement>',
+    'If <intent> is question or ambiguous, keep <replacement></replacement> empty.',
     `Keep <support_report> short, concise, and within ${SUPPORT_REPORT_MAX_CHARS} characters.`,
     'Do not use code fences, labels, or extra wrappers.',
 ]);
@@ -471,6 +474,12 @@ function isLikelySelectedTextTransformPrompt(userPrompt) {
         /(번역|한국어|영어|일본어|중국어|요약|줄여|늘려|다듬|교정|수정|고쳐|바꿔|변환|정리|문체|톤|존댓말|반말)/.test(prompt);
 }
 
+function isLikelyInsertionPrompt(userPrompt) {
+    const prompt = String(userPrompt || '').trim().toLowerCase();
+    return /\b(write|create|generate|insert|draft|compose|make|add|table|list|markdown|readme|heading|checklist|code block)\b/.test(prompt) ||
+        /(입력|작성|써|써줘|만들|생성|추가|삽입|표|테이블|목록|리스트|마크다운|제목|체크리스트|코드블록|문서|글|초안)/.test(prompt);
+}
+
 function getGithubCompatiblePromptSections({ userPrompt } = {}) {
     if (!state.aiGithubCompatibleEnabled) return [];
 
@@ -608,13 +617,14 @@ function getAIQuestionSystemPrompt() {
     return joinPromptSections(
         buildMarkdownSection('Role', [
             'You are an AI assistant for a Markdown editor.',
-            'When no text is selected, answer simple user questions instead of editing the document.',
-            'Internally reason about whether the request is a clear question or ambiguous, but do not reveal the reasoning steps.',
+            'When no text is selected, insert newly requested document content at the cursor and answer simple informational questions in the support report.',
+            'Internally reason about whether the request is a document insertion, a clear question, or ambiguous, but do not reveal the reasoning steps.',
         ]),
         buildMarkdownSection('Shared Rules', AI_SHARED_RULE_PROMPT_LINES),
         buildMarkdownSection('Response Format', [
             'Return exactly three XML blocks in this order: <intent>...</intent><support_report>...</support_report><replacement>...</replacement>.',
-            `Use only <intent>question</intent> or <intent>ambiguous</intent>, keep <support_report> within ${SUPPORT_REPORT_MAX_CHARS} characters, and keep <replacement></replacement> empty.`,
+            'Use <intent>edit</intent> when the user asks you to write, create, generate, insert, draft, compose, or make content for the document.',
+            `Use <intent>question</intent> or <intent>ambiguous</intent> for non-edit help, keep <support_report> within ${SUPPORT_REPORT_MAX_CHARS} characters, and keep <replacement></replacement> empty.`,
         ]),
     );
 }
@@ -636,12 +646,8 @@ function extractStructuredAIPayload(rawText) {
     const report = reportMatch ? reportMatch[1].trim() : '';
     let replacement = replacementMatch ? replacementMatch[1] : '';
 
-    if (!replacementMatch) {
-        replacement = source
-            .replace(/<intent>[\s\S]*?<\/intent>/gi, '')
-            .replace(/<support_report>[\s\S]*?<\/support_report>/gi, '')
-            .replace(/<\/?replacement>/gi, '')
-            .trim();
+    if (!replacementMatch || !replacement.trim()) {
+        replacement = extractFallbackAIReplacement(source);
     }
 
     replacement = replacement.replace(/^```[a-z]*\n/i, '').replace(/\n```$/, '');
@@ -651,6 +657,15 @@ function extractStructuredAIPayload(rawText) {
         report: normalizeSupportReport(report),
         replacement,
     };
+}
+
+function extractFallbackAIReplacement(source) {
+    return String(source || '')
+        .replace(/<intent>[\s\S]*?<\/intent>/gi, '')
+        .replace(/<support_report>[\s\S]*?<\/support_report>/gi, '')
+        .replace(/<replacement>[\s\S]*?<\/replacement>/gi, '')
+        .replace(/<\/?(?:markdown|table)>/gi, '')
+        .trim();
 }
 
 function containsSupportReportTag(rawText) {
@@ -1453,6 +1468,39 @@ async function sendPrompt() {
             : null;
 
         if (!hasSelection) {
+            const shouldInsertAtCursor = isLikelyInsertionPrompt(userPrompt);
+            if (!structuredPayload && shouldInsertAtCursor) {
+                const insertionText = extractFallbackAIReplacement(resultText);
+                if (insertionText.trim()) {
+                    insertPlainTextAtCursor(insertionText);
+                    renderMarkdown(cmView.state.doc.toString());
+                    requestAnimationFrame(() => {
+                        cmView?.focus();
+                    });
+                    aiRequestInFlight = false;
+                    return;
+                }
+            }
+            if ((structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) &&
+                shouldInsertAtCursor &&
+                structuredPayload?.replacement?.trim()) {
+                structuredPayload.intent = AI_INTENT_VALUES.edit;
+            }
+            if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
+                const insertionText = structuredPayload.replacement || extractFallbackAIReplacement(resultText);
+                if (insertionText.trim()) {
+                    insertPlainTextAtCursor(insertionText);
+                    renderMarkdown(cmView.state.doc.toString());
+                    if (state.aiSupportAgentEnabled || structuredPayload.report) {
+                        showSupportAgentPrompt(structuredPayload.report || SUPPORT_AGENT_FALLBACK_REPORT);
+                    }
+                    requestAnimationFrame(() => {
+                        cmView?.focus();
+                    });
+                    aiRequestInFlight = false;
+                    return;
+                }
+            }
             const questionReport = structuredPayload
                 ? structuredPayload.report
                 : normalizeSupportReport(resultText);

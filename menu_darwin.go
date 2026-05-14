@@ -24,11 +24,17 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.EventsEmit(app.ctx, "menu:ask-ai")
 	})
 	fileMenu.AddSeparator()
-	fileMenu.AddText("New Window", keys.CmdOrCtrl("n"), func(_ *menu.CallbackData) {
+	fileMenu.AddText("New Tab", keys.CmdOrCtrl("t"), func(_ *menu.CallbackData) {
 		runtime.Show(app.ctx)
 		runtime.WindowShow(app.ctx)
 		runtime.WindowUnminimise(app.ctx)
 		runtime.EventsEmit(app.ctx, "menu:new-window")
+	})
+	fileMenu.AddText("New Document", keys.CmdOrCtrl("n"), func(_ *menu.CallbackData) {
+		runtime.Show(app.ctx)
+		runtime.WindowShow(app.ctx)
+		runtime.WindowUnminimise(app.ctx)
+		runtime.EventsEmit(app.ctx, "menu:new-document")
 	})
 	fileMenu.AddSeparator()
 	fileMenu.AddText("Open...", keys.CmdOrCtrl("o"), func(_ *menu.CallbackData) {
@@ -69,7 +75,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.EventsEmit(app.ctx, "menu:refresh")
 	})
 	viewMenu.AddSeparator()
-	viewMenu.AddText("Toggle Sidebar", keys.Combo("s", keys.CmdOrCtrlKey, keys.OptionOrAltKey), func(_ *menu.CallbackData) {
+	viewMenu.AddText("Toggle Sidebar", keys.OptionOrAlt("s"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-sidebar")
 	})
 	viewMenu.AddText("Toggle File Tree Sidebar", keys.OptionOrAlt("1"), func(_ *menu.CallbackData) {
@@ -95,7 +101,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.EventsEmit(app.ctx, "menu:font-down")
 	})
 	viewMenu.AddSeparator()
-	viewMenu.AddText("Toggle Theme", keys.CmdOrCtrl("t"), func(_ *menu.CallbackData) {
+	viewMenu.AddText("Toggle Theme", keys.CmdOrCtrl("k"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-theme")
 	})
 
@@ -107,7 +113,7 @@ func buildAppMenu(app *App) *menu.Menu {
 		runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
 			Type:    runtime.InfoDialog,
 			Title:   "Help",
-			Message: "• Open File: ⌘O or 📂 button\n• Home: ⇧⌘H or ⌂ button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘T or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
+			Message: "• New Document: ⌘N\n• New Tab: ⌘T\n• Open File: ⌘O or 📂 button\n• Home: ⇧⌘H or ⌂ button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘K or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
 		})
 	})
 
