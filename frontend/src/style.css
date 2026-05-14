@@ -235,6 +235,17 @@ html.dark .tab-drag-placeholder {
     font-weight: 600;
 }
 
+.tab-unsaved-warning {
+    flex: 0 0 auto;
+    color: #f59e0b;
+    font-size: 16px;
+    line-height: 1;
+}
+
+html.dark .tab-unsaved-warning {
+    color: #fbbf24;
+}
+
 .tab-close-btn,
 .tab-add-btn {
     background: transparent;

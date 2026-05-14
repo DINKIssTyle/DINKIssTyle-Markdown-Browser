@@ -105,5 +105,12 @@ done
 - **TASK format rendering**: Unnecessary • was attached. It has now been removed and renders as intended.
 
 
+## 2.1 Beta5
+
+### Bug Fixes & Polish
+
+- **Edit State Indicator**: Displays a warning icon in the document tab when the document has been edited but not yet saved.
+
+
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

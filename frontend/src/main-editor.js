@@ -6,7 +6,7 @@
 import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
 import { state, el, getPathDirname, basename, formatSaveDialogMessage, debounce } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
-import { getActiveTab } from './main-tabs.js';
+import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
 import { showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
@@ -1148,10 +1148,14 @@ export function initCodeMirror() {
                 }
 
                 if (update.docChanged) {
+                    const hadUnsavedChanges = state.isEditing && state.currentMarkdownSource !== state.editorOriginalContent;
                     const val = update.state.doc.toString();
                     state.currentMarkdownSource = val;
                     const tab = getActiveTab();
                     if (tab) tab.currentMarkdownSource = val;
+                    if (hadUnsavedChanges !== (state.isEditing && val !== state.editorOriginalContent)) {
+                        renderTabs();
+                    }
                     syncEditorStateToBackend();
 
                     if (isFindBarOpen) {
@@ -1298,6 +1302,7 @@ export function enterEditMode() {
     schedulePreviewScrollSync(cmView);
     updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
     syncEditorStateToBackend();
+    renderTabs();
 }
 
 export async function exitEditMode(didSave = false) {
@@ -1330,6 +1335,7 @@ export async function exitEditMode(didSave = false) {
         await renderActiveTab();
     }
     syncEditorStateToBackend();
+    renderTabs();
 }
 
 export function hasUnsavedEditorChanges() {
@@ -1368,6 +1374,7 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
             state.editingPreviewPath = state.editingSourcePath || targetPath;
             state.editingPreviewFolder = state.editingSourceFolder || getPathDirname(targetPath);
             syncEditorStateToBackend();
+            renderTabs();
             if (exitAfterSave) {
                 await exitEditMode(true);
             }
@@ -1398,6 +1405,7 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
         tab.editingPreviewPath = tab.editingSourcePath || targetPath;
         tab.editingPreviewFolder = tab.editingSourceFolder || getPathDirname(targetPath);
         showToast("File saved successfully.", "check_circle");
+        renderTabs();
         return true;
     } catch (error) {
         LogError(`Save failed: ${error}`);

@@ -119,8 +119,11 @@ export function renderTabs() {
     ensureTabDragBindings();
 
     el.tabsList.innerHTML = state.tabs.map(tab => `
-        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''}" data-tab-id="${tab.id}">
+        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''}" data-tab-id="${tab.id}">
             <span class="tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
+            ${shouldShowUnsavedWarning(tab) ? `
+                <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
+            ` : ''}
             <button class="tab-close-btn" data-close-tab="${tab.id}" aria-label="Close Tab">
                 <span class="material-symbols-outlined" aria-hidden="true">close</span>
             </button>
@@ -155,6 +158,13 @@ export function renderTabs() {
     });
 
     el.tabsList.querySelector('.tab-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+function shouldShowUnsavedWarning(tab) {
+    if (tab?.id === state.activeTabId && state.isEditing) {
+        return hasUnsavedEditorChanges();
+    }
+    return hasUnsavedTabChanges(tab);
 }
 
 function ensureTabDragBindings() {
