@@ -11,7 +11,7 @@ import {
 } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
-import { scrollEditorToLine, insertFileLink } from './main-editor.js';
+import { scrollEditorToLine, insertFileLink, focusEditor } from './main-editor.js';
 import { ListFileTree, GetRelativePath } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 import { copyTextToClipboard, showToast } from './main-ui.js';
@@ -29,9 +29,9 @@ export function initSidebar() {
 
     el.btnSidebarToggle.onclick = toggleSidebar;
 
-    if (el.sidebarTabFiles) el.sidebarTabFiles.onclick = () => switchSidebarTab('files');
-    if (el.sidebarTabOutline) el.sidebarTabOutline.onclick = () => switchSidebarTab('outline');
-    if (el.sidebarTabSearch) el.sidebarTabSearch.onclick = () => switchSidebarTab('search');
+    bindSidebarTabButton(el.sidebarTabFiles, 'files');
+    bindSidebarTabButton(el.sidebarTabOutline, 'outline');
+    bindSidebarTabButton(el.sidebarTabSearch, 'search');
 
     // Bind search events in sidebar
     if (el.searchInput) {
@@ -58,6 +58,20 @@ export function initSidebar() {
     // Bind global click to close context menu
     document.addEventListener('click', () => closeFileTreeContextMenu());
     window.addEventListener('blur', () => closeFileTreeContextMenu());
+}
+
+function bindSidebarTabButton(button, tabId) {
+    if (!button) return;
+
+    button.onclick = () => switchSidebarTab(tabId);
+    button.addEventListener('keydown', (event) => {
+        if (event.key !== 'Tab' || event.shiftKey || activeSidebarTab !== tabId) {
+            return;
+        }
+
+        event.preventDefault();
+        focusSidebarPanel(tabId);
+    });
 }
 
 function bindResizer() {
@@ -101,7 +115,63 @@ export function toggleSidebar() {
     
     if (isSidebarOpen) {
         refreshSidebarContent();
+    } else {
+        focusDocumentSurface();
     }
+}
+
+export function toggleSidebarTab(tabId, options = {}) {
+    const shouldClose = isSidebarOpen && activeSidebarTab === tabId;
+    activeSidebarTab = tabId;
+    isSidebarOpen = !shouldClose;
+    updateSidebarUI();
+    el.appSidebar.classList.toggle('hidden', !isSidebarOpen);
+    el.btnSidebarToggle.classList.toggle('active', isSidebarOpen);
+    syncSidebarOffset();
+
+    if (isSidebarOpen) {
+        refreshSidebarContent();
+        if (options.focusSearchInput && tabId === 'search') {
+            focusSearchInput();
+        } else if (options.focusTab) {
+            focusSidebarTab(tabId);
+        }
+    } else {
+        focusDocumentSurface();
+    }
+}
+
+export function openSidebarTab(tabId) {
+    activeSidebarTab = tabId;
+    isSidebarOpen = true;
+    updateSidebarUI();
+    el.appSidebar.classList.remove('hidden');
+    el.btnSidebarToggle.classList.add('active');
+    syncSidebarOffset();
+    refreshSidebarContent();
+}
+
+function focusSearchInput() {
+    requestAnimationFrame(() => {
+        el.searchInput?.focus();
+        el.searchInput?.select();
+    });
+}
+
+function focusDocumentSurface() {
+    requestAnimationFrame(() => {
+        if (state.isEditing) {
+            focusEditor();
+            return;
+        }
+
+        const focusTarget = el.contentView || el.markdownContainer;
+        if (!focusTarget) return;
+        if (!focusTarget.hasAttribute('tabindex')) {
+            focusTarget.tabIndex = -1;
+        }
+        focusTarget.focus({ preventScroll: true });
+    });
 }
 
 function syncSidebarOffset() {
@@ -129,6 +199,36 @@ function updateSidebarUI() {
         tabs[id].btn.classList.toggle('active', active);
         tabs[id].panel.classList.toggle('hidden', !active);
     });
+}
+
+function focusSidebarTab(tabId) {
+    const tabs = {
+        'files': el.sidebarTabFiles,
+        'outline': el.sidebarTabOutline,
+        'search': el.sidebarTabSearch
+    };
+
+    requestAnimationFrame(() => tabs[tabId]?.focus());
+}
+
+function focusSidebarPanel(tabId) {
+    const panels = {
+        'files': el.sidebarPanelFiles,
+        'outline': el.sidebarPanelOutline,
+        'search': el.sidebarPanelSearch
+    };
+    const panel = panels[tabId];
+    if (!panel) return;
+
+    const focusable = panel.querySelector('.file-tree-item, .outline-item, .result-item')
+        || panel.querySelector('button:not([disabled]):not(.hidden), input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [href], [tabindex]:not([tabindex="-1"])');
+    if (focusable) {
+        focusable.focus();
+        return;
+    }
+
+    panel.tabIndex = -1;
+    panel.focus();
 }
 
 export function refreshSidebarContent() {
@@ -160,12 +260,12 @@ export function updateOutline() {
         const level = parseInt(h.tagName.substring(1));
         const text = h.innerText || h.textContent;
         const topButton = index === 0 ? `
-                <button class="outline-top-btn" type="button" title="Top of document" aria-label="Top of document">
+                <button class="outline-top-btn" type="button" tabindex="-1" title="Top of document" aria-label="Top of document">
                     <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
                 </button>
             ` : '';
         return `
-            <div class="outline-item level-${level} ${index === 0 ? 'has-top-button' : ''}" data-index="${index}">
+            <div class="outline-item level-${level} ${index === 0 ? 'has-top-button' : ''}" data-index="${index}" tabindex="0">
                 <span class="outline-text">${escapeHTML(text)}</span>
                 ${topButton}
             </div>
@@ -198,6 +298,7 @@ export function updateOutline() {
             }
         };
     });
+    bindListKeyboardNavigation(el.markdownOutline, '.outline-item');
 }
 
 function scrollPreviewHeadingToTop(heading) {
@@ -294,6 +395,7 @@ function renderFileTree(node, depth, isRoot = false) {
             data-path="${escapeAttr(node.path)}"
             data-kind="${isDir ? 'dir' : 'file'}"
             style="--tree-depth: ${depth};"
+            tabindex="0"
             title="${escapeAttr(node.path)}">
             <span class="file-tree-toggle material-symbols-outlined" aria-hidden="true">${canExpand ? (isExpanded ? 'expand_more' : 'chevron_right') : ''}</span>
             <span class="file-tree-icon material-symbols-outlined" aria-hidden="true">${icon}</span>
@@ -373,6 +475,36 @@ function bindFileTreeEvents() {
             event.preventDefault();
             event.stopPropagation();
             showFileTreeContextMenu(event, path, kind === 'dir');
+        });
+    });
+    bindListKeyboardNavigation(el.fileTree, '.file-tree-item');
+}
+
+function bindListKeyboardNavigation(container, itemSelector) {
+    if (!container) return;
+
+    container.querySelectorAll(itemSelector).forEach(item => {
+        item.addEventListener('keydown', (event) => {
+            const items = Array.from(container.querySelectorAll(itemSelector));
+            const index = items.indexOf(event.currentTarget);
+            if (index === -1) return;
+
+            let nextIndex = -1;
+            if (event.key === 'ArrowDown') nextIndex = Math.min(index + 1, items.length - 1);
+            if (event.key === 'ArrowUp') nextIndex = Math.max(index - 1, 0);
+            if (event.key === 'Home') nextIndex = 0;
+            if (event.key === 'End') nextIndex = items.length - 1;
+
+            if (nextIndex !== -1) {
+                event.preventDefault();
+                items[nextIndex]?.focus();
+                return;
+            }
+
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                event.currentTarget.click();
+            }
         });
     });
 }

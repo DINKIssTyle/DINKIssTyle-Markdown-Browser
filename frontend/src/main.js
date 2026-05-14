@@ -27,7 +27,7 @@ import {
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
-import { initSidebar, toggleSidebar } from './main-sidebar.js';
+import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
 import { persistAppSettings } from './main-settings.js';
 
 import {
@@ -298,6 +298,31 @@ function bindHomeScreen() {
             newTab: event.metaKey || event.ctrlKey || state.isEditing,
         });
     });
+    el.searchResults.addEventListener('keydown', event => {
+        const item = event.target.closest('.result-item');
+        if (!item) return;
+
+        const items = Array.from(el.searchResults.querySelectorAll('.result-item'));
+        const index = items.indexOf(item);
+        if (index === -1) return;
+
+        let nextIndex = -1;
+        if (event.key === 'ArrowDown') nextIndex = Math.min(index + 1, items.length - 1);
+        if (event.key === 'ArrowUp') nextIndex = Math.max(index - 1, 0);
+        if (event.key === 'Home') nextIndex = 0;
+        if (event.key === 'End') nextIndex = items.length - 1;
+
+        if (nextIndex !== -1) {
+            event.preventDefault();
+            items[nextIndex]?.focus();
+            return;
+        }
+
+        if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            item.click();
+        }
+    });
 
     if (el.footerWhatsNew) {
         el.footerWhatsNew.onclick = async (e) => {
@@ -415,6 +440,9 @@ function bindMenuEvents() {
         }
     });
     EventsOn('menu:toggle-sidebar', () => toggleSidebar());
+    EventsOn('menu:toggle-files-sidebar', () => toggleSidebarTab('files', { focusTab: true }));
+    EventsOn('menu:toggle-outline-sidebar', () => toggleSidebarTab('outline', { focusTab: true }));
+    EventsOn('menu:toggle-search-sidebar', () => toggleSidebarTab('search', { focusSearchInput: true }));
     EventsOn('menu:toggle-theme', () => toggleTheme());
     EventsOn('menu:font-up', () => changeFontSize(2));
     EventsOn('menu:font-down', () => changeFontSize(-2));
@@ -450,16 +478,44 @@ async function handleGlobalKeydown(event) {
         );
     const isEditorFontResetShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
         && (event.key === '0' || event.code === 'Digit0' || event.code === 'Numpad0');
+    const isSidebarTabShortcut = event.altKey && !event.metaKey && !event.ctrlKey && !event.shiftKey
+        && (
+            event.code === 'Digit1' ||
+            event.code === 'Digit2' ||
+            event.code === 'Digit3' ||
+            event.code === 'Numpad1' ||
+            event.code === 'Numpad2' ||
+            event.code === 'Numpad3'
+        );
+    const isSearchShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && event.key.toLowerCase() === 'f';
 
     // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)
-            && (['w', 's', 'e'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
+            && (['w', 's', 'e', 'f'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
+        if (isSidebarTabShortcut) {
+            event.preventDefault();
+            toggleSidebarTabFromShortcut(event.code);
+            return;
+        }
         if (!isGlobalKey) {
             return;
         }
+    }
+
+    if (isSidebarTabShortcut) {
+        event.preventDefault();
+        toggleSidebarTabFromShortcut(event.code);
+        return;
+    }
+
+    if (isSearchShortcut) {
+        event.preventDefault();
+        toggleSearch();
+        return;
     }
 
     if (isEditorFocused() && (isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut)) {
@@ -541,6 +597,17 @@ async function handleGlobalKeydown(event) {
     if (event.key === 'Escape') {
         closeContextMenu();
     }
+}
+
+function sidebarTabFromShortcut(code) {
+    if (code === 'Digit1' || code === 'Numpad1') return 'files';
+    if (code === 'Digit2' || code === 'Numpad2') return 'outline';
+    return 'search';
+}
+
+function toggleSidebarTabFromShortcut(code) {
+    const tabId = sidebarTabFromShortcut(code);
+    toggleSidebarTab(tabId, tabId === 'search' ? { focusSearchInput: true } : { focusTab: true });
 }
 
 async function toggleEditModeFromShortcut() {

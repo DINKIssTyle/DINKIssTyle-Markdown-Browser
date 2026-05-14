@@ -590,6 +590,14 @@ html.dark .nav-btn:hover {
     opacity: 1;
 }
 
+.outline-item:focus-visible,
+.file-tree-item:focus-visible,
+.result-item:focus-visible {
+    outline: 2px solid rgba(0, 113, 227, 0.4);
+    outline-offset: -2px;
+    background: rgba(0, 113, 227, 0.08);
+}
+
 .outline-text {
     min-width: 0;
     overflow: hidden;

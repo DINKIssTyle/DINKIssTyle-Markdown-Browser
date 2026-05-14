@@ -430,6 +430,10 @@ export function isEditorFocused() {
     return activeElement === cmView.contentDOM || cmView.contentDOM.contains(activeElement);
 }
 
+export function focusEditor() {
+    cmView?.focus();
+}
+
 export function changeEditorFontSize(delta) {
     if (!cmView) return false;
     state.currentFontSize = Math.min(72, Math.max(8, state.currentFontSize + delta));

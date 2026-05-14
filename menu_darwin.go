@@ -72,6 +72,15 @@ func buildAppMenu(app *App) *menu.Menu {
 	viewMenu.AddText("Toggle Sidebar", keys.Combo("s", keys.CmdOrCtrlKey, keys.OptionOrAltKey), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-sidebar")
 	})
+	viewMenu.AddText("Toggle File Tree Sidebar", keys.OptionOrAlt("1"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:toggle-files-sidebar")
+	})
+	viewMenu.AddText("Toggle Outline Sidebar", keys.OptionOrAlt("2"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:toggle-outline-sidebar")
+	})
+	viewMenu.AddText("Toggle Search Sidebar", keys.OptionOrAlt("3"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:toggle-search-sidebar")
+	})
 	viewMenu.AddText("Toggle Search Panel", keys.CmdOrCtrl("f"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-search")
 	})

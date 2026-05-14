@@ -155,8 +155,9 @@ export async function copyTextToClipboard(text) {
 
 export function toggleSearch() {
     import('./main-sidebar.js').then(mod => {
-        mod.toggleSidebar();
-        mod.switchSidebarTab('search');
+        mod.openSidebarTab('search');
+        el.searchInput?.focus();
+        el.searchInput?.select();
     });
 }
 
@@ -175,7 +176,7 @@ export async function handleSearch() {
         return;
     }
     el.searchResults.innerHTML = results.map(result => `
-        <div class="result-item recent-item" data-path="${result.path}" data-keyword="${escapeAttr(query)}">
+        <div class="result-item recent-item" data-path="${result.path}" data-keyword="${escapeAttr(query)}" tabindex="0">
             <span class="recent-name">${result.name}</span>
             <span class="recent-path">${result.path}</span>
         </div>
@@ -249,10 +250,7 @@ export async function searchForQuery(query) {
     if (!trimmed) return;
     
     const mod = await import('./main-sidebar.js');
-    mod.switchSidebarTab('search');
-    if (el.appSidebar.classList.contains('hidden')) {
-        mod.toggleSidebar();
-    }
+    mod.openSidebarTab('search');
     
     el.searchInput.value = trimmed;
     await handleSearch();
