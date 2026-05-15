@@ -11,7 +11,15 @@ import {
 } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
-import { scrollEditorToLine, insertFileLink, focusEditor } from './main-editor.js';
+import {
+    scrollEditorToLine,
+    insertFileLink,
+    focusEditor,
+    applyEditedDocumentRename,
+    hasUnsavedEditorChanges,
+    isEditingDocumentPath,
+    saveCurrentDocument,
+} from './main-editor.js';
 import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 import { copyTextToClipboard, showToast } from './main-ui.js';
@@ -615,7 +623,23 @@ function showFileTreeContextMenu(event, path, isDir) {
             if (!ok) return;
 
             try {
-                await RenameFileTreePath(path, trimmedName);
+                const isCurrentEditedFile = !isDir && isEditingDocumentPath(path);
+                if (isCurrentEditedFile && hasUnsavedEditorChanges()) {
+                    const saveBeforeRename = await AskConfirm(
+                        "Save Before Rename",
+                        `Save changes to ${currentName} before renaming it?`,
+                        "Save",
+                        "Cancel",
+                    );
+                    if (!saveBeforeRename) return;
+                    const saved = await saveCurrentDocument({ confirm: false, exitAfterSave: false });
+                    if (!saved) return;
+                }
+
+                const renamedPath = await RenameFileTreePath(path, trimmedName);
+                if (isCurrentEditedFile) {
+                    applyEditedDocumentRename(path, renamedPath);
+                }
                 await updateFileTree({ forceRefresh: true });
                 showToast(`${isDir ? 'Folder' : 'File'} renamed.`, 'drive_file_rename_outline');
             } catch (error) {

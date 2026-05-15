@@ -1,13 +1,13 @@
-# What's New in Version 2.1 Beta4
+# What's New in Version 2.1 Beta5
 
-[Korean (한국어)](WHATS-NEW-Ko-KR.md)
+<div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 
-
-<div align="center"><img src="icon-512.png" width="128"/></div>
+[Korean (한국어)](WHATS-NEW-Ko-KR.md) | [Spanish (Español)](WHATS-NEW_es-ES.md) | [Simplified Chinese (中国语)](WHATS-NEW_zh-CN.md) | [Japanese (日本語)](WHATS-NEW_ja-JP.md)</div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> Lightweight and elegant cross-platform<br>Markdown viewer and editor!</div>
 
 <div align="center">DKST Markdown Browser has become even more powerful! Check out the major features added in this version.</div>
+
 
 ## 🚀 Version 2.1 Key Changes
 
@@ -114,6 +114,7 @@ done
 
 - **Generate Multilingual Document Translation**: By pressing the `Translate Document` button in the editor and selecting your desired language, you can generate a translation of the currently edited document all at once.
 - **Ordered List Option**: There is now an Ordered List Continuation option in Settings > Editor > General, and the default is 1. 1. 1. Markdown standard. If you change the option to 1. 2. 3. Incrementing numbers, you can use incrementing numbers like before.
+- **Three Editor Toolbars**: You can select from Beginner, Rooki, or Pro toolbar sets based on your Markdown editing proficiency in the options.
 
 ### Bug Fixes & Polish
 

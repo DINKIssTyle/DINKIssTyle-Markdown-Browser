@@ -9,7 +9,9 @@
 </p>
 
 <div align="center">
-<a href="README.md">[Read in English]</a>
+  
+
+
 </div>
 
 

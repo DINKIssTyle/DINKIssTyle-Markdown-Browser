@@ -43,14 +43,14 @@ export const tokenColorCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const TRANSLATION_LANGUAGES = Object.freeze([
-    { code: 'en-US', name: 'English', nativeName: 'English', suffix: '_en-US' },
-    { code: 'es-ES', name: 'Spanish', nativeName: 'Español', suffix: '_es-ES' },
-    { code: 'fr-FR', name: 'French', nativeName: 'Français', suffix: '_fr-FR' },
-    { code: 'de-DE', name: 'German', nativeName: 'Deutsch', suffix: '_de-DE' },
-    { code: 'ko-KR', name: 'Korean', nativeName: '한국어', suffix: '-Ko-KR' },
-    { code: 'zh-CN', name: 'Simplified Chinese', nativeName: '中国语', suffix: '_zh-CN' },
-    { code: 'zh-TW', name: 'Traditional Chinese', nativeName: '中國語', suffix: '_zh-TW' },
-    { code: 'ja-JP', name: 'Japanese', nativeName: '日本語', suffix: '_ja-JP' },
+    { code: 'en-US', name: 'English', nativeName: 'English', suffix: '-en-US' },
+    { code: 'es-ES', name: 'Spanish', nativeName: 'Español', suffix: '-es-ES' },
+    { code: 'fr-FR', name: 'French', nativeName: 'Français', suffix: '-fr-FR' },
+    { code: 'de-DE', name: 'German', nativeName: 'Deutsch', suffix: '-de-DE' },
+    { code: 'ko-KR', name: 'Korean', nativeName: '한국어', suffix: '-ko-KR' },
+    { code: 'zh-CN', name: 'Simplified Chinese', nativeName: '中国语', suffix: '-zh-CN' },
+    { code: 'zh-TW', name: 'Traditional Chinese', nativeName: '中國語', suffix: '-zh-TW' },
+    { code: 'ja-JP', name: 'Japanese', nativeName: '日本語', suffix: '-ja-JP' },
 ]);
 const DEFAULT_TRANSLATION_LANGUAGE_CODES = Object.freeze(['ko-KR', 'en-US']);
 
@@ -2036,6 +2036,55 @@ export function hasUnsavedEditorChanges() {
 export function hasUnsavedTabChanges(tab) {
     if (!tab?.isEditing) return false;
     return (tab.currentMarkdownSource || "") !== (tab.editorOriginalContent || "");
+}
+
+export function isEditingDocumentPath(path) {
+    if (!path || !state.isEditing) return false;
+    const sourcePath = state.editingSourcePath || state.currentFilePath || "";
+    return sourcePath === path;
+}
+
+export function applyEditedDocumentRename(oldPath, newPath) {
+    if (!oldPath || !newPath || oldPath === newPath) return;
+
+    const updatePath = value => value === oldPath ? newPath : value;
+    const updateTab = tab => {
+        if (!tab) return;
+        const pathChanged = tab.path === oldPath;
+        tab.path = updatePath(tab.path);
+        tab.currentFolder = getPathDirname(tab.path);
+        tab.editingSourcePath = updatePath(tab.editingSourcePath);
+        tab.editingSourceFolder = tab.editingSourcePath ? getPathDirname(tab.editingSourcePath) : tab.editingSourceFolder;
+        tab.editingPreviewPath = updatePath(tab.editingPreviewPath);
+        tab.editingPreviewFolder = tab.editingPreviewPath ? getPathDirname(tab.editingPreviewPath) : tab.editingPreviewFolder;
+        tab.homeTargetPath = updatePath(tab.homeTargetPath);
+        tab.navHistory = (tab.navHistory || []).map(item => ({
+            ...item,
+            path: updatePath(item.path),
+        }));
+        if (pathChanged) {
+            tab.title = deriveTabTitle(newPath, tab.currentMarkdownSource || state.currentMarkdownSource || "");
+        }
+    };
+
+    state.tabs.forEach(updateTab);
+    state.currentFilePath = updatePath(state.currentFilePath);
+    state.currentFolder = getPathDirname(state.currentFilePath);
+    state.editingSourcePath = updatePath(state.editingSourcePath);
+    state.editingSourceFolder = state.editingSourcePath ? getPathDirname(state.editingSourcePath) : state.editingSourceFolder;
+    state.editingPreviewPath = updatePath(state.editingPreviewPath);
+    state.editingPreviewFolder = state.editingPreviewPath ? getPathDirname(state.editingPreviewPath) : state.editingPreviewFolder;
+    state.homeTargetPath = updatePath(state.homeTargetPath);
+    state.navHistory = state.navHistory.map(item => ({
+        ...item,
+        path: updatePath(item.path),
+    }));
+    if (el.currentPath) {
+        el.currentPath.innerText = state.currentFilePath;
+    }
+    syncEditorStateToBackend();
+    updateNavButtons();
+    renderTabs();
 }
 
 export async function saveCurrentDocument({ confirm = true, exitAfterSave = true } = {}) {

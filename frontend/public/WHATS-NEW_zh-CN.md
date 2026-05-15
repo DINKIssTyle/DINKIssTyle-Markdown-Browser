@@ -1,0 +1,115 @@
+# Version 2.1 Beta5 的新功能
+
+<div align="center"><img src="icon-512.png" width="128"/></div>
+
+<div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻量级优雅的跨平台<br>Markdown 查看器和编辑器！</div>
+
+<div align="center">DKST Markdown Browser 变得更加强大了！来看看此版本新增的主要功能。</div>
+
+## 🚀 Version 2.1 主要变更
+
+### 引入侧边栏
+
+在标签栏的左侧出现了一个打开侧边栏的按钮。`快捷键：CTRL+ALT+S (macOS: CMD+OPT+S)`
+* **侧边栏组成**:
+  * **文件树 (File Tree)**：以文件目录结构显示打开文件的主文件夹。您可以通过选择直接查看 Markdown 和图像文件。
+  * **大纲 (Outline)**：查看您的 Markdown 文档的大纲。
+  * **搜索 (Search)**：搜索功能（在 2.0 版本之前位于主工具栏）已合并至此处。
+
+### 小但重要的改动
+
+* **弹出式工具提示 (Popup Tooltip)**：当鼠标悬停在超链接上时，会显示目标地址。
+
+---
+
+## 新功能和改进计划
+
+- [ ] 使用文件树进行超链接和图像插入
+
+待续。
+
+# 最近的变更
+
+## 2.1 Beta2
+### 新增、错误修复和润色
+
+* **新增：Markdown 渲染的语法高亮**
+
+### Python
+```python
+# Fibonacci sequence
+def fibonacci(n: int) -> list[int]:
+    result = []
+    a, b = 0, 1
+
+    while len(result) < n:
+        result.append(a)
+        a, b = b, a + b
+
+    return result
+
+
+if __name__ == "__main__":
+    print("Fibonacci:", fibonacci(10))
+```
+
+### Bash
+
+```bash
+#!/usr/bin/env bash
+
+set -euo pipefail
+
+NAME="${1:-World}"
+
+if [[ "$NAME" == "admin" ]]; then
+  echo "Welcome, administrator."
+else
+  echo "Hello, $NAME!"
+fi
+
+for file in *.txt; do
+  [[ -e "$file" ]] || continue
+  echo "Found text file: $file"
+done
+```
+
+## 2.1 Beta3
+### 新增
+
+- 从文件树直接在编辑文档中插入链接和图像。
+- **表格插入可视化**：尝试使用 `/table` 插入表格。您可以使用键盘箭头键直观地插入它。
+- **表情符号插入高级功能**：一个按类别划分的模态窗口允许您仅使用键盘即可浏览和选择项目进行插入。
+
+### 错误修复和润色
+
+- **修复弹出式工具提示**；增加了多语言支持。
+- **移除表情符号提示**：现在可以将提示消息中的表情符号更改为 Google Material Symbols。
+- **文件树过滤器**：点击过滤器图标将只显示受支持的文件。
+
+## 2.1 Beta4
+
+### 错误修复和润色
+
+- **添加侧边栏快捷键**：文件树是 ALT+1，大纲是 ALT+2，搜索是 ALT+3。
+- **侧边栏键盘导航**：Tab 键移动到子元素；箭头键在整个侧边栏中移动。
+- **改进侧边栏 - 大纲格式化**：加粗文本和字体大小是根据标题区分的，可以使用格式按钮切换开关。
+- **TASK 格式渲染**：移除了不必要的 •。它现在已被移除并按预期渲染。
+
+## 2.1 Beta5
+
+### 新增
+
+- **生成多语言文档翻译**：在编辑器中按下 `Translate Document` 按钮并选择您想要的语言，即可一次性生成当前编辑文档的翻译。
+- **有序列表选项**：设置 > 编辑器 > 通用中现在有一个“有序列表续接”选项，默认为 1. 1. 1。Markdown 标准。如果您将此选项更改为 1. 2. 3.（递增数字），您就可以像以前一样使用递增数字了。
+- **三种编辑器工具栏**：您可以根据您的 Markdown 编辑熟练程度在选项中选择初学者型、新手型或专业型工具栏。
+
+### 错误修复和润色
+
+- **快捷键更改**：由于增加了功能，快捷键已有所更改。请查看启动页面底部的快捷键文档。
+- **编辑状态指示器**：当文档已被编辑但尚未保存时，会在文档标签上显示警告图标。
+- **另存为**：您可以将文档保存为不同的名称。
+- **文件树右键菜单**：增加了重命名、复制和删除功能。这些功能仅在编辑文档时有效。
+
+---
+(C) 2026 DINKI'ssTyle. 保留所有权利。

@@ -215,7 +215,48 @@ func translatedDocumentPath(sourcePath string, language TranslationLanguage) (st
 	if base == "" || ext == "" {
 		return "", fmt.Errorf("source path must include a file name and extension")
 	}
+	base = strings.TrimSuffix(base, sourceLanguageSuffix(base))
 	return filepath.Join(filepath.Dir(sourcePath), base+suffix+ext), nil
+}
+
+func sourceLanguageSuffix(base string) string {
+	parts := strings.Split(base, "-")
+	if len(parts) >= 3 && isLowerAlpha(parts[len(parts)-2], 2) && isUpperAlpha(parts[len(parts)-1], 2) {
+		return "-" + parts[len(parts)-2] + "-" + parts[len(parts)-1]
+	}
+	parts = strings.Split(base, "_")
+	if len(parts) >= 2 {
+		code := parts[len(parts)-1]
+		codeParts := strings.Split(code, "-")
+		if len(codeParts) == 2 && isLowerAlpha(codeParts[0], 2) && isUpperAlpha(codeParts[1], 2) {
+			return "_" + code
+		}
+	}
+	return ""
+}
+
+func isLowerAlpha(value string, length int) bool {
+	if len(value) != length {
+		return false
+	}
+	for _, char := range value {
+		if char < 'a' || char > 'z' {
+			return false
+		}
+	}
+	return true
+}
+
+func isUpperAlpha(value string, length int) bool {
+	if len(value) != length {
+		return false
+	}
+	for _, char := range value {
+		if char < 'A' || char > 'Z' {
+			return false
+		}
+	}
+	return true
 }
 
 func chunkMarkdownForTranslation(content string) []translationChunk {
