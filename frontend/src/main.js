@@ -53,8 +53,8 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateLinuxInstallLink(runningOnLinux);
 
     try {
-        // Step 1: Parallelize initial data fetching from Go backend
-        await Promise.all([loadSettings(), renderRecentFiles()]);
+        await loadSettings();
+        await renderRecentFiles();
 
         bindToolbar();
         bindHomeScreen();
@@ -134,9 +134,13 @@ async function loadSettings() {
     state.editorOrderedListStyle = s.editorOrderedListStyle === "incremental" ? "incremental" : "standard";
     state.lastVersion = s.lastVersion || "";
     state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
+    state.recentFileDisplayLimit = clampRecentFileDisplayLimit(s.recentFileDisplayLimit);
     state.outlineHeadingFormatEnabled = !!s.outlineHeadingFormat;
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
+    if (el.recentLimitInput) {
+        el.recentLimitInput.value = String(state.recentFileDisplayLimit);
+    }
     applyEditorPreferencesFromSettings(s);
     syncEngineSelector();
     if (el.edRenderMode) {
@@ -287,6 +291,13 @@ function bindHomeScreen() {
         await renderRecentFiles();
     };
 
+    el.recentLimitInput?.addEventListener('change', async () => {
+        state.recentFileDisplayLimit = clampRecentFileDisplayLimit(el.recentLimitInput.value);
+        el.recentLimitInput.value = String(state.recentFileDisplayLimit);
+        await persistAppSettings({ recentFileDisplayLimit: state.recentFileDisplayLimit });
+        await renderRecentFiles();
+    });
+
     el.recentList.addEventListener('click', event => {
         const item = event.target.closest('.recent-item');
         if (!item) return;
@@ -358,6 +369,14 @@ function bindHomeScreen() {
             await openAbout(true);
         };
     }
+}
+
+function clampRecentFileDisplayLimit(value) {
+    const parsed = Number.parseInt(value, 10);
+    if (!Number.isFinite(parsed)) {
+        return 8;
+    }
+    return Math.min(99, Math.max(0, parsed));
 }
 
 function bindSystemInstallModal() {

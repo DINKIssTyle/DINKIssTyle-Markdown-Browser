@@ -17,7 +17,7 @@ import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
     joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector, getPathDirname,
     isBundledDocumentPath, normalizeAppLocalFileHref, normalizeFileURLPath, isActiveMarkdownEditTab,
-    decodeLocalMarkdownPath, basename, isImagePath, escapeHTML,
+    decodeLocalMarkdownPath, basename, isImagePath, escapeHTML, escapeAttr,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
@@ -1262,22 +1262,28 @@ export async function renderMarkdown(content, options = {}) {
 
 export async function renderRecentFiles() {
     recentFilesCache = await GetRecentFiles();
-    if (!recentFilesCache || recentFilesCache.length === 0) {
+    const displayLimit = Math.min(99, Math.max(0, Number(state.recentFileDisplayLimit) || 0));
+    const displayedRecentFiles = (recentFilesCache || []).slice(0, displayLimit);
+    if (displayedRecentFiles.length === 0) {
         el.recentList.classList.add('empty');
+        const emptyTitle = displayLimit === 0 ? 'Recent documents hidden' : 'No recent documents yet';
+        const emptyCopy = displayLimit === 0
+            ? 'Recent documents are hidden. Increase the number beside Clear Recent Files to show them again.'
+            : 'Open a Markdown or HTML file and it will appear here for quick access.';
         el.recentList.innerHTML = `
             <div class="empty-state">
                 <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
-                <div class="empty-state-title">No recent documents yet</div>
-                <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here for quick access.</div>
+                <div class="empty-state-title">${emptyTitle}</div>
+                <div class="empty-state-copy">${emptyCopy}</div>
             </div>
         `;
         return;
     }
     el.recentList.classList.remove('empty');
-    el.recentList.innerHTML = recentFilesCache.map(f => `
-        <div class="recent-item" data-path="${f.path}">
-            <span class="recent-name">${f.name}</span>
-            <span class="recent-path">${f.path}</span>
+    el.recentList.innerHTML = displayedRecentFiles.map(f => `
+        <div class="recent-item" data-path="${escapeAttr(f.path)}">
+            <span class="recent-name">${escapeHTML(f.name)}</span>
+            <span class="recent-path">${escapeHTML(f.path)}</span>
         </div>
     `).join('');
 }

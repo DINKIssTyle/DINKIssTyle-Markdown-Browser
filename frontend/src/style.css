@@ -1078,9 +1078,42 @@ html.dark .empty-state {
 
 .recent-actions {
     display: flex;
+    flex-wrap: wrap;
+    align-items: center;
     gap: 12px;
     justify-content: center;
     margin-top: 16px;
+}
+
+.recent-limit-control {
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    min-height: 40px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-color);
+    color: var(--text-color);
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.recent-limit-input {
+    width: 58px;
+    height: 28px;
+    padding: 0 8px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font: inherit;
+    text-align: center;
+}
+
+.recent-limit-input:focus {
+    outline: 2px solid rgba(0, 122, 255, 0.35);
+    outline-offset: 2px;
 }
 
 .home-footer {

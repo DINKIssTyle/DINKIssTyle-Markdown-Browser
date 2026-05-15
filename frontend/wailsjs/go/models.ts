@@ -32,6 +32,7 @@ export namespace app {
 	    editorTokenColors: Record<string, string>;
 	    editorBackgroundColor: string;
 	    fileTreeFilterEnabled: boolean;
+	    recentFileDisplayLimit: number;
 	    outlineHeadingFormat: boolean;
 	    aiFeaturesDisabled: boolean;
 	    aiGeneralEnabled: boolean;
@@ -71,6 +72,7 @@ export namespace app {
 	        this.editorTokenColors = source["editorTokenColors"];
 	        this.editorBackgroundColor = source["editorBackgroundColor"];
 	        this.fileTreeFilterEnabled = source["fileTreeFilterEnabled"];
+	        this.recentFileDisplayLimit = source["recentFileDisplayLimit"];
 	        this.outlineHeadingFormat = source["outlineHeadingFormat"];
 	        this.aiFeaturesDisabled = source["aiFeaturesDisabled"];
 	        this.aiGeneralEnabled = source["aiGeneralEnabled"];

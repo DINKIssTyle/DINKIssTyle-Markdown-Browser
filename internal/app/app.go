@@ -37,6 +37,11 @@ var appIconPNG []byte
 
 var linuxIconPNGBySize map[int][]byte
 
+const (
+	defaultRecentFileDisplayLimit = 8
+	maxRecentFileDisplayLimit     = 99
+)
+
 func SetIntegrationIcons(appIcon []byte, linuxIcons map[int][]byte) {
 	appIconPNG = appIcon
 	linuxIconPNGBySize = linuxIcons
@@ -83,6 +88,7 @@ type AppSettings struct {
 	EditorTokenColors        map[string]string `json:"editorTokenColors"`
 	EditorBackgroundColor    string            `json:"editorBackgroundColor"`
 	FileTreeFilterEnabled    bool              `json:"fileTreeFilterEnabled"`
+	RecentFileDisplayLimit   int               `json:"recentFileDisplayLimit"`
 	OutlineHeadingFormat     bool              `json:"outlineHeadingFormat"`
 	AIFeaturesDisabled       bool              `json:"aiFeaturesDisabled"`
 	AIGeneralEnabled         bool              `json:"aiGeneralEnabled"`
@@ -530,9 +536,9 @@ func (a *App) saveRecentFile(path string) {
 		}
 	}
 
-	// Limit to 8
-	if len(newRecent) > 8 {
-		newRecent = newRecent[:8]
+	// Keep enough history for the configurable display limit.
+	if len(newRecent) > maxRecentFileDisplayLimit {
+		newRecent = newRecent[:maxRecentFileDisplayLimit]
 	}
 
 	data, _ := json.Marshal(newRecent)
@@ -568,6 +574,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.EditorTokenColors = map[string]string{}
 	settings.EditorBackgroundColor = ""
 	settings.FileTreeFilterEnabled = false
+	settings.RecentFileDisplayLimit = defaultRecentFileDisplayLimit
 	settings.OutlineHeadingFormat = false
 	settings.AIGeneralEnabled = true
 	settings.AIGeneralToolbarEnabled = true
@@ -582,13 +589,24 @@ func (a *App) GetSettings() AppSettings {
 	if err == nil {
 		json.Unmarshal(data, &settings)
 	}
+	normalizeSettings(&settings)
 	return settings
 }
 
 // SaveSettings saves the application settings
 func (a *App) SaveSettings(settings AppSettings) {
+	normalizeSettings(&settings)
 	data, _ := json.Marshal(settings)
 	os.WriteFile(a.settingsPath, data, 0644)
+}
+
+func normalizeSettings(settings *AppSettings) {
+	if settings.RecentFileDisplayLimit < 0 {
+		settings.RecentFileDisplayLimit = 0
+	}
+	if settings.RecentFileDisplayLimit > maxRecentFileDisplayLimit {
+		settings.RecentFileDisplayLimit = maxRecentFileDisplayLimit
+	}
 }
 
 // GetSystemTheme returns the current theme (light/dark)

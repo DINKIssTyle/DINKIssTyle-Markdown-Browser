@@ -82,6 +82,7 @@ export const el = {
     recentList: $('recent-files-list'),
     btnOpenHome: $('btn-open-home'),
     btnClearRecent: $('btn-clear-recent'),
+    recentLimitInput: $('recent-limit-input'),
     markdownContainer: $('markdown-container'),
     editPreviewReturn: $('edit-preview-return'),
     editPreviewOpenTab: $('edit-preview-open-tab'),
@@ -312,6 +313,7 @@ export const state = {
     koreanImeFixEnabled: false,
     lastVersion: "",
     fileTreeFilterEnabled: false,
+    recentFileDisplayLimit: 8,
     outlineHeadingFormatEnabled: false,
 };
 

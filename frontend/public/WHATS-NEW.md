@@ -130,12 +130,17 @@ done
 - **Tab Closing Animation**: An animation has been added to the tab bar when closing a tab.
 
 
+
 ## 2.1 Beta 6
 
+### AI Feature Enhancements
+- **Spell Checker**: Check and correct spelling in documents.
+
 ### Bug Fixes and Improvements
-- **When deleting a file from the file tree**: If there are open files, the corresponding tab should also close.
-- **File opening behavior while editing**: It should open in a new tab in edit mode.
-- **Translation document feature**: The application must remember the languages last selected by the user.
+- **Deleting Files from File Tree**: If a file is open, its tab will also close.
+- **Opening Files While Editing**: Opens in a new tab.
+- **Translation Document Feature**: The application remembers the language last selected by the user.
+- **Adjusting the number of recently opened items**: The number of displayed items can be set by the user on the start page.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

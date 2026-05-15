@@ -67,6 +67,9 @@
                 <button id="btn-theme-toggle" title="Toggle Theme" aria-label="Toggle Theme" class="nav-btn icon-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
                 </button>
+                <button id="ed-settings" title="Settings" aria-label="Settings" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">settings</span>
+                </button>
             </div>
         </header>
 
@@ -229,11 +232,6 @@
                         </div>
                         <div class="spacer"></div>
                         <div class="edit-tool-group">
-                            <button id="ed-settings" title="Settings" class="tool-btn">
-                                <span class="material-symbols-outlined">settings</span>
-                            </button>
-                        </div>
-                        <div class="edit-tool-group">
                             <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span
                                     class="material-symbols-outlined">disabled_by_default</span></button>
                             <button id="ed-save-as" title="Save As... (⇧⌘S)" class="tool-btn save-btn"><span
@@ -319,6 +317,12 @@
                                     <span class="material-symbols-outlined" aria-hidden="true">delete</span>
                                     <span>Clear Recent Files</span>
                                 </button>
+                                <label class="recent-limit-control" for="recent-limit-input"
+                                    title="Maximum recent files to show">
+                                    <span>Show</span>
+                                    <input type="number" id="recent-limit-input" class="recent-limit-input" min="0"
+                                        max="99" step="1" inputmode="numeric" aria-label="Recent files to show" />
+                                </label>
                             </div>
 
                             <footer class="home-footer" aria-label="Version and Copyright Info">

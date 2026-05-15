@@ -116,12 +116,20 @@ done
 
 
 
+
 ## 2.1 Beta 6
 
-### Correcciones y mejoras de errores
-- **Al eliminar un archivo en el árbol de archivos**: Si hay un archivo abierto, esa pestaña también debe cerrarse.
-- **Comportamiento al abrir un archivo desde el árbol mientras se edita**: Debe abrirse en una nueva pestaña en estado de edición.
-- **Función de documentos traducidos**: Debe recordar los idiomas seleccionados por el usuario por última vez.
+### Mejoras de Características de IA
+- **Revisor Ortográfico**: Revisa y corrige la ortografía en los documentos.
+
+
+### Corrección de Errores e Mejoras
+- **Borrar Archivos del Árbol de Archivos**: Si un archivo está abierto, su pestaña también se cerrará.
+- **Abrir Archivos Mientras Se Edita**: Se abre en una nueva pestaña.
+- **Característica de Documentos de Traducción**: La aplicación recuerda el idioma seleccionado por última vez por parte del usuario.
+- **Ajuste del número de elementos en la lista más reciente**: El número de elementos mostrados puede ser configurado por el usuario desde la página inicial.
+
+
 
 ---
 (C) 2026 DINKI'ssTyle. Todos los derechos reservados.
