@@ -9,6 +9,8 @@ import (
 	"embed"
 	"fmt"
 
+	appcore "dinkisstyle-markdown-browser/internal/app"
+
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
@@ -18,19 +20,27 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var appIconPNG []byte
+
+//go:embed build/linux/icon/*.png
+var linuxIconFS embed.FS
+
 func main() {
+	appcore.SetIntegrationIcons(appIconPNG, loadLinuxIcons())
+
 	// Create an instance of the app structure
-	app := NewApp()
+	app := appcore.NewApp()
 
 	// Create and configure the file loader
-	fileLoader := NewFileLoader()
+	fileLoader := appcore.NewFileLoader()
 
 	// Build the platform-specific menu (macOS: native menu bar, others: nil)
-	appMenu := buildAppMenu(app)
+	appMenu := appcore.BuildAppMenu(app)
 
 	// Create application with options
 	err := wails.Run(&options.App{
-		Title:     AppName,
+		Title:     appcore.AppName,
 		Width:     1200,
 		Height:    800,
 		MinWidth:  800,
@@ -40,8 +50,8 @@ func main() {
 			Handler: fileLoader,
 		},
 		BackgroundColour: &options.RGBA{R: 18, G: 18, B: 18, A: 1}, // Sleek dark
-		OnStartup:        app.startup,
-		OnBeforeClose:    app.onBeforeClose,
+		OnStartup:        app.Startup,
+		OnBeforeClose:    app.OnBeforeClose,
 		SingleInstanceLock: &options.SingleInstanceLock{
 			UniqueId:               "com.dinkisstyle.mdbrowser",
 			OnSecondInstanceLaunch: app.HandleSecondInstanceLaunch,
@@ -61,8 +71,8 @@ func main() {
 			TitleBar:   mac.TitleBarDefault(),
 			Appearance: mac.NSAppearanceNameAqua, // 시스템 라이트/다크 자동 따름
 			About: &mac.AboutInfo{
-				Title:   AppName,
-				Message: fmt.Sprintf("Version %s\nCopyright (C) 2026 DINKI'ssTyle.\nAll rights reserved.", AppVersion),
+				Title:   appcore.AppName,
+				Message: fmt.Sprintf("Version %s\nCopyright (C) 2026 DINKI'ssTyle.\nAll rights reserved.", appcore.AppVersion),
 			},
 			OnFileOpen: app.HandleSystemOpenFile,
 		},
@@ -71,4 +81,15 @@ func main() {
 	if err != nil {
 		println("Error:", err.Error())
 	}
+}
+
+func loadLinuxIcons() map[int][]byte {
+	icons := map[int][]byte{}
+	for _, size := range []int{16, 24, 32, 48, 64, 128, 256, 512, 1024} {
+		icon, err := linuxIconFS.ReadFile(fmt.Sprintf("build/linux/icon/%d.png", size))
+		if err == nil {
+			icons[size] = icon
+		}
+	}
+	return icons
 }

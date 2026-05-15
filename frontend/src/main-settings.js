@@ -4,7 +4,7 @@
  */
 
 import { state } from './main-state.js';
-import { SaveSettings } from '../wailsjs/go/main/App';
+import { SaveSettings } from '../wailsjs/go/app/App';
 
 export function buildSettingsPayload(overrides = {}) {
     return {

@@ -1,4 +1,4 @@
-export namespace main {
+export namespace app {
 	
 	export class AIModelInfo {
 	    id: string;

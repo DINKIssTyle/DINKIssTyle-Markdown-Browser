@@ -5,7 +5,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-package main
+package app
 
 import (
 	"github.com/wailsapp/wails/v2/pkg/menu"
@@ -13,9 +13,9 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-// buildAppMenu constructs the macOS native menu bar.
+// BuildAppMenu constructs the macOS native menu bar.
 // Wails v2 on macOS replaces the built-in menu with the one returned here.
-func buildAppMenu(app *App) *menu.Menu {
+func BuildAppMenu(app *App) *menu.Menu {
 	appMenu := menu.NewMenuFromItems(menu.AppMenu())
 
 	// ── File menu ──────────────────────────────────────────────────────

@@ -12,7 +12,7 @@ import { renderActiveTab } from './main-render.js';
 import { exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
-import { AskSaveDiscardCancel } from '../wailsjs/go/main/App';
+import { AskSaveDiscardCancel } from '../wailsjs/go/app/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────

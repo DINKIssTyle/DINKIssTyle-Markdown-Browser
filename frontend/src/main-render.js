@@ -23,7 +23,7 @@ import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
 import { syncAIControls } from './main-ai.js';
 import { applyHighlight, clearHighlight, copyTextToClipboard, showToast } from './main-ui.js';
-import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../wailsjs/go/main/App';
+import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../wailsjs/go/app/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 import { refreshSidebarContent } from './main-sidebar.js';
 

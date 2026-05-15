@@ -18,7 +18,7 @@ import {
     showToast, beginProgressTask, updateProgress,
     finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
 } from './main-ui.js';
-import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../wailsjs/go/main/App';
+import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../wailsjs/go/app/App';
 import { BrowserOpenURL, LogError, LogInfo } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────

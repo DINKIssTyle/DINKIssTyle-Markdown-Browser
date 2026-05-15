@@ -41,7 +41,7 @@ import {
     AskSaveDiscardCancel,
     PrintCurrentWindow,
     ShowPageSetup,
-} from '../wailsjs/go/main/App';
+} from '../wailsjs/go/app/App';
 import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
 
 // ── App Initialization ─────────────────────────────────────

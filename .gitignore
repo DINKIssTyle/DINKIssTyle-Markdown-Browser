@@ -9,3 +9,4 @@ frontend/package.json.md5
 dinkisstyle-markdown-browser
 note
 .DS_Store
+*_test.go

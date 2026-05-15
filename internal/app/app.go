@@ -3,13 +3,12 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-package main
+package app
 
 import (
 	"bufio"
 	"bytes"
 	"context"
-	"embed"
 	"encoding/base64"
 	"encoding/json"
 	"errors"
@@ -34,11 +33,14 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
-//go:embed build/appicon.png
 var appIconPNG []byte
 
-//go:embed build/linux/icon/*.png
-var linuxIconFS embed.FS
+var linuxIconPNGBySize map[int][]byte
+
+func SetIntegrationIcons(appIcon []byte, linuxIcons map[int][]byte) {
+	appIconPNG = appIcon
+	linuxIconPNGBySize = linuxIcons
+}
 
 // RecentFile represents a recently opened file
 type RecentFile struct {
@@ -175,8 +177,8 @@ func NewApp() *App {
 	}
 }
 
-// startup is called when the app starts. The context is saved
-func (a *App) startup(ctx context.Context) {
+// Startup is called when the app starts. The context is saved.
+func (a *App) Startup(ctx context.Context) {
 	a.ctx = ctx
 
 	// Check version for "What's New"
@@ -203,7 +205,7 @@ func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath strin
 	}
 }
 
-func (a *App) onBeforeClose(ctx context.Context) bool {
+func (a *App) OnBeforeClose(ctx context.Context) bool {
 	a.mu.Lock()
 	editorState := a.editorState
 	a.mu.Unlock()
@@ -1527,12 +1529,17 @@ func installIconSet(home string, context string, name string) error {
 }
 
 func linuxIconPNG(size int) ([]byte, error) {
-	icon, err := linuxIconFS.ReadFile(fmt.Sprintf("build/linux/icon/%d.png", size))
-	if err == nil {
+	if icon, ok := linuxIconPNGBySize[size]; ok && len(icon) > 0 {
 		return icon, nil
 	}
 	if size == 1024 {
+		if len(appIconPNG) == 0 {
+			return nil, fmt.Errorf("app icon is not configured")
+		}
 		return appIconPNG, nil
+	}
+	if len(appIconPNG) == 0 {
+		return nil, fmt.Errorf("app icon is not configured")
 	}
 	return resizePNG(appIconPNG, size)
 }

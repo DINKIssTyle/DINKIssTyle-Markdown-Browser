@@ -4,7 +4,7 @@
  */
 
 import { state, el, getScroller, escapeRegex, escapeAttr, getPathDirname } from './main-state.js';
-import { SearchMarkdown } from '../wailsjs/go/main/App';
+import { SearchMarkdown } from '../wailsjs/go/app/App';
 import { ClipboardGetText, ClipboardSetText, LogError } from '../wailsjs/runtime/runtime';
 
 // ── Module-level State ─────────────────────────────────────

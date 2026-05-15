@@ -10,7 +10,7 @@ import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
 import { showToast, updateProgress, hideProgress } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
-import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies } from '../wailsjs/go/main/App';
+import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
