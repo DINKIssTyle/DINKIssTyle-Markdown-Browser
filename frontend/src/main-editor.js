@@ -4,14 +4,14 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
-import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce } from './main-state.js';
+import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
-import { showToast } from './main-ui.js';
+import { showToast, updateProgress, hideProgress } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
-import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
-import { LogError } from '../wailsjs/runtime/runtime';
+import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies } from '../wailsjs/go/main/App';
+import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
@@ -34,11 +34,25 @@ let currentMatchIndex = -1;
 let isFindBarOpen = false;
 let previewScrollSyncFrame = 0;
 let editorScrollEventsBound = false;
+let translationProgressEventsBound = false;
 let lastRenderedPreviewContent = "";
 let plainClickSelectionState = null;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
+
+const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
+const TRANSLATION_LANGUAGES = Object.freeze([
+    { code: 'en-US', name: 'English', nativeName: 'English', suffix: '_en-US' },
+    { code: 'es-ES', name: 'Spanish', nativeName: 'Español', suffix: '_es-ES' },
+    { code: 'fr-FR', name: 'French', nativeName: 'Français', suffix: '_fr-FR' },
+    { code: 'de-DE', name: 'German', nativeName: 'Deutsch', suffix: '_de-DE' },
+    { code: 'ko-KR', name: 'Korean', nativeName: '한국어', suffix: '-Ko-KR' },
+    { code: 'zh-CN', name: 'Simplified Chinese', nativeName: '中国语', suffix: '_zh-CN' },
+    { code: 'zh-TW', name: 'Traditional Chinese', nativeName: '中國語', suffix: '_zh-TW' },
+    { code: 'ja-JP', name: 'Japanese', nativeName: '日本語', suffix: '_ja-JP' },
+]);
+const DEFAULT_TRANSLATION_LANGUAGE_CODES = Object.freeze(['ko-KR', 'en-US']);
 
 export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
     { key: 'plain', label: 'Plain Text' },
@@ -713,7 +727,7 @@ function bindEditorSearchEvents() {
             });
 
             const currentIndex = focusableElements.indexOf(document.activeElement);
-            
+
             if (currentIndex !== -1) {
                 e.preventDefault();
                 if (e.shiftKey) {
@@ -760,6 +774,259 @@ function bindEditorSearchEvents() {
             e.preventDefault();
         }
     };
+}
+
+function bindTranslationProgressEvents() {
+    if (translationProgressEventsBound) return;
+    translationProgressEventsBound = true;
+
+    EventsOn('translation:progress', (data) => {
+        const progress = Math.round(Number(data?.progress) || 0);
+        updateProgress(data?.label || 'Translating document...', progress);
+        if (data?.completed) {
+            hideProgress();
+        }
+    });
+}
+
+function getStoredTranslationLanguageCodes() {
+    try {
+        const parsed = JSON.parse(localStorage.getItem(TRANSLATION_LANGUAGE_STORAGE_KEY) || '[]');
+        if (Array.isArray(parsed) && parsed.length > 0) {
+            return parsed.filter(code => TRANSLATION_LANGUAGES.some(language => language.code === code));
+        }
+    } catch {
+        // Ignore malformed user storage and fall back to defaults.
+    }
+    return [...DEFAULT_TRANSLATION_LANGUAGE_CODES];
+}
+
+function storeTranslationLanguageCodes(codes) {
+    localStorage.setItem(TRANSLATION_LANGUAGE_STORAGE_KEY, JSON.stringify(codes));
+}
+
+function showTranslationLanguagePrompt() {
+    return new Promise((resolve) => {
+        const selectedCodes = new Set(getStoredTranslationLanguageCodes());
+        let filterText = "";
+        let isComposingFilterText = false;
+        let filterInput = null;
+        let languageList = null;
+
+        const renderLanguageList = () => {
+            const query = filterText.trim().toLowerCase();
+            const filtered = TRANSLATION_LANGUAGES.filter(language => {
+                const haystack = `${language.name} ${language.nativeName} ${language.code}`.toLowerCase();
+                return !query || haystack.includes(query);
+            });
+            languageList.innerHTML = filtered.length
+                ? filtered.map(language => `
+                    <label class="language-option">
+                        <input type="checkbox" value="${escapeAttr(language.code)}" ${selectedCodes.has(language.code) ? 'checked' : ''} />
+                        <span class="language-option-name">
+                            ${escapeHTML(language.name)} (${escapeHTML(language.nativeName)})
+                            <span class="language-option-code">${escapeHTML(language.code)}</span>
+                        </span>
+                    </label>
+                `).join('')
+                : '<div class="language-empty">No languages found.</div>';
+        };
+
+        const mountLanguagePicker = () => {
+            el.modalLanguageContainer.innerHTML = `
+                <input type="text" class="language-filter-input" placeholder="Filter languages..." autocomplete="off" spellcheck="false" />
+                <div class="language-list"></div>
+            `;
+
+            filterInput = el.modalLanguageContainer.querySelector('.language-filter-input');
+            languageList = el.modalLanguageContainer.querySelector('.language-list');
+
+            filterInput?.addEventListener('compositionstart', () => {
+                isComposingFilterText = true;
+            });
+            filterInput?.addEventListener('compositionend', event => {
+                isComposingFilterText = false;
+                filterText = event.target.value || "";
+                renderLanguageList();
+            });
+            filterInput?.addEventListener('input', event => {
+                if (isComposingFilterText || event.isComposing) return;
+                filterText = event.target.value || "";
+                renderLanguageList();
+            });
+
+            languageList?.addEventListener('change', event => {
+                const input = event.target.closest('input[type="checkbox"]');
+                if (!input) return;
+                const code = input.value;
+                if (input.checked) selectedCodes.add(code);
+                else selectedCodes.delete(code);
+            });
+
+            renderLanguageList();
+        };
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalLanguageContainer.classList.add('hidden');
+            el.modalBtnOk.removeEventListener('click', handleOk);
+            el.modalBtnCancel.removeEventListener('click', handleCancel);
+            document.removeEventListener('keydown', handleKey, true);
+        };
+
+        const handleOk = () => {
+            const selected = TRANSLATION_LANGUAGES.filter(language => selectedCodes.has(language.code));
+            cleanup();
+            if (selected.length > 0) {
+                storeTranslationLanguageCodes(selected.map(language => language.code));
+            }
+            resolve(selected);
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const handleKey = event => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel();
+            }
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                event.preventDefault();
+                handleOk();
+            }
+        };
+
+        el.modalTitle.textContent = "Translate Document";
+        el.modalMessage.textContent = "Select target languages. Translated copies will be created next to the current document.";
+        el.modalInputGroup.classList.add('hidden');
+        el.modalOptionGrid.classList.add('hidden');
+        el.modalEmojiContainer.classList.add('hidden');
+        el.modalTableContainer.classList.add('hidden');
+        el.modalLanguageContainer.classList.remove('hidden');
+        el.modalBtnOk.classList.remove('hidden');
+        mountLanguagePicker();
+        el.modalOverlay.classList.remove('hidden');
+
+        el.modalBtnOk.addEventListener('click', handleOk);
+        el.modalBtnCancel.addEventListener('click', handleCancel);
+        document.addEventListener('keydown', handleKey, true);
+        setTimeout(() => filterInput?.focus(), 50);
+    });
+}
+
+function isUsableMarkdownSourcePath(path) {
+    return !!path && path !== '__home__' && /\.(md|markdown)$/i.test(path);
+}
+
+async function ensureDocumentReadyForTranslation() {
+    if (!cmView || !state.isEditing) {
+        showToast("Open a Markdown document in edit mode first.");
+        return null;
+    }
+
+    let sourcePath = state.editingSourcePath || state.currentFilePath || "";
+    if (!isUsableMarkdownSourcePath(sourcePath)) {
+        const saved = await saveCurrentDocumentAs();
+        if (!saved) return null;
+        sourcePath = state.editingSourcePath || state.currentFilePath || "";
+    }
+    if (!isUsableMarkdownSourcePath(sourcePath)) {
+        showToast("Save this document as Markdown before translating.");
+        return null;
+    }
+
+    if (hasUnsavedEditorChanges()) {
+        const ok = await AskConfirm("Save Before Translation", "Save the current document before creating translated copies?", "Save", "Cancel");
+        if (!ok) return null;
+        const saved = await saveCurrentDocument({ confirm: false, exitAfterSave: false });
+        if (!saved) return null;
+    }
+
+    return {
+        sourcePath,
+        content: getCurrentEditorText(),
+    };
+}
+
+function getTranslationAIConfig() {
+    const aiState = window.aiState || {};
+    if (state.aiFeaturesDisabled || aiState.generalAvailable === false) {
+        return { error: "General AI is disabled in AI Settings." };
+    }
+    const endpoint = String(aiState.generalEndpoint || "").trim();
+    const model = String(aiState.generalModel || "").trim();
+    if (!endpoint || !model) {
+        return { error: "Set a General AI endpoint and model before translating." };
+    }
+    return {
+        provider: aiState.generalProvider || "openai",
+        endpoint,
+        model,
+        key: aiState.generalKey || "",
+        temperature: Number(aiState.generalTemp) || 0,
+    };
+}
+
+async function insertTranslatedDocumentLinks(sourcePath, targets) {
+    const lines = [];
+    for (const target of targets) {
+        const relPath = await GetRelativePath(sourcePath, target.path);
+        const title = target.nativeName && target.nativeName !== target.name
+            ? `${target.name} (${target.nativeName})`
+            : target.name;
+        lines.push(`[${title}](${formatMarkdownDestination(relPath)})`);
+    }
+    if (lines.length === 0) return;
+    insertPlainTextAtCursor(`${lines.join('\n')}\n`);
+    renderMarkdown(getCurrentEditorText());
+    cmView?.focus();
+}
+
+async function translateCurrentDocument() {
+    const selectedLanguages = await showTranslationLanguagePrompt();
+    if (!selectedLanguages || selectedLanguages.length === 0) {
+        return;
+    }
+
+    const ready = await ensureDocumentReadyForTranslation();
+    if (!ready) return;
+
+    const aiConfig = getTranslationAIConfig();
+    if (aiConfig.error) {
+        showToast(aiConfig.error, "error", 3200);
+        return;
+    }
+
+    try {
+        const targets = await GetTranslationTargets(ready.sourcePath, selectedLanguages);
+        const existing = targets.filter(target => target.exists);
+        if (existing.length > 0) {
+            const message = `These translated files already exist:\n\n${existing.map(target => target.fileName).join('\n')}\n\nOverwrite them?`;
+            const overwrite = await AskConfirm("Overwrite Translations", message, "Overwrite", "Cancel");
+            if (!overwrite) return;
+        }
+
+        updateProgress("Starting translation...", 0);
+        const result = await TranslateDocumentCopies({
+            sourcePath: ready.sourcePath,
+            content: ready.content,
+            languages: selectedLanguages,
+            ai: aiConfig,
+            overwriteExisting: existing.length > 0,
+        });
+        const sidebar = await import('./main-sidebar.js');
+        await sidebar.updateFileTree({ forceRefresh: true });
+        await insertTranslatedDocumentLinks(ready.sourcePath, result.targets || []);
+        showToast("Translated documents created.", "check_circle");
+    } catch (error) {
+        LogError(`TranslateDocumentCopies failed: ${error?.message || error}`);
+        showToast(error?.message || "Failed to translate document.", "error", 4200);
+    } finally {
+        hideProgress();
+    }
 }
 
 function bindEditorScrollSync() {
@@ -1758,7 +2025,7 @@ export async function insertFileLink(filePath, isImage = false) {
     const suffix = `)`;
 
     insertTextAtCursor(prefix, suffix);
-    
+
     // Replace the inner text (fileName) with the formatted path
     const selection = cmView.state.selection.main;
     cmView.dispatch({
@@ -2531,7 +2798,7 @@ export function showEmojiPicker() {
         el.modalEmojiGrid.addEventListener('click', handleEmojiClick);
         el.modalBtnCancel.addEventListener('click', handleCancelClick);
         document.addEventListener('keydown', handleKeyDown, true);
-        
+
         // Initial focus
         setTimeout(() => {
             el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
@@ -2543,6 +2810,7 @@ export function showEmojiPicker() {
 
 export function bindEditorEvents() {
     bindSlashMenuEvents();
+    bindTranslationProgressEvents();
     el.edBold.onclick = () => applyInlineWrap('**', '**');
     el.edItalic.onclick = () => applyInlineWrap('*', '*');
     el.edUnderline.onclick = () => applyInlineWrap('<u>', '</u>');
@@ -2566,6 +2834,11 @@ export function bindEditorEvents() {
     el.edEmoji.onclick = insertEmoji;
 
     el.edDiv.onclick = insertDivWrapper;
+    if (el.edTranslateDoc) {
+        el.edTranslateDoc.onclick = () => {
+            void translateCurrentDocument();
+        };
+    }
     el.edRenderMode.onchange = async event => {
         state.currentEditorRenderMode = event.target.value || 'realtime';
         lastPreviewCursorLine = getCursorLineNumber(cmView?.state);

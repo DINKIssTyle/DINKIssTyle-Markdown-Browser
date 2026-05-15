@@ -50,6 +50,10 @@ export function GetSystemTheme() {
   return window['go']['main']['App']['GetSystemTheme']();
 }
 
+export function GetTranslationTargets(arg1, arg2) {
+  return window['go']['main']['App']['GetTranslationTargets'](arg1, arg2);
+}
+
 export function GetVersion() {
   return window['go']['main']['App']['GetVersion']();
 }
@@ -144,6 +148,10 @@ export function SyncEditorState(arg1, arg2, arg3, arg4, arg5) {
 
 export function TouchRecentFile(arg1) {
   return window['go']['main']['App']['TouchRecentFile'](arg1);
+}
+
+export function TranslateDocumentCopies(arg1) {
+  return window['go']['main']['App']['TranslateDocumentCopies'](arg1);
 }
 
 export function UninstallSystemIntegration() {

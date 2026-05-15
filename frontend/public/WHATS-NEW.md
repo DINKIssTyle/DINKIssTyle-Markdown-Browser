@@ -1,5 +1,8 @@
 # What's New in Version 2.1 Beta4
 
+[Korean (한국어)](WHATS-NEW-Ko-KR.md)
+
+
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> Lightweight and elegant cross-platform<br>Markdown viewer and editor!</div>

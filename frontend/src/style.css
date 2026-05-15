@@ -3115,6 +3115,80 @@ html.dark .context-menu-item:hover {
     box-shadow: 0 0 0 3px rgba(31, 143, 255, 0.14);
 }
 
+.modal-language-container {
+    margin-bottom: 20px;
+}
+
+.language-filter-input {
+    width: 100%;
+    background: rgba(255, 255, 255, 0.05);
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    padding: 10px 12px;
+    color: var(--text-color);
+    font-size: 14px;
+    outline: none;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.language-filter-input:focus {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+}
+
+.language-list {
+    max-height: min(360px, 46vh);
+    overflow: auto;
+    margin-top: 12px;
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.language-option {
+    display: grid;
+    grid-template-columns: 22px minmax(0, 1fr);
+    align-items: center;
+    gap: 10px;
+    padding: 8px 10px;
+    border: 1px solid transparent;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.language-option:hover {
+    background: rgba(0, 113, 227, 0.08);
+    border-color: rgba(0, 113, 227, 0.24);
+}
+
+.language-option input {
+    width: 16px;
+    height: 16px;
+    margin: 0;
+    accent-color: var(--accent-color);
+}
+
+.language-option-name {
+    min-width: 0;
+    color: var(--text-color);
+    font-size: 14px;
+    line-height: 1.35;
+}
+
+.language-option-code {
+    margin-left: 6px;
+    color: color-mix(in srgb, var(--text-color) 58%, transparent);
+    font-size: 12px;
+}
+
+.language-empty {
+    padding: 24px 8px;
+    text-align: center;
+    color: color-mix(in srgb, var(--text-color) 62%, transparent);
+    font-size: 13px;
+}
+
 .modal-input-group input {
     width: 100%;
     background: rgba(255, 255, 255, 0.05);

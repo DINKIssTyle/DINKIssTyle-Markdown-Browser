@@ -337,7 +337,7 @@ function scrollPreviewHeadingToTop(heading) {
     });
 }
 
-async function updateFileTree(options = {}) {
+export async function updateFileTree(options = {}) {
     if (!el.fileTree) return;
 
     const forceRefresh = !!options.forceRefresh;

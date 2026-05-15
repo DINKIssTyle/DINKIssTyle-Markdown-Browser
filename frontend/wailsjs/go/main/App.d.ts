@@ -27,6 +27,8 @@ export function GetSettings():Promise<main.AppSettings>;
 
 export function GetSystemTheme():Promise<string>;
 
+export function GetTranslationTargets(arg1:string,arg2:Array<main.TranslationLanguage>):Promise<Array<main.TranslatedDocumentTarget>>;
+
 export function GetVersion():Promise<string>;
 
 export function HandleFileDrop(arg1:string):Promise<main.FileResult>;
@@ -74,6 +76,8 @@ export function ShowSaveFileDialog(arg1:string):Promise<string>;
 export function SyncEditorState(arg1:boolean,arg2:boolean,arg3:string,arg4:string,arg5:string):Promise<void>;
 
 export function TouchRecentFile(arg1:string):Promise<void>;
+
+export function TranslateDocumentCopies(arg1:main.TranslateDocumentRequest):Promise<main.TranslatedDocumentResult>;
 
 export function UninstallSystemIntegration():Promise<string>;
 

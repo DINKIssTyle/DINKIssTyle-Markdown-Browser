@@ -1,16 +1,16 @@
 export namespace main {
-	
+
 	export class AIModelInfo {
 	    id: string;
 	    displayName: string;
 	    isLoaded: boolean;
 	    stateLabel: string;
 	    primaryLoadedInstanceId: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AIModelInfo(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -52,11 +52,11 @@ export namespace main {
 	    aiSupportAgent: boolean;
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.theme = source["theme"];
@@ -95,11 +95,11 @@ export namespace main {
 	export class FileResult {
 	    path: string;
 	    content: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new FileResult(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
@@ -112,11 +112,11 @@ export namespace main {
 	    isDir: boolean;
 	    hasItems: boolean;
 	    children?: FileTreeNode[];
-	
+
 	    static createFrom(source: any = {}) {
 	        return new FileTreeNode(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -125,7 +125,7 @@ export namespace main {
 	        this.hasItems = source["hasItems"];
 	        this.children = this.convertValues(source["children"], FileTreeNode);
 	    }
-	
+
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -147,30 +147,160 @@ export namespace main {
 	export class RecentFile {
 	    path: string;
 	    name: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new RecentFile(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.name = source["name"];
 	    }
 	}
+	export class TranslationAIConfig {
+	    provider: string;
+	    endpoint: string;
+	    model: string;
+	    key: string;
+	    temperature: number;
+
+	    static createFrom(source: any = {}) {
+	        return new TranslationAIConfig(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.provider = source["provider"];
+	        this.endpoint = source["endpoint"];
+	        this.model = source["model"];
+	        this.key = source["key"];
+	        this.temperature = source["temperature"];
+	    }
+	}
+	export class TranslationLanguage {
+	    code: string;
+	    name: string;
+	    nativeName: string;
+	    suffix: string;
+
+	    static createFrom(source: any = {}) {
+	        return new TranslationLanguage(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.name = source["name"];
+	        this.nativeName = source["nativeName"];
+	        this.suffix = source["suffix"];
+	    }
+	}
+	export class TranslateDocumentRequest {
+	    sourcePath: string;
+	    content: string;
+	    languages: TranslationLanguage[];
+	    ai: TranslationAIConfig;
+	    overwriteExisting: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new TranslateDocumentRequest(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.sourcePath = source["sourcePath"];
+	        this.content = source["content"];
+	        this.languages = this.convertValues(source["languages"], TranslationLanguage);
+	        this.ai = this.convertValues(source["ai"], TranslationAIConfig);
+	        this.overwriteExisting = source["overwriteExisting"];
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class TranslatedDocumentTarget {
+	    code: string;
+	    name: string;
+	    nativeName: string;
+	    path: string;
+	    fileName: string;
+	    exists: boolean;
+
+	    static createFrom(source: any = {}) {
+	        return new TranslatedDocumentTarget(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.name = source["name"];
+	        this.nativeName = source["nativeName"];
+	        this.path = source["path"];
+	        this.fileName = source["fileName"];
+	        this.exists = source["exists"];
+	    }
+	}
+	export class TranslatedDocumentResult {
+	    targets: TranslatedDocumentTarget[];
+
+	    static createFrom(source: any = {}) {
+	        return new TranslatedDocumentResult(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.targets = this.convertValues(source["targets"], TranslatedDocumentTarget);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+
+
 
 }
 
 export namespace options {
-	
+
 	export class SecondInstanceData {
 	    Args: string[];
 	    WorkingDirectory: string;
-	
+
 	    static createFrom(source: any = {}) {
 	        return new SecondInstanceData(source);
 	    }
-	
+
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Args = source["Args"];
