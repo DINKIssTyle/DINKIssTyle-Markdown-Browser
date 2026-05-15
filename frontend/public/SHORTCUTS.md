@@ -1,4 +1,9 @@
-# ⌨️ Shortcuts
+[Korean (한국어)](SHORTCUTS-ko-KR.md) | 
+[Spanish (Español)](SHORTCUTS-es-ES.md)| 
+[Simplified Chinese (中国语)](SHORTCUTS-zh-CN.md) | 
+[Japanese (日本語)](SHORTCUTS-ja-JP.md)
+
+# ⌨️ Shortcuts 
 This is the list of shortcuts for the DKST Markdown Browser.
 
 ## Common Shortcuts
@@ -26,7 +31,7 @@ This is the list of shortcuts for the DKST Markdown Browser.
 | Font Size | Ctrl++, Ctrl+- | ⌘++, ⌘+- |
 
 ## Edit Mode
-**💡 Tip:** Switching between Leader Mode and Editor Mode is very fast using the shortcut **`Ctrl + E`** (Windows/Linux) or **`⌘ + E`** (macOS)!
+**💡 Tip:** Switching between Reader Mode and Editor Mode is very fast using the shortcut **`Ctrl + E`** (Windows/Linux) or **`⌘ + E`** (macOS)!
 | Feature | Shortcut/Usage | Description |
 |---|---|---|
 | Search Code Shortcuts | `/` + Arrow Key Enter or type feature name Enter | Searches all available code shortcuts on the keyboard. |

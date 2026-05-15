@@ -35,7 +35,16 @@ export const LOCALIZED_BUNDLED_DOCUMENTS = Object.freeze({
     shortcuts: Object.freeze({
         defaultPath: SHORTCUTS_PATH,
         title: 'Shortcuts',
-        paths: Object.freeze({}),
+        paths: Object.freeze({
+            'ko': '/SHORTCUTS-ko-KR.md',
+            'ko-kr': '/SHORTCUTS-ko-KR.md',
+            'es': '/SHORTCUTS-es-ES.md',
+            'es-es': '/SHORTCUTS-es-ES.md',
+            'zh': '/SHORTCUTS-zh-CN.md',
+            'zh-cn': '/SHORTCUTS-zh-CN.md',
+            'ja': '/SHORTCUTS-ja-JP.md',
+            'ja-jp': '/SHORTCUTS-ja-JP.md',
+        }),
     }),
     whatsNew: Object.freeze({
         defaultPath: WHATS_NEW_PATH,

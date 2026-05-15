@@ -227,10 +227,10 @@ html.dark .tab-item.drag-lifted {
     border-width: 0;
     pointer-events: none;
     transition:
-        width 320ms cubic-bezier(0.2, 0, 0, 1) 60ms,
-        max-width 320ms cubic-bezier(0.2, 0, 0, 1) 60ms,
-        flex-basis 320ms cubic-bezier(0.2, 0, 0, 1) 60ms,
-        border-width 320ms cubic-bezier(0.2, 0, 0, 1) 60ms,
+        width var(--tab-close-collapse-duration, 320ms) var(--tab-close-collapse-easing, cubic-bezier(0.2, 0, 0, 1)) var(--tab-close-collapse-delay, 60ms),
+        max-width var(--tab-close-collapse-duration, 320ms) var(--tab-close-collapse-easing, cubic-bezier(0.2, 0, 0, 1)) var(--tab-close-collapse-delay, 60ms),
+        flex-basis var(--tab-close-collapse-duration, 320ms) var(--tab-close-collapse-easing, cubic-bezier(0.2, 0, 0, 1)) var(--tab-close-collapse-delay, 60ms),
+        border-width var(--tab-close-collapse-duration, 320ms) var(--tab-close-collapse-easing, cubic-bezier(0.2, 0, 0, 1)) var(--tab-close-collapse-delay, 60ms),
         background 0.18s ease,
         color 0.18s ease,
         border-color 0.18s ease,
@@ -239,13 +239,13 @@ html.dark .tab-item.drag-lifted {
 }
 
 .tab-item.removing-item .tab-container {
-    filter: blur(8px);
+    filter: blur(var(--tab-close-content-blur, 8px));
     opacity: 0;
-    transform: scale(0.92);
+    transform: scale(var(--tab-close-content-scale, 0.92));
     transition:
-        filter 280ms ease-in,
-        opacity 200ms ease-in,
-        transform 280ms ease-in;
+        filter var(--tab-close-content-filter-duration, 280ms) var(--tab-close-content-easing, ease-in),
+        opacity var(--tab-close-content-opacity-duration, 200ms) var(--tab-close-content-easing, ease-in),
+        transform var(--tab-close-content-transform-duration, 280ms) var(--tab-close-content-easing, ease-in);
 }
 
 .tab-drag-placeholder {
@@ -3263,6 +3263,11 @@ html.dark .file-tree-context-menu {
     transition: transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
 }
 
+.modal-content.language-picker-modal {
+    max-width: 380px;
+    padding: 22px 22px 18px;
+}
+
 .modal-overlay:not(.hidden) .modal-content {
     transform: scale(1);
 }
@@ -3349,6 +3354,18 @@ html.dark .file-tree-context-menu {
     margin-bottom: 20px;
 }
 
+.language-picker-modal #modal-title {
+    margin-bottom: 16px;
+}
+
+.language-picker-modal #modal-message {
+    display: none;
+}
+
+.language-picker-modal .modal-language-container {
+    margin-bottom: 8px;
+}
+
 .language-filter-input {
     width: 100%;
     background: rgba(255, 255, 255, 0.05);
@@ -3375,6 +3392,12 @@ html.dark .file-tree-context-menu {
     gap: 6px;
 }
 
+.language-picker-modal .language-list {
+    max-height: min(300px, 42vh);
+    margin-top: 8px;
+    gap: 2px;
+}
+
 .language-option {
     display: grid;
     grid-template-columns: 22px minmax(0, 1fr);
@@ -3385,6 +3408,19 @@ html.dark .file-tree-context-menu {
     border-radius: 8px;
     cursor: pointer;
     transition: background 0.16s ease, border-color 0.16s ease;
+}
+
+.language-picker-modal .language-option {
+    padding: 5px 8px;
+}
+
+.language-picker-modal .language-option-name {
+    line-height: 1.25;
+}
+
+.language-picker-modal .modal-actions {
+    margin-top: 8px;
+    padding-top: 4px;
 }
 
 .language-option:hover {

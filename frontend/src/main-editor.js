@@ -3,7 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
+import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES } from './config.js';
 import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
@@ -42,18 +42,6 @@ export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
-const TRANSLATION_LANGUAGES = Object.freeze([
-    { code: 'en-US', name: 'English', nativeName: 'English', suffix: '-en-US' },
-    { code: 'es-ES', name: 'Spanish', nativeName: 'Español', suffix: '-es-ES' },
-    { code: 'fr-FR', name: 'French', nativeName: 'Français', suffix: '-fr-FR' },
-    { code: 'de-DE', name: 'German', nativeName: 'Deutsch', suffix: '-de-DE' },
-    { code: 'ko-KR', name: 'Korean', nativeName: '한국어', suffix: '-ko-KR' },
-    { code: 'zh-CN', name: 'Simplified Chinese', nativeName: '中国语', suffix: '-zh-CN' },
-    { code: 'zh-TW', name: 'Traditional Chinese', nativeName: '中國語', suffix: '-zh-TW' },
-    { code: 'ja-JP', name: 'Japanese', nativeName: '日本語', suffix: '-ja-JP' },
-]);
-const DEFAULT_TRANSLATION_LANGUAGE_CODES = Object.freeze(['ko-KR', 'en-US']);
-
 export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
     { key: 'plain', label: 'Plain Text' },
     { key: 'heading', label: 'Headings' },
@@ -1095,8 +1083,12 @@ function bindTranslationProgressEvents() {
 
 function getStoredTranslationLanguageCodes() {
     try {
-        const parsed = JSON.parse(localStorage.getItem(TRANSLATION_LANGUAGE_STORAGE_KEY) || '[]');
-        if (Array.isArray(parsed) && parsed.length > 0) {
+        const stored = localStorage.getItem(TRANSLATION_LANGUAGE_STORAGE_KEY);
+        if (stored !== null) {
+            const parsed = JSON.parse(stored);
+            if (!Array.isArray(parsed)) {
+                return [...DEFAULT_TRANSLATION_LANGUAGE_CODES];
+            }
             return parsed.filter(code => TRANSLATION_LANGUAGES.some(language => language.code === code));
         }
     } catch {
@@ -1109,9 +1101,16 @@ function storeTranslationLanguageCodes(codes) {
     localStorage.setItem(TRANSLATION_LANGUAGE_STORAGE_KEY, JSON.stringify(codes));
 }
 
+function getOrderedTranslationLanguageCodes(selectedCodes) {
+    return TRANSLATION_LANGUAGES
+        .filter(language => selectedCodes.has(language.code))
+        .map(language => language.code);
+}
+
 function showTranslationLanguagePrompt() {
     return new Promise((resolve) => {
         const selectedCodes = new Set(getStoredTranslationLanguageCodes());
+        const modalContent = el.modalOverlay.querySelector('.modal-content');
         let filterText = "";
         let isComposingFilterText = false;
         let filterInput = null;
@@ -1165,6 +1164,7 @@ function showTranslationLanguagePrompt() {
                 const code = input.value;
                 if (input.checked) selectedCodes.add(code);
                 else selectedCodes.delete(code);
+                storeTranslationLanguageCodes(getOrderedTranslationLanguageCodes(selectedCodes));
             });
 
             renderLanguageList();
@@ -1172,6 +1172,7 @@ function showTranslationLanguagePrompt() {
 
         const cleanup = () => {
             el.modalOverlay.classList.add('hidden');
+            modalContent?.classList.remove('language-picker-modal');
             el.modalLanguageContainer.classList.add('hidden');
             el.modalBtnOk.removeEventListener('click', handleOk);
             el.modalBtnCancel.removeEventListener('click', handleCancel);
@@ -1181,9 +1182,7 @@ function showTranslationLanguagePrompt() {
         const handleOk = () => {
             const selected = TRANSLATION_LANGUAGES.filter(language => selectedCodes.has(language.code));
             cleanup();
-            if (selected.length > 0) {
-                storeTranslationLanguageCodes(selected.map(language => language.code));
-            }
+            storeTranslationLanguageCodes(selected.map(language => language.code));
             resolve(selected);
         };
 
@@ -1204,7 +1203,8 @@ function showTranslationLanguagePrompt() {
         };
 
         el.modalTitle.textContent = "Translate Document";
-        el.modalMessage.textContent = "Select target languages. Translated copies will be created next to the current document.";
+        el.modalMessage.textContent = "";
+        modalContent?.classList.add('language-picker-modal');
         el.modalInputGroup.classList.add('hidden');
         el.modalOptionGrid.classList.add('hidden');
         el.modalEmojiContainer.classList.add('hidden');

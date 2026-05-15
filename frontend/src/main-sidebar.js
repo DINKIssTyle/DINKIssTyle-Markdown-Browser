@@ -522,6 +522,7 @@ function bindFileTreeEvents() {
                 pushHistory: true,
                 setHome: false,
                 newTab: wantsNewTab || state.isEditing,
+                openInEditMode: state.isEditing && documentTypeFromPath(path) === 'markdown',
             });
         });
 
@@ -730,6 +731,8 @@ function showFileTreeContextMenu(event, path, isDir) {
             if (!ok) return;
             try {
                 await DeleteFileTreePath(path);
+                const { discardTabsForDeletedPath } = await import('./main-tabs.js');
+                await discardTabsForDeletedPath(path, { isDirectory: isDir });
                 await updateFileTree({ forceRefresh: true });
                 showToast(`${isDir ? 'Folder' : 'File'} deleted.`, 'delete');
             } catch (error) {

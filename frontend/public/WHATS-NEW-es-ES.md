@@ -1,4 +1,4 @@
-# Novedades en la Versión 2.1 Beta5
+# Novedades en la Versión 2.1 Beta6
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -113,6 +113,15 @@ done
 - **Menú Contextual del Árbol de Archivos**: Se ha añadido la opción "Abrir en Nueva Pestaña". Esto solo funciona en modo lectura.
 - **Menú Contextual del Árbol de Archivos**: Se ha añadido la opción "Abrir en Nueva Pestaña". Esto solo funciona en modo lectura.
 - **Animación de Cierre de Pestaña**: Se ha añadido una animación a la barra de pestañas al cerrar una pestaña.
+
+
+
+## 2.1 Beta 6
+
+### Correcciones y mejoras de errores
+- **Al eliminar un archivo en el árbol de archivos**: Si hay un archivo abierto, esa pestaña también debe cerrarse.
+- **Comportamiento al abrir un archivo desde el árbol mientras se edita**: Debe abrirse en una nueva pestaña en estado de edición.
+- **Función de documentos traducidos**: Debe recordar los idiomas seleccionados por el usuario por última vez.
 
 ---
 (C) 2026 DINKI'ssTyle. Todos los derechos reservados.

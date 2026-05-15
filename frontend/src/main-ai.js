@@ -1326,7 +1326,8 @@ async function requestFIM() {
             model: window.aiState.fimModel,
             prompt: `<|fim_prefix|>${prefix}<|fim_middle|><|fim_suffix|>${suffix}`,
             max_tokens: 64,
-            stop: ["<|file_separator|>"]
+            stop: ["<|file_separator|>"],
+            store: false
         };
         if (window.aiState.fimTemp > 0) {
             payload.temperature = window.aiState.fimTemp;
@@ -1458,7 +1459,8 @@ async function sendPrompt() {
                 messages: [
                     { role: "system", content: systemPrompt },
                     { role: "user", content: contextualPrompt }
-                ]
+                ],
+                store: false
             };
             if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
 

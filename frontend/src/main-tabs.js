@@ -12,6 +12,7 @@ import { renderActiveTab } from './main-render.js';
 import { exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
+import { TAB_CLOSE_ANIMATION } from './config.js';
 import { AskSaveDiscardCancel } from '../wailsjs/go/app/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
@@ -20,7 +21,6 @@ let dragState = null;
 let suppressClickUntil = 0;
 let dragBindingsReady = false;
 const closingTabIds = new Set();
-const TAB_CLOSE_ANIMATION_MS = 420;
 const closedTabs = [];
 const MAX_CLOSED_TABS = 20;
 
@@ -491,6 +491,79 @@ function rememberClosedTab(tab) {
     }
 }
 
+function pathMatchesDeletedPath(candidate, deletedPath, isDirectory = false) {
+    if (!candidate || !deletedPath || candidate === HOME_SCREEN_PATH) {
+        return false;
+    }
+    if (candidate === deletedPath) {
+        return true;
+    }
+    if (!isDirectory) {
+        return false;
+    }
+    const normalizedDeletedPath = deletedPath.replace(/[\\/]+$/, "");
+    return candidate.startsWith(`${normalizedDeletedPath}/`) || candidate.startsWith(`${normalizedDeletedPath}\\`);
+}
+
+function tabMatchesDeletedPath(tab, deletedPath, isDirectory = false) {
+    if (!tab) {
+        return false;
+    }
+    return [
+        tab.path,
+        tab.editingSourcePath,
+        tab.editingPreviewPath,
+    ].some(path => pathMatchesDeletedPath(path, deletedPath, isDirectory));
+}
+
+function removeClosedTabsForDeletedPath(deletedPath, isDirectory = false) {
+    for (let index = closedTabs.length - 1; index >= 0; index -= 1) {
+        if (pathMatchesDeletedPath(closedTabs[index]?.path, deletedPath, isDirectory)) {
+            closedTabs.splice(index, 1);
+        }
+    }
+}
+
+export async function discardTabsForDeletedPath(deletedPath, { isDirectory = false } = {}) {
+    removeClosedTabsForDeletedPath(deletedPath, isDirectory);
+
+    const deletedTabIds = new Set(
+        state.tabs
+            .filter(tab => tabMatchesDeletedPath(tab, deletedPath, isDirectory))
+            .map(tab => tab.id)
+    );
+    if (deletedTabIds.size === 0) {
+        return;
+    }
+
+    const wasActiveDeleted = deletedTabIds.has(state.activeTabId);
+    state.tabs = state.tabs.filter(tab => !deletedTabIds.has(tab.id));
+    deletedTabIds.forEach(tabId => closingTabIds.delete(tabId));
+
+    if (state.tabs.length === 0) {
+        const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
+        state.tabs.push(freshTab);
+        state.activeTabId = freshTab.id;
+        syncGlobalsFromTab(freshTab);
+        syncEditorSessionFromState();
+        renderTabs();
+        await renderActiveTab();
+        return;
+    }
+
+    if (wasActiveDeleted || !state.tabs.some(tab => tab.id === state.activeTabId)) {
+        const fallback = state.tabs[0];
+        state.activeTabId = fallback.id;
+        syncGlobalsFromTab(fallback);
+        syncEditorSessionFromState();
+        renderTabs();
+        await renderActiveTab();
+        return;
+    }
+
+    renderTabs();
+}
+
 export async function reopenClosedTab() {
     const closedTab = closedTabs.shift();
     if (!closedTab) {
@@ -511,6 +584,7 @@ function animateTabClose(tabID) {
         return Promise.resolve();
     }
 
+    applyTabCloseMotionConfig(tabNode);
     closingTabIds.add(tabID);
     tabNode.style.width = `${tabNode.offsetWidth}px`;
     tabNode.style.maxWidth = `${tabNode.offsetWidth}px`;
@@ -532,7 +606,7 @@ function animateTabClose(tabID) {
                 finish();
             }
         };
-        const timeoutId = window.setTimeout(finish, TAB_CLOSE_ANIMATION_MS);
+        const timeoutId = window.setTimeout(finish, getTabCloseFallbackMs());
 
         tabNode.addEventListener('transitionend', handleTransitionEnd);
         requestAnimationFrame(() => {
@@ -542,6 +616,25 @@ function animateTabClose(tabID) {
             tabNode.style.flexBasis = '0px';
         });
     });
+}
+
+function applyTabCloseMotionConfig(tabNode) {
+    const setVar = (name, value) => tabNode.style.setProperty(name, value);
+    setVar('--tab-close-collapse-duration', `${TAB_CLOSE_ANIMATION.collapseMs}ms`);
+    setVar('--tab-close-collapse-delay', `${TAB_CLOSE_ANIMATION.collapseDelayMs}ms`);
+    setVar('--tab-close-collapse-easing', TAB_CLOSE_ANIMATION.collapseEasing);
+    setVar('--tab-close-content-filter-duration', `${TAB_CLOSE_ANIMATION.contentFilterMs}ms`);
+    setVar('--tab-close-content-opacity-duration', `${TAB_CLOSE_ANIMATION.contentOpacityMs}ms`);
+    setVar('--tab-close-content-transform-duration', `${TAB_CLOSE_ANIMATION.contentTransformMs}ms`);
+    setVar('--tab-close-content-easing', TAB_CLOSE_ANIMATION.contentEasing);
+    setVar('--tab-close-content-blur', `${TAB_CLOSE_ANIMATION.contentBlurPx}px`);
+    setVar('--tab-close-content-scale', String(TAB_CLOSE_ANIMATION.contentScale));
+}
+
+function getTabCloseFallbackMs() {
+    return TAB_CLOSE_ANIMATION.collapseDelayMs
+        + TAB_CLOSE_ANIMATION.collapseMs
+        + TAB_CLOSE_ANIMATION.fallbackPaddingMs;
 }
 
 // ── New Tab ────────────────────────────────────────────────

@@ -379,6 +379,7 @@ func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationA
 			{"role": "system", "content": "You are a careful Markdown document translator."},
 			{"role": "user", "content": prompt},
 		},
+		"store": false,
 	}
 	if ai.Temperature > 0 {
 		payload["temperature"] = ai.Temperature
@@ -415,6 +416,7 @@ func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai Translatio
 		"model":  ai.Model,
 		"input":  "You are a careful Markdown document translator.\n\n" + prompt,
 		"stream": true,
+		"store":  false,
 	}
 	if ai.Temperature > 0 {
 		payload["temperature"] = ai.Temperature

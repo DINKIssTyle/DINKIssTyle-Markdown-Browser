@@ -13,7 +13,7 @@ import {
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab, hideLinkTooltip } from './main-render.js';
-import { undoAction, redoAction, getUndoDepth, getRedoDepth } from './main-editor.js';
+import { undoAction, redoAction, getUndoDepth, getRedoDepth, enterEditMode } from './main-editor.js';
 import {
     showToast, beginProgressTask, updateProgress,
     finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
@@ -70,12 +70,13 @@ export async function openPath(path, options = {}) {
         keyword = "",
         anchor = "",
         tabId = state.activeTabId,
+        openInEditMode = false,
     } = options;
     hideLinkTooltip();
     path = normalizeFileURLPath(path);
 
     if (newTab) {
-        await createAndSwitchToNewTab(path, { pushHistory: false, setHome, content, keyword, anchor });
+        await createAndSwitchToNewTab(path, { pushHistory: false, setHome, content, keyword, anchor, openInEditMode });
         return;
     }
 
@@ -131,6 +132,9 @@ export async function openPath(path, options = {}) {
         await yieldToUI();
         throwIfTaskCancelled(taskId);
         await loadFile(path, fileContent, pushHistory, setHome);
+        if (openInEditMode && documentType === 'markdown') {
+            enterEditMode();
+        }
     } catch (err) {
         if (isCancelledTaskError(err)) {
             return;

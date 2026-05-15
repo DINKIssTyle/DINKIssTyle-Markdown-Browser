@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta5
+# What's New in Version 2.1 Beta6
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
@@ -128,5 +128,14 @@ done
 - **File Tree Right-Click Menu**: An "Open in New Tab" option has been added. This only works in read mode.
 - **File Tree Right-Click Menu**: An "Open in New Tab" option has been added. This only works in read mode.
 - **Tab Closing Animation**: An animation has been added to the tab bar when closing a tab.
+
+
+## 2.1 Beta 6
+
+### Bug Fixes and Improvements
+- **When deleting a file from the file tree**: If there are open files, the corresponding tab should also close.
+- **File opening behavior while editing**: It should open in a new tab in edit mode.
+- **Translation document feature**: The application must remember the languages last selected by the user.
+
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.
