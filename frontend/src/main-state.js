@@ -484,7 +484,7 @@ export function formatDisplayPath(path) {
     return path;
 }
 
-export function deriveTabTitle(path, content) {
+export function deriveTabTitle(path, content, { maxContentLength = Infinity } = {}) {
     if (path === HOME_SCREEN_PATH) return 'Start';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
     const localizedTitle = getLocalizedBundledDocumentTitle(path);
@@ -495,10 +495,13 @@ export function deriveTabTitle(path, content) {
         return title || basename(path);
     }
 
-    const heading = content.match(/^#\s+(.+)$/m)?.[1]?.trim();
+    const titleContent = Number.isFinite(maxContentLength)
+        ? String(content || '').slice(0, maxContentLength)
+        : String(content || '');
+    const heading = titleContent.match(/^#\s+(.+)$/m)?.[1]?.trim();
     if (heading) return heading;
 
-    const firstLine = content
+    const firstLine = titleContent
         .split('\n')
         .map(line => line.trim())
         .find(line => line && !line.startsWith('---'));

@@ -7,7 +7,7 @@ import { state, el } from './main-state.js';
 import { persistAppSettings } from './main-settings.js';
 import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/app/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode } from './main-editor.js';
+import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
 import { showToast } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
@@ -772,6 +772,10 @@ function positionPromptBox() {
 
 function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySelection = false } = {}) {
     if (!isGeneralAIActive() || isAIProgressVisible()) return false;
+    if (isSpellcheckActive()) {
+        hidePromptBox({ restoreEditorFocus: false });
+        return false;
+    }
     if (!allowEmptySelection && !getEditorSelection()) return false;
 
     aiPromptForcedVisible = allowEmptySelection;
@@ -804,6 +808,10 @@ function refreshPromptForSelection({ focusInput = false, preserveInput = true } 
         showPromptBoxElement();
         updatePromptBusyUI();
         return true;
+    }
+    if (isSpellcheckActive()) {
+        hidePromptBox({ restoreEditorFocus: false });
+        return false;
     }
     if (!state.isEditing || !cmView || !isGeneralAIActive() || cmView.composing) {
         hidePromptBoxElement();
@@ -1225,6 +1233,10 @@ function handleSelectionChange() {
         updatePromptBusyUI();
         return;
     }
+    if (isSpellcheckActive()) {
+        hidePromptBox({ restoreEditorFocus: false });
+        return;
+    }
     if (!state.isEditing || !cmView || !isGeneralAIActive()) {
         hidePromptBox({ restoreEditorFocus: false });
         return;
@@ -1260,6 +1272,10 @@ export function showAskAIPrompt() {
         showToast("Ask AI is available in editor mode.");
         return false;
     }
+    if (isSpellcheckActive()) {
+        hidePromptBox({ restoreEditorFocus: false });
+        return false;
+    }
     if (!isGeneralAIActive()) {
         showToast(isAIFeaturesDisabled() ? "AI features are disabled in Advanced Options." : "General AI is disabled in AI Settings.");
         return false;
@@ -1267,7 +1283,7 @@ export function showAskAIPrompt() {
     return showPromptBox({ focusInput: true, preserveInput: true, allowEmptySelection: true });
 }
 
-function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
+export function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
     if (isAIProgressVisible()) return;
     aiPromptForcedVisible = false;
     clearSupportAgentPrompt();

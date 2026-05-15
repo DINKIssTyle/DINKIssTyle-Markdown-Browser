@@ -3000,6 +3000,18 @@ html.dark .progress-widget {
     font-weight: 700;
 }
 
+.progress-title.dots-waving {
+    white-space: nowrap;
+}
+
+.progress-title-dot {
+    display: inline-block;
+    animation: progress-title-dot-wave 0.9s ease-in-out infinite;
+    animation-delay: calc(var(--dot-index) * 0.12s);
+    transform-origin: center bottom;
+    will-change: transform, opacity;
+}
+
 .progress-title.shimmering {
     display: inline-block;
     background: linear-gradient(110deg,
@@ -3205,6 +3217,20 @@ html.dark .file-tree-context-menu {
 
     100% {
         background-position: -120% 0;
+    }
+}
+
+@keyframes progress-title-dot-wave {
+    0%,
+    70%,
+    100% {
+        opacity: 0.55;
+        transform: translateY(0) scale(1);
+    }
+
+    35% {
+        opacity: 1;
+        transform: translateY(-4px) scale(1.08);
     }
 }
 
@@ -3538,30 +3564,72 @@ html.dark .file-tree-context-menu {
     line-height: 1.35;
 }
 
-.spellcheck-close-btn {
+.spellcheck-navigator {
     position: absolute;
-    top: 14px;
-    right: 14px;
+    left: 50%;
+    bottom: 24px;
     z-index: 220;
-    width: 34px;
-    height: 34px;
+    transform: translateX(-50%);
+    min-width: 166px;
+    height: 38px;
+    padding: 0 12px;
     border: 1px solid var(--border-color);
     border-radius: 999px;
-    background: color-mix(in srgb, var(--surface-elevated) 92%, transparent);
+    background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
     color: var(--text-color);
-    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.18);
+    box-shadow: 0 12px 30px rgba(0, 0, 0, 0.18);
+    backdrop-filter: blur(14px);
+    -webkit-backdrop-filter: blur(14px);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 12px;
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+.spellcheck-nav-btn {
+    width: 24px;
+    height: 24px;
+    border: none;
+    border-radius: 999px;
+    background: transparent;
+    color: var(--text-color);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, transform 0.15s ease;
 }
 
-.spellcheck-close-btn:hover {
+.spellcheck-nav-btn:hover {
+    background: rgba(0, 113, 227, 0.1);
+    color: var(--accent-color);
+}
+
+.spellcheck-nav-btn:active {
+    transform: scale(0.94);
+}
+
+.spellcheck-nav-apply:hover {
+    background: rgba(52, 199, 89, 0.14);
+    color: #188038;
+}
+
+.spellcheck-nav-close:hover {
     background: rgba(217, 45, 32, 0.12);
     color: #d92d20;
 }
 
-.spellcheck-close-btn .material-symbols-outlined {
+.spellcheck-nav-count {
+    min-width: 40px;
+    text-align: center;
+    font-size: 13px;
+    font-weight: 800;
+    font-variant-numeric: tabular-nums;
+}
+
+.spellcheck-nav-btn .material-symbols-outlined {
     font-size: 18px;
 }
 

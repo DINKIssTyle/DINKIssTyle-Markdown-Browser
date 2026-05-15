@@ -22,7 +22,7 @@ import { languages } from '@codemirror/language-data';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { ghostTextField, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
+import { ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 
 // ── Module-level State ─────────────────────────────────────
 let slashMenuState = null;
@@ -39,8 +39,11 @@ let lastRenderedPreviewContent = "";
 let plainClickSelectionState = null;
 let spellcheckTooltip = null;
 let spellcheckCloseButton = null;
+let spellcheckNavigator = null;
+let spellcheckInProgress = false;
 let activeSpellcheckSuggestionId = null;
 let spellcheckTooltipHideTimer = 0;
+let spellcheckTooltipPositionFrame = 0;
 let toolbarDisabledTooltip = null;
 let toolbarDisabledTooltipButton = null;
 export let cmView = null;
@@ -49,6 +52,11 @@ export const tokenColorCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
+const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
+const SPELLCHECK_CHUNK_TARGET_LENGTH = 700;
+const SPELLCHECK_CHUNK_MAX_LENGTH = 1000;
+const SPELLCHECK_COORDINATE_RECOVERY_RADIUS = 360;
+const SPELLCHECK_SCROLL_MARGIN = 220;
 export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
     { key: 'plain', label: 'Plain Text' },
     { key: 'heading', label: 'Headings' },
@@ -650,6 +658,16 @@ function syncRenderModeIcon() {
         el.edRenderModeMenu.title = isRealtime ? 'Realtime' : 'Line Change';
         el.edRenderModeMenu.setAttribute('aria-label', el.edRenderModeMenu.title);
     }
+}
+
+function updateActiveTabTitleFromContent(content) {
+    const tab = getActiveTab();
+    if (!tab) return false;
+    const titlePath = state.editingSourcePath || state.currentFilePath || tab.path;
+    const nextTitle = deriveTabTitle(titlePath, content, { maxContentLength: LIVE_TAB_TITLE_CONTENT_LIMIT });
+    if (tab.title === nextTitle) return false;
+    tab.title = nextTitle;
+    return true;
 }
 
 export function applyEditorToolbarMode() {
@@ -1623,7 +1641,138 @@ function getSpellcheckAIConfig() {
     return aiConfig;
 }
 
-function normalizeSpellcheckSuggestions(suggestions, content) {
+function splitOversizedSpellcheckBlock(block) {
+    if (block.content.length <= SPELLCHECK_CHUNK_MAX_LENGTH) {
+        return [block];
+    }
+
+    const pieces = [];
+    let start = 0;
+    while (start < block.content.length) {
+        const maxEnd = Math.min(block.content.length, start + SPELLCHECK_CHUNK_MAX_LENGTH);
+        if (maxEnd >= block.content.length) {
+            pieces.push({ start: block.start + start, content: block.content.slice(start) });
+            break;
+        }
+
+        const windowStart = Math.min(block.content.length, start + SPELLCHECK_CHUNK_TARGET_LENGTH);
+        const windowText = block.content.slice(windowStart, maxEnd);
+        let relativeCut = -1;
+        for (const boundary of ['\n', '. ', '.\n', '? ', '?\n', '! ', '!\n', '。', '؟ ']) {
+            const index = windowText.lastIndexOf(boundary);
+            if (index > relativeCut) {
+                relativeCut = index + boundary.length;
+            }
+        }
+
+        const end = relativeCut > 0 ? windowStart + relativeCut : maxEnd;
+        pieces.push({ start: block.start + start, content: block.content.slice(start, end) });
+        start = end;
+    }
+    return pieces.filter(piece => piece.content.trim());
+}
+
+function createSpellcheckBlocks(content) {
+    const blocks = [];
+    const blockRegex = /(?:^|\n)(?:#{1,6}\s.+(?:\n+|$)|```[\s\S]*?(?:```|$)|(?:[-*+]\s.+(?:\n|$))+|(?:\d+\.\s.+(?:\n|$))+|(?:>\s?.+(?:\n|$))+|(?:\|.*\|(?:\n|$))+|[^\n]+(?:\n(?!\n)[^\n]+)*)(?:\n*)/g;
+    let match;
+
+    while ((match = blockRegex.exec(content)) !== null) {
+        const raw = match[0];
+        const leadingNewline = raw.startsWith('\n') ? 1 : 0;
+        const blockContent = raw.slice(leadingNewline);
+        if (!blockContent.trim()) continue;
+        blocks.push({
+            start: match.index + leadingNewline,
+            content: blockContent,
+        });
+    }
+
+    return blocks.flatMap(splitOversizedSpellcheckBlock);
+}
+
+function createSpellcheckChunks(content) {
+    const blocks = createSpellcheckBlocks(content);
+    if (blocks.length === 0) return [];
+
+    const chunks = [];
+    let current = null;
+
+    for (const block of blocks) {
+        if (!current) {
+            current = { start: block.start, content: block.content };
+            continue;
+        }
+
+        const gap = content.slice(current.start + current.content.length, block.start);
+        const candidate = `${current.content}${gap}${block.content}`;
+        const currentIsHeadingOnly = /^#{1,6}\s.+\s*$/.test(current.content.trim());
+        const shouldAttachToHeading = currentIsHeadingOnly && candidate.length <= SPELLCHECK_CHUNK_MAX_LENGTH;
+
+        if (candidate.length <= SPELLCHECK_CHUNK_TARGET_LENGTH || shouldAttachToHeading) {
+            current.content = candidate;
+            continue;
+        }
+
+        chunks.push(current);
+        current = { start: block.start, content: block.content };
+    }
+
+    if (current) chunks.push(current);
+
+    return chunks.flatMap(chunk => {
+        if (chunk.content.length <= SPELLCHECK_CHUNK_MAX_LENGTH) {
+            return [chunk];
+        }
+        return splitOversizedSpellcheckBlock(chunk);
+    }).map(chunk => {
+        let start = chunk.start;
+        let text = chunk.content;
+        while (text.length && /^\s$/.test(text[0])) {
+            text = text.slice(1);
+            start += 1;
+        }
+        while (text.length && /\s$/.test(text[text.length - 1])) {
+            text = text.slice(0, -1);
+        }
+        return { start, content: text };
+    }).filter(chunk => chunk.content.trim());
+}
+
+function findSpellcheckOriginalInChunk(content, original, startHint = 0) {
+    if (!original) return -1;
+    const exactAtHint = Number.isInteger(startHint) ? content.indexOf(original, Math.max(0, startHint)) : -1;
+    if (exactAtHint >= 0 && Math.abs(exactAtHint - startHint) <= SPELLCHECK_COORDINATE_RECOVERY_RADIUS) {
+        return exactAtHint;
+    }
+
+    if (Number.isInteger(startHint)) {
+        const radiusStart = Math.max(0, startHint - SPELLCHECK_COORDINATE_RECOVERY_RADIUS);
+        const radiusEnd = Math.min(content.length, startHint + SPELLCHECK_COORDINATE_RECOVERY_RADIUS + original.length);
+        const nearbyIndex = content.slice(radiusStart, radiusEnd).indexOf(original);
+        if (nearbyIndex >= 0) {
+            return radiusStart + nearbyIndex;
+        }
+    }
+
+    const matches = [];
+    let index = content.indexOf(original);
+    while (index >= 0) {
+        matches.push(index);
+        index = content.indexOf(original, index + original.length);
+    }
+    if (matches.length === 1) {
+        return matches[0];
+    }
+    if (matches.length > 1 && Number.isInteger(startHint)) {
+        return matches.reduce((best, next) => (
+            Math.abs(next - startHint) < Math.abs(best - startHint) ? next : best
+        ), matches[0]);
+    }
+    return -1;
+}
+
+function normalizeSpellcheckSuggestions(suggestions, content, offset = 0) {
     return (suggestions || [])
         .map((suggestion, index) => {
             const original = String(suggestion.original || '');
@@ -1631,42 +1780,132 @@ function normalizeSpellcheckSuggestions(suggestions, content) {
             let start = Number(suggestion.start);
             let end = Number(suggestion.end);
             if (!Number.isInteger(start) || !Number.isInteger(end) || content.slice(start, end) !== original) {
-                const nearStart = Number.isInteger(start) ? Math.max(0, start - 240) : 0;
-                const nearIndex = original ? content.indexOf(original, nearStart) : -1;
-                const globalIndex = nearIndex >= 0 ? nearIndex : (original ? content.indexOf(original) : -1);
-                if (globalIndex >= 0) {
-                    start = globalIndex;
-                    end = globalIndex + original.length;
+                const recoveredStart = findSpellcheckOriginalInChunk(content, original, start);
+                if (recoveredStart >= 0) {
+                    start = recoveredStart;
+                    end = recoveredStart + original.length;
                 }
             }
             return {
-                id: `spell-${Date.now()}-${index}`,
+                id: `spell-${Date.now()}-${offset}-${index}`,
                 tabId: state.activeTabId,
                 original,
                 replacement,
                 reason: String(suggestion.reason || ''),
-                start,
-                end,
+                start: start + offset,
+                end: end + offset,
             };
         })
         .filter(suggestion => {
-            if (!Number.isInteger(suggestion.start) || !Number.isInteger(suggestion.end)) return false;
-            if (suggestion.start < 0 || suggestion.end <= suggestion.start || suggestion.end > content.length) return false;
+            const localStart = suggestion.start - offset;
+            const localEnd = suggestion.end - offset;
+            if (!Number.isInteger(localStart) || !Number.isInteger(localEnd)) return false;
+            if (localStart < 0 || localEnd <= localStart || localEnd > content.length) return false;
             if (!suggestion.original || !suggestion.replacement || suggestion.original === suggestion.replacement) return false;
-            return content.slice(suggestion.start, suggestion.end) === suggestion.original;
+            return content.slice(localStart, localEnd) === suggestion.original;
         });
+}
+
+function mergeSpellcheckSuggestions(existing, incoming, currentContent) {
+    const merged = [...existing];
+    const occupied = new Set(existing.map(suggestion => `${suggestion.start}:${suggestion.end}:${suggestion.replacement}`));
+    for (const suggestion of incoming) {
+        if (currentContent.slice(suggestion.start, suggestion.end) !== suggestion.original) {
+            continue;
+        }
+        const key = `${suggestion.start}:${suggestion.end}:${suggestion.replacement}`;
+        if (occupied.has(key)) {
+            continue;
+        }
+        occupied.add(key);
+        merged.push(suggestion);
+    }
+    merged.sort((a, b) => a.start === b.start ? a.end - b.end : a.start - b.start);
+    return merged;
 }
 
 function getSpellcheckState() {
     return cmView?.state.field(spellcheckField, false) || { suggestions: [] };
 }
 
+export function isSpellcheckActive() {
+    return spellcheckInProgress || getSpellcheckState().suggestions.length > 0;
+}
+
 function findSpellcheckSuggestion(id) {
     return getSpellcheckState().suggestions.find(suggestion => suggestion.id === id);
 }
 
+function getActiveSpellcheckIndex(suggestions = getSpellcheckState().suggestions) {
+    if (!suggestions.length) return -1;
+    const activeIndex = suggestions.findIndex(suggestion => suggestion.id === activeSpellcheckSuggestionId);
+    if (activeIndex >= 0) return activeIndex;
+    const pos = cmView?.state.selection.main.from ?? 0;
+    const containingIndex = suggestions.findIndex(suggestion => suggestion.start <= pos && pos <= suggestion.end);
+    if (containingIndex >= 0) return containingIndex;
+    const nextIndex = suggestions.findIndex(suggestion => suggestion.start >= pos);
+    return nextIndex >= 0 ? nextIndex : 0;
+}
+
+function updateSpellcheckNavigator() {
+    const suggestions = getSpellcheckState().suggestions;
+    if (!suggestions.length) {
+        spellcheckNavigator?.remove();
+        spellcheckNavigator = null;
+        spellcheckCloseButton = null;
+        return;
+    }
+
+    ensureSpellcheckCloseButton();
+    const index = getActiveSpellcheckIndex(suggestions);
+    const count = spellcheckNavigator?.querySelector('[data-spellcheck-count]');
+    if (count) {
+        count.textContent = `${index + 1} / ${suggestions.length}`;
+    }
+}
+
+function focusSpellcheckSuggestion(index) {
+    if (!cmView) return;
+    const suggestions = getSpellcheckState().suggestions;
+    if (!suggestions.length) {
+        updateSpellcheckNavigator();
+        return;
+    }
+
+    const normalizedIndex = ((index % suggestions.length) + suggestions.length) % suggestions.length;
+    const suggestion = suggestions[normalizedIndex];
+    cmView.dispatch({
+        selection: { anchor: suggestion.start, head: suggestion.end },
+        effects: EditorView.scrollIntoView(suggestion.start, {
+            y: 'nearest',
+            yMargin: SPELLCHECK_SCROLL_MARGIN,
+        }),
+    });
+    activeSpellcheckSuggestionId = suggestion.id;
+    requestAnimationFrame(() => {
+        showSpellcheckTooltip(suggestion);
+        updateSpellcheckNavigator();
+    });
+}
+
+function moveSpellcheckSuggestion(delta) {
+    const suggestions = getSpellcheckState().suggestions;
+    if (!suggestions.length) return;
+    focusSpellcheckSuggestion(getActiveSpellcheckIndex(suggestions) + delta);
+}
+
+function applyActiveSpellcheckSuggestion() {
+    const suggestions = getSpellcheckState().suggestions;
+    const index = getActiveSpellcheckIndex(suggestions);
+    const suggestion = index >= 0 ? suggestions[index] : null;
+    if (!suggestion) return;
+    applySpellcheckSuggestion(suggestion.id);
+}
+
 function hideSpellcheckTooltip() {
     clearTimeout(spellcheckTooltipHideTimer);
+    cancelAnimationFrame(spellcheckTooltipPositionFrame);
+    spellcheckTooltipPositionFrame = 0;
     spellcheckTooltip?.remove();
     spellcheckTooltip = null;
     activeSpellcheckSuggestionId = null;
@@ -1707,13 +1946,48 @@ function showToolbarDisabledTooltip(button) {
     toolbarDisabledTooltipButton = button;
 }
 
+function positionSpellcheckTooltip(tooltip, suggestion) {
+    if (!cmView || !tooltip || !suggestion) return false;
+    const coords = cmView.coordsAtPos(suggestion.start);
+    if (!coords) return false;
+
+    const scrollerRect = cmView.scrollDOM.getBoundingClientRect();
+    if (coords.bottom < scrollerRect.top || coords.top > scrollerRect.bottom) {
+        return false;
+    }
+
+    const rect = tooltip.getBoundingClientRect();
+    const left = Math.min(Math.max(12, coords.left), window.innerWidth - rect.width - 12);
+    const top = Math.max(12, coords.top - rect.height - 10);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    return true;
+}
+
+function queuePositionSpellcheckTooltip() {
+    cancelAnimationFrame(spellcheckTooltipPositionFrame);
+    spellcheckTooltipPositionFrame = requestAnimationFrame(() => {
+        spellcheckTooltipPositionFrame = 0;
+        if (!spellcheckTooltip || !activeSpellcheckSuggestionId) return;
+        const suggestion = findSpellcheckSuggestion(activeSpellcheckSuggestionId);
+        if (!positionSpellcheckTooltip(spellcheckTooltip, suggestion)) {
+            hideSpellcheckTooltip();
+        }
+    });
+}
+
+function handleSpellcheckScroll() {
+    if (!spellcheckTooltip) return;
+    queuePositionSpellcheckTooltip();
+}
+
 function showSpellcheckTooltip(suggestion) {
     if (!cmView || !suggestion) return;
-    if (activeSpellcheckSuggestionId === suggestion.id && spellcheckTooltip) return;
+    if (activeSpellcheckSuggestionId === suggestion.id && spellcheckTooltip) {
+        positionSpellcheckTooltip(spellcheckTooltip, suggestion);
+        return;
+    }
     hideSpellcheckTooltip();
-
-    const coords = cmView.coordsAtPos(suggestion.start);
-    if (!coords) return;
 
     const tooltip = document.createElement('div');
     tooltip.className = 'spellcheck-tooltip';
@@ -1723,12 +1997,6 @@ function showSpellcheckTooltip(suggestion) {
         ${suggestion.reason ? `<span class="spellcheck-tooltip-reason">${escapeHTML(suggestion.reason)}</span>` : ''}
     `;
     document.body.appendChild(tooltip);
-
-    const rect = tooltip.getBoundingClientRect();
-    const left = Math.min(Math.max(12, coords.left), window.innerWidth - rect.width - 12);
-    const top = Math.max(12, coords.top - rect.height - 10);
-    tooltip.style.left = `${left}px`;
-    tooltip.style.top = `${top}px`;
 
     tooltip.querySelector('.spellcheck-tooltip-replacement')?.addEventListener('click', event => {
         event.preventDefault();
@@ -1740,6 +2008,11 @@ function showSpellcheckTooltip(suggestion) {
 
     spellcheckTooltip = tooltip;
     activeSpellcheckSuggestionId = suggestion.id;
+    if (!positionSpellcheckTooltip(tooltip, suggestion)) {
+        hideSpellcheckTooltip();
+        return;
+    }
+    updateSpellcheckNavigator();
 }
 
 function applySpellcheckSuggestion(id) {
@@ -1761,27 +2034,53 @@ function applySpellcheckSuggestion(id) {
         return;
     }
 
+    const currentIndex = getActiveSpellcheckIndex();
     cmView.dispatch({
         changes: { from: suggestion.start, to: suggestion.end, insert: suggestion.replacement },
         selection: { anchor: suggestion.start + suggestion.replacement.length },
         effects: removeSpellcheckSuggestionEffect.of(id),
-        scrollIntoView: true,
         userEvent: 'input.spellcheck',
     });
     hideSpellcheckTooltip();
+    requestAnimationFrame(() => {
+        const suggestions = getSpellcheckState().suggestions;
+        if (suggestions.length) {
+            focusSpellcheckSuggestion(Math.min(currentIndex, suggestions.length - 1));
+        } else {
+            clearSpellcheckSuggestions();
+        }
+    });
     cmView.focus();
 }
 
 function ensureSpellcheckCloseButton() {
-    if (spellcheckCloseButton) return;
-    spellcheckCloseButton = document.createElement('button');
-    spellcheckCloseButton.className = 'spellcheck-close-btn';
-    spellcheckCloseButton.type = 'button';
-    spellcheckCloseButton.title = 'Close spellcheck';
-    spellcheckCloseButton.setAttribute('aria-label', 'Close spellcheck');
-    spellcheckCloseButton.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">close</span>';
-    spellcheckCloseButton.addEventListener('click', clearSpellcheckSuggestions);
-    el.documentArea?.appendChild(spellcheckCloseButton);
+    if (spellcheckNavigator) return;
+    spellcheckNavigator = document.createElement('div');
+    spellcheckNavigator.className = 'spellcheck-navigator';
+    spellcheckNavigator.setAttribute('role', 'toolbar');
+    spellcheckNavigator.setAttribute('aria-label', 'Spellcheck suggestions');
+    spellcheckNavigator.innerHTML = `
+        <button class="spellcheck-nav-btn" type="button" title="Previous suggestion" aria-label="Previous suggestion">
+            <span class="material-symbols-outlined" aria-hidden="true">keyboard_arrow_up</span>
+        </button>
+        <span class="spellcheck-nav-count" data-spellcheck-count>0 / 0</span>
+        <button class="spellcheck-nav-btn" type="button" title="Next suggestion" aria-label="Next suggestion">
+            <span class="material-symbols-outlined" aria-hidden="true">keyboard_arrow_down</span>
+        </button>
+        <button class="spellcheck-nav-btn spellcheck-nav-apply" type="button" title="Apply suggestion" aria-label="Apply suggestion">
+            <span class="material-symbols-outlined" aria-hidden="true">check_circle</span>
+        </button>
+        <button class="spellcheck-nav-btn spellcheck-nav-close" type="button" title="Close spellcheck" aria-label="Close spellcheck">
+            <span class="material-symbols-outlined" aria-hidden="true">close</span>
+        </button>
+    `;
+    const [previousButton, nextButton, applyButton, closeButton] = spellcheckNavigator.querySelectorAll('button');
+    previousButton?.addEventListener('click', () => moveSpellcheckSuggestion(-1));
+    nextButton?.addEventListener('click', () => moveSpellcheckSuggestion(1));
+    applyButton?.addEventListener('click', applyActiveSpellcheckSuggestion);
+    closeButton?.addEventListener('click', clearSpellcheckSuggestions);
+    spellcheckCloseButton = closeButton || null;
+    el.documentArea?.appendChild(spellcheckNavigator);
 }
 
 export function clearSpellcheckSuggestions() {
@@ -1789,7 +2088,8 @@ export function clearSpellcheckSuggestions() {
         cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of([]) });
     }
     hideSpellcheckTooltip();
-    spellcheckCloseButton?.remove();
+    spellcheckNavigator?.remove();
+    spellcheckNavigator = null;
     spellcheckCloseButton = null;
 }
 
@@ -1816,36 +2116,69 @@ async function runSpellcheck() {
 
     try {
         clearSpellcheckSuggestions();
-        updateProgress("Checking spelling...", 0);
-        const result = await SpellCheckDocument({
-            content,
-            language: {
-                code: selectedLanguage.code === 'auto' ? '' : selectedLanguage.code,
-                name: selectedLanguage.name || '',
-                nativeName: selectedLanguage.nativeName || '',
-                auto: selectedLanguage.auto || selectedLanguage.code === 'auto',
-            },
-            ai: aiConfig,
-        });
-        if (state.activeTabId !== requestTabId) {
-            return;
-        }
-        if (getCurrentEditorText() !== content) {
-            showToast("Document changed while checking spelling. Please run spellcheck again.", "error", 3600);
-            return;
-        }
-        const suggestions = normalizeSpellcheckSuggestions(result?.suggestions || [], getCurrentEditorText());
-        cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of(suggestions) });
-        if (suggestions.length === 0) {
+        spellcheckInProgress = true;
+        hidePromptBox({ restoreEditorFocus: false });
+        const chunks = createSpellcheckChunks(content);
+        if (chunks.length === 0) {
             showToast("No spelling suggestions found.", "check_circle");
             return;
         }
-        ensureSpellcheckCloseButton();
+
+        let totalSuggestions = 0;
+        for (const [chunkIndex, chunk] of chunks.entries()) {
+            if (state.activeTabId !== requestTabId) {
+                return;
+            }
+            updateProgress(`Checking spelling chunk ${chunkIndex + 1} of ${chunks.length}...`, Math.round((chunkIndex / chunks.length) * 100), { active: true });
+            const result = await SpellCheckDocument({
+                content: chunk.content,
+                language: {
+                    code: selectedLanguage.code === 'auto' ? '' : selectedLanguage.code,
+                    name: selectedLanguage.name || '',
+                    nativeName: selectedLanguage.nativeName || '',
+                    auto: selectedLanguage.auto || selectedLanguage.code === 'auto',
+                },
+                ai: aiConfig,
+            });
+            if (state.activeTabId !== requestTabId) {
+                return;
+            }
+
+            const incoming = normalizeSpellcheckSuggestions(result?.suggestions || [], chunk.content, chunk.start);
+            if (incoming.length === 0) {
+                continue;
+            }
+
+            const currentContent = getCurrentEditorText();
+            const existing = getSpellcheckState().suggestions;
+            const merged = mergeSpellcheckSuggestions(existing, incoming, currentContent);
+            const addedCount = merged.length - existing.length;
+            if (addedCount <= 0) {
+                continue;
+            }
+
+            totalSuggestions += addedCount;
+            cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of(merged) });
+            ensureSpellcheckCloseButton();
+            updateSpellcheckNavigator();
+            if (!activeSpellcheckSuggestionId || existing.length === 0) {
+                focusSpellcheckSuggestion(0);
+            }
+        }
+
+        updateProgress("Checking spelling...", 100, { active: false });
+        if (totalSuggestions === 0) {
+            showToast("No spelling suggestions found.", "check_circle");
+            return;
+        }
+        updateSpellcheckNavigator();
+        const suggestions = getSpellcheckState().suggestions;
         showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
     } catch (error) {
         LogError(`SpellCheckDocument failed: ${error?.message || error}`);
         showToast(error?.message || "Failed to check spelling.", "error", 4200);
     } finally {
+        spellcheckInProgress = false;
         hideProgress();
     }
 }
@@ -2383,13 +2716,17 @@ export function initCodeMirror() {
                     state.currentMarkdownSource = val;
                     const tab = getActiveTab();
                     if (tab) tab.currentMarkdownSource = val;
-                    if (hadUnsavedChanges !== (state.isEditing && val !== state.editorOriginalContent)) {
+                    const didUpdateTabTitle = updateActiveTabTitleFromContent(val);
+                    if (didUpdateTabTitle || hadUnsavedChanges !== (state.isEditing && val !== state.editorOriginalContent)) {
                         renderTabs();
                     }
                     syncEditorStateToBackend();
 
                     if (isFindBarOpen) {
                         updateFindMatchesDebounced();
+                    }
+                    if (getSpellcheckState().suggestions.length) {
+                        requestAnimationFrame(updateSpellcheckNavigator);
                     }
                 }
 
@@ -2645,6 +2982,7 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
         await SaveFile(targetPath, contentToSave);
         showToast("File saved successfully.", "check_circle");
         if (savingTab) {
+            savingTab.title = deriveTabTitle(targetPath, contentToSave);
             savingTab.currentMarkdownSource = contentToSave;
             savingTab.editorOriginalContent = contentToSave;
             savingTab.editingPreviewPath = savingTab.editingSourcePath || targetPath;
@@ -3759,7 +4097,7 @@ function bindToolbarPopupEvents() {
         hideToolbarDisabledTooltip();
     });
     window.addEventListener('scroll', hideToolbarDisabledTooltip, true);
-    window.addEventListener('scroll', hideSpellcheckTooltip, true);
+    window.addEventListener('scroll', handleSpellcheckScroll, true);
     window.addEventListener('resize', hideToolbarDisabledTooltip);
     window.addEventListener('resize', hideSpellcheckTooltip);
 }

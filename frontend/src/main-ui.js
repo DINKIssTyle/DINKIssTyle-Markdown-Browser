@@ -30,10 +30,37 @@ export function showToast(msg, icon = null, duration = 2400) {
 
 // ── Progress Widget ────────────────────────────────────────
 
+const WAVING_PROGRESS_TITLE_PATTERN = /checking spelling|starting translation|translating document/i;
+
+function renderProgressTitle(title, { wavingDots = false } = {}) {
+    el.progressTitle.textContent = "";
+    el.progressTitle.removeAttribute('aria-label');
+    el.progressTitle.classList.toggle('dots-waving', wavingDots);
+
+    if (!wavingDots) {
+        el.progressTitle.textContent = title;
+        return;
+    }
+
+    const baseTitle = title.replace(/\.{3}\s*$/, '');
+    const displayTitle = `${baseTitle}...`;
+    el.progressTitle.setAttribute('aria-label', displayTitle);
+    el.progressTitle.appendChild(document.createTextNode(baseTitle));
+    for (let index = 0; index < 3; index += 1) {
+        const dot = document.createElement('span');
+        dot.className = 'progress-title-dot';
+        dot.textContent = '.';
+        dot.setAttribute('aria-hidden', 'true');
+        dot.style.setProperty('--dot-index', String(index));
+        el.progressTitle.appendChild(dot);
+    }
+}
+
 export function showProgress(title, progress = null, options = {}) {
     clearTimeout(progressHideTimer);
-    el.progressTitle.textContent = title;
-    const isActive = !!options.active || /rendering document|translating document/i.test(title);
+    const isWavingTitle = WAVING_PROGRESS_TITLE_PATTERN.test(title);
+    renderProgressTitle(title, { wavingDots: isWavingTitle });
+    const isActive = !!options.active || /rendering document|translating document|checking spelling|starting translation/i.test(title);
     el.progressTitle.classList.toggle('shimmering', /rendering document/i.test(title));
     el.progressFill.classList.toggle('active', isActive);
     if (typeof progress === 'number') {
@@ -53,6 +80,8 @@ export function showProgress(title, progress = null, options = {}) {
 export function hideProgress() {
     clearTimeout(progressHideTimer);
     el.progressTitle.classList.remove('shimmering');
+    el.progressTitle.classList.remove('dots-waving');
+    el.progressTitle.removeAttribute('aria-label');
     progressHideTimer = setTimeout(() => {
         el.progressWidget.classList.remove('show');
         setTimeout(() => el.progressWidget.classList.add('hidden'), 250);
