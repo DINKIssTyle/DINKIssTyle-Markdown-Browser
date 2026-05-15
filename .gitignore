@@ -8,5 +8,5 @@ dist/linux/DKST Markdown Browser-1.0.0-linux-amd64
 frontend/package.json.md5
 dinkisstyle-markdown-browser
 note
-.DS_Store
 *_test.go
+

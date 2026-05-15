@@ -13,8 +13,17 @@ set OUT_DIR=dist\windows
 set CONFIG_FILE=internal\app\config.go
 set APP_VERSION_LDFLAG=dinkisstyle-markdown-browser/internal/app.AppVersion
 
-for /f "usebackq delims=" %%A in (`powershell -NoProfile -Command "$text = Get-Content '%CONFIG_FILE%' -Raw; if ($text -match 'AppVersion\s*=\s*\"([^\"]+)\"') { $matches[1] }"`) do set VERSION=%%A
-if "%VERSION%"=="" (
+set VERSION=
+for /f "tokens=1,* delims==" %%A in ('findstr /r /c:"AppVersion[ ]*=" "%CONFIG_FILE%"') do (
+    set "VERSION=%%B"
+)
+:trim_version
+if "!VERSION:~0,1!"==" " (
+    set "VERSION=!VERSION:~1!"
+    goto trim_version
+)
+set "VERSION=%VERSION:"=%"
+if "!VERSION!"=="" (
     echo [ERROR] Failed to read AppVersion from %CONFIG_FILE%
     exit /b 1
 )
@@ -22,7 +31,7 @@ if "%VERSION%"=="" (
 echo ============================================================
 echo  DKST Markdown Browser — Windows Build
 echo  Architecture : %ARCH%
-echo  Version      : %VERSION%
+echo  Version      : !VERSION!
 echo ============================================================
 
 REM ── Dependency Check ─────────────────────────────────────────────
@@ -38,7 +47,7 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-powershell -NoProfile -Command "$content = Get-Content 'wails.json' -Raw; $content = $content -replace '\"productVersion\":\s*\"[^\"]+\"', '\"productVersion\": \"%VERSION%\"'; Set-Content 'wails.json' $content"
+powershell -NoProfile -Command "$content = Get-Content 'wails.json' -Raw; $content = $content -replace '\"productVersion\":\s*\"[^\"]+\"', '\"productVersion\": \"!VERSION!\"'; Set-Content 'wails.json' $content"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Failed to sync wails.json productVersion
     exit /b 1
@@ -49,13 +58,13 @@ if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 REM ── Build Execution ──────────────────────────────────────────────
 if /I "%ARCH%"=="amd64" (
     echo [*] Starting Windows amd64 build...
-    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=%VERSION%'" -clean
+    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=!VERSION!'" -clean
 ) else if /I "%ARCH%"=="arm64" (
     echo [*] Starting Windows arm64 build...
-    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=%VERSION%'" -clean
+    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=!VERSION!'" -clean
 ) else if /I "%ARCH%"=="386" (
     echo [*] Starting Windows 386 build...
-    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=%VERSION%'" -clean
+    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=!VERSION!'" -clean
 ) else (
     echo [ERROR] Unknown architecture: %ARCH%  (amd64 ^| arm64 ^| 386^)
     exit /b 1
@@ -64,10 +73,10 @@ if /I "%ARCH%"=="amd64" (
 REM ── Result Copy ────────────────────────────────────────────
 set EXE_PATH=build\bin\%APP_NAME%.exe
 if exist "%EXE_PATH%" (
-    copy /Y "%EXE_PATH%" "%OUT_DIR%\%APP_NAME%-%VERSION%-windows-%ARCH%.exe"
+    copy /Y "%EXE_PATH%" "%OUT_DIR%\%APP_NAME%-!VERSION!-windows-%ARCH%.exe"
     echo.
     echo [OK] Build completed!
-    echo      Output Path: "%OUT_DIR%\%APP_NAME%-%VERSION%-windows-%ARCH%.exe"
+    echo      Output Path: "%OUT_DIR%\%APP_NAME%-!VERSION!-windows-%ARCH%.exe"
     echo.
     echo [TIP] To create an NSIS installer, use the scripts in build\windows\installer\.
 ) else (
