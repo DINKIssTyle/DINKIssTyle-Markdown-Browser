@@ -103,13 +103,16 @@ done
 - **Generar Traducción de Documento Multilingüe**: Al presionar el botón `Translate Document` en el editor y seleccionar tu idioma deseado, puedes generar una traducción del documento actualmente editado de una vez.
 - **Opción de Lista Ordenada**: Ahora hay una opción de Continuación de Lista Ordenada en Configuración > Editor > General, y el predeterminado es 1. 1. 1. Estándar Markdown. Si cambias la opción a 1. 2. 3., los números incrementales, puedes usar números incrementales como antes.
 - **Tres Barras de Herramientas del Editor**: Puedes seleccionar entre los conjuntos de barras de herramientas Principiante, Novato o Profesional según tu nivel de dominio de la edición en Markdown en las opciones.
+- **Reabrir Pestaña Cerrada**: Puedes reabrir una pestaña cerrada con `CTRL+SHIFT+T`.
 
-### Correcciones de Errores y Pulido
+### Correcciones y Pulido
 
-- **Cambios en Atajos**: Debido a la funcionalidad ampliada, ha habido cambios en los atajos. Por favor, consulta la documentación de atajos al final de la página de inicio.
-- **Indicador de Estado de Edición**: Muestra un icono de advertencia en la pestaña del documento cuando el documento ha sido editado pero aún no guardado.
-- **Guardar Como**: Puedes guardar el documento con otro nombre.
-- **Menú Clic Derecho del Árbol de Archivos**: Se han añadido las funciones Renombrar, Copiar y Eliminar. Estas características solo funcionan cuando se está editando el documento.
+- **Cambios de Atajos**: Debido a la funcionalidad ampliada, ha habido cambios en los atajos. Por favor, consulte la documentación de atajos al final de la página de inicio.
+- **Indicador de Estado de Edición**: Muestra un icono de advertencia en la pestaña del documento cuando el documento ha sido editado pero aún no se ha guardado.
+- **Guardar como**: Puede guardar el documento con un nombre diferente.
+- **Menú Contextual del Árbol de Archivos**: Se ha añadido la opción "Abrir en Nueva Pestaña". Esto solo funciona en modo lectura.
+- **Menú Contextual del Árbol de Archivos**: Se ha añadido la opción "Abrir en Nueva Pestaña". Esto solo funciona en modo lectura.
+- **Animación de Cierre de Pestaña**: Se ha añadido una animación a la barra de pestañas al cerrar una pestaña.
 
 ---
 (C) 2026 DINKI'ssTyle. Todos los derechos reservados.

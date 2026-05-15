@@ -1,96 +1,87 @@
+<div align="center">  
+<a href="FEATURES-ko-KR.md">한국어</a> | <a href="FEATURES-es-ES.md">Español</a> | <a href="FEATURES-zh-CN.md">汉语</a> | <a href="FEATURES-ja-JP.md">日本語</a>
+</div>
+
+
 # FEATURES
 
-이 문서는 DKST Markdown Browser의 기능을 설명합니다.  
-DKST Markdown Browser는 마크다운 문서를 읽고, 편집하거나 새로 작성할 수 있습니다.
+This document describes the features of DKST Markdown Browser.  
+DKST Markdown Browser allows you to read, edit, or create new Markdown documents.
 
 ## Common
 
-- **마크다운 열기**: 마크다운 문서를 열 수 있습니다.
-- **사이드바 - 파일트리**: 열린 문서의 디렉토리 구조를 탐색할 수 있습니다.
-- **사이드바 - 검색**: 열린 문서 및 하위 폴더에서 키워드를 검색할 수 있습니다.
-- **이미지 뷰어**: 파일 트리를 통해 열린 이미지를 탐색하고 확대/축소하는 등의 기본 기능을 제공합니다.
-- **키보드 접근성**: 대부분의 기능은 키보드를 이용해 접근하거나 이동이 가능합니다.
-
+- **Open Markdown**: Open Markdown files.
+- **Sidebar - File Tree**: Navigate the directory structure of open documents.
+- **Sidebar - Search**: Search for keywords in open documents and subfolders.
+- **Image Viewer**: Provides basic functions such as browsing and zooming in/out of opened images via the file tree.
+- **Keyboard Accessibility**: Most functions can be accessed or navigated using the keyboard.
+- **Supported Extensions**: `.md`, `.markdown`
 
 ## Reader
-#### DKST Markdown Browser는 하이퍼링크화 된 마크다운 문서 브라우징에 탁월하며, 아래와 같은 기능들이 제공합니다.
+#### DKST Markdown Browser excels at browsing hyperlinked Markdown documents and offers the following features:
 
-- **사이드바 - 아웃라인**: 마크다운 문서의 구조를 시각적으로 보여주고 목차처럼 정리하여 해당 위치로 빠르게 이동할 수 있습니다.
-- **하이퍼링크 탐색**: 하이퍼링크화된 마크다운 문서를 웹 브라우저처럼 탐색할 수 있습니다.
-- **홈 기능**: 처음 열린 문서가 홈이 되며, 하이퍼링크로 다른 문서로 이동하더라도 다시 홈으로 쉽게 돌아올 수 있습니다.
-- **글자 크기 조절**: 버튼 또는 키보드 단축키로 문서의 글자 크기를 쉽게 조절할 수 있습니다.
-- **라이트, 다크 테마**: 사용자 취향에 따라 밝은 테마와 어두운 테마를 선택할 수 있습니다.
-- **인쇄 기능**: 문서를 인쇄할 수 있습니다.
-- **랜더링 엔진**: `Marked`, `Remark` 중 선택할 수 있습니다.
-  - 랜더링 하는 항목
-    - **수식**: `katex*`를 이용해서 LaTeX 수식을 HTML로 렌더링합니다.
-    - **다이어그램**: `Mermaid`를 이용해서 Mermaid 코드블록을 SVG로 랜더링합니다.
-    - **Syntax Highlight**: `highlight.js`를 이용해서 코드블록을 랜더링 합니다.
-
- 
-
+- **Sidebar - Outline**: Visually displays the structure of a Markdown document and organizes it like a table of contents, allowing quick jumps to specific locations.
+- **Hyperlink Navigation**: Browse hyperlinked Markdown documents as if they were in a web browser.
+- **Home Function**: The first opened document serves as the home, and you can easily return to it even when navigating to other documents via hyperlinks.
+- **Font Size Adjustment**: Easily adjust the document font size using buttons or keyboard shortcuts.
+- **Light, Dark Themes**: Choose between light and dark themes according to your preference.
+- **Print Function**: Print the document.
+- **Rendering Engine**: Select between `Marked` and `Remark`.
+  - Rendered items:
+    - **Formulas**: Renders LaTeX formulas to HTML using `katex*`.
+    - **Diagrams**: Renders Mermaid code blocks to SVG using `Mermaid`.
+    - **Syntax Highlight**: Renders code blocks using `highlight.js`.
 
 ## Editor
 
-#### DKST Markdown Browser는`CodeMirror`를 내장하여 현대적인 마크다운 문서 편집 환경을 제공합니다.
+#### DKST Markdown Browser provides a modern Markdown document editing environment by embedding `CodeMirror`.
 
-- **Syntax Highlight**: 편집 가독성을 향상시키는 Syntax Highlight 기능을 지원하며, 설정에서 프리셋을 선택하거나 사용자 맞춤형 컬러 팔레트를 구성할 수 있습니다.
-- **`/` 단축키**: 편집 도중 `/`키를 입력하여 마우스 클릭없이 툴바 도구들을 이용할 수 있습니다.
-- **링크 삽입**: `URL` 또는 `로컬 문서`를 쉽게 삽입할 수 있습니다. `로컬 문서`를 삽입하면 상대 경로로 입력되어 문서 작성을 편리하게 해줍니다.
-- **이미지 삽입**: `URL` 또는 `로컬 이미지`를 쉽게 삽입할 수 있습니다. `로컬 이미지`를 삽입하면 상대 경로로 입력되어 문서 작성을 편리하게 해줍니다.
-- **사이드바 - 파일 트리를 이용한 삽입**: 파일 트리에서 문서, 파일 또는 이미지를 선택하고 마우스 우클릭 메뉴를 활용하면 해당 아이템을 편집기 커서 위치에 바로 삽입할 수 있습니다.
-- **지능적인 삽입 경로 판단**: 문서나 이미지가 삽입될 때 경로에 공백이 포함되는 경우, 범용성을 위해 `<`와 `>`로 감쌉니다.
-- **편집 중 하이퍼링크로 이동한 문서**: 편집 중인 문서에서 하이퍼링크를 클릭하면 해당 문서가 뷰어에 표시되며, 다시 편집 중인 문서로 돌아오거나 해당 문서를 새 탭으로 열 수 있는 플로팅 버튼이 제공됩니다.
-- **편집기와 뷰어 스크롤 동기화**: 편집 화면의 스크롤과 렌더링된 뷰어의 스크롤 위치를 동기화합니다. 옵션에서 비활성화할 수 있습니다.
-- **찾기 및 바꾸기**: 편집 중인 문서의 텍스트를 검색하거나, 일괄 대치할 수 있습니다.
-- **CJK 호환 모드**: `CodeMirror`와 한중일 입력기의 `Marked Text`입력 방식과 호환성을 위한 모드로 제공하며, 불필요한 빈줄 생성을 방지합니다.
-- **편집기 글자 크기 조절**: 버튼 또는 키보드 단축키로 편집창의 글자 크기를 쉽게 조절할 수 있습니다.
+- **Syntax Highlight**: Supports Syntax Highlighting to improve readability during editing, allowing you to select presets or configure custom color palettes in settings.
+- **`/` Shortcut**: Pressing `/` while editing allows you to use toolbar tools without needing a mouse click.
+- **Link Insertion**: Easily insert `URLs` or `local documents`. Inserting a `local document` uses relative paths, making document creation convenient.
+- **Image Insertion**: Easily insert `URLs` or `local images`. Inserting a `local image` uses relative paths, making document creation convenient.
+- **Insertion via Sidebar - File Tree**: Select a document, file, or image from the file tree and use the right-click menu to insert that item directly at the cursor position in the editor.
+- **Intelligent Path Judgment for Insertion**: When inserting a document or image, if the path contains spaces, it is enclosed in `<` and `>` for universality.
+- **Documents Linked During Editing**: If you click a hyperlink in the document being edited, that document is displayed in the viewer. A floating button is provided to return to the document being edited or open it in a new tab.
+- **Editor and Viewer Scroll Synchronization**: Synchronizes the scroll position between the editing screen and the rendered viewer. This can be disabled in options.
+- **Find and Replace**: Search or batch replace text within the document being edited.
+- **CJK Compatibility Mode**: Available in a mode compatible with `CodeMirror` and the "Marked Text" input method of East Asian input methods, preventing unnecessary blank lines.
+- **Editor Font Size Adjustment**: Easily adjust the font size of the editing window using buttons or keyboard shortcuts.
 
-
->[!TIP] [기본 단축키](SHORTCUTS.md)에 대해 알아보세요. 단축키를 사용하면 매우 편리합니다.
-
+>[!TIP] Learn about [Default Shortcuts](SHORTCUTS.md). Using shortcuts is very convenient.
 
 ## Editor with AI Assist
-DKST Markdown Browser 는 Local LLM 을 활용한 AI 어시스트를 제공하며, 이 기능을 설정하고 켜거나 끄려면 에디터 설정의 AI 항목을 확인해 주세요.
+DKST Markdown Browser offers AI assist utilizing a Local LLM; please check the AI section in the editor settings to configure and toggle this feature.
 
-- **AI 기능 툴바**: 기능이 활성화 되면 에디터 좌측하단에 `AI`플로팅 버튼이 표시됩니다.
-  - AI 버튼을 클릭해 기능을 일시 정지할 수 있습니다.
-  - 펼침 버튼을 클릭해 AI 기능 툴바를 모두 표시하거나, 접을 수 있습니다.
-     - **온도**: 온도를 조절하여 AI 응답의 창의성을 조절할 수 있습니다. 온도가 높을수록 AI는 창의적인 응답을 작성합니다.
-     - **Autocomplete**: Fill-in-the-Middle (FIM) 기능을 켜거나 끕니다. 제대로 작동하기 위해서는 적절한 LLM 모델을 선택하여야 합니다.
-     - **Context+**: 사용자를 어시스트 하기 위해서 선택한 텍스트의 전후 내용의 일부를 문맥으로 사용합니다. 더 많은 문맥 예산과 처리 시간이 필요할 수 있습니다.
-     - **Github Compatible**: GitHub용 문서를 작성한다면 AI가 GitHub Flavored Markdown (GFM) 스펙에 맞는 어시스트를 시도합니다.
-     - **Talk to me**: AI가 사용자 응답을 처리하고 **매번** 처리 내용을 짧게 보고합니다.
+- **AI Feature Toolbar**: When activated, an `AI` floating button appears in the bottom left corner of the editor.
+  - Click the AI button to pause the feature.
+  - Click the expand button to show or hide the entire AI feature toolbar.
+     - **Temperature**: Adjust the temperature to control the creativity of the AI response. Higher temperatures result in more creative AI responses.
+     - **Autocomplete**: Toggle Fill-in-the-Middle (FIM). Selecting an appropriate LLM model is necessary for proper operation.
+     - **Context+**: Uses some preceding and succeeding text as context to assist the user. This may require more context budget and processing time.
+     - **Github Compatible**: If you are writing documents for GitHub, the AI attempts assistance compliant with the GitHub Flavored Markdown (GFM) specification.
+     - **Talk to me**: The AI processes the user's response and reports on the processing content in brief **every time**.
 
+### Trying out AI Features
 
+#### Getting AI Assist with Text Selection
+1. Select the sentence you are editing. The AI prompt window appears upon selecting a sentence.
+1. Press `/` to directly input the prompt into the prompt window.
+1. Try starting lightly like this: `Improve sentence`, `Translate to English`
+1. The selected sentence will have been improved or translated.
 
-### AI 기능 사용 따라해보기
+Prompt Examples: "Organize into a table", "Wrap in div and center align with width 128px", "Change to lowercase", "Rewrite the sentence in simpler terms", "Spell check", "Draw as a diagram"
 
-#### 텍스트 선택 AI 어시스트 받기
-1. 편집 중인 문장을 선택하세요. 문장을 선택하는 것으로도 AI 프롬프트 창이 뜹니다.
-1. `/`키를 눌러 바로 프롬프트 창에 프롬프트를 입력할 수 있습니다.
-1. 다음과 같이 가볍게 시작해보세요. `문장 개선`, `영어로 번역`
-1. 선택했던 문장이 개선되거나, 번역 되었을 것 입니다.
+#### Getting AI Assist without Text Selection
+1. Press `/` and select `Ask AI` (Enter) to bring up the AI prompt window.
+1. You can also call the AI prompt using a shortcut: `CTRL+/` or `⌘+/`
+1. Try starting lightly like this: `Enter 10 fruits and vegetables in a table`, `Write briefly about the benefits of apples in Markdown format`
+1. You will see fruits and vegetables organized into a table, or the benefits of apples in an LLM-like response.
 
-프롬프트 예문: "표로 정리해주세요", "div로 감싸서 중앙정렬 폭 128px", "소문자로 변경", "문장을 쉽게 풀어서 재작성", "맞춤법 검사", "다이어그램으로 그려주세요"
+Prompt Examples: "Draw a cat inside a code block", "Write a Python Hello World example"
 
-#### 텍스트 선택 없는 AI 어시스트 받기
-1. `/`를 입력하고 `Ask AI`를 선택(엔터키)하면, AI 프롬프트 창이 뜹니다.
-1. 단축키를 눌러 AI 프롬프트를 호출할수도 있습니다. `CTRL+/` 또는 `⌘+/`
-1. 다음과 같이 가볍게 시작해보세요. `과일과 야채 각각 10개를 표로 입력`, `사과의 효능을 마크다운 형식으로 꾸며서 짧게 작성`
-1. 표로 정리 된 과일과 야채 또는, LLM 응답스러운 사과의 효능을 보실 수 있게 되었을 것입니다.
+>[!Note] The LLM operating in DKST Markdown Browser does not save the context of the conversation. This is to remain faithful to its role as a tool, and it does not remember previous conversations. Furthermore, it cannot refer to any external information such as the internet, current time, or location.
 
-프롬프트 예문: "코드블록 안에 고양이를 그리세요", "파이선 헬로우 월드 예제 작성"
-
->[!Note] DKST Markdown Browser에서 작동하는 LLM은 대화의 문맥을 저장하지 않습니다. 이는 도구로서의 역할에 충실하기 위함이며, 이전 대화 내용도 기억하지 못합니다. 또한, 인터넷이나 현재 시간, 위치 등 어떤한 외부 정보도 참고할 수 없습니다.
-
-- **권장 LLM 모델**
-   - **3B~4B** 정도 규모의 `Reasoning`이 없거나 끌 수 있는 LLM 모델을 사용하세요.
-   - **AI 어시스트의 품질**은 사용하는 LLM 모델에 따라 매우 다를 수 있습니다.
-
-
-
-
-
-
-
+- **Recommended LLM Models**
+   - Use an LLM model in the range of `3B~4B` that has limited or switchable `Reasoning`.
+   - **The quality of AI assistance** can vary greatly depending on the LLM model you use.

@@ -9,7 +9,7 @@ import {
     documentTypeFromPath, splitLinkTarget, isExternalURL,
     joinPath, getScroller, syncEngineSelector, deriveTabTitle,
     isMacOS, isEditableTarget, isBundledDocumentPath, isActiveMarkdownEditTab,
-    isSupportedPreviewPath,
+    isSupportedPreviewPath, getLocalizedBundledDocument,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab, hideLinkTooltip } from './main-render.js';
@@ -311,19 +311,45 @@ export async function openThirdPartyNotices(newTab = false) {
 }
 
 export async function openShortcuts(newTab = false) {
-    await openPath(SHORTCUTS_PATH, { newTab });
+    await openPath(getPreferredLocalizedBundledPath('shortcuts', SHORTCUTS_PATH), { newTab });
 }
 
 export async function openFeatures(newTab = false) {
-    await openPath(FEATURES_PATH, { newTab });
+    await openPath(getPreferredLocalizedBundledPath('features', FEATURES_PATH), { newTab });
 }
 
 export async function openAbout(newTab = false) {
-    await openPath(ABOUT_PATH, { newTab });
+    await openPath(getPreferredLocalizedBundledPath('about', ABOUT_PATH), { newTab });
 }
 
 export async function openWhatsNew(newTab = false) {
-    await openPath(WHATS_NEW_PATH, { newTab });
+    await openPath(getPreferredLocalizedBundledPath('whatsNew', WHATS_NEW_PATH), { newTab });
+}
+
+function getPreferredLocalizedBundledPath(key, fallbackPath) {
+    const document = getLocalizedBundledDocument(key);
+    if (!document) {
+        return fallbackPath;
+    }
+
+    const languages = Array.isArray(navigator.languages) && navigator.languages.length > 0
+        ? navigator.languages
+        : [navigator.language];
+
+    for (const language of languages) {
+        const normalized = String(language || '').replace('_', '-').toLowerCase();
+        const exactMatch = document.paths[normalized];
+        if (exactMatch) {
+            return exactMatch;
+        }
+
+        const baseMatch = document.paths[normalized.split('-')[0]];
+        if (baseMatch) {
+            return baseMatch;
+        }
+    }
+
+    return document.defaultPath || fallbackPath;
 }
 
 async function loadBundledMarkdown(path) {
@@ -347,9 +373,18 @@ export function resolveLink(rel, options = {}) {
 
     const normalizedPathPart = normalizeAppLocalFileHref(pathPart) || pathPart;
     const fileURLPath = normalizeFileURLPath(normalizedPathPart);
-    const resolvedPath = fileURLPath.startsWith('/') ? fileURLPath : joinPath(state.currentFolder, fileURLPath);
+    const resolvedPath = fileURLPath.startsWith('/')
+        ? fileURLPath
+        : resolveRelativeDocumentLink(fileURLPath);
     LogInfo(`markdown link href=${rel} resolved=${resolvedPath} anchor=${anchor || ""} newTab=${!!options.newTab}`);
     openPath(resolvedPath, { ...options, anchor });
+}
+
+function resolveRelativeDocumentLink(path) {
+    if (isBundledDocumentPath(state.currentFilePath)) {
+        return `/${path.replace(/^\/+/, '')}`;
+    }
+    return joinPath(state.currentFolder, path);
 }
 
 export async function confirmAndOpenExternalLink(href) {

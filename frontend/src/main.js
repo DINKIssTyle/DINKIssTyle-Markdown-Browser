@@ -11,7 +11,7 @@ import { DEFAULT_CONTENT_FONT_SIZE, MIN_SPLASH_MS } from './config.js';
 import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector } from './main-state.js';
 import {
     createTab, getActiveTab, syncGlobalsFromTab, renderTabs,
-    createAndSwitchToNewTab, closeTab, activateTabByShortcut,
+    createAndSwitchToNewTab, closeTab, reopenClosedTab, activateTabByShortcut,
 } from './main-tabs.js';
 import {
     handleOpenFile, openPath, openIncomingFiles, openAbout, openFeatures, openShortcuts, openThirdPartyNotices,
@@ -434,6 +434,7 @@ function setupDragAndDrop() {
 
 function bindMenuEvents() {
     EventsOn('menu:new-window', () => createAndSwitchToNewTab());
+    EventsOn('menu:reopen-closed-tab', () => reopenClosedTab());
     EventsOn('menu:new-document', () => createNewDocument());
     EventsOn('menu:ask-ai', () => showAskAIPrompt());
     EventsOn('menu:home', () => goHome());
@@ -509,6 +510,8 @@ async function handleGlobalKeydown(event) {
         && event.key.toLowerCase() === 'f';
     const isNewTabShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
         && event.key.toLowerCase() === 't';
+    const isReopenClosedTabShortcut = (event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey
+        && event.key.toLowerCase() === 't';
     const isNewDocumentShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
         && event.key.toLowerCase() === 'n';
     const isToggleThemeShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
@@ -519,7 +522,7 @@ async function handleGlobalKeydown(event) {
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)
-            && (['w', 's', 'e', 'f', 't', 'n', 'k'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
+            && (['w', 's', 'e', 'f', 't', 'n', 'k'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isReopenClosedTabShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
         if (isSidebarTabShortcut) {
             event.preventDefault();
             toggleSidebarTabFromShortcut(event.code);
@@ -556,6 +559,12 @@ async function handleGlobalKeydown(event) {
     if (isNewTabShortcut) {
         event.preventDefault();
         await createAndSwitchToNewTab();
+        return;
+    }
+
+    if (isReopenClosedTabShortcut) {
+        event.preventDefault();
+        await reopenClosedTab();
         return;
     }
 

@@ -510,15 +510,22 @@ function bindFileTreeEvents() {
             }
 
             const { openPath } = await import('./main-navigation.js');
+            const wantsNewTab = event.shiftKey || event.metaKey || event.ctrlKey;
+            const editingTabId = findEditingTabIdForPath(path);
+            if (editingTabId && !wantsNewTab) {
+                const { switchToTab } = await import('./main-tabs.js');
+                await switchToTab(editingTabId);
+                return;
+            }
+
             await openPath(path, {
                 pushHistory: true,
                 setHome: false,
-                newTab: state.isEditing,
+                newTab: wantsNewTab || state.isEditing,
             });
         });
 
         item.addEventListener('contextmenu', (event) => {
-            if (!state.isEditing) return;
             const path = item.dataset.path;
             const kind = item.dataset.kind;
             if (!path) return;
@@ -529,6 +536,29 @@ function bindFileTreeEvents() {
         });
     });
     bindListKeyboardNavigation(el.fileTree, '.file-tree-item');
+}
+
+function findEditingTabIdForPath(path) {
+    if (!path) {
+        return "";
+    }
+
+    if (state.isEditing) {
+        const activeEditingPath = state.editingSourcePath || state.currentFilePath || "";
+        if (activeEditingPath === path) {
+            return state.activeTabId;
+        }
+    }
+
+    const tab = state.tabs.find(item => {
+        if (!item?.isEditing) {
+            return false;
+        }
+        const editingPath = item.editingSourcePath || item.path || "";
+        return editingPath === path;
+    });
+
+    return tab?.id || "";
 }
 
 function bindListKeyboardNavigation(container, itemSelector) {
@@ -563,19 +593,35 @@ function bindListKeyboardNavigation(container, itemSelector) {
 function showFileTreeContextMenu(event, path, isDir) {
     if (!fileTreeContextMenu) {
         fileTreeContextMenu = document.createElement('div');
-        fileTreeContextMenu.className = 'context-menu file-tree-context-menu';
+        fileTreeContextMenu.className = 'context-menu file-tree-context-menu hidden';
+        fileTreeContextMenu.setAttribute('aria-hidden', 'true');
+        fileTreeContextMenu.setAttribute('role', 'menu');
         document.body.appendChild(fileTreeContextMenu);
     }
 
     const isImage = isImagePath(path);
 
     fileTreeContextMenu.innerHTML = `
-        ${!isDir ? `<button class="context-menu-item" id="ft-ctx-insert">Insert</button>` : ''}
+        ${!isDir ? `<button class="context-menu-item" id="ft-ctx-open-new-tab">Open In New Tab</button>` : ''}
+        ${state.isEditing && !isDir ? `<button class="context-menu-item" id="ft-ctx-insert">Insert</button>` : ''}
         ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-rename">Rename</button>` : ''}
         ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-duplicate">Duplicate</button>` : ''}
         ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-delete">Delete</button>` : ''}
         <button class="context-menu-item" id="ft-ctx-copy-path">Copy Path</button>
     `;
+
+    const openNewTabBtn = fileTreeContextMenu.querySelector('#ft-ctx-open-new-tab');
+    if (openNewTabBtn) {
+        openNewTabBtn.onclick = async () => {
+            closeFileTreeContextMenu();
+            const { openPath } = await import('./main-navigation.js');
+            await openPath(path, {
+                pushHistory: true,
+                setHome: false,
+                newTab: true,
+            });
+        };
+    }
 
     const insertBtn = fileTreeContextMenu.querySelector('#ft-ctx-insert');
     if (insertBtn) {
@@ -693,7 +739,9 @@ function showFileTreeContextMenu(event, path, isDir) {
         };
     }
 
-    fileTreeContextMenu.classList.add('show');
+    fileTreeContextMenu.classList.remove('show');
+    fileTreeContextMenu.classList.remove('hidden');
+    fileTreeContextMenu.setAttribute('aria-hidden', 'false');
     
     // Position menu
     const menuRect = fileTreeContextMenu.getBoundingClientRect();
@@ -702,11 +750,14 @@ function showFileTreeContextMenu(event, path, isDir) {
     
     fileTreeContextMenu.style.left = `${x}px`;
     fileTreeContextMenu.style.top = `${y}px`;
+    requestAnimationFrame(() => fileTreeContextMenu?.classList.add('show'));
 }
 
 function closeFileTreeContextMenu() {
     if (fileTreeContextMenu) {
         fileTreeContextMenu.classList.remove('show');
+        fileTreeContextMenu.classList.add('hidden');
+        fileTreeContextMenu.setAttribute('aria-hidden', 'true');
     }
 }
 

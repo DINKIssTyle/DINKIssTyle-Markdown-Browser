@@ -73,7 +73,7 @@ DKST Markdown Browser 可用于阅读、编辑或新建 Markdown 文档。
 - **CJK 兼容模式**：提供了一种与 `CodeMirror` 和中日韩输入法 `Marked Text` 输入方式兼容的模式，可防止出现不必要的空行。
 - **编辑器字体大小调整**：可通过按钮或键盘快捷键轻松调节编辑窗口的字体大小。
 
->[!TIP] 了解 [基本快捷键](SHORTCUTS.md)。使用快捷键会非常方便。
+>[!TIP] 了解 [基本快捷键](frontend/public/SHORTCUTS.md)。使用快捷键会非常方便。
 
 ## AI 辅助编辑 (Editor with AI Assist)
 DKST Markdown Browser 利用本地 LLM 提供 AI 助手功能，如需设置或开关此功能，请查看编辑器设置中的 AI 项。

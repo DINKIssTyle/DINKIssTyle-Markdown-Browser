@@ -82,7 +82,7 @@ DKST Markdown Browser는 마크다운 문서를 읽고, 편집하거나 새로 �
 - **편집기 글자 크기 조절**: 버튼 또는 키보드 단축키로 편집창의 글자 크기를 쉽게 조절할 수 있습니다.
 
 
->[!TIP] [기본 단축키](SHORTCUTS.md)에 대해 알아보세요. 단축키를 사용하면 매우 편리합니다.
+>[!TIP] [기본 단축키](frontend/public/SHORTCUTS.md)에 대해 알아보세요. 단축키를 사용하면 매우 편리합니다.
 
 
 ## Editor with AI Assist

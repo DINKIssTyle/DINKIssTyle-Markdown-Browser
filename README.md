@@ -73,7 +73,7 @@ DKST Markdown Browser allows you to read, edit, or create new Markdown documents
 - **CJK Compatibility Mode**: Available in a mode compatible with `CodeMirror` and the "Marked Text" input method of East Asian input methods, preventing unnecessary blank lines.
 - **Editor Font Size Adjustment**: Easily adjust the font size of the editing window using buttons or keyboard shortcuts.
 
->[!TIP] Learn about [Default Shortcuts](SHORTCUTS.md). Using shortcuts is very convenient.
+>[!TIP] Learn about [Default Shortcuts](frontend/public/SHORTCUTS.md). Using shortcuts is very convenient.
 
 ## Editor with AI Assist
 DKST Markdown Browser offers AI assist utilizing a Local LLM; please check the AI section in the editor settings to configure and toggle this feature.

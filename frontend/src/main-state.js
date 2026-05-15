@@ -12,6 +12,52 @@ export const FEATURES_PATH = '/FEATURES.md';
 export const SHORTCUTS_PATH = '/SHORTCUTS.md';
 export const THIRD_PARTY_NOTICES_PATH = '/THIRD-PARTY-NOTICES.md';
 export const WHATS_NEW_PATH = '/WHATS-NEW.md';
+export const LOCALIZED_BUNDLED_DOCUMENTS = Object.freeze({
+    about: Object.freeze({
+        defaultPath: ABOUT_PATH,
+        title: 'About',
+        paths: Object.freeze({}),
+    }),
+    features: Object.freeze({
+        defaultPath: FEATURES_PATH,
+        title: 'Features',
+        paths: Object.freeze({
+            'ko': '/FEATURES-ko-KR.md',
+            'ko-kr': '/FEATURES-ko-KR.md',
+            'es': '/FEATURES-es-ES.md',
+            'es-es': '/FEATURES-es-ES.md',
+            'zh': '/FEATURES-zh-CN.md',
+            'zh-cn': '/FEATURES-zh-CN.md',
+            'ja': '/FEATURES-ja-JP.md',
+            'ja-jp': '/FEATURES-ja-JP.md',
+        }),
+    }),
+    shortcuts: Object.freeze({
+        defaultPath: SHORTCUTS_PATH,
+        title: 'Shortcuts',
+        paths: Object.freeze({}),
+    }),
+    whatsNew: Object.freeze({
+        defaultPath: WHATS_NEW_PATH,
+        title: "What's New",
+        paths: Object.freeze({
+            'ko': '/WHATS-NEW-ko-KR.md',
+            'ko-kr': '/WHATS-NEW-ko-KR.md',
+            'es': '/WHATS-NEW-es-ES.md',
+            'es-es': '/WHATS-NEW-es-ES.md',
+            'zh': '/WHATS-NEW-zh-CN.md',
+            'zh-cn': '/WHATS-NEW-zh-CN.md',
+            'ja': '/WHATS-NEW-ja-JP.md',
+            'ja-jp': '/WHATS-NEW-ja-JP.md',
+        }),
+    }),
+});
+export const LOCALIZED_BUNDLED_DOCUMENT_PATHS = Object.freeze([
+    ...new Set(Object.values(LOCALIZED_BUNDLED_DOCUMENTS).flatMap(document => [
+        document.defaultPath,
+        ...Object.values(document.paths),
+    ])),
+]);
 
 // ── DOM Helpers ────────────────────────────────────────────
 export const $ = id => document.getElementById(id);
@@ -418,21 +464,16 @@ export function isExternalURL(href) {
 
 export function formatDisplayPath(path) {
     if (path === HOME_SCREEN_PATH) return 'DKST Markdown Browser';
-    if (path === ABOUT_PATH) return 'ABOUT.md';
-    if (path === FEATURES_PATH) return 'FEATURES.md';
-    if (path === SHORTCUTS_PATH) return 'SHORTCUTS.md';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'THIRD-PARTY-NOTICES.md';
-    if (path === WHATS_NEW_PATH) return 'WHATS-NEW.md';
+    if (isLocalizedBundledDocumentPath(path)) return basename(path);
     return path;
 }
 
 export function deriveTabTitle(path, content) {
     if (path === HOME_SCREEN_PATH) return 'Start';
-    if (path === ABOUT_PATH) return 'About';
-    if (path === FEATURES_PATH) return 'Features';
-    if (path === SHORTCUTS_PATH) return 'Shortcuts';
     if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
-    if (path === WHATS_NEW_PATH) return "What's New";
+    const localizedTitle = getLocalizedBundledDocumentTitle(path);
+    if (localizedTitle) return localizedTitle;
     if (documentTypeFromPath(path) === 'html') {
         const doc = new DOMParser().parseFromString(content, 'text/html');
         const title = doc.querySelector('title')?.textContent?.trim();
@@ -501,6 +542,20 @@ export function splitLinkTarget(href) {
     };
 }
 
+export function getLocalizedBundledDocument(key) {
+    return LOCALIZED_BUNDLED_DOCUMENTS[key] || null;
+}
+
+export function getLocalizedBundledDocumentTitle(path) {
+    const document = Object.values(LOCALIZED_BUNDLED_DOCUMENTS)
+        .find(item => item.defaultPath === path || Object.values(item.paths).includes(path));
+    return document?.title || "";
+}
+
+export function isLocalizedBundledDocumentPath(path) {
+    return LOCALIZED_BUNDLED_DOCUMENT_PATHS.includes(path);
+}
+
 export function debounce(fn, ms) {
     let timer;
     return (...args) => {
@@ -510,11 +565,8 @@ export function debounce(fn, ms) {
 }
 
 export function isBundledDocumentPath(path) {
-    return path === ABOUT_PATH ||
-        path === FEATURES_PATH ||
-        path === SHORTCUTS_PATH ||
-        path === THIRD_PARTY_NOTICES_PATH ||
-        path === WHATS_NEW_PATH;
+    return path === THIRD_PARTY_NOTICES_PATH ||
+        isLocalizedBundledDocumentPath(path);
 }
 
 export function isActiveMarkdownEditTab() {

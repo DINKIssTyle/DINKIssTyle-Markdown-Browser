@@ -6,6 +6,7 @@ This is the list of shortcuts for the DKST Markdown Browser.
 | :--- | :--- | :--- |
 | New Document | Ctrl+N | ⌘+N |
 | Open New Tab | Ctrl+T | ⌘+T |
+| Reopen Closed Tab | Ctrl+⇧+T | ⌘+⇧+T |
 | Close Current Tab | Ctrl+W | ⌘+W |
 | Go to Tab | Ctrl+1~9 | ⌘+1~9 |
 | Toggle Sidebar | Alt+S | ⌥+S |

@@ -30,6 +30,12 @@ func BuildAppMenu(app *App) *menu.Menu {
 		runtime.WindowUnminimise(app.ctx)
 		runtime.EventsEmit(app.ctx, "menu:new-window")
 	})
+	fileMenu.AddText("Reopen Closed Tab", keys.Combo("t", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
+		runtime.Show(app.ctx)
+		runtime.WindowShow(app.ctx)
+		runtime.WindowUnminimise(app.ctx)
+		runtime.EventsEmit(app.ctx, "menu:reopen-closed-tab")
+	})
 	fileMenu.AddText("New Document", keys.CmdOrCtrl("n"), func(_ *menu.CallbackData) {
 		runtime.Show(app.ctx)
 		runtime.WindowShow(app.ctx)

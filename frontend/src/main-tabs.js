@@ -19,6 +19,10 @@ import { LogError } from '../wailsjs/runtime/runtime';
 let dragState = null;
 let suppressClickUntil = 0;
 let dragBindingsReady = false;
+const closingTabIds = new Set();
+const TAB_CLOSE_ANIMATION_MS = 420;
+const closedTabs = [];
+const MAX_CLOSED_TABS = 20;
 
 // ── Tab CRUD ───────────────────────────────────────────────
 
@@ -119,14 +123,16 @@ export function renderTabs() {
     ensureTabDragBindings();
 
     el.tabsList.innerHTML = state.tabs.map(tab => `
-        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''}" data-tab-id="${tab.id}">
-            <span class="tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
-            ${shouldShowUnsavedWarning(tab) ? `
-                <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
-            ` : ''}
-            <button class="tab-close-btn" data-close-tab="${tab.id}" aria-label="Close Tab">
-                <span class="material-symbols-outlined" aria-hidden="true">close</span>
-            </button>
+        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''} ${closingTabIds.has(tab.id) ? 'removing-item' : ''}" data-tab-id="${tab.id}">
+            <div class="tab-container">
+                <span class="tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
+                ${shouldShowUnsavedWarning(tab) ? `
+                    <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
+                ` : ''}
+                <button class="tab-close-btn" data-close-tab="${tab.id}" aria-label="Close Tab">
+                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                </button>
+            </div>
         </div>
     `).join('');
 
@@ -408,7 +414,7 @@ async function moveTabToIndex(sourceTabID, insertionIndex) {
 
 export async function closeTab(tabID) {
     const tab = state.tabs.find(item => item.id === tabID);
-    if (!tab) return;
+    if (!tab || closingTabIds.has(tabID)) return;
 
     const isActiveEditingTab = tabID === state.activeTabId && state.isEditing;
     const hasUnsavedChanges = isActiveEditingTab ? hasUnsavedEditorChanges() : hasUnsavedTabChanges(tab);
@@ -433,11 +439,19 @@ export async function closeTab(tabID) {
         await exitEditMode(false);
     }
 
-    const idx = state.tabs.findIndex(tab => tab.id === tabID);
+    let idx = state.tabs.findIndex(tab => tab.id === tabID);
     if (idx === -1) return;
 
     const wasActive = state.tabs[idx].id === state.activeTabId;
+    rememberClosedTab(state.tabs[idx]);
+    await animateTabClose(tabID);
+    idx = state.tabs.findIndex(tab => tab.id === tabID);
+    if (idx === -1) {
+        closingTabIds.delete(tabID);
+        return;
+    }
     state.tabs.splice(idx, 1);
+    closingTabIds.delete(tabID);
 
     if (state.tabs.length === 0) {
         const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
@@ -460,6 +474,74 @@ export async function closeTab(tabID) {
     }
 
     renderTabs();
+}
+
+function rememberClosedTab(tab) {
+    if (!tab?.path) {
+        return;
+    }
+
+    closedTabs.unshift({
+        path: tab.path,
+        title: tab.title || 'Untitled',
+    });
+
+    if (closedTabs.length > MAX_CLOSED_TABS) {
+        closedTabs.length = MAX_CLOSED_TABS;
+    }
+}
+
+export async function reopenClosedTab() {
+    const closedTab = closedTabs.shift();
+    if (!closedTab) {
+        showToast('No closed tab to reopen.', 'history');
+        return;
+    }
+
+    await openPath(closedTab.path, {
+        pushHistory: true,
+        setHome: true,
+        newTab: true,
+    });
+}
+
+function animateTabClose(tabID) {
+    const tabNode = el.tabsList.querySelector(`[data-tab-id="${tabID}"]`);
+    if (!tabNode || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+        return Promise.resolve();
+    }
+
+    closingTabIds.add(tabID);
+    tabNode.style.width = `${tabNode.offsetWidth}px`;
+    tabNode.style.maxWidth = `${tabNode.offsetWidth}px`;
+    tabNode.style.flexBasis = `${tabNode.offsetWidth}px`;
+
+    return new Promise(resolve => {
+        let finished = false;
+        const finish = () => {
+            if (finished) {
+                return;
+            }
+            finished = true;
+            tabNode.removeEventListener('transitionend', handleTransitionEnd);
+            window.clearTimeout(timeoutId);
+            resolve();
+        };
+        const handleTransitionEnd = event => {
+            if (event.target === tabNode && event.propertyName === 'width') {
+                finish();
+            }
+        };
+        const timeoutId = window.setTimeout(finish, TAB_CLOSE_ANIMATION_MS);
+
+        tabNode.addEventListener('transitionend', handleTransitionEnd);
+        requestAnimationFrame(() => {
+            tabNode.classList.add('removing-item');
+            tabNode.style.width = '0px';
+            tabNode.style.maxWidth = '0px';
+            tabNode.style.flexBasis = '0px';
+        });
+    });
 }
 
 // ── New Tab ────────────────────────────────────────────────

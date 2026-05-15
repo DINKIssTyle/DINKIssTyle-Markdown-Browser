@@ -1,8 +1,11 @@
 # What's New in Version 2.1 Beta5
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
+<div align="center">
+  
+[Korean (한국어)](WHATS-NEW-ko-KR.md) | [Spanish (Español)](WHATS-NEW-es-ES.md) | [Simplified Chinese (中国语)](WHATS-NEW-zh-CN.md) | [Japanese (日本語)](WHATS-NEW-ja-JP.md)
 
-[Korean (한국어)](WHATS-NEW-Ko-KR.md) | [Spanish (Español)](WHATS-NEW_es-ES.md) | [Simplified Chinese (中国语)](WHATS-NEW_zh-CN.md) | [Japanese (日本語)](WHATS-NEW_ja-JP.md)</div>
+</div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> Lightweight and elegant cross-platform<br>Markdown viewer and editor!</div>
 
@@ -115,13 +118,15 @@ done
 - **Generate Multilingual Document Translation**: By pressing the `Translate Document` button in the editor and selecting your desired language, you can generate a translation of the currently edited document all at once.
 - **Ordered List Option**: There is now an Ordered List Continuation option in Settings > Editor > General, and the default is 1. 1. 1. Markdown standard. If you change the option to 1. 2. 3. Incrementing numbers, you can use incrementing numbers like before.
 - **Three Editor Toolbars**: You can select from Beginner, Rooki, or Pro toolbar sets based on your Markdown editing proficiency in the options.
+- **Reopen Closed Tab**: You can reopen a closed tab with `CTRL+SHIFT+T`.
 
 ### Bug Fixes & Polish
 
 - **Shortcut Changes**: Due to expanded functionality, there have been changes to the shortcuts. Please check the shortcut documentation at the bottom of the start page.
 - **Edit State Indicator**: Displays a warning icon in the document tab when the document has been edited but not yet saved.
 - **Save As**: You can save the document under a different name.
-- **File Tree Right-Click Menu**: Rename, Copy, and Delete functions have been added. These features only work when the document is being edited.
-
+- **File Tree Right-Click Menu**: An "Open in New Tab" option has been added. This only works in read mode.
+- **File Tree Right-Click Menu**: An "Open in New Tab" option has been added. This only works in read mode.
+- **Tab Closing Animation**: An animation has been added to the tab bar when closing a tab.
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

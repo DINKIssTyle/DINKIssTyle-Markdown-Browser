@@ -74,7 +74,7 @@ El Navegador Markdown DKST permite leer, editar y crear nuevos documentos Markdo
 - **Modo Compatible con CJK**: Proporcionado en un modo compatible con el método de entrada `Marked Text` de los teclados chinos, japoneses y coreanos, previniendo la generación innecesaria de líneas en blanco.
 - **Ajuste del Tamaño de Fuente del Editor**: Ajuste fácilmente el tamaño de la fuente del área de edición mediante botones o atajos de teclado.
 
->[!TIP] Conozca los [atajos básicos](SHORTCUTS.md). Los atajos hacen que sea muy conveniente.
+>[!TIP] Conozca los [atajos básicos](frontend/public/SHORTCUTS.md). Los atajos hacen que sea muy conveniente.
 
 ## Editor con Asistencia IA
 El Navegador Markdown DKST ofrece asistencia de IA utilizando LLMs locales; consulte la sección de IA en la configuración del editor para configurar y activar/desactivar esta función.
