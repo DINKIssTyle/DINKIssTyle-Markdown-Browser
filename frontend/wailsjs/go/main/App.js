@@ -22,6 +22,14 @@ export function ConfirmOpenExternalURL(arg1) {
   return window['go']['main']['App']['ConfirmOpenExternalURL'](arg1);
 }
 
+export function DeleteFileTreePath(arg1) {
+  return window['go']['main']['App']['DeleteFileTreePath'](arg1);
+}
+
+export function DuplicateFileTreePath(arg1) {
+  return window['go']['main']['App']['DuplicateFileTreePath'](arg1);
+}
+
 export function FrontendReady() {
   return window['go']['main']['App']['FrontendReady']();
 }
@@ -112,6 +120,10 @@ export function ReadFile(arg1) {
 
 export function ReadImageAsDataURL(arg1) {
   return window['go']['main']['App']['ReadImageAsDataURL'](arg1);
+}
+
+export function RenameFileTreePath(arg1, arg2) {
+  return window['go']['main']['App']['RenameFileTreePath'](arg1, arg2);
 }
 
 export function SaveFile(arg1, arg2) {

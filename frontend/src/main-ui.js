@@ -30,10 +30,12 @@ export function showToast(msg, icon = null, duration = 2400) {
 
 // ── Progress Widget ────────────────────────────────────────
 
-export function showProgress(title, progress = null) {
+export function showProgress(title, progress = null, options = {}) {
     clearTimeout(progressHideTimer);
     el.progressTitle.textContent = title;
+    const isActive = !!options.active || /rendering document|translating document/i.test(title);
     el.progressTitle.classList.toggle('shimmering', /rendering document/i.test(title));
+    el.progressFill.classList.toggle('active', isActive);
     if (typeof progress === 'number') {
         const clamped = Math.max(0, Math.min(100, progress));
         el.progressValue.textContent = `${clamped}%`;
@@ -57,8 +59,8 @@ export function hideProgress() {
     }, 400);
 }
 
-export function updateProgress(title, progress = null) {
-    showProgress(title, progress);
+export function updateProgress(title, progress = null, options = {}) {
+    showProgress(title, progress, options);
 }
 
 export function beginProgressTask(title, progress = null) {

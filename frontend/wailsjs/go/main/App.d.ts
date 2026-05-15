@@ -13,6 +13,10 @@ export function ClearRecentFiles():Promise<void>;
 
 export function ConfirmOpenExternalURL(arg1:string):Promise<boolean>;
 
+export function DeleteFileTreePath(arg1:string):Promise<void>;
+
+export function DuplicateFileTreePath(arg1:string):Promise<string>;
+
 export function FrontendReady():Promise<Array<string>>;
 
 export function GetAIModelCatalog(arg1:string,arg2:Record<string, string>):Promise<Array<main.AIModelInfo>>;
@@ -58,6 +62,8 @@ export function PrintCurrentWindow():Promise<void>;
 export function ReadFile(arg1:string):Promise<string>;
 
 export function ReadImageAsDataURL(arg1:string):Promise<string>;
+
+export function RenameFileTreePath(arg1:string,arg2:string):Promise<string>;
 
 export function SaveFile(arg1:string,arg2:string):Promise<void>;
 

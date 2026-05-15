@@ -142,8 +142,9 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 				progress = int(float64(completedSteps) / float64(totalSteps) * 100)
 			}
 			runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
-				"label":       fmt.Sprintf("Translating %s %d/%d", target.Name, chunkIndex+1, len(chunks)),
+				"label":       fmt.Sprintf("Translating document %d of %d", targetIndex+1, len(targets)),
 				"progress":    progress,
+				"active":      true,
 				"language":    target.Code,
 				"chunk":       chunkIndex + 1,
 				"chunkTotal":  len(chunks),
@@ -169,6 +170,18 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 				previousTranslatedTail = tailRunes(next, translationChunkOverlapRunes)
 			}
 			completedSteps++
+			if totalSteps > 0 {
+				runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
+					"label":       fmt.Sprintf("Translating document %d of %d", targetIndex+1, len(targets)),
+					"progress":    int(float64(completedSteps) / float64(totalSteps) * 100),
+					"active":      true,
+					"language":    target.Code,
+					"chunk":       chunkIndex + 1,
+					"chunkTotal":  len(chunks),
+					"targetIndex": targetIndex + 1,
+					"targetTotal": len(targets),
+				})
+			}
 		}
 
 		if err := os.WriteFile(target.Path, []byte(translated.String()+"\n"), 0644); err != nil {
@@ -181,6 +194,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 	runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
 		"label":     "Translation completed",
 		"progress":  100,
+		"active":    false,
 		"completed": true,
 	})
 

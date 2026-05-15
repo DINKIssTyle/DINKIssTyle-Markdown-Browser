@@ -782,7 +782,7 @@ function bindTranslationProgressEvents() {
 
     EventsOn('translation:progress', (data) => {
         const progress = Math.round(Number(data?.progress) || 0);
-        updateProgress(data?.label || 'Translating document...', progress);
+        updateProgress(data?.label || 'Translating document...', progress, { active: data?.active !== false });
         if (data?.completed) {
             hideProgress();
         }

@@ -12,7 +12,7 @@ import {
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
 import { scrollEditorToLine, insertFileLink, focusEditor } from './main-editor.js';
-import { ListFileTree, GetRelativePath } from '../wailsjs/go/main/App';
+import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 import { copyTextToClipboard, showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
@@ -77,27 +77,47 @@ function bindSidebarTabButton(button, tabId) {
 
 function bindResizer() {
     let isResizing = false;
+    let pendingWidth = 0;
+    let resizeFrame = 0;
+
+    const applyPendingWidth = () => {
+        resizeFrame = 0;
+        if (!isResizing || !pendingWidth) return;
+        document.documentElement.style.setProperty('--sidebar-width', `${pendingWidth}px`);
+    };
 
     el.sidebarResizer.addEventListener('mousedown', (e) => {
         isResizing = true;
         document.body.style.cursor = 'col-resize';
+        document.body.classList.add('sidebar-is-resizing');
         el.sidebarResizer.classList.add('is-resizing');
         e.preventDefault();
-        
+
         const onMouseMove = (moveEvent) => {
             if (!isResizing) return;
-            
+
             let newWidth = moveEvent.clientX;
             if (newWidth < 200) newWidth = 200;
             if (newWidth > 600) newWidth = 600;
-            
-            document.documentElement.style.setProperty('--sidebar-width', `${newWidth}px`);
-            syncSidebarOffset();
+
+            pendingWidth = newWidth;
+            if (!resizeFrame) {
+                resizeFrame = requestAnimationFrame(applyPendingWidth);
+            }
         };
 
         const onMouseUp = () => {
             isResizing = false;
+            if (resizeFrame) {
+                cancelAnimationFrame(resizeFrame);
+                resizeFrame = 0;
+            }
+            if (pendingWidth) {
+                document.documentElement.style.setProperty('--sidebar-width', `${pendingWidth}px`);
+            }
+            pendingWidth = 0;
             document.body.style.cursor = '';
+            document.body.classList.remove('sidebar-is-resizing');
             el.sidebarResizer.classList.remove('is-resizing');
             window.removeEventListener('mousemove', onMouseMove);
             window.removeEventListener('mouseup', onMouseUp);
@@ -543,6 +563,9 @@ function showFileTreeContextMenu(event, path, isDir) {
 
     fileTreeContextMenu.innerHTML = `
         ${!isDir ? `<button class="context-menu-item" id="ft-ctx-insert">Insert</button>` : ''}
+        ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-rename">Rename</button>` : ''}
+        ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-duplicate">Duplicate</button>` : ''}
+        ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-delete">Delete</button>` : ''}
         <button class="context-menu-item" id="ft-ctx-copy-path">Copy Path</button>
     `;
 
@@ -573,6 +596,79 @@ function showFileTreeContextMenu(event, path, isDir) {
         };
     }
 
+    const renameBtn = fileTreeContextMenu.querySelector('#ft-ctx-rename');
+    if (renameBtn) {
+        renameBtn.onclick = async () => {
+            closeFileTreeContextMenu();
+            const currentName = basename(path);
+            const newName = await showFileTreeNamePrompt("Rename", `Rename this ${isDir ? 'folder' : 'file'}:`, currentName);
+            if (newName === null) return;
+            const trimmedName = newName.trim();
+            if (!trimmedName || trimmedName === currentName) return;
+
+            const ok = await AskConfirm(
+                "Rename",
+                `Rename ${currentName} to ${trimmedName}?`,
+                "Rename",
+                "Cancel",
+            );
+            if (!ok) return;
+
+            try {
+                await RenameFileTreePath(path, trimmedName);
+                await updateFileTree({ forceRefresh: true });
+                showToast(`${isDir ? 'Folder' : 'File'} renamed.`, 'drive_file_rename_outline');
+            } catch (error) {
+                LogError(`RenameFileTreePath failed path=${path}: ${error?.message || error}`);
+                showToast(error?.message || `Failed to rename ${isDir ? 'folder' : 'file'}.`, 'error');
+            }
+        };
+    }
+
+    const duplicateBtn = fileTreeContextMenu.querySelector('#ft-ctx-duplicate');
+    if (duplicateBtn) {
+        duplicateBtn.onclick = async () => {
+            closeFileTreeContextMenu();
+            const ok = await AskConfirm(
+                "Duplicate",
+                `Duplicate this ${isDir ? 'folder' : 'file'}?\n\n${basename(path)}`,
+                "Duplicate",
+                "Cancel",
+            );
+            if (!ok) return;
+            try {
+                await DuplicateFileTreePath(path);
+                await updateFileTree({ forceRefresh: true });
+                showToast(`${isDir ? 'Folder' : 'File'} duplicated.`, 'content_copy');
+            } catch (error) {
+                LogError(`DuplicateFileTreePath failed path=${path}: ${error?.message || error}`);
+                showToast(`Failed to duplicate ${isDir ? 'folder' : 'file'}.`, 'error');
+            }
+        };
+    }
+
+    const deleteBtn = fileTreeContextMenu.querySelector('#ft-ctx-delete');
+    if (deleteBtn) {
+        deleteBtn.onclick = async () => {
+            closeFileTreeContextMenu();
+            const ok = await AskConfirm(
+                "Delete",
+                `Delete this ${isDir ? 'folder' : 'file'}?\n\n${basename(path)}\n\nThis cannot be undone.`,
+                "Delete",
+                "Cancel",
+            );
+            if (!ok) return;
+            try {
+                await DeleteFileTreePath(path);
+                await updateFileTree({ forceRefresh: true });
+                showToast(`${isDir ? 'Folder' : 'File'} deleted.`, 'delete');
+            } catch (error) {
+                LogError(`DeleteFileTreePath failed path=${path}: ${error?.message || error}`);
+                showToast(`Failed to delete ${isDir ? 'folder' : 'file'}.`, 'error');
+            }
+        };
+    }
+
     fileTreeContextMenu.classList.add('show');
     
     // Position menu
@@ -588,6 +684,55 @@ function closeFileTreeContextMenu() {
     if (fileTreeContextMenu) {
         fileTreeContextMenu.classList.remove('show');
     }
+}
+
+function showFileTreeNamePrompt(title, message, defaultValue = "") {
+    return new Promise((resolve) => {
+        el.modalTitle.textContent = title;
+        el.modalMessage.textContent = message;
+        el.modalInput.value = defaultValue;
+        el.modalOverlay.classList.remove('hidden');
+        el.modalBtnOk.classList.remove('hidden');
+        el.modalInputGroup.classList.remove('hidden');
+        el.modalOptionGrid.classList.add('hidden');
+        el.modalEmojiContainer.classList.add('hidden');
+        el.modalTableContainer.classList.add('hidden');
+        el.modalLanguageContainer?.classList.add('hidden');
+
+        const handleOk = () => {
+            const value = el.modalInput.value;
+            cleanup();
+            resolve(value);
+        };
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+        const handleKey = event => {
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleOk();
+            }
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel();
+            }
+        };
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalBtnOk.removeEventListener('click', handleOk);
+            el.modalBtnCancel.removeEventListener('click', handleCancel);
+            el.modalInput.removeEventListener('keydown', handleKey);
+        };
+
+        el.modalBtnOk.addEventListener('click', handleOk);
+        el.modalBtnCancel.addEventListener('click', handleCancel);
+        el.modalInput.addEventListener('keydown', handleKey);
+        setTimeout(() => {
+            el.modalInput.focus();
+            el.modalInput.select();
+        }, 50);
+    });
 }
 
 async function ensureDirectoryChildrenLoaded(path) {

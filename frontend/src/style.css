@@ -440,6 +440,18 @@ html.dark .nav-btn:hover {
         border-color 0.18s ease;
 }
 
+body.sidebar-is-resizing,
+body.sidebar-is-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+body.sidebar-is-resizing .app-sidebar,
+body.sidebar-is-resizing #app-sidebar.hidden {
+    transition: none !important;
+}
+
 #app-sidebar.hidden {
     display: flex !important;
     width: 0;
@@ -2945,20 +2957,82 @@ html.dark .context-menu-item:hover {
     background: rgba(255, 255, 255, 0.09);
 }
 
+.file-tree-context-menu {
+    width: 132px;
+    min-width: 132px;
+    padding: 6px;
+    background: rgba(251, 251, 253, 0.98);
+    box-shadow: 0 10px 28px rgba(0, 0, 0, 0.16);
+    backdrop-filter: none;
+    -webkit-backdrop-filter: none;
+}
+
+html.dark .file-tree-context-menu {
+    background: rgba(36, 36, 40, 0.98);
+}
+
+.file-tree-context-menu .context-menu-item {
+    padding: 8px 10px;
+    font-size: 13px;
+    white-space: nowrap;
+}
+
 .progress-track {
     width: 100%;
-    height: 12px;
+    height: 10px;
     border-radius: 999px;
-    background: rgba(127, 127, 127, 0.16);
+    background: linear-gradient(180deg, rgba(127, 127, 127, 0.18), rgba(127, 127, 127, 0.11));
+    box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
     overflow: hidden;
 }
 
 .progress-fill {
+    position: relative;
     height: 100%;
     width: 0%;
     border-radius: inherit;
-    background: linear-gradient(90deg, #1f8fff, #3bb5ff);
-    transition: width 0.2s ease;
+    overflow: hidden;
+    background: linear-gradient(90deg, #2388ff 0%, #28b9ff 55%, #4fd6ff 100%);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.28),
+        0 0 12px rgba(40, 185, 255, 0.28);
+    transition: width 0.24s ease;
+    transform: translateZ(0);
+    will-change: width;
+}
+
+.progress-fill.active::before,
+.progress-fill.active::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+}
+
+.progress-fill.active::before {
+    opacity: 0.2;
+    background: repeating-linear-gradient(45deg,
+            rgba(255, 255, 255, 0.95) 0,
+            rgba(255, 255, 255, 0.95) 7px,
+            transparent 7px,
+            transparent 18px);
+    transform: translate3d(-18px, 0, 0);
+    animation: progress-fill-stripes 1.05s linear infinite;
+    will-change: transform;
+}
+
+.progress-fill.active::after {
+    width: 44%;
+    left: -50%;
+    background: linear-gradient(90deg,
+            transparent 0%,
+            rgba(255, 255, 255, 0.1) 22%,
+            rgba(255, 255, 255, 0.5) 50%,
+            rgba(255, 255, 255, 0.1) 78%,
+            transparent 100%);
+    transform: translate3d(-20%, 0, 0);
+    animation: progress-fill-sheen 1.45s ease-in-out infinite;
+    will-change: transform;
 }
 
 .progress-fill.indeterminate {
@@ -2987,6 +3061,26 @@ html.dark .context-menu-item:hover {
 
     100% {
         transform: translateX(190%);
+    }
+}
+
+@keyframes progress-fill-stripes {
+    0% {
+        transform: translate3d(-18px, 0, 0);
+    }
+
+    100% {
+        transform: translate3d(0, 0, 0);
+    }
+}
+
+@keyframes progress-fill-sheen {
+    0% {
+        transform: translate3d(-30%, 0, 0);
+    }
+
+    100% {
+        transform: translate3d(340%, 0, 0);
     }
 }
 
