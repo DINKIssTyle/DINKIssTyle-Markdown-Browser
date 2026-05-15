@@ -293,6 +293,173 @@ const HTML_VOID_TAGS = [
     'link', 'meta', 'param', 'source', 'track', 'wbr'
 ];
 const HTML_VOID_TAG_CLOSE_REGEX = new RegExp(`(<(${HTML_VOID_TAGS.join('|')})\\b[^<>]*?>)<\\/\\2\\s*>`, 'gi');
+const EDITOR_TOOLBAR_MODES = Object.freeze(['beginner', 'rookie', 'pro']);
+const TOOLBAR_COLLAPSED_BUTTON_IDS = Object.freeze([
+    'ed-heading-menu',
+    'ed-list-menu',
+    'ed-insert-menu',
+    'ed-more-menu',
+    'ed-render-mode-menu',
+    'ed-toolbar-hidden',
+]);
+const TOOLBAR_DIRECT_TOOL_IDS = Object.freeze([
+    'ed-find-replace',
+    'ed-translate-doc',
+    'ed-bold',
+    'ed-italic',
+    'ed-underline',
+    'ed-strike',
+    'ed-quote',
+    'ed-h1',
+    'ed-h2',
+    'ed-h3',
+    'ed-ul',
+    'ed-ol',
+    'ed-hr',
+    'ed-link',
+    'ed-image',
+    'ed-code',
+    'ed-table',
+    'ed-div',
+    'ed-task',
+    'ed-latex',
+    'ed-emoji',
+    'ed-font-minus',
+    'ed-font-plus',
+    'ed-settings',
+    'ed-cancel',
+    'ed-save-as',
+    'ed-save',
+]);
+const TOOLBAR_MODE_CONFIG = Object.freeze({
+    beginner: Object.freeze({
+        show: [
+            ...TOOLBAR_DIRECT_TOOL_IDS,
+            'ed-render-mode-menu',
+        ],
+        hide: [
+            'ed-heading-menu',
+            'ed-list-menu',
+            'ed-insert-menu',
+            'ed-more-menu',
+            'ed-toolbar-hidden',
+        ],
+        showRenderSelect: false,
+        showRenderLabel: false,
+    }),
+    rookie: Object.freeze({
+        show: [
+            'ed-find-replace',
+            'ed-translate-doc',
+            'ed-bold',
+            'ed-italic',
+            'ed-underline',
+            'ed-strike',
+            'ed-quote',
+            'ed-heading-menu',
+            'ed-list-menu',
+            'ed-hr',
+            'ed-insert-menu',
+            'ed-more-menu',
+            'ed-render-mode-menu',
+            'ed-font-minus',
+            'ed-font-plus',
+            'ed-settings',
+            'ed-cancel',
+            'ed-save-as',
+            'ed-save',
+        ],
+        hide: [
+            'ed-h1',
+            'ed-h2',
+            'ed-h3',
+            'ed-ul',
+            'ed-ol',
+            'ed-link',
+            'ed-image',
+            'ed-code',
+            'ed-table',
+            'ed-div',
+            'ed-task',
+            'ed-latex',
+            'ed-emoji',
+            'ed-toolbar-hidden',
+        ],
+        showRenderSelect: false,
+        showRenderLabel: false,
+    }),
+    pro: Object.freeze({
+        show: [
+            'ed-find-replace',
+            'ed-translate-doc',
+            'ed-bold',
+            'ed-italic',
+            'ed-underline',
+            'ed-strike',
+            'ed-quote',
+            'ed-toolbar-hidden',
+            'ed-render-mode-menu',
+            'ed-font-minus',
+            'ed-font-plus',
+            'ed-settings',
+            'ed-cancel',
+            'ed-save-as',
+            'ed-save',
+        ],
+        hide: [
+            'ed-h1',
+            'ed-h2',
+            'ed-h3',
+            'ed-heading-menu',
+            'ed-ul',
+            'ed-ol',
+            'ed-list-menu',
+            'ed-hr',
+            'ed-link',
+            'ed-image',
+            'ed-code',
+            'ed-table',
+            'ed-div',
+            'ed-insert-menu',
+            'ed-task',
+            'ed-latex',
+            'ed-emoji',
+            'ed-more-menu',
+        ],
+        showRenderSelect: false,
+        showRenderLabel: false,
+    }),
+});
+const TOOLBAR_POPUP_GROUPS = Object.freeze({
+    heading: Object.freeze([
+        { label: 'H1', description: 'Heading 1 (#)', action: () => applyBlockMarker('h1') },
+        { label: 'H2', description: 'Heading 2 (##)', action: () => applyBlockMarker('h2') },
+        { label: 'H3', description: 'Heading 3 (###)', action: () => applyBlockMarker('h3') },
+        { label: 'H4', description: 'Heading 4 (####)', action: () => applyBlockMarker('h4') },
+    ]),
+    list: Object.freeze([
+        { label: 'Unordered List', icon: 'format_list_bulleted', action: () => applyBlockMarker('ul') },
+        { label: 'Ordered List', icon: 'format_list_numbered', action: () => applyBlockMarker('ol') },
+    ]),
+    insert: Object.freeze([
+        { label: 'Link', icon: 'link', action: () => insertLink() },
+        { label: 'Image', icon: 'image', action: () => insertImage() },
+        { label: 'Code Block', icon: 'code', action: () => insertCodeBlock() },
+        { label: 'Table', icon: 'table_chart', action: () => insertTable() },
+        { label: 'DIV Wrapper', icon: 'border_inner', action: () => insertDivWrapper() },
+    ]),
+    more: Object.freeze([
+        { label: 'Task List', icon: 'checklist', action: () => applyBlockMarker('task') },
+        { label: 'LaTeX', icon: 'functions', action: () => insertLatex() },
+        { label: 'Emoji', icon: 'mood', action: () => insertEmoji() },
+    ]),
+    renderMode: Object.freeze([
+        { label: 'Realtime', description: 'Render while typing', icon: 'autoplay', value: 'realtime' },
+        { label: 'Line Change', description: 'Render after line changes', icon: 'autopause', value: 'cursor-line-change' },
+    ]),
+});
+let toolbarPopup = null;
+let toolbarPopupTrigger = null;
 function getEditorThemeName() {
     return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
 }
@@ -388,13 +555,150 @@ function applyEditorPlainTextColor() {
 }
 
 export function applyEditorPreferencesFromSettings(settings = {}) {
+    state.editorToolbarMode = normalizeEditorToolbarMode(settings.editorToolbarMode);
     state.editorPreviewScrollSyncEnabled = settings.editorPreviewScrollSync !== false;
     state.editorOrderedListStyle = settings.editorOrderedListStyle === 'incremental' ? 'incremental' : 'standard';
     state.editorTokenColorsEnabled = settings.editorTokenColorsEnabled !== false;
     state.editorTokenColors = normalizeTokenColors(settings.editorTokenColors || {});
     state.editorBackgroundColor = normalizeBackgroundColor(settings.editorBackgroundColor);
+    applyEditorToolbarMode();
     applyEditorTokenColors();
     applyEditorBackgroundColor();
+}
+
+function normalizeEditorToolbarMode(mode) {
+    return EDITOR_TOOLBAR_MODES.includes(mode) ? mode : 'beginner';
+}
+
+function getToolbarElement(id) {
+    return document.getElementById(id);
+}
+
+function syncToolbarGroupVisibility() {
+    el.editToolbar?.querySelectorAll('.edit-tool-group').forEach(group => {
+        const visibleItems = [...group.children].filter(child => {
+            if (child.classList?.contains('hidden')) return false;
+            if (child.tagName === 'LABEL' && child.classList.contains('hidden')) return false;
+            return child.offsetParent !== null || !child.classList?.contains('hidden');
+        });
+        group.classList.toggle('hidden', visibleItems.length === 0);
+    });
+
+    el.editToolbar?.querySelectorAll('.edit-separator').forEach(separator => {
+        const previousGroup = separator.previousElementSibling;
+        const nextGroup = separator.nextElementSibling;
+        const shouldShow = previousGroup?.classList?.contains('edit-tool-group')
+            && nextGroup?.classList?.contains('edit-tool-group')
+            && !previousGroup.classList.contains('hidden')
+            && !nextGroup.classList.contains('hidden');
+        separator.classList.toggle('hidden', !shouldShow);
+    });
+}
+
+function syncRenderModeIcon() {
+    if (!el.edRenderModeIcon) return;
+    const isRealtime = state.currentEditorRenderMode !== 'cursor-line-change';
+    el.edRenderModeIcon.textContent = isRealtime ? 'autoplay' : 'autopause';
+    if (el.edRenderModeMenu) {
+        el.edRenderModeMenu.title = isRealtime ? 'Realtime' : 'Line Change';
+        el.edRenderModeMenu.setAttribute('aria-label', el.edRenderModeMenu.title);
+    }
+}
+
+export function applyEditorToolbarMode() {
+    const mode = normalizeEditorToolbarMode(state.editorToolbarMode);
+    state.editorToolbarMode = mode;
+    const config = TOOLBAR_MODE_CONFIG[mode];
+    const shown = new Set(config.show);
+    const managedIds = new Set([...TOOLBAR_DIRECT_TOOL_IDS, ...TOOLBAR_COLLAPSED_BUTTON_IDS]);
+
+    managedIds.forEach(id => {
+        getToolbarElement(id)?.classList.toggle('hidden', !shown.has(id));
+    });
+
+    config.hide.forEach(id => getToolbarElement(id)?.classList.add('hidden'));
+    el.edRenderMode?.classList.toggle('hidden', !config.showRenderSelect);
+    el.edRenderMode?.previousElementSibling?.classList.toggle('hidden', !config.showRenderLabel);
+    el.edRenderMode?.previousElementSibling?.previousElementSibling?.classList.toggle('hidden', !config.showRenderLabel);
+    closeToolbarPopup();
+    syncRenderModeIcon();
+    requestAnimationFrame(syncToolbarGroupVisibility);
+}
+
+function closeToolbarPopup() {
+    toolbarPopup?.remove();
+    toolbarPopup = null;
+    toolbarPopupTrigger?.setAttribute('aria-expanded', 'false');
+    toolbarPopupTrigger = null;
+}
+
+function buildToolbarPopupItem(item, index, selectedValue = '') {
+    const active = item.value && item.value === selectedValue ? ' active' : '';
+    const description = item.description ? `<span>${escapeHTML(item.description)}</span>` : '';
+    const icon = item.icon ? `<span class="material-symbols-outlined toolbar-popup-icon" aria-hidden="true">${escapeHTML(item.icon)}</span>` : '';
+    return `
+        <button class="toolbar-popup-item${active}" type="button" data-toolbar-popup-index="${index}">
+            ${icon}
+            <span class="toolbar-popup-copy">
+                <strong>${escapeHTML(item.label)}</strong>
+                ${description}
+            </span>
+        </button>
+    `;
+}
+
+function openToolbarPopup(trigger, groupKey) {
+    const items = TOOLBAR_POPUP_GROUPS[groupKey] || [];
+    if (!trigger || !items.length) return;
+    if (toolbarPopup && toolbarPopupTrigger === trigger) {
+        closeToolbarPopup();
+        return;
+    }
+
+    closeToolbarPopup();
+    const selectedValue = groupKey === 'renderMode' ? state.currentEditorRenderMode : '';
+    const popup = document.createElement('div');
+    popup.className = 'toolbar-popup';
+    popup.setAttribute('role', 'menu');
+    popup.innerHTML = items.map((item, index) => buildToolbarPopupItem(item, index, selectedValue)).join('');
+    document.body.appendChild(popup);
+
+    const triggerRect = trigger.getBoundingClientRect();
+    const popupRect = popup.getBoundingClientRect();
+    const left = Math.min(
+        window.innerWidth - popupRect.width - 10,
+        Math.max(10, triggerRect.left + (triggerRect.width / 2) - (popupRect.width / 2))
+    );
+    const top = Math.max(10, triggerRect.bottom + 8);
+    popup.style.left = `${left}px`;
+    popup.style.top = `${top}px`;
+
+    popup.addEventListener('click', event => {
+        const button = event.target.closest('[data-toolbar-popup-index]');
+        if (!button) return;
+        const item = items[Number(button.dataset.toolbarPopupIndex)];
+        closeToolbarPopup();
+        if (item.value) {
+            void setEditorRenderMode(item.value);
+            return;
+        }
+        item.action?.();
+    });
+
+    toolbarPopup = popup;
+    toolbarPopupTrigger = trigger;
+    trigger.setAttribute('aria-expanded', 'true');
+}
+
+async function setEditorRenderMode(mode) {
+    state.currentEditorRenderMode = mode === 'cursor-line-change' ? 'cursor-line-change' : 'realtime';
+    if (el.edRenderMode) {
+        el.edRenderMode.value = state.currentEditorRenderMode;
+    }
+    syncRenderModeIcon();
+    lastPreviewCursorLine = getCursorLineNumber(cmView?.state);
+    schedulePreviewRender(getCurrentEditorText(), 0);
+    await persistEditorPreferences();
 }
 
 export function applyEditorTokenColors() {
@@ -1948,6 +2252,9 @@ function applyBlockMarker(type) {
             case 'h3':
                 lines.push(buildBlockLine(line.text, '### '));
                 break;
+            case 'h4':
+                lines.push(buildBlockLine(line.text, '#### '));
+                break;
             case 'ul':
                 lines.push(buildBlockLine(line.text, '- '));
                 break;
@@ -2808,9 +3115,29 @@ export function showEmojiPicker() {
 
 // ── Editor Event Bindings ──────────────────────────────────
 
+function bindToolbarPopupEvents() {
+    if (bindToolbarPopupEvents.bound) return;
+    bindToolbarPopupEvents.bound = true;
+
+    el.edHeadingMenu?.addEventListener('click', () => openToolbarPopup(el.edHeadingMenu, 'heading'));
+    el.edListMenu?.addEventListener('click', () => openToolbarPopup(el.edListMenu, 'list'));
+    el.edInsertMenu?.addEventListener('click', () => openToolbarPopup(el.edInsertMenu, 'insert'));
+    el.edMoreMenu?.addEventListener('click', () => openToolbarPopup(el.edMoreMenu, 'more'));
+    el.edRenderModeMenu?.addEventListener('click', () => openToolbarPopup(el.edRenderModeMenu, 'renderMode'));
+    document.addEventListener('click', event => {
+        if (!toolbarPopup) return;
+        if (toolbarPopup.contains(event.target) || toolbarPopupTrigger?.contains(event.target)) return;
+        closeToolbarPopup();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key === 'Escape') closeToolbarPopup();
+    });
+}
+
 export function bindEditorEvents() {
     bindSlashMenuEvents();
     bindTranslationProgressEvents();
+    bindToolbarPopupEvents();
     el.edBold.onclick = () => applyInlineWrap('**', '**');
     el.edItalic.onclick = () => applyInlineWrap('*', '*');
     el.edUnderline.onclick = () => applyInlineWrap('<u>', '</u>');
@@ -2839,11 +3166,8 @@ export function bindEditorEvents() {
             void translateCurrentDocument();
         };
     }
-    el.edRenderMode.onchange = async event => {
-        state.currentEditorRenderMode = event.target.value || 'realtime';
-        lastPreviewCursorLine = getCursorLineNumber(cmView?.state);
-        schedulePreviewRender(getCurrentEditorText(), 0);
-        await persistEditorPreferences();
+    el.edRenderMode.onchange = event => {
+        void setEditorRenderMode(event.target.value || 'realtime');
     };
 
     el.edFontMinus.onclick = () => {

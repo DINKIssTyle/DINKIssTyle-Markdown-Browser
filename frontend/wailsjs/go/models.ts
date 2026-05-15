@@ -1,16 +1,16 @@
 export namespace main {
-
+	
 	export class AIModelInfo {
 	    id: string;
 	    displayName: string;
 	    isLoaded: boolean;
 	    stateLabel: string;
 	    primaryLoadedInstanceId: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AIModelInfo(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.id = source["id"];
@@ -25,6 +25,7 @@ export namespace main {
 	    fontSize: number;
 	    engine: string;
 	    editorRenderMode: string;
+	    editorToolbarMode: string;
 	    editorPreviewScrollSync: boolean;
 	    editorOrderedListStyle: string;
 	    editorTokenColorsEnabled: boolean;
@@ -52,17 +53,18 @@ export namespace main {
 	    aiSupportAgent: boolean;
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.theme = source["theme"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];
+	        this.editorToolbarMode = source["editorToolbarMode"];
 	        this.editorPreviewScrollSync = source["editorPreviewScrollSync"];
 	        this.editorOrderedListStyle = source["editorOrderedListStyle"];
 	        this.editorTokenColorsEnabled = source["editorTokenColorsEnabled"];
@@ -95,11 +97,11 @@ export namespace main {
 	export class FileResult {
 	    path: string;
 	    content: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new FileResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
@@ -112,11 +114,11 @@ export namespace main {
 	    isDir: boolean;
 	    hasItems: boolean;
 	    children?: FileTreeNode[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new FileTreeNode(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -125,7 +127,7 @@ export namespace main {
 	        this.hasItems = source["hasItems"];
 	        this.children = this.convertValues(source["children"], FileTreeNode);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -147,11 +149,11 @@ export namespace main {
 	export class RecentFile {
 	    path: string;
 	    name: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new RecentFile(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
@@ -164,11 +166,11 @@ export namespace main {
 	    model: string;
 	    key: string;
 	    temperature: number;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TranslationAIConfig(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.provider = source["provider"];
@@ -183,11 +185,11 @@ export namespace main {
 	    name: string;
 	    nativeName: string;
 	    suffix: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TranslationLanguage(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.code = source["code"];
@@ -202,11 +204,11 @@ export namespace main {
 	    languages: TranslationLanguage[];
 	    ai: TranslationAIConfig;
 	    overwriteExisting: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TranslateDocumentRequest(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.sourcePath = source["sourcePath"];
@@ -215,7 +217,7 @@ export namespace main {
 	        this.ai = this.convertValues(source["ai"], TranslationAIConfig);
 	        this.overwriteExisting = source["overwriteExisting"];
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -241,11 +243,11 @@ export namespace main {
 	    path: string;
 	    fileName: string;
 	    exists: boolean;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TranslatedDocumentTarget(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.code = source["code"];
@@ -258,16 +260,16 @@ export namespace main {
 	}
 	export class TranslatedDocumentResult {
 	    targets: TranslatedDocumentTarget[];
-
+	
 	    static createFrom(source: any = {}) {
 	        return new TranslatedDocumentResult(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.targets = this.convertValues(source["targets"], TranslatedDocumentTarget);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -286,21 +288,21 @@ export namespace main {
 		    return a;
 		}
 	}
-
-
+	
+	
 
 }
 
 export namespace options {
-
+	
 	export class SecondInstanceData {
 	    Args: string[];
 	    WorkingDirectory: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new SecondInstanceData(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.Args = source["Args"];

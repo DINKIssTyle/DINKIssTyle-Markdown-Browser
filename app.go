@@ -74,6 +74,7 @@ type AppSettings struct {
 	FontSize                 int               `json:"fontSize"`
 	Engine                   string            `json:"engine"`
 	EditorRenderMode         string            `json:"editorRenderMode"`
+	EditorToolbarMode        string            `json:"editorToolbarMode"`
 	EditorPreviewScrollSync  bool              `json:"editorPreviewScrollSync"`
 	EditorOrderedListStyle   string            `json:"editorOrderedListStyle"`
 	EditorTokenColorsEnabled bool              `json:"editorTokenColorsEnabled"`
@@ -556,8 +557,9 @@ func (a *App) GetSettings() AppSettings {
 	// Default settings
 	settings.Theme = "light" // "dark" | "light"
 	settings.FontSize = 16
-	settings.Engine = "marked"             // "marked" | "html"
-	settings.EditorRenderMode = "realtime" // "realtime" | "cursor"
+	settings.Engine = "marked"              // "marked" | "html"
+	settings.EditorRenderMode = "realtime"  // "realtime" | "cursor"
+	settings.EditorToolbarMode = "beginner" // "beginner" | "rookie" | "pro"
 	settings.EditorPreviewScrollSync = true
 	settings.EditorOrderedListStyle = "standard" // "standard" | "incremental"
 	settings.EditorTokenColorsEnabled = true

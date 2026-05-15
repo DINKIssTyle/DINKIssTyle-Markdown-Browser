@@ -7,7 +7,7 @@ import { state, el } from './main-state.js';
 import { persistAppSettings } from './main-settings.js';
 import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/main/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
-import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor } from './main-editor.js';
+import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode } from './main-editor.js';
 import { showToast } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
@@ -858,6 +858,9 @@ function syncEditorSettingsControls() {
     if (el.editorOrderedListStyle) {
         el.editorOrderedListStyle.value = state.editorOrderedListStyle || 'standard';
     }
+    if (el.editorToolbarMode) {
+        el.editorToolbarMode.value = state.editorToolbarMode || 'beginner';
+    }
     if (el.editorTokenColorsEnabled) {
         el.editorTokenColorsEnabled.checked = state.editorTokenColorsEnabled;
     }
@@ -893,6 +896,9 @@ function applyEditorTokenColorPreset(presetKey) {
 function collectEditorSettingsFromControls() {
     state.editorPreviewScrollSyncEnabled = el.editorPreviewScrollSync?.checked ?? true;
     state.editorOrderedListStyle = el.editorOrderedListStyle?.value === 'incremental' ? 'incremental' : 'standard';
+    state.editorToolbarMode = ['beginner', 'rookie', 'pro'].includes(el.editorToolbarMode?.value)
+        ? el.editorToolbarMode.value
+        : 'beginner';
     state.editorTokenColorsEnabled = el.editorTokenColorsEnabled?.checked ?? true;
     const nextColors = {};
     el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
@@ -900,6 +906,7 @@ function collectEditorSettingsFromControls() {
     });
     state.editorTokenColors = nextColors;
     state.editorBackgroundColor = el.editorBackgroundColor?.value || getEditorDefaultBackgroundColor();
+    applyEditorToolbarMode();
     applyEditorTokenColors();
     applyEditorBackgroundColor();
 }

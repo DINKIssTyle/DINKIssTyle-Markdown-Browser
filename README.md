@@ -88,6 +88,8 @@ DKST Markdown Browser allows you to read, edit, or create new Markdown documents
 ## Editor with AI Assist
 DKST Markdown Browser offers AI assist utilizing a Local LLM. Please check the AI section in the editor settings to configure and toggle this feature.
 
+- **Generate Multilingual Document Translation**: By pressing the `Translate Document` button in the editor and selecting your desired language, you can generate a translation of the currently edited document all at once.
+
 - **AI Feature Toolbar**: When activated, an `AI` floating button appears in the bottom left of the editor.
   - Click the AI button to temporarily pause features.
   - Click the expand button to show or hide the entire AI feature toolbar.

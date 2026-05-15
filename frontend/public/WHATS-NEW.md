@@ -111,14 +111,16 @@ done
 ## 2.1 Beta5
 
 ### Added
+
+- **Generate Multilingual Document Translation**: By pressing the `Translate Document` button in the editor and selecting your desired language, you can generate a translation of the currently edited document all at once.
 - **Ordered List Option**: There is now an Ordered List Continuation option in Settings > Editor > General, and the default is 1. 1. 1. Markdown standard. If you change the option to 1. 2. 3. Incrementing numbers, you can use incrementing numbers like before.
 
 ### Bug Fixes & Polish
 
 - **Shortcut Changes**: Due to expanded functionality, there have been changes to the shortcuts. Please check the shortcut documentation at the bottom of the start page.
-
 - **Edit State Indicator**: Displays a warning icon in the document tab when the document has been edited but not yet saved.
 - **Save As**: You can save the document under a different name.
+- **File Tree Right-Click Menu**: Rename, Copy, and Delete functions have been added. These features only work when the document is being edited.
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

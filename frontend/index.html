@@ -132,7 +132,7 @@
                     <div class="edit-toolbar-row edit-toolbar-row-primary">
                         <div class="edit-tool-group">
                             <button id="ed-find-replace" title="Find & Replace (⌘F)" class="tool-btn"><span
-                                    class="material-symbols-outlined">find_replace</span></button>
+                                    class="material-symbols-outlined">manage_search</span></button>
                             <button id="ed-translate-doc" title="Translate Document" class="tool-btn"><span
                                     class="material-symbols-outlined">globe_book</span></button>
                         </div>
@@ -154,10 +154,16 @@
                             <button id="ed-h1" title="Heading 1 (#)" class="tool-btn">H1</button>
                             <button id="ed-h2" title="Heading 2 (##)" class="tool-btn">H2</button>
                             <button id="ed-h3" title="Heading 3 (###)" class="tool-btn">H3</button>
+                            <button id="ed-heading-menu" title="Headings" class="tool-btn toolbar-popup-trigger hidden"
+                                type="button" aria-haspopup="true" aria-expanded="false"><span
+                                    class="material-symbols-outlined">format_h1</span></button>
                             <button id="ed-ul" title="Unordered List (•)" class="tool-btn"><span
                                     class="material-symbols-outlined">format_list_bulleted</span></button>
                             <button id="ed-ol" title="Ordered List (1.)" class="tool-btn"><span
                                     class="material-symbols-outlined">format_list_numbered</span></button>
+                            <button id="ed-list-menu" title="Lists" class="tool-btn toolbar-popup-trigger hidden"
+                                type="button" aria-haspopup="true" aria-expanded="false"><span
+                                    class="material-symbols-outlined">format_list_bulleted_add</span></button>
                             <button id="ed-hr" title="Horizontal Rule (---)" class="tool-btn"><span
                                     class="material-symbols-outlined">horizontal_rule</span></button>
                         </div>
@@ -173,6 +179,9 @@
                                     class="material-symbols-outlined">table_chart</span></button>
                             <button id="ed-div" title="DIV Wrapper" class="tool-btn"><span
                                     class="material-symbols-outlined">border_inner</span></button>
+                            <button id="ed-insert-menu" title="Insert" class="tool-btn toolbar-popup-trigger hidden"
+                                type="button" aria-haspopup="true" aria-expanded="false"><span
+                                    class="material-symbols-outlined">add_diamond</span></button>
                         </div>
                         <div class="edit-separator"></div>
                         <div class="edit-tool-group">
@@ -182,6 +191,9 @@
                                     class="material-symbols-outlined">functions</span></button>
                             <button id="ed-emoji" title="Emoji" class="tool-btn"><span
                                     class="material-symbols-outlined">mood</span></button>
+                            <button id="ed-more-menu" title="More" class="tool-btn toolbar-popup-trigger hidden"
+                                type="button" aria-haspopup="true" aria-expanded="false"><span
+                                    class="material-symbols-outlined">more_horiz</span></button>
                         </div>
                         <div class="edit-separator"></div>
                         <div class="edit-tool-group">
@@ -192,6 +204,15 @@
                                 <option value="realtime">Realtime</option>
                                 <option value="cursor-line-change">Line change</option>
                             </select>
+                            <button id="ed-render-mode-menu" title="Update Mode"
+                                class="tool-btn toolbar-popup-trigger hidden" type="button" aria-haspopup="true"
+                                aria-expanded="false"><span id="ed-render-mode-icon"
+                                    class="material-symbols-outlined">autoplay</span></button>
+                        </div>
+                        <div class="edit-separator"></div>
+                        <div class="edit-tool-group">
+                            <button id="ed-toolbar-hidden" title="Hidden tools" class="tool-btn hidden" type="button"
+                                disabled><span class="material-symbols-outlined">more_horiz</span></button>
                         </div>
                         <div class="edit-separator"></div>
                         <div class="edit-tool-group">
@@ -222,7 +243,8 @@
                     <div id="editor-find-bar" class="editor-find-bar hidden">
                         <div class="editor-find-bar-row">
                             <div class="editor-find-input-group">
-                                <span class="material-symbols-outlined editor-find-icon" aria-hidden="true">search</span>
+                                <span class="material-symbols-outlined editor-find-icon"
+                                    aria-hidden="true">search</span>
                                 <input type="text" id="editor-find-input" class="editor-find-input" placeholder="Find"
                                     spellcheck="false" autocomplete="off" />
                             </div>
@@ -243,13 +265,16 @@
                         </div>
                         <div id="editor-replace-row" class="editor-find-bar-row editor-replace-row hidden">
                             <div class="editor-find-input-group">
-                                <span class="material-symbols-outlined editor-find-icon" aria-hidden="true">swap_horiz</span>
-                                <input type="text" id="editor-replace-input" class="editor-find-input" placeholder="Replace"
-                                    spellcheck="false" autocomplete="off" />
+                                <span class="material-symbols-outlined editor-find-icon"
+                                    aria-hidden="true">swap_horiz</span>
+                                <input type="text" id="editor-replace-input" class="editor-find-input"
+                                    placeholder="Replace" spellcheck="false" autocomplete="off" />
                             </div>
                             <div class="editor-replace-actions">
-                                <button id="editor-replace-one" class="editor-find-action-btn" type="button">Replace</button>
-                                <button id="editor-replace-all" class="editor-find-action-btn" type="button">All</button>
+                                <button id="editor-replace-one" class="editor-find-action-btn"
+                                    type="button">Replace</button>
+                                <button id="editor-replace-all" class="editor-find-action-btn"
+                                    type="button">All</button>
                             </div>
                         </div>
                     </div>
@@ -268,15 +293,18 @@
                     <article id="content-view" class="content-view">
                         <!-- Home Screen (Recent Files) -->
                         <div id="home-screen" class="home-screen">
-                            <h1><span class="material-symbols-outlined home-title-icon" aria-hidden="true">markdown</span>
+                            <h1><span class="material-symbols-outlined home-title-icon"
+                                    aria-hidden="true">markdown</span>
                                 <span>DKST Markdown Browser</span>
                             </h1>
                             <p class="home-subtitle">Open or drag a Markdown or HTML file here.</p>
                             <div id="recent-files-list" class="recent-list">
                                 <div class="empty-state">
-                                    <span class="material-symbols-outlined empty-state-icon" aria-hidden="true">history</span>
+                                    <span class="material-symbols-outlined empty-state-icon"
+                                        aria-hidden="true">history</span>
                                     <div class="empty-state-title">No recent documents yet</div>
-                                    <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here for quick
+                                    <div class="empty-state-copy">Open a Markdown or HTML file and it will appear here
+                                        for quick
                                         access.</div>
                                 </div>
                             </div>
@@ -293,7 +321,8 @@
 
                             <footer class="home-footer" aria-label="Version and Copyright Info">
                                 <div class="home-footer-line">
-                                    <a href="#" id="footer-install" class="footer-link footer-install hidden">Install</a>
+                                    <a href="#" id="footer-install"
+                                        class="footer-link footer-install hidden">Install</a>
                                     <span id="footer-install-dot" class="footer-dot footer-install hidden"
                                         aria-hidden="true">•</span>
                                     <span id="app-version-footer">Version --</span>
@@ -305,7 +334,8 @@
                                     <span class="footer-dot" aria-hidden="true">•</span>
                                     <a href="#" id="footer-shortcuts" class="footer-link">Shortcuts</a>
                                     <span class="footer-dot" aria-hidden="true">•</span>
-                                    <a href="#" id="footer-third-party-notices" class="footer-link">Third-Party Notices</a>
+                                    <a href="#" id="footer-third-party-notices" class="footer-link">Third-Party
+                                        Notices</a>
                                 </div>
                                 <div class="home-footer-line">
                                     <a href="#" id="footer-copyright" class="footer-link footer-copyright">(C) 2026
@@ -484,11 +514,11 @@
                             <div class="ai-setting-header">
                                 <h4>General</h4>
                             </div>
-                            <div class="ai-setting-grid ai-setting-grid-single-row">
+                            <div class="ai-setting-grid ai-setting-grid-single-row editor-general-grid">
                                 <div class="ai-setting-option">
                                     <label class="ai-setting-checkbox-row" for="editor-preview-scroll-sync">
                                         <input type="checkbox" id="editor-preview-scroll-sync" />
-                                        <span>Sync editor and Markdown preview scrolling</span>
+                                        <span>Scroll Synchronization</span>
                                     </label>
                                     <div class="ai-setting-note">
                                         Keeps the preview aligned with the visible editor lines while editing.
@@ -513,6 +543,17 @@
                                     </select>
                                     <span class="ai-setting-note">
                                         Controls the marker inserted when pressing Enter inside a numbered list.
+                                    </span>
+                                </label>
+                                <label class="ai-setting-field ai-setting-field-full" for="editor-toolbar-mode">
+                                    Tool Bar
+                                    <select id="editor-toolbar-mode">
+                                        <option value="beginner">Beginner</option>
+                                        <option value="rookie">Rookie</option>
+                                        <option value="pro">Pro</option>
+                                    </select>
+                                    <span class="ai-setting-note">
+                                        Controls which editor toolbar tools are shown directly or grouped behind popups.
                                     </span>
                                 </label>
                             </div>

@@ -130,6 +130,7 @@ async function loadSettings() {
     state.currentMarkdownEngine = s.engine || "marked";
     state.currentEngine = state.currentMarkdownEngine;
     state.currentEditorRenderMode = s.editorRenderMode || "realtime";
+    state.editorToolbarMode = ["beginner", "rookie", "pro"].includes(s.editorToolbarMode) ? s.editorToolbarMode : "beginner";
     state.editorOrderedListStyle = s.editorOrderedListStyle === "incremental" ? "incremental" : "standard";
     state.lastVersion = s.lastVersion || "";
     state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
