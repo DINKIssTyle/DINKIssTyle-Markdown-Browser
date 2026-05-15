@@ -502,6 +502,11 @@
                 <h3 id="settings-title">Settings</h3>
                 <div class="settings-shell">
                     <nav class="settings-tabs" role="tablist" aria-label="Settings sections">
+                        <button id="settings-tab-common" class="settings-tab" type="button" role="tab"
+                            aria-selected="false" aria-controls="settings-panel-common">
+                            <span class="material-symbols-outlined" aria-hidden="true">instant_mix</span>
+                            <span>Common</span>
+                        </button>
                         <button id="settings-tab-editor" class="settings-tab active" type="button" role="tab"
                             aria-selected="true" aria-controls="settings-panel-editor">
                             <span class="material-symbols-outlined" aria-hidden="true">border_color</span>
@@ -513,6 +518,12 @@
                             <span>AI</span>
                         </button>
                     </nav>
+
+                    <section id="settings-panel-common" class="settings-panel settings-placeholder-panel hidden"
+                        role="tabpanel" aria-labelledby="settings-tab-common">
+                        <span class="material-symbols-outlined settings-placeholder-icon"
+                            aria-hidden="true">person_play</span>
+                    </section>
 
                     <section id="settings-panel-editor" class="settings-panel" role="tabpanel"
                         aria-labelledby="settings-tab-editor">

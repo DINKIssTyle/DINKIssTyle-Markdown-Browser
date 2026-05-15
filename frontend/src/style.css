@@ -3904,6 +3904,18 @@ html.dark .file-tree-context-menu {
     gap: 12px;
 }
 
+.settings-placeholder-panel {
+    min-height: 360px;
+    align-items: center;
+    justify-content: center;
+}
+
+.settings-placeholder-icon {
+    font-size: 128px;
+    line-height: 1;
+    color: color-mix(in srgb, var(--text-muted) 64%, transparent);
+}
+
 .ai-settings-panels {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));

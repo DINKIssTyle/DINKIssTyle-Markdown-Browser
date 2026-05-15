@@ -824,13 +824,18 @@ async function persistAISettings() {
 }
 
 function syncSettingsTabs(activeTab = 'editor') {
+    const isCommon = activeTab === 'common';
     const isEditor = activeTab === 'editor';
+    const isAi = activeTab === 'ai';
+    el.settingsTabCommon?.classList.toggle('active', isCommon);
     el.settingsTabEditor?.classList.toggle('active', isEditor);
-    el.settingsTabAi?.classList.toggle('active', !isEditor);
+    el.settingsTabAi?.classList.toggle('active', isAi);
+    el.settingsTabCommon?.setAttribute('aria-selected', String(isCommon));
     el.settingsTabEditor?.setAttribute('aria-selected', String(isEditor));
-    el.settingsTabAi?.setAttribute('aria-selected', String(!isEditor));
+    el.settingsTabAi?.setAttribute('aria-selected', String(isAi));
+    el.settingsPanelCommon?.classList.toggle('hidden', !isCommon);
     el.settingsPanelEditor?.classList.toggle('hidden', !isEditor);
-    el.settingsPanelAi?.classList.toggle('hidden', isEditor);
+    el.settingsPanelAi?.classList.toggle('hidden', !isAi);
 }
 
 function renderEditorTokenColorControls() {
@@ -962,6 +967,7 @@ export async function initAI() {
 }
 
 export function bindAIEvents() {
+    el.settingsTabCommon?.addEventListener('click', () => syncSettingsTabs('common'));
     el.settingsTabEditor?.addEventListener('click', () => syncSettingsTabs('editor'));
     el.settingsTabAi?.addEventListener('click', () => syncSettingsTabs('ai'));
     el.editorTokenColorsEnabled?.addEventListener('change', syncEditorTokenColorAvailability);
