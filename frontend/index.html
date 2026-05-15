@@ -211,6 +211,8 @@
                         <div class="edit-tool-group">
                             <button id="ed-cancel" title="Cancel" class="tool-btn cancel-btn"><span
                                     class="material-symbols-outlined">disabled_by_default</span></button>
+                            <button id="ed-save-as" title="Save As... (⇧⌘S)" class="tool-btn save-btn"><span
+                                    class="material-symbols-outlined">save_as</span></button>
                             <button id="ed-save" title="Save" class="tool-btn save-btn"><span
                                     class="material-symbols-outlined">save</span></button>
                         </div>
@@ -500,6 +502,16 @@
                                         insert a new line.
                                     </div>
                                 </div>
+                                <label class="ai-setting-field ai-setting-field-full" for="editor-ordered-list-style">
+                                    Ordered List Continuation
+                                    <select id="editor-ordered-list-style">
+                                        <option value="standard">1. 1. 1. Markdown standard</option>
+                                        <option value="incremental">1. 2. 3. Incrementing numbers</option>
+                                    </select>
+                                    <span class="ai-setting-note">
+                                        Controls the marker inserted when pressing Enter inside a numbered list.
+                                    </span>
+                                </label>
                             </div>
                         </section>
                         <section class="ai-setting-group ai-setting-group-editor">

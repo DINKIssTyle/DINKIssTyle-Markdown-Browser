@@ -44,6 +44,9 @@ func buildAppMenu(app *App) *menu.Menu {
 	fileMenu.AddText("Save", keys.CmdOrCtrl("s"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:save")
 	})
+	fileMenu.AddText("Save As...", keys.Combo("s", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:save-as")
+	})
 	fileMenu.AddSeparator()
 	fileMenu.AddText("Page Setup...", keys.Combo("p", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:page-setup")

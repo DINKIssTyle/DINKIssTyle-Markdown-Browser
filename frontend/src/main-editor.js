@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE, EDITOR_FONT_VISUAL_SCALE } from './config.js';
-import { state, el, getPathDirname, basename, formatSaveDialogMessage, debounce } from './main-state.js';
+import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
@@ -13,7 +13,7 @@ import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState } from '../wailsjs/go/main/App';
 import { LogError } from '../wailsjs/runtime/runtime';
 
-import { EditorState, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
+import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { SearchCursor } from '@codemirror/search';
@@ -35,6 +35,7 @@ let isFindBarOpen = false;
 let previewScrollSyncFrame = 0;
 let editorScrollEventsBound = false;
 let lastRenderedPreviewContent = "";
+let plainClickSelectionState = null;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
@@ -374,6 +375,7 @@ function applyEditorPlainTextColor() {
 
 export function applyEditorPreferencesFromSettings(settings = {}) {
     state.editorPreviewScrollSyncEnabled = settings.editorPreviewScrollSync !== false;
+    state.editorOrderedListStyle = settings.editorOrderedListStyle === 'incremental' ? 'incremental' : 'standard';
     state.editorTokenColorsEnabled = settings.editorTokenColorsEnabled !== false;
     state.editorTokenColors = normalizeTokenColors(settings.editorTokenColors || {});
     state.editorBackgroundColor = normalizeBackgroundColor(settings.editorBackgroundColor);
@@ -912,6 +914,106 @@ function isImeComposing(view = cmView) {
     return !!ime?.composing || !!view.composing;
 }
 
+function isPlainEditorPrimaryClick(event) {
+    return event.button === 0
+        && !event.shiftKey
+        && !event.metaKey
+        && !event.ctrlKey
+        && !event.altKey
+        && event.detail === 1;
+}
+
+function isEditorContentClick(event, view) {
+    return view?.contentDOM && event.target instanceof Node && view.contentDOM.contains(event.target);
+}
+
+function rememberPlainEditorClick(event, view) {
+    plainClickSelectionState = null;
+    if (!isPlainEditorPrimaryClick(event) || !isEditorContentClick(event, view)) {
+        return false;
+    }
+
+    plainClickSelectionState = {
+        x: event.clientX,
+        y: event.clientY,
+        time: Date.now()
+    };
+    return false;
+}
+
+function collapsePlainEditorClick(event, view) {
+    const clickState = plainClickSelectionState;
+    plainClickSelectionState = null;
+
+    if (!clickState || !isPlainEditorPrimaryClick(event) || !isEditorContentClick(event, view)) {
+        return false;
+    }
+
+    const distance = Math.hypot(event.clientX - clickState.x, event.clientY - clickState.y);
+    const elapsed = Date.now() - clickState.time;
+    if (distance > 4 || elapsed > 700) {
+        return false;
+    }
+
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos == null) {
+        return false;
+    }
+
+    requestAnimationFrame(() => {
+        if (cmView !== view) return;
+        const selection = view.state.selection.main;
+        if (selection.empty && selection.from === pos) return;
+        view.dispatch({ selection: { anchor: pos } });
+    });
+    return false;
+}
+
+function insertStandardOrderedListItem(view) {
+    if (state.editorOrderedListStyle !== 'standard') return false;
+
+    const { state: editorState } = view;
+    if (editorState.selection.ranges.length !== 1) {
+        return false;
+    }
+
+    const range = editorState.selection.main;
+    if (!range.empty || !markdownLanguage.isActiveAt(editorState, range.from, -1)) {
+        return false;
+    }
+
+    const line = editorState.doc.lineAt(range.from);
+    const beforeCursor = line.text.slice(0, range.from - line.from);
+    const afterCursor = line.text.slice(range.from - line.from);
+    const match = beforeCursor.match(/^(\s*)\d+([.)])(\s+)(.*)$/);
+    if (!match) {
+        return false;
+    }
+
+    const [, indent, delimiter, spacing, beforeContent] = match;
+    const marker = `${indent}1${delimiter}${spacing}`;
+    const markerLength = indent.length + 1 + delimiter.length + spacing.length;
+    const itemIsEmpty = !beforeContent.trim() && !afterCursor.trim();
+
+    const changes = editorState.changeByRange(range => {
+        if (itemIsEmpty) {
+            return {
+                range: EditorSelection.cursor(line.from + indent.length),
+                changes: { from: line.from + indent.length, to: line.from + markerLength, insert: '' }
+            };
+        }
+
+        const insert = `\n${marker}`;
+        return {
+            range: EditorSelection.cursor(range.from + insert.length),
+            changes: { from: range.from, to: range.from, insert }
+        };
+    });
+
+    view.dispatch(editorState.update(changes, { scrollIntoView: true, userEvent: "input" }));
+    return true;
+}
+
 const slashMenuKeymap = Prec.highest(keymap.of([
     {
         key: 'ArrowDown',
@@ -1057,6 +1159,10 @@ export function initCodeMirror() {
         doc: state.currentMarkdownSource || "",
         extensions: [
             Prec.highest(koreanImeEnterFix),
+            Prec.highest(keymap.of([{
+                key: 'Enter',
+                run: insertStandardOrderedListItem
+            }])),
             slashMenuKeymap,
             lineNumbers(),
             history(),
@@ -1068,6 +1174,13 @@ export function initCodeMirror() {
                         const selection = cmView.state.selection.main;
                         if (selection.empty) return false;
                         return showPromptBoxAtSelection();
+                    }
+                },
+                {
+                    key: 'Mod-Shift-s',
+                    run: () => {
+                        void saveCurrentDocumentAs();
+                        return true;
                     }
                 },
                 {
@@ -1120,7 +1233,14 @@ export function initCodeMirror() {
             EditorView.domEventHandlers({
                 blur() {
                     closeSlashMenu();
+                    plainClickSelectionState = null;
                     return false;
+                },
+                mousedown(event, view) {
+                    return rememberPlainEditorClick(event, view);
+                },
+                mouseup(event, view) {
+                    return collapsePlainEditorClick(event, view);
                 },
                 keydown(event, view) {
                     if (!slashMenuState) return false;
@@ -1382,6 +1502,69 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
         return true;
     } catch (error) {
         LogError(`Save failed: ${error}`);
+        showToast("Failed to save file.", "error");
+        return false;
+    }
+}
+
+export async function saveCurrentDocumentAs() {
+    if (!cmView) return false;
+
+    const contentToSave = cmView.state.doc.toString();
+    const currentPath = state.editingSourcePath || state.currentFilePath || "";
+    const defaultName = basename(currentPath) || "Untitled.md";
+    const selectedPath = await ShowSaveFileDialog(defaultName);
+    if (!selectedPath) return false;
+
+    const savingTab = getActiveTab();
+    try {
+        await SaveFile(selectedPath, contentToSave);
+
+        const selectedFolder = getPathDirname(selectedPath);
+        state.currentFilePath = selectedPath;
+        state.currentFolder = selectedFolder;
+        state.currentDocumentType = 'markdown';
+        state.currentMarkdownSource = contentToSave;
+        state.editorOriginalContent = contentToSave;
+        state.editingSourcePath = selectedPath;
+        state.editingSourceFolder = selectedFolder;
+        state.editingPreviewPath = selectedPath;
+        state.editingPreviewFolder = selectedFolder;
+        state.homeTargetPath = selectedPath;
+        if (el.currentPath) {
+            el.currentPath.innerText = selectedPath;
+        }
+
+        if (state.navIndex >= 0 && state.navIndex < state.navHistory.length) {
+            state.navHistory[state.navIndex].path = selectedPath;
+        } else {
+            state.navHistory = [{ path: selectedPath, scroll: 0 }];
+            state.navIndex = 0;
+        }
+
+        if (savingTab) {
+            savingTab.path = selectedPath;
+            savingTab.kind = 'document';
+            savingTab.documentType = 'markdown';
+            savingTab.title = deriveTabTitle(selectedPath, contentToSave);
+            savingTab.currentFolder = selectedFolder;
+            savingTab.currentMarkdownSource = contentToSave;
+            savingTab.editorOriginalContent = contentToSave;
+            savingTab.editingSourcePath = selectedPath;
+            savingTab.editingSourceFolder = selectedFolder;
+            savingTab.editingPreviewPath = selectedPath;
+            savingTab.editingPreviewFolder = selectedFolder;
+            savingTab.homeTargetPath = selectedPath;
+            savingTab.navHistory = state.navHistory.map(item => ({ ...item }));
+            savingTab.navIndex = state.navIndex;
+        }
+
+        syncEditorStateToBackend();
+        renderTabs();
+        showToast("File saved successfully.", "check_circle");
+        return true;
+    } catch (error) {
+        LogError(`Save As failed: ${error}`);
         showToast("Failed to save file.", "error");
         return false;
     }
@@ -2399,6 +2582,9 @@ export function bindEditorEvents() {
     };
 
     el.edCancel.onclick = handleCancel;
+    el.edSaveAs.onclick = () => {
+        void saveCurrentDocumentAs();
+    };
     el.edSave.onclick = handleSave;
 }
 

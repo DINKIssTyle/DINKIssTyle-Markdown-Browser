@@ -26,6 +26,7 @@ export namespace main {
 	    engine: string;
 	    editorRenderMode: string;
 	    editorPreviewScrollSync: boolean;
+	    editorOrderedListStyle: string;
 	    editorTokenColorsEnabled: boolean;
 	    editorTokenColors: Record<string, string>;
 	    editorBackgroundColor: string;
@@ -63,6 +64,7 @@ export namespace main {
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];
 	        this.editorPreviewScrollSync = source["editorPreviewScrollSync"];
+	        this.editorOrderedListStyle = source["editorOrderedListStyle"];
 	        this.editorTokenColorsEnabled = source["editorTokenColorsEnabled"];
 	        this.editorTokenColors = source["editorTokenColors"];
 	        this.editorBackgroundColor = source["editorBackgroundColor"];

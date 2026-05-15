@@ -20,7 +20,7 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -130,6 +130,7 @@ async function loadSettings() {
     state.currentMarkdownEngine = s.engine || "marked";
     state.currentEngine = state.currentMarkdownEngine;
     state.currentEditorRenderMode = s.editorRenderMode || "realtime";
+    state.editorOrderedListStyle = s.editorOrderedListStyle === "incremental" ? "incremental" : "standard";
     state.lastVersion = s.lastVersion || "";
     state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
     state.outlineHeadingFormatEnabled = !!s.outlineHeadingFormat;
@@ -448,6 +449,11 @@ function bindMenuEvents() {
             await saveCurrentDocument({ confirm: false, exitAfterSave: false });
         }
     });
+    EventsOn('menu:save-as', async () => {
+        if (state.isEditing) {
+            await saveCurrentDocumentAs();
+        }
+    });
     EventsOn('menu:toggle-sidebar', () => toggleSidebar());
     EventsOn('menu:toggle-files-sidebar', () => toggleSidebarTab('files', { focusTab: true }));
     EventsOn('menu:toggle-outline-sidebar', () => toggleSidebarTab('outline', { focusTab: true }));
@@ -571,6 +577,15 @@ async function handleGlobalKeydown(event) {
         } else {
             changeEditorFontSize(isEditorFontDownShortcut ? -1 : 1);
         }
+        return;
+    }
+
+    if ((event.metaKey || event.ctrlKey) && event.shiftKey && !event.altKey && event.key.toLowerCase() === 's') {
+        if (!state.isEditing) {
+            return;
+        }
+        event.preventDefault();
+        await saveCurrentDocumentAs();
         return;
     }
 

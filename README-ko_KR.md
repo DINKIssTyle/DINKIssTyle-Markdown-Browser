@@ -1,3 +1,34 @@
+# DKST 마크다운 브라우저 소개
+
+<p align="center">
+  <img src="frontend/public/icon-192.png" width="128">
+</p>
+
+<p align="center">
+  <strong>가볍고 우아한 크로스 플랫폼<br>마크다운 뷰어 및 에디터!</strong>
+</p>
+
+<div align="center">
+<a href="README.md">[Read in English]</a>
+</div>
+
+
+## NEWS
+
+### ✨ 새로운! 버전 2.0!
+- **AI 지원**: 마크다운 문서를 작성하고 편집할 수 있는 AI 비서 기능.
+- **몰입 상태(Flow State)**: 작업 흐름을 방해하지 않는 연속 작성 마크다운 에디터.
+<p align="center">
+  <img src="frontend/public/img/200_ai_01.gif" width="90%">
+</p>
+<p align="center">
+  <img src="frontend/public/img/200_ai_02.gif" width="90%">
+</p>
+<p align="center">
+  <img src="frontend/public/img/200_ai_03.gif" width="90%">
+</p>
+
+---
 # FEATURES
 
 이 문서는 DKST Markdown Browser의 기능을 설명합니다.  
@@ -10,6 +41,7 @@ DKST Markdown Browser는 마크다운 문서를 읽고, 편집하거나 새로 �
 - **사이드바 - 검색**: 열린 문서 및 하위 폴더에서 키워드를 검색할 수 있습니다.
 - **이미지 뷰어**: 파일 트리를 통해 열린 이미지를 탐색하고 확대/축소하는 등의 기본 기능을 제공합니다.
 - **키보드 접근성**: 대부분의 기능은 키보드를 이용해 접근하거나 이동이 가능합니다.
+- **지원하는 확장자**:`.md`, `.markdown`
 
 
 ## Reader
@@ -26,6 +58,7 @@ DKST Markdown Browser는 마크다운 문서를 읽고, 편집하거나 새로 �
     - **수식**: `katex*`를 이용해서 LaTeX 수식을 HTML로 렌더링합니다.
     - **다이어그램**: `Mermaid`를 이용해서 Mermaid 코드블록을 SVG로 랜더링합니다.
     - **Syntax Highlight**: `highlight.js`를 이용해서 코드블록을 랜더링 합니다.
+
 
  
 
@@ -94,3 +127,77 @@ DKST Markdown Browser 는 Local LLM 을 활용한 AI 어시스트를 제공하�
 
 
 
+
+## 다운로드
+최신 릴리스 실행 파일은 [여기를 클릭하여 다운로드](https://github.com/DINKIssTyle/DINKIssTyle-Markdown-Browser/releases)하세요.
+
+
+## 설치
+
+### Windows
+실행 파일을 원하는 위치로 이동하여 사용하십시오.
+
+### macOS
+표준 방법은 실행 파일(앱 번들)을 `Applications` 폴더 또는 `~/Applications` 디렉터리로 이동하는 것입니다.
+
+**이 앱은 신뢰할 수 있는 개발자 서명이 없으므로 '격리(Quarantine)' 속성을 제거해야 합니다.** 앱에 설정된 '격리' 속성을 직접 제거하면 앱을 신뢰할 수 있는 파일로 만들 수 있습니다.
+> 아래 명령어는 앱이 Applications 폴더에 설치된 경우를 위한 것입니다.
+
+```bash
+xattr -cr "/Applications/DKST Markdown Browser.app"
+```
+명령어를 입력한 후 `Enter`를 눌러 격리를 해제하세요.
+
+### Linux (Ubuntu, CentOS 등)
+실행 파일을 실행한 후, 시작 페이지 하단의 설치 링크를 클릭하여 설치를 완료하세요.
+
+
+
+
+
+## 후원
+<div>
+<a href="https://github.com/sponsors/DINKIssTyle">
+    <img src="https://img.shields.io/badge/Sponsor-EA4AAA?style=for-the-badge&logo=github-sponsors&logoColor=white" alt="Sponsor">
+  </a>
+  <br> 후원은 제가 이 프로젝트를 계속 개선하는 데 도움이 됩니다. — 그리고 집에서 문제를 일으키지 않고 침대에서도 밤늦게 작업할 수 있는 완벽하게 타당한 구실을 얻게 해줍니다.
+</p><br></div>
+
+
+## 고급 사용자
+
+
+### 전제 조건
+
+- **Go**: 버전 1.23 이상
+- **Wails**: 버전 v2.11.0 이상
+- **Node.js**: 버전 18 이상 (npm 포함)
+- **CGO 도구**: 네이티브 컴파일에 필요 (예: GCC 또는 Clang)
+
+### 소스에서 빌드하기
+
+#### macOS
+macOS 빌드 스크립트는 범용 바이너리(선택한 경우)를 생성하고 애플리케이션 번들(`.app`)을 처리합니다.
+```bash
+chmod +x build-macOS.sh
+./build-macOS.sh [arm64 | amd64 | universal]
+```
+
+#### Windows
+Windows 빌드 스크립트는 아이콘이 포함된 실행 파일(`.exe`)을 생성합니다.
+```cmd
+build-Windows.bat [amd64 | arm64 | 386]
+```
+
+#### Linux
+Linux 빌드 스크립트는 특정 아키텍처에 맞는 바이너리를 생성합니다.
+```bash
+chmod +x build-Linux.sh
+./build-Linux.sh [amd64 | arm64 | arm]
+```
+
+## 라이선스
+
+**DINKIssTyle** 제작.
+Copyright (c) 2026 DINKI'ssTyle. 모든 권리 보유.
+오픈 소스 라이브러리 라이선스는 `THIRD-PARTY-NOTICES.md`를 참조하십시오.

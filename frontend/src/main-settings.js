@@ -13,6 +13,7 @@ export function buildSettingsPayload(overrides = {}) {
         engine: state.currentMarkdownEngine,
         editorRenderMode: state.currentEditorRenderMode,
         editorPreviewScrollSync: state.editorPreviewScrollSyncEnabled,
+        editorOrderedListStyle: state.editorOrderedListStyle,
         editorTokenColorsEnabled: state.editorTokenColorsEnabled,
         editorTokenColors: state.editorTokenColors,
         editorBackgroundColor: state.editorBackgroundColor,

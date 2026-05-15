@@ -75,6 +75,7 @@ type AppSettings struct {
 	Engine                   string            `json:"engine"`
 	EditorRenderMode         string            `json:"editorRenderMode"`
 	EditorPreviewScrollSync  bool              `json:"editorPreviewScrollSync"`
+	EditorOrderedListStyle   string            `json:"editorOrderedListStyle"`
 	EditorTokenColorsEnabled bool              `json:"editorTokenColorsEnabled"`
 	EditorTokenColors        map[string]string `json:"editorTokenColors"`
 	EditorBackgroundColor    string            `json:"editorBackgroundColor"`
@@ -328,8 +329,9 @@ func defaultDirectoryForBasePath(basePath string) string {
 // ShowSaveFileDialog opens a dialog to save a new file
 func (a *App) ShowSaveFileDialog(defaultName string) (string, error) {
 	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
-		Title:           "Save File",
-		DefaultFilename: defaultName,
+		Title:                "Save File",
+		DefaultFilename:      defaultName,
+		CanCreateDirectories: true,
 		Filters: []runtime.FileFilter{
 			{DisplayName: "Markdown Files", Pattern: "*.md;*.markdown"},
 		},
@@ -557,6 +559,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.Engine = "marked"             // "marked" | "html"
 	settings.EditorRenderMode = "realtime" // "realtime" | "cursor"
 	settings.EditorPreviewScrollSync = true
+	settings.EditorOrderedListStyle = "standard" // "standard" | "incremental"
 	settings.EditorTokenColorsEnabled = true
 	settings.EditorTokenColors = map[string]string{}
 	settings.EditorBackgroundColor = ""

@@ -855,6 +855,9 @@ function syncEditorSettingsControls() {
     if (el.editorPreviewScrollSync) {
         el.editorPreviewScrollSync.checked = state.editorPreviewScrollSyncEnabled;
     }
+    if (el.editorOrderedListStyle) {
+        el.editorOrderedListStyle.value = state.editorOrderedListStyle || 'standard';
+    }
     if (el.editorTokenColorsEnabled) {
         el.editorTokenColorsEnabled.checked = state.editorTokenColorsEnabled;
     }
@@ -889,6 +892,7 @@ function applyEditorTokenColorPreset(presetKey) {
 
 function collectEditorSettingsFromControls() {
     state.editorPreviewScrollSyncEnabled = el.editorPreviewScrollSync?.checked ?? true;
+    state.editorOrderedListStyle = el.editorOrderedListStyle?.value === 'incremental' ? 'incremental' : 'standard';
     state.editorTokenColorsEnabled = el.editorTokenColorsEnabled?.checked ?? true;
     const nextColors = {};
     el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
