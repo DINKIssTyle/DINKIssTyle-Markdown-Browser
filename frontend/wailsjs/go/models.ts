@@ -160,6 +160,24 @@ export namespace app {
 	        this.name = source["name"];
 	    }
 	}
+	export class SpellCheckLanguage {
+	    code: string;
+	    name: string;
+	    nativeName: string;
+	    auto: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SpellCheckLanguage(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.code = source["code"];
+	        this.name = source["name"];
+	        this.nativeName = source["nativeName"];
+	        this.auto = source["auto"];
+	    }
+	}
 	export class TranslationAIConfig {
 	    provider: string;
 	    endpoint: string;
@@ -180,6 +198,91 @@ export namespace app {
 	        this.temperature = source["temperature"];
 	    }
 	}
+	export class SpellCheckRequest {
+	    content: string;
+	    language: SpellCheckLanguage;
+	    ai: TranslationAIConfig;
+	
+	    static createFrom(source: any = {}) {
+	        return new SpellCheckRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.content = source["content"];
+	        this.language = this.convertValues(source["language"], SpellCheckLanguage);
+	        this.ai = this.convertValues(source["ai"], TranslationAIConfig);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SpellCheckSuggestion {
+	    original: string;
+	    replacement: string;
+	    start: number;
+	    end: number;
+	    reason: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new SpellCheckSuggestion(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.original = source["original"];
+	        this.replacement = source["replacement"];
+	        this.start = source["start"];
+	        this.end = source["end"];
+	        this.reason = source["reason"];
+	    }
+	}
+	export class SpellCheckResult {
+	    suggestions: SpellCheckSuggestion[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SpellCheckResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.suggestions = this.convertValues(source["suggestions"], SpellCheckSuggestion);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	
 	export class TranslationLanguage {
 	    code: string;
 	    name: string;

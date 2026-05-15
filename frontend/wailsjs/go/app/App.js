@@ -154,6 +154,10 @@ export function ShowSaveFileDialog(arg1) {
   return window['go']['app']['App']['ShowSaveFileDialog'](arg1);
 }
 
+export function SpellCheckDocument(arg1) {
+  return window['go']['app']['App']['SpellCheckDocument'](arg1);
+}
+
 export function SyncEditorState(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['SyncEditorState'](arg1, arg2, arg3, arg4, arg5);
 }

@@ -10,11 +10,11 @@ import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
 import { showToast, updateProgress, hideProgress } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
-import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies } from '../wailsjs/go/app/App';
+import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor } from '@codemirror/view';
+import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { SearchCursor } from '@codemirror/search';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -37,11 +37,15 @@ let editorScrollEventsBound = false;
 let translationProgressEventsBound = false;
 let lastRenderedPreviewContent = "";
 let plainClickSelectionState = null;
+let spellcheckTooltip = null;
+let spellcheckCloseButton = null;
+let activeSpellcheckSuggestionId = null;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
+const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
 export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
     { key: 'plain', label: 'Plain Text' },
     { key: 'heading', label: 'Headings' },
@@ -276,6 +280,59 @@ export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
     },
 ]);
 
+const setSpellcheckSuggestionsEffect = StateEffect.define();
+const removeSpellcheckSuggestionEffect = StateEffect.define();
+
+function buildSpellcheckDecorations(suggestions, docLength = cmView?.state.doc.length || 0) {
+    const marks = [];
+    for (const suggestion of suggestions || []) {
+        if (!suggestion || suggestion.start < 0 || suggestion.end <= suggestion.start || suggestion.end > docLength) {
+            continue;
+        }
+        marks.push(Decoration.mark({
+            class: 'cm-spellcheck-marker',
+            attributes: {
+                'data-spellcheck-id': suggestion.id,
+                title: suggestion.replacement || 'Spellcheck suggestion',
+            }
+        }).range(suggestion.start, suggestion.end));
+    }
+    return Decoration.set(marks, true);
+}
+
+const spellcheckField = StateField.define({
+    create() {
+        return {
+            suggestions: [],
+            decorations: Decoration.none,
+        };
+    },
+    update(value, tr) {
+        let suggestions = value.suggestions;
+        if (tr.docChanged) {
+            suggestions = suggestions
+                .map(suggestion => ({
+                    ...suggestion,
+                    start: tr.changes.mapPos(suggestion.start, 1),
+                    end: tr.changes.mapPos(suggestion.end, -1),
+                }))
+                .filter(suggestion => suggestion.end > suggestion.start);
+        }
+        for (const effect of tr.effects) {
+            if (effect.is(setSpellcheckSuggestionsEffect)) {
+                suggestions = effect.value || [];
+            } else if (effect.is(removeSpellcheckSuggestionEffect)) {
+                suggestions = suggestions.filter(suggestion => suggestion.id !== effect.value);
+            }
+        }
+        return {
+            suggestions,
+            decorations: buildSpellcheckDecorations(suggestions, tr.newDoc.length),
+        };
+    },
+    provide: field => EditorView.decorations.from(field, value => value.decorations),
+});
+
 const HTML_VOID_TAGS = [
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
     'link', 'meta', 'param', 'source', 'track', 'wbr'
@@ -292,6 +349,7 @@ const TOOLBAR_COLLAPSED_BUTTON_IDS = Object.freeze([
 ]);
 const TOOLBAR_DIRECT_TOOL_IDS = Object.freeze([
     'ed-find-replace',
+    'ed-spellcheck',
     'ed-translate-doc',
     'ed-bold',
     'ed-italic',
@@ -338,6 +396,7 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
     rookie: Object.freeze({
         show: [
             'ed-find-replace',
+            'ed-spellcheck',
             'ed-translate-doc',
             'ed-bold',
             'ed-italic',
@@ -379,6 +438,7 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
     pro: Object.freeze({
         show: [
             'ed-find-replace',
+            'ed-spellcheck',
             'ed-translate-doc',
             'ed-bold',
             'ed-italic',
@@ -1333,6 +1393,335 @@ async function translateCurrentDocument() {
     }
 }
 
+function getStoredSpellcheckLanguageCode() {
+    try {
+        const stored = localStorage.getItem(SPELLCHECK_LANGUAGE_STORAGE_KEY);
+        if (stored === 'auto' || TRANSLATION_LANGUAGES.some(language => language.code === stored)) {
+            return stored;
+        }
+    } catch {
+        // Ignore malformed user storage and fall back to auto detection.
+    }
+    return 'auto';
+}
+
+function showSpellcheckLanguagePrompt() {
+    return new Promise((resolve) => {
+        const modalContent = el.modalOverlay.querySelector('.modal-content');
+        const languageItems = [
+            { code: 'auto', name: 'Auto Detect', nativeName: 'Language auto detection', auto: true },
+            ...TRANSLATION_LANGUAGES.map(language => ({ ...language, auto: false })),
+        ];
+        let orderedItems = [...languageItems];
+        let selectedCode = getStoredSpellcheckLanguageCode();
+        let draggedCode = null;
+
+        const renderLanguageList = () => {
+            el.modalLanguageContainer.innerHTML = `
+                <div class="spellcheck-language-list" role="listbox" aria-label="Spellcheck language">
+                    ${orderedItems.map(item => `
+                        <label class="language-option spellcheck-language-option" draggable="true" data-language-code="${escapeAttr(item.code)}">
+                            <span class="material-symbols-outlined spellcheck-language-drag" aria-hidden="true">drag_indicator</span>
+                            <input type="radio" name="spellcheck-language" value="${escapeAttr(item.code)}" ${item.code === selectedCode ? 'checked' : ''} />
+                            <span class="language-option-name">
+                                ${escapeHTML(item.name)}${item.nativeName ? ` (${escapeHTML(item.nativeName)})` : ''}
+                                ${item.code !== 'auto' ? `<span class="language-option-code">${escapeHTML(item.code)}</span>` : ''}
+                            </span>
+                        </label>
+                    `).join('')}
+                </div>
+            `;
+        };
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            modalContent?.classList.remove('language-picker-modal', 'spellcheck-language-modal');
+            el.modalLanguageContainer.classList.add('hidden');
+            el.modalBtnOk.textContent = 'OK';
+            el.modalBtnOk.removeEventListener('click', handleOk);
+            el.modalBtnCancel.removeEventListener('click', handleCancel);
+            el.modalLanguageContainer.removeEventListener('change', handleChange);
+            el.modalLanguageContainer.removeEventListener('dragstart', handleDragStart);
+            el.modalLanguageContainer.removeEventListener('dragover', handleDragOver);
+            el.modalLanguageContainer.removeEventListener('drop', handleDrop);
+            el.modalLanguageContainer.removeEventListener('dragend', handleDragEnd);
+            document.removeEventListener('keydown', handleKey, true);
+        };
+
+        const handleOk = () => {
+            const selected = orderedItems.find(item => item.code === selectedCode) || orderedItems[0];
+            cleanup();
+            localStorage.setItem(SPELLCHECK_LANGUAGE_STORAGE_KEY, selected.code);
+            resolve(selected);
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const handleKey = event => {
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel();
+            }
+            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+                event.preventDefault();
+                handleOk();
+            }
+        };
+
+        const handleChange = event => {
+            const input = event.target.closest('input[type="radio"]');
+            if (!input) return;
+            selectedCode = input.value;
+        };
+
+        const handleDragStart = event => {
+            const option = event.target.closest('.spellcheck-language-option');
+            if (!option) return;
+            draggedCode = option.dataset.languageCode;
+            option.classList.add('is-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            event.dataTransfer.setData('text/plain', draggedCode);
+        };
+
+        const handleDragOver = event => {
+            const option = event.target.closest('.spellcheck-language-option');
+            if (!option || !draggedCode || option.dataset.languageCode === draggedCode) return;
+            event.preventDefault();
+            event.dataTransfer.dropEffect = 'move';
+            el.modalLanguageContainer.querySelectorAll('.spellcheck-language-option').forEach(node => {
+                node.classList.toggle('is-drop-target', node === option);
+            });
+        };
+
+        const handleDrop = event => {
+            const option = event.target.closest('.spellcheck-language-option');
+            if (!option || !draggedCode) return;
+            event.preventDefault();
+            const fromIndex = orderedItems.findIndex(item => item.code === draggedCode);
+            const toIndex = orderedItems.findIndex(item => item.code === option.dataset.languageCode);
+            if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
+                const [moved] = orderedItems.splice(fromIndex, 1);
+                orderedItems.splice(toIndex, 0, moved);
+                renderLanguageList();
+            }
+        };
+
+        const handleDragEnd = () => {
+            draggedCode = null;
+            el.modalLanguageContainer.querySelectorAll('.spellcheck-language-option').forEach(node => {
+                node.classList.remove('is-dragging', 'is-drop-target');
+            });
+        };
+
+        el.modalTitle.textContent = "Spellcheck";
+        el.modalMessage.textContent = "";
+        modalContent?.classList.add('language-picker-modal', 'spellcheck-language-modal');
+        el.modalInputGroup.classList.add('hidden');
+        el.modalOptionGrid.classList.add('hidden');
+        el.modalEmojiContainer.classList.add('hidden');
+        el.modalTableContainer.classList.add('hidden');
+        el.modalLanguageContainer.classList.remove('hidden');
+        el.modalBtnOk.textContent = 'Start';
+        el.modalBtnOk.classList.remove('hidden');
+        renderLanguageList();
+        el.modalOverlay.classList.remove('hidden');
+
+        el.modalBtnOk.addEventListener('click', handleOk);
+        el.modalBtnCancel.addEventListener('click', handleCancel);
+        el.modalLanguageContainer.addEventListener('change', handleChange);
+        el.modalLanguageContainer.addEventListener('dragstart', handleDragStart);
+        el.modalLanguageContainer.addEventListener('dragover', handleDragOver);
+        el.modalLanguageContainer.addEventListener('drop', handleDrop);
+        el.modalLanguageContainer.addEventListener('dragend', handleDragEnd);
+        document.addEventListener('keydown', handleKey, true);
+    });
+}
+
+function getSpellcheckAIConfig() {
+    const aiConfig = getTranslationAIConfig();
+    if (aiConfig.error) {
+        return { error: aiConfig.error.replace('translating', 'spellchecking') };
+    }
+    return aiConfig;
+}
+
+function normalizeSpellcheckSuggestions(suggestions, content) {
+    return (suggestions || [])
+        .map((suggestion, index) => {
+            const original = String(suggestion.original || '');
+            const replacement = String(suggestion.replacement || '');
+            let start = Number(suggestion.start);
+            let end = Number(suggestion.end);
+            if (!Number.isInteger(start) || !Number.isInteger(end) || content.slice(start, end) !== original) {
+                const nearStart = Number.isInteger(start) ? Math.max(0, start - 240) : 0;
+                const nearIndex = original ? content.indexOf(original, nearStart) : -1;
+                const globalIndex = nearIndex >= 0 ? nearIndex : (original ? content.indexOf(original) : -1);
+                if (globalIndex >= 0) {
+                    start = globalIndex;
+                    end = globalIndex + original.length;
+                }
+            }
+            return {
+                id: `spell-${Date.now()}-${index}`,
+                original,
+                replacement,
+                reason: String(suggestion.reason || ''),
+                start,
+                end,
+            };
+        })
+        .filter(suggestion => {
+            if (!Number.isInteger(suggestion.start) || !Number.isInteger(suggestion.end)) return false;
+            if (suggestion.start < 0 || suggestion.end <= suggestion.start || suggestion.end > content.length) return false;
+            if (!suggestion.original || !suggestion.replacement || suggestion.original === suggestion.replacement) return false;
+            return content.slice(suggestion.start, suggestion.end) === suggestion.original;
+        });
+}
+
+function getSpellcheckState() {
+    return cmView?.state.field(spellcheckField, false) || { suggestions: [] };
+}
+
+function findSpellcheckSuggestion(id) {
+    return getSpellcheckState().suggestions.find(suggestion => suggestion.id === id);
+}
+
+function hideSpellcheckTooltip() {
+    spellcheckTooltip?.remove();
+    spellcheckTooltip = null;
+    activeSpellcheckSuggestionId = null;
+}
+
+function showSpellcheckTooltip(suggestion) {
+    if (!cmView || !suggestion) return;
+    if (activeSpellcheckSuggestionId === suggestion.id && spellcheckTooltip) return;
+    hideSpellcheckTooltip();
+
+    const coords = cmView.coordsAtPos(suggestion.start);
+    if (!coords) return;
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'spellcheck-tooltip';
+    tooltip.dataset.spellcheckId = suggestion.id;
+    tooltip.innerHTML = `
+        <button class="spellcheck-tooltip-replacement" type="button">${escapeHTML(suggestion.replacement)}</button>
+        ${suggestion.reason ? `<span class="spellcheck-tooltip-reason">${escapeHTML(suggestion.reason)}</span>` : ''}
+    `;
+    document.body.appendChild(tooltip);
+
+    const rect = tooltip.getBoundingClientRect();
+    const left = Math.min(Math.max(12, coords.left), window.innerWidth - rect.width - 12);
+    const top = Math.max(12, coords.top - rect.height - 10);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+
+    tooltip.querySelector('.spellcheck-tooltip-replacement')?.addEventListener('click', event => {
+        event.preventDefault();
+        event.stopPropagation();
+        applySpellcheckSuggestion(suggestion.id);
+    });
+
+    spellcheckTooltip = tooltip;
+    activeSpellcheckSuggestionId = suggestion.id;
+}
+
+function applySpellcheckSuggestion(id) {
+    if (!cmView) return;
+    const suggestion = findSpellcheckSuggestion(id);
+    if (!suggestion) return;
+
+    const current = cmView.state.doc.sliceString(suggestion.start, suggestion.end);
+    if (current !== suggestion.original) {
+        showToast("This suggestion is out of date.", "error", 2600);
+        cmView.dispatch({ effects: removeSpellcheckSuggestionEffect.of(id) });
+        hideSpellcheckTooltip();
+        return;
+    }
+
+    cmView.dispatch({
+        changes: { from: suggestion.start, to: suggestion.end, insert: suggestion.replacement },
+        selection: { anchor: suggestion.start + suggestion.replacement.length },
+        effects: removeSpellcheckSuggestionEffect.of(id),
+        scrollIntoView: true,
+        userEvent: 'input.spellcheck',
+    });
+    hideSpellcheckTooltip();
+    cmView.focus();
+}
+
+function ensureSpellcheckCloseButton() {
+    if (spellcheckCloseButton) return;
+    spellcheckCloseButton = document.createElement('button');
+    spellcheckCloseButton.className = 'spellcheck-close-btn';
+    spellcheckCloseButton.type = 'button';
+    spellcheckCloseButton.title = 'Close spellcheck';
+    spellcheckCloseButton.setAttribute('aria-label', 'Close spellcheck');
+    spellcheckCloseButton.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">close</span>';
+    spellcheckCloseButton.addEventListener('click', clearSpellcheckSuggestions);
+    el.documentArea?.appendChild(spellcheckCloseButton);
+}
+
+function clearSpellcheckSuggestions() {
+    if (cmView) {
+        cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of([]) });
+    }
+    hideSpellcheckTooltip();
+    spellcheckCloseButton?.remove();
+    spellcheckCloseButton = null;
+}
+
+async function runSpellcheck() {
+    const selectedLanguage = await showSpellcheckLanguagePrompt();
+    if (!selectedLanguage) return;
+    if (!cmView || !state.isEditing) {
+        showToast("Open a Markdown document in edit mode first.");
+        return;
+    }
+
+    const aiConfig = getSpellcheckAIConfig();
+    if (aiConfig.error) {
+        showToast(aiConfig.error, "error", 3200);
+        return;
+    }
+
+    const content = getCurrentEditorText();
+    if (!content.trim()) {
+        showToast("Document content is empty.");
+        return;
+    }
+
+    try {
+        clearSpellcheckSuggestions();
+        updateProgress("Checking spelling...", 0);
+        const result = await SpellCheckDocument({
+            content,
+            language: {
+                code: selectedLanguage.code === 'auto' ? '' : selectedLanguage.code,
+                name: selectedLanguage.name || '',
+                nativeName: selectedLanguage.nativeName || '',
+                auto: selectedLanguage.auto || selectedLanguage.code === 'auto',
+            },
+            ai: aiConfig,
+        });
+        const suggestions = normalizeSpellcheckSuggestions(result?.suggestions || [], getCurrentEditorText());
+        cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of(suggestions) });
+        if (suggestions.length === 0) {
+            showToast("No spelling suggestions found.", "check_circle");
+            return;
+        }
+        ensureSpellcheckCloseButton();
+        showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
+    } catch (error) {
+        LogError(`SpellCheckDocument failed: ${error?.message || error}`);
+        showToast(error?.message || "Failed to check spelling.", "error", 4200);
+    } finally {
+        hideProgress();
+    }
+}
+
 function bindEditorScrollSync() {
     if (!cmView || editorScrollEventsBound) {
         return;
@@ -1798,6 +2187,7 @@ export function initCodeMirror() {
             tokenColorCompartment.of(getTokenColorExtension()),
             koreanImeEnterFix,
             ghostTextField,
+            spellcheckField,
             drawSelection(),
             dropCursor(),
             EditorView.lineWrapping,
@@ -1812,6 +2202,21 @@ export function initCodeMirror() {
                 },
                 mouseup(event, view) {
                     return collapsePlainEditorClick(event, view);
+                },
+                mouseover(event) {
+                    const marker = event.target instanceof Element ? event.target.closest('.cm-spellcheck-marker') : null;
+                    const id = marker?.dataset?.spellcheckId;
+                    if (!id) return false;
+                    showSpellcheckTooltip(findSpellcheckSuggestion(id));
+                    return false;
+                },
+                click(event) {
+                    const marker = event.target instanceof Element ? event.target.closest('.cm-spellcheck-marker') : null;
+                    const id = marker?.dataset?.spellcheckId;
+                    if (!id) return false;
+                    event.preventDefault();
+                    showSpellcheckTooltip(findSpellcheckSuggestion(id));
+                    return true;
                 },
                 keydown(event, view) {
                     if (!slashMenuState) return false;
@@ -1839,6 +2244,7 @@ export function initCodeMirror() {
                 }
 
                 if (update.docChanged) {
+                    hideSpellcheckTooltip();
                     const hadUnsavedChanges = state.isEditing && state.currentMarkdownSource !== state.editorOriginalContent;
                     const val = update.state.doc.toString();
                     state.currentMarkdownSource = val;
@@ -3210,6 +3616,11 @@ export function bindEditorEvents() {
     el.edEmoji.onclick = insertEmoji;
 
     el.edDiv.onclick = insertDivWrapper;
+    if (el.edSpellcheck) {
+        el.edSpellcheck.onclick = () => {
+            void runSpellcheck();
+        };
+    }
     if (el.edTranslateDoc) {
         el.edTranslateDoc.onclick = () => {
             void translateCurrentDocument();
