@@ -1585,6 +1585,8 @@ export function syncAIControls() {
     const generalToolbarEnabled = isGeneralAIToolbarEnabled();
     const toolbarCollapsed = generalToolbarEnabled && !!state.aiToolbarCollapsed;
     const fimAvailable = isFIMAvailable();
+    const aiRequiredToolDisabled = !generalAvailable;
+    const aiRequiredTooltip = "AI features required";
     const generalDisabledMessage = "General AI is disabled in AI Settings.";
     const fimDisabledMessage = "FIM is disabled in AI Settings.";
     const aiDisabledMessage = "AI features are disabled in Advanced Options.";
@@ -1665,6 +1667,24 @@ export function syncAIControls() {
     } else {
         el.edContextPlus.setAttribute('data-tooltip', isAIFeaturesDisabled() ? aiDisabledMessage : generalDisabledMessage);
     }
+
+    [
+        { button: el.edSpellcheck, enabledTitle: "Spellcheck" },
+        { button: el.edTranslateDoc, enabledTitle: "Translate Document" },
+    ].forEach(({ button, enabledTitle }) => {
+        if (!button) return;
+        button.classList.toggle('disabled', aiRequiredToolDisabled);
+        button.classList.toggle('ai-required-disabled', aiRequiredToolDisabled);
+        button.setAttribute('aria-disabled', String(aiRequiredToolDisabled));
+        button.setAttribute('aria-label', aiRequiredToolDisabled ? aiRequiredTooltip : enabledTitle);
+        if (aiRequiredToolDisabled) {
+            button.removeAttribute('title');
+            button.setAttribute('data-tooltip', aiRequiredTooltip);
+        } else {
+            button.title = enabledTitle;
+            button.removeAttribute('data-tooltip');
+        }
+    });
     syncGeneralTemperatureControl();
 
     if (!generalToolbarEnabled) {

@@ -3,7 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES } from './config.js';
+import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES, getSlashCommands as getConfiguredSlashCommands } from './config.js';
 import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
@@ -40,6 +40,9 @@ let plainClickSelectionState = null;
 let spellcheckTooltip = null;
 let spellcheckCloseButton = null;
 let activeSpellcheckSuggestionId = null;
+let spellcheckTooltipHideTimer = 0;
+let toolbarDisabledTooltip = null;
+let toolbarDisabledTooltipButton = null;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
@@ -293,7 +296,6 @@ function buildSpellcheckDecorations(suggestions, docLength = cmView?.state.doc.l
             class: 'cm-spellcheck-marker',
             attributes: {
                 'data-spellcheck-id': suggestion.id,
-                title: suggestion.replacement || 'Spellcheck suggestion',
             }
         }).range(suggestion.start, suggestion.end));
     }
@@ -1251,14 +1253,89 @@ function showTranslationLanguagePrompt() {
             resolve(null);
         };
 
+        const getLanguageCheckboxes = () => Array.from(el.modalLanguageContainer.querySelectorAll('input[type="checkbox"]'));
+
+        const focusLanguageCheckbox = index => {
+            const checkboxes = getLanguageCheckboxes();
+            if (!checkboxes.length) return;
+            const boundedIndex = (index + checkboxes.length) % checkboxes.length;
+            checkboxes[boundedIndex]?.focus();
+        };
+
+        const focusFirstLanguageCheckbox = () => {
+            const checkboxes = getLanguageCheckboxes();
+            const firstCheckedIndex = checkboxes.findIndex(input => input.checked);
+            focusLanguageCheckbox(firstCheckedIndex >= 0 ? firstCheckedIndex : 0);
+        };
+
         const handleKey = event => {
+            if (!el.modalOverlay || el.modalOverlay.classList.contains('hidden')) return;
+            if (isComposingFilterText || event.isComposing) return;
+
             if (event.key === 'Escape') {
                 event.preventDefault();
                 handleCancel();
+                return;
             }
-            if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
+
+            const checkboxes = getLanguageCheckboxes();
+            const active = document.activeElement;
+            const checkboxIndex = checkboxes.indexOf(active);
+
+            if (event.key === 'Tab') {
+                if (active === filterInput && !event.shiftKey) {
+                    event.preventDefault();
+                    focusFirstLanguageCheckbox();
+                    return;
+                }
+                if (checkboxIndex >= 0 && !event.shiftKey) {
+                    event.preventDefault();
+                    el.modalBtnOk.focus();
+                    return;
+                }
+                if (checkboxIndex >= 0 && event.shiftKey) {
+                    event.preventDefault();
+                    filterInput?.focus();
+                    return;
+                }
+                if (active === el.modalBtnOk && event.shiftKey) {
+                    event.preventDefault();
+                    focusLanguageCheckbox(checkboxes.length - 1);
+                    return;
+                }
+            }
+
+            if (['ArrowDown', 'ArrowRight'].includes(event.key) && checkboxes.length > 0) {
+                event.preventDefault();
+                focusLanguageCheckbox(checkboxIndex >= 0 ? checkboxIndex + 1 : 0);
+                return;
+            }
+            if (['ArrowUp', 'ArrowLeft'].includes(event.key) && checkboxes.length > 0) {
+                event.preventDefault();
+                focusLanguageCheckbox(checkboxIndex >= 0 ? checkboxIndex - 1 : checkboxes.length - 1);
+                return;
+            }
+            if (event.key === 'Home' && checkboxes.length > 0) {
+                event.preventDefault();
+                focusLanguageCheckbox(0);
+                return;
+            }
+            if (event.key === 'End' && checkboxes.length > 0) {
+                event.preventDefault();
+                focusLanguageCheckbox(checkboxes.length - 1);
+                return;
+            }
+            if (event.key === ' ' && checkboxIndex >= 0) {
+                event.preventDefault();
+                const input = checkboxes[checkboxIndex];
+                input.checked = !input.checked;
+                input.dispatchEvent(new Event('change', { bubbles: true }));
+                return;
+            }
+            if (event.key === 'Enter') {
                 event.preventDefault();
                 handleOk();
+                return;
             }
         };
 
@@ -1412,16 +1489,13 @@ function showSpellcheckLanguagePrompt() {
             { code: 'auto', name: 'Auto Detect', nativeName: 'Language auto detection', auto: true },
             ...TRANSLATION_LANGUAGES.map(language => ({ ...language, auto: false })),
         ];
-        let orderedItems = [...languageItems];
         let selectedCode = getStoredSpellcheckLanguageCode();
-        let draggedCode = null;
 
         const renderLanguageList = () => {
             el.modalLanguageContainer.innerHTML = `
                 <div class="spellcheck-language-list" role="listbox" aria-label="Spellcheck language">
-                    ${orderedItems.map(item => `
-                        <label class="language-option spellcheck-language-option" draggable="true" data-language-code="${escapeAttr(item.code)}">
-                            <span class="material-symbols-outlined spellcheck-language-drag" aria-hidden="true">drag_indicator</span>
+                    ${languageItems.map(item => `
+                        <label class="language-option spellcheck-language-option" data-language-code="${escapeAttr(item.code)}">
                             <input type="radio" name="spellcheck-language" value="${escapeAttr(item.code)}" ${item.code === selectedCode ? 'checked' : ''} />
                             <span class="language-option-name">
                                 ${escapeHTML(item.name)}${item.nativeName ? ` (${escapeHTML(item.nativeName)})` : ''}
@@ -1441,15 +1515,12 @@ function showSpellcheckLanguagePrompt() {
             el.modalBtnOk.removeEventListener('click', handleOk);
             el.modalBtnCancel.removeEventListener('click', handleCancel);
             el.modalLanguageContainer.removeEventListener('change', handleChange);
-            el.modalLanguageContainer.removeEventListener('dragstart', handleDragStart);
-            el.modalLanguageContainer.removeEventListener('dragover', handleDragOver);
-            el.modalLanguageContainer.removeEventListener('drop', handleDrop);
-            el.modalLanguageContainer.removeEventListener('dragend', handleDragEnd);
+            el.modalLanguageContainer.removeEventListener('keydown', handleLanguageKeydown);
             document.removeEventListener('keydown', handleKey, true);
         };
 
         const handleOk = () => {
-            const selected = orderedItems.find(item => item.code === selectedCode) || orderedItems[0];
+            const selected = languageItems.find(item => item.code === selectedCode) || languageItems[0];
             cleanup();
             localStorage.setItem(SPELLCHECK_LANGUAGE_STORAGE_KEY, selected.code);
             resolve(selected);
@@ -1465,6 +1536,13 @@ function showSpellcheckLanguagePrompt() {
                 event.preventDefault();
                 handleCancel();
             }
+            if (event.key === 'Enter' && !event.metaKey && !event.ctrlKey) {
+                const active = document.activeElement;
+                if (active?.matches?.('input[type="radio"], .spellcheck-language-option')) {
+                    event.preventDefault();
+                    handleOk();
+                }
+            }
             if ((event.metaKey || event.ctrlKey) && event.key === 'Enter') {
                 event.preventDefault();
                 handleOk();
@@ -1477,43 +1555,43 @@ function showSpellcheckLanguagePrompt() {
             selectedCode = input.value;
         };
 
-        const handleDragStart = event => {
-            const option = event.target.closest('.spellcheck-language-option');
-            if (!option) return;
-            draggedCode = option.dataset.languageCode;
-            option.classList.add('is-dragging');
-            event.dataTransfer.effectAllowed = 'move';
-            event.dataTransfer.setData('text/plain', draggedCode);
+        const focusSpellcheckLanguage = index => {
+            const radios = Array.from(el.modalLanguageContainer.querySelectorAll('input[type="radio"]'));
+            if (!radios.length) return;
+            const boundedIndex = (index + radios.length) % radios.length;
+            const radio = radios[boundedIndex];
+            radio.checked = true;
+            selectedCode = radio.value;
+            radio.focus();
         };
 
-        const handleDragOver = event => {
-            const option = event.target.closest('.spellcheck-language-option');
-            if (!option || !draggedCode || option.dataset.languageCode === draggedCode) return;
-            event.preventDefault();
-            event.dataTransfer.dropEffect = 'move';
-            el.modalLanguageContainer.querySelectorAll('.spellcheck-language-option').forEach(node => {
-                node.classList.toggle('is-drop-target', node === option);
-            });
-        };
-
-        const handleDrop = event => {
-            const option = event.target.closest('.spellcheck-language-option');
-            if (!option || !draggedCode) return;
-            event.preventDefault();
-            const fromIndex = orderedItems.findIndex(item => item.code === draggedCode);
-            const toIndex = orderedItems.findIndex(item => item.code === option.dataset.languageCode);
-            if (fromIndex >= 0 && toIndex >= 0 && fromIndex !== toIndex) {
-                const [moved] = orderedItems.splice(fromIndex, 1);
-                orderedItems.splice(toIndex, 0, moved);
-                renderLanguageList();
+        const handleLanguageKeydown = event => {
+            const radios = Array.from(el.modalLanguageContainer.querySelectorAll('input[type="radio"]'));
+            if (!radios.length) return;
+            const currentIndex = Math.max(0, radios.indexOf(document.activeElement));
+            if (['ArrowDown', 'ArrowRight'].includes(event.key)) {
+                event.preventDefault();
+                focusSpellcheckLanguage(currentIndex + 1);
+            } else if (['ArrowUp', 'ArrowLeft'].includes(event.key)) {
+                event.preventDefault();
+                focusSpellcheckLanguage(currentIndex - 1);
+            } else if (event.key === 'Home') {
+                event.preventDefault();
+                focusSpellcheckLanguage(0);
+            } else if (event.key === 'End') {
+                event.preventDefault();
+                focusSpellcheckLanguage(radios.length - 1);
+            } else if (event.key === ' ') {
+                const active = document.activeElement;
+                if (active?.matches?.('input[type="radio"]')) {
+                    event.preventDefault();
+                    active.checked = true;
+                    selectedCode = active.value;
+                }
+            } else if (event.key === 'Enter') {
+                event.preventDefault();
+                handleOk();
             }
-        };
-
-        const handleDragEnd = () => {
-            draggedCode = null;
-            el.modalLanguageContainer.querySelectorAll('.spellcheck-language-option').forEach(node => {
-                node.classList.remove('is-dragging', 'is-drop-target');
-            });
         };
 
         el.modalTitle.textContent = "Spellcheck";
@@ -1532,11 +1610,11 @@ function showSpellcheckLanguagePrompt() {
         el.modalBtnOk.addEventListener('click', handleOk);
         el.modalBtnCancel.addEventListener('click', handleCancel);
         el.modalLanguageContainer.addEventListener('change', handleChange);
-        el.modalLanguageContainer.addEventListener('dragstart', handleDragStart);
-        el.modalLanguageContainer.addEventListener('dragover', handleDragOver);
-        el.modalLanguageContainer.addEventListener('drop', handleDrop);
-        el.modalLanguageContainer.addEventListener('dragend', handleDragEnd);
+        el.modalLanguageContainer.addEventListener('keydown', handleLanguageKeydown);
         document.addEventListener('keydown', handleKey, true);
+        setTimeout(() => {
+            el.modalLanguageContainer.querySelector(`input[type="radio"][value="${CSS.escape(selectedCode)}"]`)?.focus();
+        }, 50);
     });
 }
 
@@ -1566,6 +1644,7 @@ function normalizeSpellcheckSuggestions(suggestions, content) {
             }
             return {
                 id: `spell-${Date.now()}-${index}`,
+                tabId: state.activeTabId,
                 original,
                 replacement,
                 reason: String(suggestion.reason || ''),
@@ -1590,9 +1669,45 @@ function findSpellcheckSuggestion(id) {
 }
 
 function hideSpellcheckTooltip() {
+    clearTimeout(spellcheckTooltipHideTimer);
     spellcheckTooltip?.remove();
     spellcheckTooltip = null;
     activeSpellcheckSuggestionId = null;
+}
+
+function scheduleHideSpellcheckTooltip(delay = 120) {
+    clearTimeout(spellcheckTooltipHideTimer);
+    spellcheckTooltipHideTimer = window.setTimeout(hideSpellcheckTooltip, delay);
+}
+
+function hideToolbarDisabledTooltip() {
+    toolbarDisabledTooltip?.remove();
+    toolbarDisabledTooltip = null;
+    toolbarDisabledTooltipButton = null;
+}
+
+function showToolbarDisabledTooltip(button) {
+    const message = button?.dataset?.tooltip;
+    if (!button || !message) return;
+    if (toolbarDisabledTooltip && toolbarDisabledTooltipButton === button) return;
+    hideToolbarDisabledTooltip();
+
+    const tooltip = document.createElement('div');
+    tooltip.className = 'toolbar-disabled-tooltip';
+    tooltip.textContent = message;
+    document.body.appendChild(tooltip);
+
+    const buttonRect = button.getBoundingClientRect();
+    const tooltipRect = tooltip.getBoundingClientRect();
+    const left = Math.min(
+        Math.max(8, buttonRect.left + (buttonRect.width / 2) - (tooltipRect.width / 2)),
+        window.innerWidth - tooltipRect.width - 8
+    );
+    const top = Math.min(buttonRect.bottom + 8, window.innerHeight - tooltipRect.height - 8);
+    tooltip.style.left = `${left}px`;
+    tooltip.style.top = `${top}px`;
+    toolbarDisabledTooltip = tooltip;
+    toolbarDisabledTooltipButton = button;
 }
 
 function showSpellcheckTooltip(suggestion) {
@@ -1623,6 +1738,8 @@ function showSpellcheckTooltip(suggestion) {
         event.stopPropagation();
         applySpellcheckSuggestion(suggestion.id);
     });
+    tooltip.addEventListener('mouseenter', () => clearTimeout(spellcheckTooltipHideTimer));
+    tooltip.addEventListener('mouseleave', () => scheduleHideSpellcheckTooltip());
 
     spellcheckTooltip = tooltip;
     activeSpellcheckSuggestionId = suggestion.id;
@@ -1632,6 +1749,12 @@ function applySpellcheckSuggestion(id) {
     if (!cmView) return;
     const suggestion = findSpellcheckSuggestion(id);
     if (!suggestion) return;
+    if (suggestion.tabId && suggestion.tabId !== state.activeTabId) {
+        hideSpellcheckTooltip();
+        clearSpellcheckSuggestions();
+        showToast("This suggestion belongs to another tab.", "error", 2600);
+        return;
+    }
 
     const current = cmView.state.doc.sliceString(suggestion.start, suggestion.end);
     if (current !== suggestion.original) {
@@ -1664,7 +1787,7 @@ function ensureSpellcheckCloseButton() {
     el.documentArea?.appendChild(spellcheckCloseButton);
 }
 
-function clearSpellcheckSuggestions() {
+export function clearSpellcheckSuggestions() {
     if (cmView) {
         cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of([]) });
     }
@@ -1692,6 +1815,7 @@ async function runSpellcheck() {
         showToast("Document content is empty.");
         return;
     }
+    const requestTabId = state.activeTabId;
 
     try {
         clearSpellcheckSuggestions();
@@ -1706,6 +1830,13 @@ async function runSpellcheck() {
             },
             ai: aiConfig,
         });
+        if (state.activeTabId !== requestTabId) {
+            return;
+        }
+        if (getCurrentEditorText() !== content) {
+            showToast("Document changed while checking spelling. Please run spellcheck again.", "error", 3600);
+            return;
+        }
         const suggestions = normalizeSpellcheckSuggestions(result?.suggestions || [], getCurrentEditorText());
         cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of(suggestions) });
         if (suggestions.length === 0) {
@@ -1814,42 +1945,38 @@ function removeVoidHtmlClosingTags(update) {
     return true;
 }
 
+function getSlashCommandActions() {
+    return {
+        bold: () => applyInlineWrap('**', '**'),
+        italic: () => applyInlineWrap('*', '*'),
+        underline: () => applyInlineWrap('<u>', '</u>'),
+        strike: () => applyInlineWrap('~~', '~~'),
+        quote: () => applyBlockMarker('quote'),
+        h1: () => applyBlockMarker('h1'),
+        h2: () => applyBlockMarker('h2'),
+        h3: () => applyBlockMarker('h3'),
+        ul: () => applyBlockMarker('ul'),
+        ol: () => applyBlockMarker('ol'),
+        hr: () => insertHorizontalRule(),
+        link: () => insertLink(),
+        image: () => insertImage(),
+        code: () => insertCodeBlock(),
+        table: () => insertTable(),
+        div: () => insertDivWrapper(),
+        task: () => applyBlockMarker('task'),
+        find: () => openFindBar(),
+        spellcheck: () => runSpellcheck(),
+        translateDocument: () => translateCurrentDocument(),
+        latex: () => insertLatex(),
+        emoji: () => insertEmoji(),
+        askAI: () => showAskAIPrompt(),
+    };
+}
+
 function getSlashCommands() {
-    const commands = [
-        { id: 'bold', label: 'Bold', token: '**', keywords: 'bold strong', aliases: ['볼드', '굵게', '굵은글씨', 'ㅂ'], run: () => applyInlineWrap('**', '**') },
-        { id: 'italic', label: 'Italic', token: '*', keywords: 'italic emphasis', aliases: ['이탤릭', '이탤릭체', '기울임', 'ㄱㅇ', 'ㅇㅌ'], run: () => applyInlineWrap('*', '*') },
-        { id: 'underline', label: 'Underline', token: '<u>', keywords: 'underline', aliases: ['언더라인', '밑줄', 'ㅁㅈ', 'ㅇㄷ'], run: () => applyInlineWrap('<u>', '</u>') },
-        { id: 'strike', label: 'Strikethrough', token: '~~', keywords: 'strike strikethrough', aliases: ['취소선', '스트라이크', 'ㅊㅅㅅ'], run: () => applyInlineWrap('~~', '~~') },
-        { id: 'quote', label: 'Blockquote', token: '>', keywords: 'quote blockquote', aliases: ['인용', '인용문', '블록인용', 'ㅇㅇ'], run: () => applyBlockMarker('quote') },
-        { id: 'h1', label: 'Heading 1', token: '#', keywords: 'h1 heading title', aliases: ['헤딩', '헤딩1', '헤드', 'ㅎ', '헤', '헤딩원'], run: () => applyBlockMarker('h1') },
-        { id: 'h2', label: 'Heading 2', token: '##', keywords: 'h2 heading', aliases: ['헤딩', '헤딩2', '헤드', 'ㅎ', '헤', '헤딩투'], run: () => applyBlockMarker('h2') },
-        { id: 'h3', label: 'Heading 3', token: '###', keywords: 'h3 heading', aliases: ['헤딩', '헤딩3', '헤드', 'ㅎ', '헤', '헤딩쓰리'], run: () => applyBlockMarker('h3') },
-        { id: 'ul', label: 'Bullet List', token: '- ', keywords: 'unordered list bullet ul', aliases: ['리스트', '목록', '불릿', '글머리표', 'ㄹㅅㅌ'], run: () => applyBlockMarker('ul') },
-        { id: 'ol', label: 'Numbered List', token: '1. ', keywords: 'ordered list number ol', aliases: ['번호목록', '숫자목록', '리스트', '목록', 'ㅂㅎ'], run: () => applyBlockMarker('ol') },
-        { id: 'hr', label: 'Horizontal Rule', token: '---', keywords: 'rule divider hr', aliases: ['구분선', '수평선', '라인', 'ㄱㅂㅅ'], run: () => insertHorizontalRule() },
-        { id: 'link', label: 'Link', token: '[ ]( )', keywords: 'link url', aliases: ['링크', '주소', '링크삽입', 'ㄹㅋ'], run: () => insertLink() },
-        { id: 'image', label: 'Image', token: '![ ]( )', keywords: 'image img photo', aliases: ['이미지', '사진', '그림', 'ㅇㅁㅈ'], run: () => insertImage() },
-        { id: 'code', label: 'Code Block', token: '```', keywords: 'code block fence', aliases: ['코드', '코드블록', '코드블럭', 'ㅋㄷ'], run: () => insertCodeBlock() },
-        { id: 'table', label: 'Table', token: '| |', keywords: 'table grid', aliases: ['테이블', '표', 'ㅌㅇㅂ'], run: () => insertTable() },
-        { id: 'div', label: 'DIV Wrapper', token: '<div>', keywords: 'div wrapper align', aliases: ['디브', '박스', '정렬박스', 'ㄷㅂ'], run: () => insertDivWrapper() },
-        { id: 'task', label: 'Task List', token: '- [ ]', keywords: 'task checklist todo', aliases: ['체크리스트', '할일', '할일목록', '작업목록', 'ㅊㅋ'], run: () => applyBlockMarker('task') },
-        { id: 'find', label: 'Find', token: '/find', keywords: 'find search', aliases: ['찾기', '검색', 'ㅋㄷ', 'ㄱㅅ'], run: () => openFindBar() },
-        { id: 'latex', label: 'LaTeX', token: '$$', keywords: 'latex math equation', aliases: ['수식', '라텍스', '공식', 'ㅅㅅ'], run: () => insertLatex() },
-        { id: 'emoji', label: 'Emoji', token: ':)', keywords: 'emoji emoticon smile', aliases: ['이모지', '이모티콘', '표정', 'ㅇㅁㅈ'], run: () => insertEmoji() },
-    ];
-
-    if (!state.aiFeaturesDisabled && window.aiState?.generalToolbarEnabled) {
-        commands.unshift({
-            id: 'ask-ai',
-            label: 'Ask AI',
-            token: 'AI',
-            keywords: 'ask ai question prompt assistant',
-            aliases: ['ai', 'ask', '질문', '문의', '챗', '대화'],
-            run: () => showAskAIPrompt(),
-        });
-    }
-
-    return commands;
+    return getConfiguredSlashCommands(getSlashCommandActions(), {
+        includeAskAI: !state.aiFeaturesDisabled && window.aiState?.generalToolbarEnabled,
+    });
 }
 
 function filterSlashCommands(query = "") {
@@ -2207,7 +2334,16 @@ export function initCodeMirror() {
                     const marker = event.target instanceof Element ? event.target.closest('.cm-spellcheck-marker') : null;
                     const id = marker?.dataset?.spellcheckId;
                     if (!id) return false;
+                    clearTimeout(spellcheckTooltipHideTimer);
                     showSpellcheckTooltip(findSpellcheckSuggestion(id));
+                    return false;
+                },
+                mouseout(event) {
+                    const marker = event.target instanceof Element ? event.target.closest('.cm-spellcheck-marker') : null;
+                    if (!marker) return false;
+                    const relatedMarker = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.cm-spellcheck-marker') : null;
+                    if (relatedMarker === marker) return false;
+                    scheduleHideSpellcheckTooltip();
                     return false;
                 },
                 click(event) {
@@ -2310,6 +2446,7 @@ export function syncEditorSessionFromState() {
     const nextContent = state.currentMarkdownSource || "";
     const currentContent = cmView.state.doc.toString();
     if (currentContent !== nextContent) {
+        clearSpellcheckSuggestions();
         cmView.dispatch({
             changes: { from: 0, to: cmView.state.doc.length, insert: nextContent }
         });
@@ -2361,6 +2498,7 @@ export function enterEditMode() {
     if (state.currentDocumentType !== 'markdown') return;
 
     hideLinkTooltip();
+    clearSpellcheckSuggestions();
     initCodeMirror();
 
     state.isEditing = true;
@@ -2405,6 +2543,7 @@ export function enterEditMode() {
 export async function exitEditMode(didSave = false) {
     if (!state.isEditing) return;
     hideLinkTooltip();
+    clearSpellcheckSuggestions();
     closeSlashMenu();
     clearTimeout(window._renderTimer);
 
@@ -3580,13 +3719,52 @@ function bindToolbarPopupEvents() {
     el.edMoreMenu?.addEventListener('click', () => openToolbarPopup(el.edMoreMenu, 'more'));
     el.edRenderModeMenu?.addEventListener('click', () => openToolbarPopup(el.edRenderModeMenu, 'renderMode'));
     document.addEventListener('click', event => {
-        if (!toolbarPopup) return;
-        if (toolbarPopup.contains(event.target) || toolbarPopupTrigger?.contains(event.target)) return;
-        closeToolbarPopup();
+        if (toolbarPopup) {
+            if (!toolbarPopup.contains(event.target) && !toolbarPopupTrigger?.contains(event.target)) {
+                closeToolbarPopup();
+            }
+        }
+        if (spellcheckTooltip) {
+            const target = event.target instanceof Element ? event.target : null;
+            const inTooltip = target && spellcheckTooltip.contains(target);
+            const inMarker = target?.closest('.cm-spellcheck-marker');
+            if (!inTooltip && !inMarker) {
+                hideSpellcheckTooltip();
+            }
+        }
     });
     document.addEventListener('keydown', event => {
-        if (event.key === 'Escape') closeToolbarPopup();
+        if (event.key === 'Escape') {
+            closeToolbarPopup();
+            hideSpellcheckTooltip();
+        }
     });
+    document.addEventListener('mouseover', event => {
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        if (!button) return;
+        showToolbarDisabledTooltip(button);
+    });
+    document.addEventListener('mouseout', event => {
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        if (!button) return;
+        const related = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        if (related === button) return;
+        hideToolbarDisabledTooltip();
+    });
+    document.addEventListener('focusin', event => {
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        if (!button) return;
+        showToolbarDisabledTooltip(button);
+    });
+    document.addEventListener('focusout', event => {
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        if (!button) return;
+        hideToolbarDisabledTooltip();
+    });
+    window.addEventListener('scroll', hideToolbarDisabledTooltip, true);
+    window.addEventListener('scroll', hideSpellcheckTooltip, true);
+    window.addEventListener('resize', hideToolbarDisabledTooltip);
+    window.addEventListener('resize', hideSpellcheckTooltip);
 }
 
 export function bindEditorEvents() {
@@ -3618,11 +3796,13 @@ export function bindEditorEvents() {
     el.edDiv.onclick = insertDivWrapper;
     if (el.edSpellcheck) {
         el.edSpellcheck.onclick = () => {
+            if (el.edSpellcheck.classList.contains('ai-required-disabled')) return;
             void runSpellcheck();
         };
     }
     if (el.edTranslateDoc) {
         el.edTranslateDoc.onclick = () => {
+            if (el.edTranslateDoc.classList.contains('ai-required-disabled')) return;
             void translateCurrentDocument();
         };
     }

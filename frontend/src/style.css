@@ -2157,50 +2157,39 @@ html.dark .toolbar-popup {
     cursor: not-allowed;
 }
 
+.tool-btn.ai-required-disabled {
+    filter: grayscale(1);
+}
+
 .tool-btn.disabled:hover {
-    background: rgba(128, 128, 128, 0.08);
+    background: transparent;
     color: var(--text-color);
 }
 
-.tool-btn.disabled[data-tooltip]:hover::after,
-.tool-btn.disabled[data-tooltip]:focus-visible::after {
-    content: attr(data-tooltip);
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 8px);
-    transform: translateX(-50%);
-    min-width: 180px;
-    max-width: 220px;
-    padding: 7px 9px;
+.tool-btn:active {
+    transform: scale(0.94);
+}
+
+.tool-btn.disabled:active {
+    transform: none;
+}
+
+.toolbar-disabled-tooltip {
+    position: fixed;
+    z-index: 2200;
+    width: max-content;
+    max-width: 180px;
+    padding: 6px 8px;
     border-radius: 8px;
     background: rgba(20, 24, 31, 0.96);
     color: #f8fafc;
     font-size: 11px;
     font-weight: 600;
-    line-height: 1.35;
+    line-height: 1.25;
     text-align: center;
-    white-space: normal;
+    white-space: nowrap;
     box-shadow: 0 10px 24px rgba(0, 0, 0, 0.22);
     pointer-events: none;
-    z-index: 1200;
-}
-
-.tool-btn.disabled[data-tooltip]:hover::before,
-.tool-btn.disabled[data-tooltip]:focus-visible::before {
-    content: "";
-    position: absolute;
-    left: 50%;
-    bottom: calc(100% + 3px);
-    transform: translateX(-50%);
-    border-width: 5px;
-    border-style: solid;
-    border-color: rgba(20, 24, 31, 0.96) transparent transparent transparent;
-    pointer-events: none;
-    z-index: 1200;
-}
-
-.tool-btn:active {
-    transform: scale(0.94);
 }
 
 .tool-btn .material-symbols-outlined {
@@ -3464,23 +3453,8 @@ html.dark .file-tree-context-menu {
 }
 
 .spellcheck-language-option {
-    grid-template-columns: 20px 18px minmax(0, 1fr);
+    grid-template-columns: 18px minmax(0, 1fr);
     user-select: none;
-}
-
-.spellcheck-language-option.is-dragging {
-    opacity: 0.48;
-}
-
-.spellcheck-language-option.is-drop-target {
-    border-color: rgba(0, 113, 227, 0.48);
-    background: rgba(0, 113, 227, 0.12);
-}
-
-.spellcheck-language-drag {
-    color: color-mix(in srgb, var(--text-color) 42%, transparent);
-    font-size: 18px !important;
-    cursor: grab;
 }
 
 .cm-spellcheck-marker {

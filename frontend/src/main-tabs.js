@@ -9,7 +9,7 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { clearSpellcheckSuggestions, exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -109,6 +109,7 @@ export async function switchToTab(tabID) {
     if (!nextTab || nextTab.id === state.activeTabId) {
         return;
     }
+    clearSpellcheckSuggestions();
     saveCurrentScroll();
     state.activeTabId = nextTab.id;
     syncGlobalsFromTab(nextTab);
@@ -191,6 +192,7 @@ function beginPointerDrag(tabNode, event) {
     if (tabId !== state.activeTabId) {
         const nextTab = state.tabs.find(tab => tab.id === tabId);
         if (nextTab) {
+            clearSpellcheckSuggestions();
             saveCurrentScroll();
             state.activeTabId = nextTab.id;
             syncGlobalsFromTab(nextTab);
@@ -402,6 +404,7 @@ async function moveTabToIndex(sourceTabID, insertionIndex) {
         return;
     }
 
+    clearSpellcheckSuggestions();
     saveCurrentScroll();
     state.activeTabId = movedTab.id;
     syncGlobalsFromTab(movedTab);
@@ -436,6 +439,7 @@ export async function closeTab(tabID) {
     }
 
     if (isActiveEditingTab) {
+        clearSpellcheckSuggestions();
         await exitEditMode(false);
     }
 
@@ -464,6 +468,7 @@ export async function closeTab(tabID) {
     }
 
     if (wasActive) {
+        clearSpellcheckSuggestions();
         const fallback = state.tabs[Math.max(0, idx - 1)] || state.tabs[0];
         state.activeTabId = fallback.id;
         syncGlobalsFromTab(fallback);
