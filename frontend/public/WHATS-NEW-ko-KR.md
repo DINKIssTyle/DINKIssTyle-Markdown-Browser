@@ -1,4 +1,4 @@
-# 버전 2.1 베타5의 새로운 기능
+# 버전 2.1 베타6의 새로운 기능
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
