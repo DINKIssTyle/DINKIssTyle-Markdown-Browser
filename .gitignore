@@ -10,3 +10,5 @@ dinkisstyle-markdown-browser
 note
 *_test.go
 
+frontend/wailsjs/runtime/runtime.d.ts
+frontend/wailsjs/runtime/runtime.js
