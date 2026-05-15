@@ -9,13 +9,18 @@ set -euo pipefail
 APP_NAME="DKST Markdown Browser"
 ARCH="${1:-amd64}"   # amd64 | arm64 | arm (default amd64)
 OUT_DIR="./dist/linux"
+CONFIG_FILE="internal/app/config.go"
+APP_VERSION_LDFLAG="dinkisstyle-markdown-browser/internal/app.AppVersion"
 
 read_app_version() {
     local version
-    version=$(sed -n 's/^[[:space:]]*AppVersion = "\(.*\)"/\1/p' config.go | head -n 1)
+    version=$(sed -n \
+        -e 's/^[[:space:]]*var[[:space:]]*AppVersion[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' \
+        -e 's/^[[:space:]]*AppVersion[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' \
+        "${CONFIG_FILE}" | head -n 1)
     if [ -z "${version}" ]; then
-        echo "❌ Failed to read AppVersion from config.go"
-        exit 1
+        echo "❌ Failed to read AppVersion from ${CONFIG_FILE}" >&2
+        return 1
     fi
     echo "${version}"
 }
@@ -113,7 +118,7 @@ case "${ARCH}" in
         wails build \
             -platform "linux/${ARCH}" \
             -o "${APP_NAME}" \
-            -ldflags "-X 'main.AppVersion=${VERSION}'" \
+            -ldflags "-X '${APP_VERSION_LDFLAG}=${VERSION}'" \
             ${BUILD_TAGS} \
             -clean
         ;;

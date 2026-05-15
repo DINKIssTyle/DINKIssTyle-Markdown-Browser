@@ -10,11 +10,12 @@ set APP_NAME=DKST Markdown Browser
 set ARCH=%1
 if "%ARCH%"=="" set ARCH=amd64
 set OUT_DIR=dist\windows
+set CONFIG_FILE=internal\app\config.go
+set APP_VERSION_LDFLAG=dinkisstyle-markdown-browser/internal/app.AppVersion
 
-for /f "tokens=3 delims== " %%A in ('findstr /r /c:"AppVersion = " config.go') do set VERSION=%%~A
-set VERSION=%VERSION:"=%
+for /f "usebackq delims=" %%A in (`powershell -NoProfile -Command "$text = Get-Content '%CONFIG_FILE%' -Raw; if ($text -match 'AppVersion\s*=\s*\"([^\"]+)\"') { $matches[1] }"`) do set VERSION=%%A
 if "%VERSION%"=="" (
-    echo [ERROR] Failed to read AppVersion from config.go
+    echo [ERROR] Failed to read AppVersion from %CONFIG_FILE%
     exit /b 1
 )
 
@@ -48,13 +49,13 @@ if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 REM ── Build Execution ──────────────────────────────────────────────
 if /I "%ARCH%"=="amd64" (
     echo [*] Starting Windows amd64 build...
-    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X main.AppVersion=%VERSION%" -clean
+    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=%VERSION%'" -clean
 ) else if /I "%ARCH%"=="arm64" (
     echo [*] Starting Windows arm64 build...
-    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X main.AppVersion=%VERSION%" -clean
+    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=%VERSION%'" -clean
 ) else if /I "%ARCH%"=="386" (
     echo [*] Starting Windows 386 build...
-    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X main.AppVersion=%VERSION%" -clean
+    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=%VERSION%'" -clean
 ) else (
     echo [ERROR] Unknown architecture: %ARCH%  (amd64 ^| arm64 ^| 386^)
     exit /b 1
