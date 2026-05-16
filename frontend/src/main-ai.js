@@ -78,6 +78,7 @@ let aiDeltaTickerCoalesceTimer = null;
 let aiDeltaTickerPendingText = "";
 let aiDeltaTickerQueue = [];
 let aiReasoningTickerIndex = 0;
+let aiDeltaTickerVersion = 0;
 const AI_PROMPT_BASE_WIDTH = 320;
 const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.3);
 const AI_PROMPT_INPUT_MAX_LINES = 5;
@@ -294,6 +295,7 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
     positionPromptBox();
     showPromptBoxElement();
     updatePromptBusyUI();
+    showAIWaitingTicker();
 }
 
 function normalizeAIDeltaText(value = "") {
@@ -321,21 +323,47 @@ function showAIDeltaTicker(kind = "message", text = "") {
     }
 
     clearTimeout(aiDeltaTickerHideTimer);
+    const tickerVersion = ++aiDeltaTickerVersion;
     const isReasoning = kind === "reasoning";
+    el.aiPromptStreamTicker.hidden = false;
     el.aiPromptStreamKind.textContent = isReasoning ? "Reasoning" : "Response";
     el.aiPromptStreamText.textContent = text;
     el.aiPromptStreamTicker.classList.toggle('is-reasoning', isReasoning);
+    el.aiPromptStreamTicker.classList.remove('is-waiting');
     el.aiPromptStreamTicker.classList.remove('is-visible');
+    el.aiPromptBox?.classList.remove('is-awaiting-delta');
     el.aiPromptBox?.classList.add('is-streaming-delta');
 
     requestAnimationFrame(() => {
+        if (tickerVersion !== aiDeltaTickerVersion) {
+            return;
+        }
         el.aiPromptStreamTicker?.classList.add('is-visible');
     });
 
     aiDeltaTickerHideTimer = setTimeout(() => {
+        if (tickerVersion !== aiDeltaTickerVersion) {
+            return;
+        }
         el.aiPromptStreamTicker?.classList.remove('is-visible');
         el.aiPromptBox?.classList.remove('is-streaming-delta');
     }, AI_DELTA_TICKER_HIDE_MS);
+}
+
+function showAIWaitingTicker() {
+    if (!aiPromptBusyState || !el.aiPromptStreamTicker || !el.aiPromptStreamKind || !el.aiPromptStreamText) {
+        return;
+    }
+    if (el.aiPromptBox?.classList.contains('is-streaming-delta')) {
+        return;
+    }
+
+    el.aiPromptStreamKind.textContent = "Ready";
+    el.aiPromptStreamText.textContent = "Preparing response";
+    el.aiPromptStreamTicker.hidden = false;
+    el.aiPromptStreamTicker.classList.remove('is-reasoning');
+    el.aiPromptStreamTicker.classList.add('is-waiting', 'is-visible');
+    el.aiPromptBox?.classList.add('is-awaiting-delta');
 }
 
 function flushAIDeltaTickerQueue() {
@@ -426,8 +454,12 @@ function clearAIDeltaTicker() {
     aiDeltaTickerPendingText = "";
     aiDeltaTickerQueue = [];
     aiReasoningTickerIndex = 0;
-    el.aiPromptBox?.classList.remove('is-streaming-delta');
-    el.aiPromptStreamTicker?.classList.remove('is-visible', 'is-reasoning');
+    aiDeltaTickerVersion += 1;
+    el.aiPromptBox?.classList.remove('is-streaming-delta', 'is-awaiting-delta');
+    el.aiPromptStreamTicker?.classList.remove('is-visible', 'is-reasoning', 'is-waiting');
+    if (el.aiPromptStreamTicker) {
+        el.aiPromptStreamTicker.hidden = true;
+    }
     if (el.aiPromptStreamKind) {
         el.aiPromptStreamKind.textContent = "";
     }
@@ -467,6 +499,7 @@ function isSupportAgentPromptVisible() {
 }
 
 function showSupportAgentPrompt(reportText) {
+    clearAIDeltaTicker();
     supportAgentPromptText = normalizeSupportReport(reportText);
     positionPromptBox();
     showPromptBoxElement();

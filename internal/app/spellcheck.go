@@ -118,8 +118,9 @@ func (a *App) requestOpenAISpellCheck(ctx context.Context, ai TranslationAIConfi
 			{"role": "system", "content": "You are a precise multilingual proofreading engine that returns strict JSON only."},
 			{"role": "user", "content": prompt},
 		},
-		"stream": true,
-		"store":  false,
+		"response_format": map[string]string{"type": "json_object"},
+		"stream":          true,
+		"store":           false,
 	}
 	if ai.Temperature > 0 {
 		payload["temperature"] = ai.Temperature
@@ -128,7 +129,25 @@ func (a *App) requestOpenAISpellCheck(ctx context.Context, ai TranslationAIConfi
 	if err != nil {
 		return "", err
 	}
-	return a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "spellcheck")
+	result, err := a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "spellcheck")
+	if err == nil && strings.TrimSpace(result) != "" {
+		return result, nil
+	}
+	delete(payload, "stream")
+	delete(payload, "store")
+	delete(payload, "response_format")
+	body, marshalErr := json.Marshal(payload)
+	if marshalErr != nil {
+		return "", marshalErr
+	}
+	respBody, fallbackErr := doTranslationPost(ctx, endpoint, ai.Key, body, 300*time.Second)
+	if fallbackErr != nil {
+		if err == nil {
+			return "", fallbackErr
+		}
+		return "", err
+	}
+	return parseOpenAIChatCompletion(respBody)
 }
 
 func (a *App) requestLMStudioSpellCheck(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {

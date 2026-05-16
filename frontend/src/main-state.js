@@ -301,6 +301,7 @@ export const state = {
     nextTabID: 1,
     isEditing: false,
     editorOriginalContent: "",
+    editorSelection: null,
     editingSourcePath: "",
     editingSourceFolder: "",
     editingPreviewPath: "",

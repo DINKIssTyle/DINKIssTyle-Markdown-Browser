@@ -1,4 +1,4 @@
-# Version 2.1 Beta6 的新功能
+# Version 2.1 Beta7 的新功能
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -132,6 +132,16 @@ done
 - **调整最近打开的列表数量**：显示的项目数量可以在主页由用户设置。
 
 
+
+
+## 2.1 Beta 7
+
+### Bug Fixes and Improvements
+
+- **修复 `SpellCheck` 问题**: 改进了 LLM 响应解析，解决了拼写检查失败的问题。
+- **实时 LLM 响应显示**: 在以下情况下显示来自 LLM 的流式增量消息：
+  - **OpenAI 兼容模式**: `Ask AI Prompt Box`（询问 AI 提示框）、`Translate Document`（翻译文档）
+  - **LM Studio 模式**: `Ask AI Prompt Box`（询问 AI 提示框）、`Translate Document`（翻译文档）、`SpellCheck`（拼写检查）
 
 
 ---

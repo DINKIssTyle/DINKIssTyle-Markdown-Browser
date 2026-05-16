@@ -1,4 +1,4 @@
-# Novedades en la Versión 2.1 Beta6
+# Novedades en la Versión 2.1 Beta7
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -129,6 +129,16 @@ done
 - **Característica de Documentos de Traducción**: La aplicación recuerda el idioma seleccionado por última vez por parte del usuario.
 - **Ajuste del número de elementos en la lista más reciente**: El número de elementos mostrados puede ser configurado por el usuario desde la página inicial.
 
+
+
+## 2.1 Beta 7
+
+### Correcciones e Mejoras de Errores
+
+- **Corregido Fallo en `SpellCheck`**: Se mejoró el análisis de la respuesta del LLM para resolver fallos en la verificación ortográfica.
+- **Visualización de Respuesta en Vivo del LLM**: Muestra los mensajes delta transmitidos del LLM en los siguientes escenarios:
+  - **Modo Compatible con OpenAI**: `Caja de Indicación para IA`, `Traducir Documento`
+  - **Modo LM Studio**: `Caja de Indicación para IA`, `Traducir Documento`, `SpellCheck`
 
 
 ---

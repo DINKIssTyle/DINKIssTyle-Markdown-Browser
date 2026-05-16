@@ -39,12 +39,22 @@ html.dark {
     padding: 0;
 }
 
+html {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    overscroll-behavior: none;
+}
+
 body {
     font-family: var(--font-stack);
     background-color: var(--bg-color);
     color: var(--text-color);
     overflow: hidden;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
+    position: fixed;
+    inset: 0;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -99,7 +109,9 @@ html.dark .startup-splash-logo {
 #app {
     display: flex;
     flex-direction: column;
-    height: 100vh;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
     position: relative;
 }
 
@@ -1721,6 +1733,8 @@ html.dark .markdown-container .hljs-deletion {
         width: auto;
         height: auto;
         overflow: visible;
+        position: static;
+        inset: auto;
         background: #ffffff;
         color: #000000;
     }
@@ -3249,15 +3263,15 @@ html.dark .file-tree-context-menu {
     width: 5px;
     height: 5px;
     border-radius: 999px;
-    background: #28b9ff;
-    box-shadow: 0 0 8px rgba(40, 185, 255, 0.36);
+    background: color-mix(in srgb, var(--text-color) 42%, transparent 58%);
+    box-shadow: none;
     flex: 0 0 auto;
 }
 
 .progress-stream-text {
     min-width: 0;
     overflow: hidden;
-    color: color-mix(in srgb, var(--text-color) 78%, #2388ff 22%);
+    color: color-mix(in srgb, var(--text-color) 68%, transparent 32%);
     font-size: 11.5px;
     font-weight: 700;
     line-height: 1.25;
@@ -3267,7 +3281,7 @@ html.dark .file-tree-context-menu {
 }
 
 html.dark .progress-stream-text {
-    color: color-mix(in srgb, var(--text-color) 82%, #7dccff 18%);
+    color: color-mix(in srgb, var(--text-color) 64%, transparent 36%);
 }
 
 @keyframes progress-title-shimmer {
@@ -4752,7 +4766,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     position: absolute;
     inset: 6px 48px 6px 10px;
     z-index: 2;
-    display: flex;
+    display: none;
     align-items: center;
     gap: 7px;
     padding: 0 5px;
@@ -4767,8 +4781,13 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-stream-ticker.is-visible {
+    display: flex;
     opacity: 1;
     transform: translateX(0);
+}
+
+.ai-prompt-box.is-support-agent .ai-prompt-stream-ticker {
+    display: none !important;
 }
 
 .ai-prompt-stream-kind {
@@ -4789,6 +4808,11 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     color: #0f766e;
 }
 
+.ai-prompt-stream-ticker.is-waiting .ai-prompt-stream-kind {
+    border-color: rgba(70, 174, 247, 0.28);
+    color: #2388ff;
+}
+
 .ai-prompt-stream-text {
     min-width: 0;
     overflow: hidden;
@@ -4804,7 +4828,23 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     text-shadow: none;
 }
 
-.ai-prompt-box.is-busy.is-streaming-delta textarea {
+.ai-prompt-stream-ticker.is-waiting .ai-prompt-stream-text::after {
+    content: "";
+    display: inline-block;
+    width: 18px;
+    height: 9px;
+    margin-left: 6px;
+    border-radius: 999px;
+    background:
+        radial-gradient(circle at 3px 50%, #2388ff 0 2px, transparent 2.5px),
+        radial-gradient(circle at 9px 50%, #2388ff 0 2px, transparent 2.5px),
+        radial-gradient(circle at 15px 50%, #2388ff 0 2px, transparent 2.5px);
+    opacity: 0.74;
+    animation: ai-prompt-waiting-wave 0.92s ease-in-out infinite;
+}
+
+.ai-prompt-box.is-busy.is-streaming-delta textarea,
+.ai-prompt-box.is-busy.is-awaiting-delta textarea {
     opacity: 0;
 }
 
@@ -4979,6 +5019,13 @@ html.dark .ai-prompt-stream-text {
     background-clip: text;
 }
 
+html.dark .ai-prompt-stream-ticker.is-waiting .ai-prompt-stream-text::after {
+    background:
+        radial-gradient(circle at 3px 50%, #8fd0ff 0 2px, transparent 2.5px),
+        radial-gradient(circle at 9px 50%, #8fd0ff 0 2px, transparent 2.5px),
+        radial-gradient(circle at 15px 50%, #8fd0ff 0 2px, transparent 2.5px);
+}
+
 html.dark .ai-prompt-shell:focus-within {
     border-color: rgba(108, 190, 255, 0.68);
     box-shadow:
@@ -5056,6 +5103,19 @@ html.dark .ai-prompt-shell:focus-within {
     100% {
         transform: translateX(170%) rotate(18deg);
         opacity: 0;
+    }
+}
+
+@keyframes ai-prompt-waiting-wave {
+    0%,
+    100% {
+        transform: translateY(0);
+        opacity: 0.38;
+    }
+
+    45% {
+        transform: translateY(-2px);
+        opacity: 0.9;
     }
 }
 

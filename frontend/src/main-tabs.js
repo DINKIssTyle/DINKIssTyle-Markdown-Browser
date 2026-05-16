@@ -9,7 +9,7 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { clearSpellcheckSuggestions, exitEditMode, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { clearSpellcheckSuggestions, exitEditMode, getEditorSelectionSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -40,6 +40,8 @@ export function createTab({ path = HOME_SCREEN_PATH, title = 'New Tab' } = {}) {
         currentMarkdownSource: "",
         isEditing: false,
         editorOriginalContent: "",
+        editorSelection: null,
+        editorSelections: {},
         editingSourcePath: "",
         editingSourceFolder: "",
         editingPreviewPath: "",
@@ -62,6 +64,12 @@ export function syncTabFromGlobals(tab) {
     tab.currentMarkdownSource = state.currentMarkdownSource;
     tab.isEditing = state.isEditing;
     tab.editorOriginalContent = state.editorOriginalContent;
+    tab.editorSelection = getEditorSelectionSnapshot() || state.editorSelection || null;
+    tab.editorSelections = tab.editorSelections || {};
+    const editorSelectionKey = state.editingSourcePath || state.currentFilePath;
+    if (editorSelectionKey && tab.editorSelection) {
+        tab.editorSelections[editorSelectionKey] = tab.editorSelection;
+    }
     tab.editingSourcePath = state.editingSourcePath;
     tab.editingSourceFolder = state.editingSourceFolder;
     tab.editingPreviewPath = state.editingPreviewPath;
@@ -81,6 +89,8 @@ export function syncGlobalsFromTab(tab) {
     state.currentMarkdownSource = tab.currentMarkdownSource || "";
     state.isEditing = !!tab.isEditing;
     state.editorOriginalContent = tab.editorOriginalContent || "";
+    tab.editorSelections = tab.editorSelections || {};
+    state.editorSelection = tab.editorSelections[tab.editingSourcePath || tab.path] || tab.editorSelection || null;
     state.editingSourcePath = tab.editingSourcePath || "";
     state.editingSourceFolder = tab.editingSourceFolder || "";
     state.editingPreviewPath = tab.editingPreviewPath || "";

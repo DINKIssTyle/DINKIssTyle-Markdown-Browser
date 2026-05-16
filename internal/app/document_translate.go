@@ -389,7 +389,24 @@ func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationA
 	if err != nil {
 		return "", err
 	}
-	return a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "translation")
+	result, err := a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "translation")
+	if err == nil && strings.TrimSpace(result) != "" {
+		return result, nil
+	}
+	delete(payload, "stream")
+	delete(payload, "store")
+	body, marshalErr := json.Marshal(payload)
+	if marshalErr != nil {
+		return "", marshalErr
+	}
+	respBody, fallbackErr := doTranslationPost(ctx, endpoint, ai.Key, body, 300*time.Second)
+	if fallbackErr != nil {
+		if err == nil {
+			return "", fallbackErr
+		}
+		return "", err
+	}
+	return parseOpenAIChatCompletion(respBody)
 }
 
 func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {

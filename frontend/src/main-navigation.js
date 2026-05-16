@@ -13,7 +13,7 @@ import {
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab, hideLinkTooltip } from './main-render.js';
-import { undoAction, redoAction, getUndoDepth, getRedoDepth, enterEditMode } from './main-editor.js';
+import { undoAction, redoAction, getUndoDepth, getRedoDepth, enterEditMode, getEditorSelectionSnapshot } from './main-editor.js';
 import {
     showToast, beginProgressTask, updateProgress,
     finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
@@ -231,10 +231,24 @@ export function goHome() {
 // ── File Loading ───────────────────────────────────────────
 
 async function loadFile(path, content, pushHistory = true, setHome = false) {
+    const tab = getActiveTab();
+    if (tab && state.isEditing) {
+        const previousSelectionKey = state.editingSourcePath || state.currentFilePath;
+        const previousSelection = getEditorSelectionSnapshot() || state.editorSelection;
+        if (previousSelectionKey && previousSelection) {
+            tab.editorSelections = tab.editorSelections || {};
+            tab.editorSelections[previousSelectionKey] = previousSelection;
+        }
+    }
+
     state.currentFilePath = path;
     state.currentDocumentType = documentTypeFromPath(path);
     state.currentFolder = getPathDirname(path);
     state.currentMarkdownSource = state.currentDocumentType === 'markdown' ? content : "";
+    if (tab) {
+        tab.editorSelections = tab.editorSelections || {};
+        state.editorSelection = tab.editorSelections[path] || null;
+    }
     syncEngineSelector();
 
     if (!isBundledDocumentPath(path) && isSupportedPreviewPath(path)) {
@@ -251,7 +265,6 @@ async function loadFile(path, content, pushHistory = true, setHome = false) {
         pushCurrentHistory(path);
     }
 
-    const tab = getActiveTab();
     if (tab) {
         syncTabFromGlobals(tab);
         tab.title = deriveTabTitle(path, content);

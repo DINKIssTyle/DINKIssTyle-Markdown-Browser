@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta6
+# What's New in Version 2.1 Beta7
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
@@ -141,6 +141,19 @@ done
 - **Opening Files While Editing**: Opens in a new tab.
 - **Translation Document Feature**: The application remembers the language last selected by the user.
 - **Adjusting the number of recently opened items**: The number of displayed items can be set by the user on the start page.
+
+
+## 2.1 Beta 7
+
+### Bug Fixes and Improvements
+
+- **`SpellCheck` Failure Fixed**: Improved LLM response parsing to resolve spelling check failures.
+- **Live LLM Response Display**: Displays streaming delta messages from the LLM in the following scenarios:
+  - **OpenAI Compatible Mode**: `Ask AI Prompt Box`, `Translate Document`
+  - **LM Studio Mode**: `Ask AI Prompt Box`, `Translate Document`, `SpellCheck`
+
+
+
 
 ---
 (C) 2026 DINKI'ssTyle. All rights reserved.

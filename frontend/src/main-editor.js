@@ -53,6 +53,11 @@ export const tokenColorCompartment = new Compartment();
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
 const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
+
+function isCancelledAIError(error) {
+    const message = String(error?.message || error || '').toLowerCase();
+    return message.includes('context canceled') || message.includes('context cancelled') || message.includes('canceled');
+}
 const SPELLCHECK_CHUNK_TARGET_LENGTH = 700;
 const SPELLCHECK_CHUNK_MAX_LENGTH = 1000;
 const SPELLCHECK_COORDINATE_RECOVERY_RADIUS = 360;
@@ -860,6 +865,28 @@ function getCursorLineNumber(editorState = cmView?.state) {
     return editorState.doc.lineAt(editorState.selection.main.head).number;
 }
 
+export function getEditorSelectionSnapshot() {
+    if (!cmView || !state.isEditing) {
+        return null;
+    }
+    const selection = cmView.state.selection.main;
+    return {
+        anchor: selection.anchor,
+        head: selection.head,
+    };
+}
+
+function normalizeEditorSelectionSnapshot(snapshot, docLength) {
+    if (!snapshot || typeof snapshot.anchor !== 'number' || typeof snapshot.head !== 'number') {
+        return { anchor: 0, head: 0 };
+    }
+    const clamp = value => Math.max(0, Math.min(docLength, Math.round(value)));
+    return {
+        anchor: clamp(snapshot.anchor),
+        head: clamp(snapshot.head),
+    };
+}
+
 function getTopVisibleLineNumber(view = cmView) {
     return getVisibleLineNumbers(view, { maxLines: 1 })[0] || 1;
 }
@@ -1482,6 +1509,10 @@ async function translateCurrentDocument() {
         await insertTranslatedDocumentLinks(ready.sourcePath, result.targets || []);
         showToast("Translated documents created.", "check_circle");
     } catch (error) {
+        if (isCancelledAIError(error)) {
+            LogError(`TranslateDocumentCopies cancelled: ${error?.message || error}`);
+            return;
+        }
         LogError(`TranslateDocumentCopies failed: ${error?.message || error}`);
         showToast(error?.message || "Failed to translate document.", "error", 4200);
     } finally {
@@ -2179,6 +2210,10 @@ async function runSpellcheck() {
         const suggestions = getSpellcheckState().suggestions;
         showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
     } catch (error) {
+        if (isCancelledAIError(error)) {
+            LogError(`SpellCheckDocument cancelled: ${error?.message || error}`);
+            return;
+        }
         LogError(`SpellCheckDocument failed: ${error?.message || error}`);
         showToast(error?.message || "Failed to check spelling.", "error", 4200);
     } finally {
@@ -2735,6 +2770,17 @@ export function initCodeMirror() {
                 }
 
                 if (update.docChanged || update.selectionSet) {
+                    if (update.selectionSet) {
+                        const selection = update.state.selection.main;
+                        state.editorSelection = {
+                            anchor: selection.anchor,
+                            head: selection.head,
+                        };
+                        const tab = getActiveTab();
+                        if (tab) {
+                            tab.editorSelection = state.editorSelection;
+                        }
+                    }
                     updatePreviewForEditorChange(update);
                 }
 
@@ -2783,11 +2829,26 @@ export function syncEditorSessionFromState() {
 
     const nextContent = state.currentMarkdownSource || "";
     const currentContent = cmView.state.doc.toString();
+    const nextSelection = normalizeEditorSelectionSnapshot(state.editorSelection, nextContent.length);
     if (currentContent !== nextContent) {
         clearSpellcheckSuggestions();
         cmView.dispatch({
-            changes: { from: 0, to: cmView.state.doc.length, insert: nextContent }
+            changes: { from: 0, to: cmView.state.doc.length, insert: nextContent },
+            selection: EditorSelection.single(nextSelection.anchor, nextSelection.head)
         });
+    } else {
+        const currentSelection = cmView.state.selection.main;
+        if (currentSelection.anchor !== nextSelection.anchor || currentSelection.head !== nextSelection.head) {
+            cmView.dispatch({
+                selection: EditorSelection.single(nextSelection.anchor, nextSelection.head)
+            });
+        }
+    }
+
+    state.editorSelection = nextSelection;
+    const activeTab = getActiveTab();
+    if (activeTab) {
+        activeTab.editorSelection = nextSelection;
     }
 
     if (!state.editingSourcePath) {
