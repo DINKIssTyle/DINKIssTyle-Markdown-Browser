@@ -8,7 +8,7 @@ import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMe
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
-import { showToast, updateProgress, hideProgress } from './main-ui.js';
+import { showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
@@ -1155,6 +1155,10 @@ function bindTranslationProgressEvents() {
         if (data?.completed) {
             hideProgress();
         }
+    });
+
+    EventsOn('progress:delta', (data) => {
+        showProgressDelta(data?.text || "");
     });
 }
 

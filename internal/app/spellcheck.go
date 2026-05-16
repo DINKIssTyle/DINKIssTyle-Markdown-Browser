@@ -118,7 +118,8 @@ func (a *App) requestOpenAISpellCheck(ctx context.Context, ai TranslationAIConfi
 			{"role": "system", "content": "You are a precise multilingual proofreading engine that returns strict JSON only."},
 			{"role": "user", "content": prompt},
 		},
-		"store": false,
+		"stream": true,
+		"store":  false,
 	}
 	if ai.Temperature > 0 {
 		payload["temperature"] = ai.Temperature
@@ -127,25 +128,7 @@ func (a *App) requestOpenAISpellCheck(ctx context.Context, ai TranslationAIConfi
 	if err != nil {
 		return "", err
 	}
-	respBody, err := doTranslationPost(ctx, endpoint, ai.Key, body, 300*time.Second)
-	if err != nil {
-		return "", err
-	}
-
-	var parsed struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-	if err := json.Unmarshal(respBody, &parsed); err != nil {
-		return "", err
-	}
-	if len(parsed.Choices) == 0 {
-		return "", fmt.Errorf("AI response did not include choices")
-	}
-	return parsed.Choices[0].Message.Content, nil
+	return a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "spellcheck")
 }
 
 func (a *App) requestLMStudioSpellCheck(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
@@ -206,12 +189,18 @@ func (a *App) requestLMStudioSpellCheck(ctx context.Context, ai TranslationAICon
 			eventData = nil
 			var raw map[string]any
 			if json.Unmarshal([]byte(joined), &raw) == nil {
-				if next, ok := raw["content"].(string); ok {
-					output.WriteString(next)
-				}
+				a.appendLMStudioStreamContent(raw, &output, "spellcheck")
 			}
 		}
 		if err == io.EOF {
+			if len(eventData) > 0 {
+				joined := strings.Join(eventData, "\n")
+				eventData = nil
+				var raw map[string]any
+				if json.Unmarshal([]byte(joined), &raw) == nil {
+					a.appendLMStudioStreamContent(raw, &output, "spellcheck")
+				}
+			}
 			break
 		}
 	}
@@ -223,7 +212,20 @@ func parseSpellCheckSuggestions(raw string) ([]SpellCheckSuggestion, error) {
 	if start := strings.Index(cleaned, "{"); start > 0 {
 		cleaned = cleaned[start:]
 	}
-	if end := strings.LastIndex(cleaned, "}"); end >= 0 && end < len(cleaned)-1 {
+	if !json.Valid([]byte(cleaned)) {
+		cleaned = completeJSONClosers(cleaned)
+	}
+	if !json.Valid([]byte(cleaned)) {
+		if strings.HasPrefix(cleaned, "{\"suggestions\":[") && strings.HasSuffix(cleaned, "]") {
+			cleaned += "}"
+		}
+	}
+	if !json.Valid([]byte(cleaned)) && strings.HasPrefix(cleaned, "{") {
+		if end := strings.LastIndex(cleaned, "}"); end >= 0 && end < len(cleaned)-1 {
+			cleaned = cleaned[:end+1]
+		}
+	}
+	if end := strings.LastIndex(cleaned, "}"); json.Valid([]byte(cleaned)) && end >= 0 && end < len(cleaned)-1 {
 		cleaned = cleaned[:end+1]
 	}
 
@@ -236,6 +238,55 @@ func parseSpellCheckSuggestions(raw string) ([]SpellCheckSuggestion, error) {
 		return nil, fmt.Errorf("failed to parse spellcheck response: %w", err)
 	}
 	return parsed.Suggestions, nil
+}
+
+func completeJSONClosers(value string) string {
+	var stack []rune
+	inString := false
+	escaped := false
+	for _, r := range value {
+		if inString {
+			if escaped {
+				escaped = false
+				continue
+			}
+			if r == '\\' {
+				escaped = true
+				continue
+			}
+			if r == '"' {
+				inString = false
+			}
+			continue
+		}
+		switch r {
+		case '"':
+			inString = true
+		case '{', '[':
+			stack = append(stack, r)
+		case '}':
+			if len(stack) > 0 && stack[len(stack)-1] == '{' {
+				stack = stack[:len(stack)-1]
+			}
+		case ']':
+			if len(stack) > 0 && stack[len(stack)-1] == '[' {
+				stack = stack[:len(stack)-1]
+			}
+		}
+	}
+	if len(stack) == 0 {
+		return value
+	}
+	var repaired strings.Builder
+	repaired.WriteString(value)
+	for index := len(stack) - 1; index >= 0; index-- {
+		if stack[index] == '{' {
+			repaired.WriteRune('}')
+		} else {
+			repaired.WriteRune(']')
+		}
+	}
+	return repaired.String()
 }
 
 func normalizeSpellCheckSuggestions(content string, suggestions []SpellCheckSuggestion) []SpellCheckSuggestion {

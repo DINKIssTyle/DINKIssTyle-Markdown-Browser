@@ -72,6 +72,12 @@ let lastPromptInputValue = "";
 let aiPromptForcedVisible = false;
 let aiDockHideTimer = null;
 let aiPanelHideTimer = null;
+let aiDeltaTickerTimer = null;
+let aiDeltaTickerHideTimer = null;
+let aiDeltaTickerCoalesceTimer = null;
+let aiDeltaTickerPendingText = "";
+let aiDeltaTickerQueue = [];
+let aiReasoningTickerIndex = 0;
 const AI_PROMPT_BASE_WIDTH = 320;
 const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.3);
 const AI_PROMPT_INPUT_MAX_LINES = 5;
@@ -83,6 +89,18 @@ const GENERAL_TEMP_AUTO_LABEL = "Auto";
 const SUPPORT_REPORT_MAX_CHARS = 600;
 const SUPPORT_AGENT_FALLBACK_REPORT = "Work is done, but I couldn't prepare an appropriate response. Please try again.";
 const AI_DOCK_FADE_MS = 180;
+const AI_DELTA_TICKER_INTERVAL_MS = 170;
+const AI_DELTA_TICKER_HIDE_MS = 850;
+const AI_DELTA_TICKER_COALESCE_MS = 220;
+const AI_DELTA_TICKER_MIN_CHARS = 18;
+const AI_DELTA_TICKER_MAX_QUEUE = 18;
+const AI_DELTA_TICKER_MAX_CHARS = 72;
+const AI_REASONING_TICKER_LABELS = Object.freeze([
+    "Thinking",
+    "Checking context",
+    "Planning",
+    "Composing",
+]);
 const AI_EDIT_RULES = Object.freeze({
     selectedTextOnly: 'You must edit ONLY the text inside <selected_text>.',
     responseOnlyReplacement: 'Your entire response must be only the replacement for <selected_text>.',
@@ -278,6 +296,146 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
     updatePromptBusyUI();
 }
 
+function normalizeAIDeltaText(value = "") {
+    return String(value || "")
+        .replace(/```[\s\S]*?```/g, "code block")
+        .replace(/[`*_>#\[\](){}|~-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getAIDeltaPreview(text = "") {
+    const normalized = normalizeAIDeltaText(text);
+    if (!normalized) {
+        return "";
+    }
+    if (normalized.length <= AI_DELTA_TICKER_MAX_CHARS) {
+        return normalized;
+    }
+    return `${normalized.slice(0, AI_DELTA_TICKER_MAX_CHARS - 1).trim()}...`;
+}
+
+function showAIDeltaTicker(kind = "message", text = "") {
+    if (!el.aiPromptStreamTicker || !el.aiPromptStreamKind || !el.aiPromptStreamText) {
+        return;
+    }
+
+    clearTimeout(aiDeltaTickerHideTimer);
+    const isReasoning = kind === "reasoning";
+    el.aiPromptStreamKind.textContent = isReasoning ? "Reasoning" : "Response";
+    el.aiPromptStreamText.textContent = text;
+    el.aiPromptStreamTicker.classList.toggle('is-reasoning', isReasoning);
+    el.aiPromptStreamTicker.classList.remove('is-visible');
+    el.aiPromptBox?.classList.add('is-streaming-delta');
+
+    requestAnimationFrame(() => {
+        el.aiPromptStreamTicker?.classList.add('is-visible');
+    });
+
+    aiDeltaTickerHideTimer = setTimeout(() => {
+        el.aiPromptStreamTicker?.classList.remove('is-visible');
+        el.aiPromptBox?.classList.remove('is-streaming-delta');
+    }, AI_DELTA_TICKER_HIDE_MS);
+}
+
+function flushAIDeltaTickerQueue() {
+    aiDeltaTickerTimer = null;
+    if (!aiRequestInFlight && !aiPromptBusyState) {
+        clearAIDeltaTicker();
+        return;
+    }
+
+    const next = aiDeltaTickerQueue.shift();
+    if (next) {
+        showAIDeltaTicker(next.kind, next.text);
+    }
+
+    if (aiDeltaTickerQueue.length > 0) {
+        aiDeltaTickerTimer = setTimeout(flushAIDeltaTickerQueue, AI_DELTA_TICKER_INTERVAL_MS);
+    }
+}
+
+function enqueueAIDeltaTicker(kind = "message", text = "") {
+    const isReasoning = kind === "reasoning";
+    const nextText = isReasoning ? text : getAIDeltaPreview(text);
+    if (!nextText) {
+        return;
+    }
+
+    const nextKind = isReasoning ? "reasoning" : "message";
+    const lastQueued = aiDeltaTickerQueue[aiDeltaTickerQueue.length - 1];
+    if (!isReasoning && lastQueued?.kind === "message") {
+        const mergedText = `${lastQueued.text}${nextText}`;
+        if (mergedText.length <= AI_DELTA_TICKER_MAX_CHARS) {
+            lastQueued.text = mergedText;
+        } else {
+            aiDeltaTickerQueue.push({ kind: nextKind, text: nextText });
+        }
+    } else if (isReasoning && lastQueued?.kind === "reasoning") {
+        lastQueued.text = nextText;
+    } else {
+        aiDeltaTickerQueue.push({ kind: nextKind, text: nextText });
+    }
+    if (aiDeltaTickerQueue.length > AI_DELTA_TICKER_MAX_QUEUE) {
+        aiDeltaTickerQueue = aiDeltaTickerQueue.slice(-AI_DELTA_TICKER_MAX_QUEUE);
+    }
+    if (!aiDeltaTickerTimer) {
+        flushAIDeltaTickerQueue();
+    }
+}
+
+function flushPendingAIDeltaTicker() {
+    clearTimeout(aiDeltaTickerCoalesceTimer);
+    aiDeltaTickerCoalesceTimer = null;
+    const nextText = getAIDeltaPreview(aiDeltaTickerPendingText);
+    aiDeltaTickerPendingText = "";
+    enqueueAIDeltaTicker("message", nextText);
+}
+
+function queueAIDeltaTicker(kind = "message", text = "") {
+    if (!aiRequestInFlight && !aiPromptBusyState) {
+        return;
+    }
+
+    if (kind === "reasoning") {
+        enqueueAIDeltaTicker("reasoning", `${AI_REASONING_TICKER_LABELS[aiReasoningTickerIndex++ % AI_REASONING_TICKER_LABELS.length]}...`);
+        return;
+    }
+
+    aiDeltaTickerPendingText = `${aiDeltaTickerPendingText}${text}`;
+    const preview = getAIDeltaPreview(aiDeltaTickerPendingText);
+    if (!preview) {
+        return;
+    }
+    const shouldFlushNow = preview.length >= AI_DELTA_TICKER_MIN_CHARS || /[.!?。！？)]$/.test(preview);
+    if (shouldFlushNow) {
+        flushPendingAIDeltaTicker();
+        return;
+    }
+    clearTimeout(aiDeltaTickerCoalesceTimer);
+    aiDeltaTickerCoalesceTimer = setTimeout(flushPendingAIDeltaTicker, AI_DELTA_TICKER_COALESCE_MS);
+}
+
+function clearAIDeltaTicker() {
+    clearTimeout(aiDeltaTickerTimer);
+    clearTimeout(aiDeltaTickerHideTimer);
+    clearTimeout(aiDeltaTickerCoalesceTimer);
+    aiDeltaTickerTimer = null;
+    aiDeltaTickerHideTimer = null;
+    aiDeltaTickerCoalesceTimer = null;
+    aiDeltaTickerPendingText = "";
+    aiDeltaTickerQueue = [];
+    aiReasoningTickerIndex = 0;
+    el.aiPromptBox?.classList.remove('is-streaming-delta');
+    el.aiPromptStreamTicker?.classList.remove('is-visible', 'is-reasoning');
+    if (el.aiPromptStreamKind) {
+        el.aiPromptStreamKind.textContent = "";
+    }
+    if (el.aiPromptStreamText) {
+        el.aiPromptStreamText.textContent = "";
+    }
+}
+
 function setPromptBusyInputText(value = "") {
     if (!aiPromptBusyState) {
         return;
@@ -350,6 +508,7 @@ function clearSupportAgentPrompt({ focusInput = false } = {}) {
 }
 
 function hideAIProgressOverlay() {
+    clearAIDeltaTicker();
     clearPromptBusyState();
     requestAnimationFrame(() => {
         refreshPromptForSelection({ preserveInput: false });
@@ -1076,6 +1235,10 @@ export function bindAIEvents() {
         setPromptBusyInputText('Thinking...');
     });
 
+    EventsOn('ai:delta', (data) => {
+        queueAIDeltaTicker(data?.kind || "message", data?.text || "");
+    });
+
     // FIM Toggle
     el.edGeneralAi.onclick = async () => {
         if (!isGeneralAIAvailable()) {
@@ -1482,6 +1645,7 @@ async function sendPrompt() {
                     { role: "system", content: systemPrompt },
                     { role: "user", content: contextualPrompt }
                 ],
+                stream: true,
                 store: false
             };
             if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;

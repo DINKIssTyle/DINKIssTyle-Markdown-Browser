@@ -884,16 +884,89 @@ func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body str
 	}
 	defer resp.Body.Close()
 
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return string(respBody), fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	if isEventStreamResponse(resp) {
+		result, err := a.readOpenAICompatibleAIStream(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return result, nil
+	}
+
 	respBody, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return "", err
 	}
 
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		return string(respBody), fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	return string(respBody), nil
+}
+
+func isEventStreamResponse(resp *http.Response) bool {
+	return strings.Contains(strings.ToLower(resp.Header.Get("Content-Type")), "text/event-stream")
+}
+
+func (a *App) readOpenAICompatibleAIStream(body io.Reader) (string, error) {
+	var fullResponse strings.Builder
+	reader := bufio.NewReader(body)
+	var eventData []string
+
+	appendEvent := func(joined string) {
+		var raw map[string]any
+		if json.Unmarshal([]byte(joined), &raw) != nil {
+			return
+		}
+		for _, next := range extractOpenAIStreamContent(raw) {
+			fullResponse.WriteString(next)
+			runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{
+				"kind": "message",
+				"text": next,
+			})
+		}
 	}
 
-	return string(respBody), nil
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return "", err
+		}
+
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "data:") {
+			data := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
+			if data != "" && data != "[DONE]" {
+				eventData = append(eventData, data)
+			}
+		} else if trimmed == "" && len(eventData) > 0 {
+			appendEvent(strings.Join(eventData, "\n"))
+			eventData = nil
+		}
+
+		if err == io.EOF {
+			if len(eventData) > 0 {
+				appendEvent(strings.Join(eventData, "\n"))
+			}
+			break
+		}
+	}
+
+	payload := map[string]any{
+		"choices": []map[string]any{
+			{
+				"message": map[string]string{
+					"content": fullResponse.String(),
+				},
+			},
+		},
+	}
+	encoded, err := json.Marshal(payload)
+	if err != nil {
+		return "", err
+	}
+	return string(encoded), nil
 }
 
 // GetAIModelList fetches available model IDs from an OpenAI-compatible /v1/models endpoint.
@@ -1334,8 +1407,15 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 				case "message.delta":
 					if next, ok := raw["content"].(string); ok {
 						fullResponse.WriteString(next)
+						runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{
+							"kind": "message",
+							"text": next,
+						})
 					}
 				case "reasoning.delta":
+					runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{
+						"kind": "reasoning",
+					})
 					runtime.EventsEmit(a.ctx, "ai:reasoning", map[string]any{
 						"text": "Thinking...",
 					})

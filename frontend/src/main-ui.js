@@ -12,6 +12,11 @@ let hlMatches = [];
 let hlCurrent = -1;
 let toastTimer = null;
 let progressHideTimer = null;
+let progressDeltaTimer = null;
+let progressDeltaHideTimer = null;
+let progressDeltaCoalesceTimer = null;
+let progressDeltaPendingText = "";
+let progressDeltaQueue = [];
 let contextMenuState = null;
 let activeProgressTaskId = 0;
 
@@ -31,6 +36,33 @@ export function showToast(msg, icon = null, duration = 2400) {
 // ── Progress Widget ────────────────────────────────────────
 
 const WAVING_PROGRESS_TITLE_PATTERN = /checking spelling|starting translation|translating document/i;
+const PROGRESS_DELTA_INTERVAL_MS = 180;
+const PROGRESS_DELTA_HIDE_MS = 900;
+const PROGRESS_DELTA_COALESCE_MS = 220;
+const PROGRESS_DELTA_MIN_CHARS = 18;
+const PROGRESS_DELTA_MAX_QUEUE = 18;
+const PROGRESS_DELTA_MAX_CHARS = 88;
+
+function normalizeProgressDeltaText(value = "") {
+    return String(value || "")
+        .replace(/\\n/g, " ")
+        .replace(/```[\s\S]*?```/g, "code block")
+        .replace(/[{}\[\]",:]+/g, " ")
+        .replace(/[`*_>#|~-]+/g, " ")
+        .replace(/\s+/g, " ")
+        .trim();
+}
+
+function getProgressDeltaPreview(value = "") {
+    const normalized = normalizeProgressDeltaText(value);
+    if (!normalized) {
+        return "";
+    }
+    if (normalized.length <= PROGRESS_DELTA_MAX_CHARS) {
+        return normalized;
+    }
+    return `${normalized.slice(0, PROGRESS_DELTA_MAX_CHARS - 1).trim()}...`;
+}
 
 function renderProgressTitle(title, { wavingDots = false } = {}) {
     el.progressTitle.textContent = "";
@@ -79,6 +111,7 @@ export function showProgress(title, progress = null, options = {}) {
 
 export function hideProgress() {
     clearTimeout(progressHideTimer);
+    clearProgressDelta();
     el.progressTitle.classList.remove('shimmering');
     el.progressTitle.classList.remove('dots-waving');
     el.progressTitle.removeAttribute('aria-label');
@@ -90,6 +123,94 @@ export function hideProgress() {
 
 export function updateProgress(title, progress = null, options = {}) {
     showProgress(title, progress, options);
+}
+
+function renderProgressDelta(text = "") {
+    if (!el.progressStreamTicker || !el.progressStreamText) {
+        return;
+    }
+    clearTimeout(progressDeltaHideTimer);
+    el.progressStreamText.textContent = text;
+    el.progressWidget.classList.add('has-stream-delta');
+    el.progressStreamTicker.classList.remove('is-visible');
+    requestAnimationFrame(() => {
+        el.progressStreamTicker?.classList.add('is-visible');
+    });
+    progressDeltaHideTimer = setTimeout(() => {
+        el.progressStreamTicker?.classList.remove('is-visible');
+        el.progressWidget?.classList.remove('has-stream-delta');
+    }, PROGRESS_DELTA_HIDE_MS);
+}
+
+function flushProgressDeltaQueue() {
+    progressDeltaTimer = null;
+    const next = progressDeltaQueue.shift();
+    if (next) {
+        renderProgressDelta(next);
+    }
+    if (progressDeltaQueue.length > 0) {
+        progressDeltaTimer = setTimeout(flushProgressDeltaQueue, PROGRESS_DELTA_INTERVAL_MS);
+    }
+}
+
+function enqueueProgressDeltaPreview(nextText = "") {
+    if (!nextText) {
+        return;
+    }
+    const lastQueued = progressDeltaQueue[progressDeltaQueue.length - 1];
+    if (lastQueued && `${lastQueued}${nextText}`.length <= PROGRESS_DELTA_MAX_CHARS) {
+        progressDeltaQueue[progressDeltaQueue.length - 1] = `${lastQueued}${nextText}`;
+    } else {
+        progressDeltaQueue.push(nextText);
+    }
+    if (progressDeltaQueue.length > PROGRESS_DELTA_MAX_QUEUE) {
+        progressDeltaQueue = progressDeltaQueue.slice(-PROGRESS_DELTA_MAX_QUEUE);
+    }
+    if (!progressDeltaTimer) {
+        flushProgressDeltaQueue();
+    }
+}
+
+function flushPendingProgressDelta() {
+    clearTimeout(progressDeltaCoalesceTimer);
+    progressDeltaCoalesceTimer = null;
+    const nextText = getProgressDeltaPreview(progressDeltaPendingText);
+    progressDeltaPendingText = "";
+    enqueueProgressDeltaPreview(nextText);
+}
+
+export function showProgressDelta(value = "") {
+    if (!el.progressWidget || el.progressWidget.classList.contains('hidden')) {
+        return;
+    }
+    progressDeltaPendingText = `${progressDeltaPendingText}${value}`;
+    const preview = getProgressDeltaPreview(progressDeltaPendingText);
+    if (!preview) {
+        return;
+    }
+    const shouldFlushNow = preview.length >= PROGRESS_DELTA_MIN_CHARS || /[.!?。！？)]$/.test(preview);
+    if (shouldFlushNow) {
+        flushPendingProgressDelta();
+        return;
+    }
+    clearTimeout(progressDeltaCoalesceTimer);
+    progressDeltaCoalesceTimer = setTimeout(flushPendingProgressDelta, PROGRESS_DELTA_COALESCE_MS);
+}
+
+function clearProgressDelta() {
+    clearTimeout(progressDeltaTimer);
+    clearTimeout(progressDeltaHideTimer);
+    clearTimeout(progressDeltaCoalesceTimer);
+    progressDeltaTimer = null;
+    progressDeltaHideTimer = null;
+    progressDeltaCoalesceTimer = null;
+    progressDeltaPendingText = "";
+    progressDeltaQueue = [];
+    el.progressWidget?.classList.remove('has-stream-delta');
+    el.progressStreamTicker?.classList.remove('is-visible');
+    if (el.progressStreamText) {
+        el.progressStreamText.textContent = "";
+    }
 }
 
 export function beginProgressTask(title, progress = null) {

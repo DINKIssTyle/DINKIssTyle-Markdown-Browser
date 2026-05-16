@@ -379,7 +379,8 @@ func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationA
 			{"role": "system", "content": "You are a careful Markdown document translator."},
 			{"role": "user", "content": prompt},
 		},
-		"store": false,
+		"stream": true,
+		"store":  false,
 	}
 	if ai.Temperature > 0 {
 		payload["temperature"] = ai.Temperature
@@ -388,25 +389,7 @@ func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationA
 	if err != nil {
 		return "", err
 	}
-	respBody, err := doTranslationPost(ctx, endpoint, ai.Key, body, 300*time.Second)
-	if err != nil {
-		return "", err
-	}
-
-	var parsed struct {
-		Choices []struct {
-			Message struct {
-				Content string `json:"content"`
-			} `json:"message"`
-		} `json:"choices"`
-	}
-	if err := json.Unmarshal(respBody, &parsed); err != nil {
-		return "", err
-	}
-	if len(parsed.Choices) == 0 {
-		return "", fmt.Errorf("AI response did not include choices")
-	}
-	return parsed.Choices[0].Message.Content, nil
+	return a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "translation")
 }
 
 func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
@@ -467,16 +450,181 @@ func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai Translatio
 			eventData = nil
 			var raw map[string]any
 			if json.Unmarshal([]byte(joined), &raw) == nil {
-				if next, ok := raw["content"].(string); ok {
-					output.WriteString(next)
-				}
+				a.appendLMStudioStreamContent(raw, &output, "translation")
 			}
 		}
 		if err == io.EOF {
+			if len(eventData) > 0 {
+				joined := strings.Join(eventData, "\n")
+				eventData = nil
+				var raw map[string]any
+				if json.Unmarshal([]byte(joined), &raw) == nil {
+					a.appendLMStudioStreamContent(raw, &output, "translation")
+				}
+			}
 			break
 		}
 	}
 	return output.String(), nil
+}
+
+func (a *App) appendLMStudioStreamContent(raw map[string]any, output *strings.Builder, progressKind string) {
+	eventType, _ := raw["type"].(string)
+	for _, next := range extractLMStudioStreamContent(raw) {
+		if eventType == "chat.end" && output.Len() > 0 {
+			continue
+		}
+		output.WriteString(next)
+		if progressKind != "" {
+			runtime.EventsEmit(a.ctx, "progress:delta", map[string]any{
+				"kind": progressKind,
+				"text": next,
+			})
+		}
+	}
+}
+
+func extractLMStudioStreamContent(raw map[string]any) []string {
+	chunks := make([]string, 0, 1)
+	if next, ok := raw["content"].(string); ok && next != "" {
+		chunks = append(chunks, next)
+	}
+
+	result, ok := raw["result"].(map[string]any)
+	if !ok {
+		return chunks
+	}
+	output, ok := result["output"].([]any)
+	if !ok {
+		return chunks
+	}
+	for _, item := range output {
+		entry, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if next, ok := entry["content"].(string); ok && next != "" {
+			chunks = append(chunks, next)
+		}
+	}
+	return chunks
+}
+
+func (a *App) doOpenAIChatStream(ctx context.Context, endpoint string, apiKey string, body []byte, timeout time.Duration, progressKind string) (string, error) {
+	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
+	if err != nil {
+		return "", err
+	}
+	req.Header.Set("Content-Type", "application/json")
+	req.Header.Set("Accept", "text/event-stream")
+	if strings.TrimSpace(apiKey) != "" {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
+	}
+
+	client := &http.Client{Timeout: timeout}
+	resp, err := client.Do(req)
+	if err != nil {
+		return "", err
+	}
+	defer resp.Body.Close()
+
+	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
+		respBody, _ := io.ReadAll(resp.Body)
+		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
+	}
+
+	if contentType := strings.ToLower(resp.Header.Get("Content-Type")); contentType != "" && !strings.Contains(contentType, "text/event-stream") {
+		respBody, err := io.ReadAll(resp.Body)
+		if err != nil {
+			return "", err
+		}
+		return parseOpenAIChatCompletion(respBody)
+	}
+
+	var output strings.Builder
+	reader := bufio.NewReader(resp.Body)
+	var eventData []string
+	for {
+		line, err := reader.ReadString('\n')
+		if err != nil && err != io.EOF {
+			return "", err
+		}
+		trimmed := strings.TrimSpace(line)
+		if strings.HasPrefix(trimmed, "data:") {
+			data := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
+			if data != "" && data != "[DONE]" {
+				eventData = append(eventData, data)
+			}
+		} else if trimmed == "" && len(eventData) > 0 {
+			a.appendOpenAIStreamEvent(strings.Join(eventData, "\n"), &output, progressKind)
+			eventData = nil
+		}
+		if err == io.EOF {
+			if len(eventData) > 0 {
+				a.appendOpenAIStreamEvent(strings.Join(eventData, "\n"), &output, progressKind)
+			}
+			break
+		}
+	}
+	return output.String(), nil
+}
+
+func (a *App) appendOpenAIStreamEvent(joined string, output *strings.Builder, progressKind string) {
+	var raw map[string]any
+	if json.Unmarshal([]byte(joined), &raw) != nil {
+		return
+	}
+	for _, next := range extractOpenAIStreamContent(raw) {
+		output.WriteString(next)
+		if progressKind != "" {
+			runtime.EventsEmit(a.ctx, "progress:delta", map[string]any{
+				"kind": progressKind,
+				"text": next,
+			})
+		}
+	}
+}
+
+func extractOpenAIStreamContent(raw map[string]any) []string {
+	choices, ok := raw["choices"].([]any)
+	if !ok {
+		return nil
+	}
+	chunks := make([]string, 0, len(choices))
+	for _, item := range choices {
+		choice, ok := item.(map[string]any)
+		if !ok {
+			continue
+		}
+		if delta, ok := choice["delta"].(map[string]any); ok {
+			if next, ok := delta["content"].(string); ok && next != "" {
+				chunks = append(chunks, next)
+			}
+		}
+		if message, ok := choice["message"].(map[string]any); ok {
+			if next, ok := message["content"].(string); ok && next != "" {
+				chunks = append(chunks, next)
+			}
+		}
+	}
+	return chunks
+}
+
+func parseOpenAIChatCompletion(respBody []byte) (string, error) {
+	var parsed struct {
+		Choices []struct {
+			Message struct {
+				Content string `json:"content"`
+			} `json:"message"`
+		} `json:"choices"`
+	}
+	if err := json.Unmarshal(respBody, &parsed); err != nil {
+		return "", err
+	}
+	if len(parsed.Choices) == 0 {
+		return "", fmt.Errorf("AI response did not include choices")
+	}
+	return parsed.Choices[0].Message.Content, nil
 }
 
 func doTranslationPost(ctx context.Context, endpoint string, apiKey string, body []byte, timeout time.Duration) ([]byte, error) {

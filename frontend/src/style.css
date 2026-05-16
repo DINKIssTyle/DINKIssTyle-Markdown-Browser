@@ -2955,7 +2955,7 @@ html:not(.dark) .toast {
     position: fixed;
     right: 24px;
     bottom: 24px;
-    width: min(320px, calc(100vw - 24px));
+    width: min(380px, calc(100vw - 24px));
     padding: 12px 14px;
     border-radius: 14px;
     background: rgba(255, 255, 255, 0.94);
@@ -2985,7 +2985,7 @@ html.dark .progress-widget {
     align-items: center;
     justify-content: space-between;
     gap: 12px;
-    margin-bottom: 10px;
+    margin-bottom: 3px;
 }
 
 .progress-header-main {
@@ -3148,8 +3148,9 @@ html.dark .file-tree-context-menu {
 }
 
 .progress-track {
+    position: relative;
     width: 100%;
-    height: 10px;
+    height: 12px;
     border-radius: 999px;
     background: linear-gradient(180deg, rgba(127, 127, 127, 0.18), rgba(127, 127, 127, 0.11));
     box-shadow: inset 0 1px 2px rgba(0, 0, 0, 0.08);
@@ -3208,6 +3209,65 @@ html.dark .file-tree-context-menu {
 .progress-fill.indeterminate {
     width: 42%;
     animation: progress-indeterminate 1.1s ease-in-out infinite;
+}
+
+.progress-stream-ticker {
+    width: 100%;
+    max-height: 0;
+    margin: 0;
+    padding: 0 2px;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    min-width: 0;
+    pointer-events: none;
+    opacity: 0;
+    overflow: hidden;
+    transform: translateY(4px);
+    transition:
+        max-height 0.18s ease,
+        margin 0.18s ease,
+        padding 0.18s ease,
+        opacity 0.16s ease,
+        transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.progress-stream-ticker.is-visible {
+    max-height: 19px;
+    min-height: 16px;
+    margin: -1px 0 4px;
+    padding: 1px 2px 0;
+    opacity: 1;
+    transform: translateY(0);
+}
+
+.progress-stream-ticker::before {
+    content: "";
+    width: 5px;
+    height: 5px;
+    border-radius: 999px;
+    background: #28b9ff;
+    box-shadow: 0 0 8px rgba(40, 185, 255, 0.36);
+    flex: 0 0 auto;
+}
+
+.progress-stream-text {
+    min-width: 0;
+    overflow: hidden;
+    color: color-mix(in srgb, var(--text-color) 78%, #2388ff 22%);
+    font-size: 11.5px;
+    font-weight: 700;
+    line-height: 1.25;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-shadow: none;
+}
+
+html.dark .progress-stream-text {
+    color: color-mix(in srgb, var(--text-color) 82%, #7dccff 18%);
 }
 
 @keyframes progress-title-shimmer {
@@ -4688,6 +4748,66 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     transition: none;
 }
 
+.ai-prompt-stream-ticker {
+    position: absolute;
+    inset: 6px 48px 6px 10px;
+    z-index: 2;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    padding: 0 5px;
+    border-radius: 0;
+    background: transparent;
+    box-shadow: none;
+    min-width: 0;
+    pointer-events: none;
+    opacity: 0;
+    transform: translateX(12px);
+    transition: opacity 0.16s ease, transform 0.18s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ai-prompt-stream-ticker.is-visible {
+    opacity: 1;
+    transform: translateX(0);
+}
+
+.ai-prompt-stream-kind {
+    flex: 0 0 auto;
+    padding: 2px 6px 1px;
+    border-radius: 999px;
+    background: rgba(255, 255, 255, 0.92);
+    border: 1px solid rgba(35, 136, 255, 0.36);
+    color: #2388ff;
+    font-size: 10px;
+    font-weight: 800;
+    line-height: 1.2;
+    text-transform: uppercase;
+}
+
+.ai-prompt-stream-ticker.is-reasoning .ai-prompt-stream-kind {
+    border-color: rgba(15, 118, 110, 0.32);
+    color: #0f766e;
+}
+
+.ai-prompt-stream-text {
+    min-width: 0;
+    overflow: hidden;
+    background: linear-gradient(90deg, #2388ff 0%, #22aef7 52%, #1cc7de 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
+    color: transparent;
+    font-size: 13px;
+    font-weight: 800;
+    line-height: 1.3;
+    white-space: nowrap;
+    text-overflow: ellipsis;
+    text-shadow: none;
+}
+
+.ai-prompt-box.is-busy.is-streaming-delta textarea {
+    opacity: 0;
+}
+
 .ai-prompt-box.is-visible {
     opacity: 1;
     pointer-events: auto;
@@ -4723,6 +4843,24 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     --ai-prompt-badge-gradient: linear-gradient(120deg, #8fd0ff 0%, #1077df 100%);
     --ai-prompt-shell-border: rgba(16, 119, 223, 0.14);
     --ai-prompt-shell-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 255, 0.98));
+}
+
+html.dark .ai-prompt-box.is-support-agent {
+    --ai-prompt-accent-rgb: 116, 194, 255;
+    --ai-prompt-badge-gradient: linear-gradient(120deg, #8fd0ff 0%, #3b95ff 100%);
+    --ai-prompt-badge-shadow: 0 18px 30px rgba(87, 174, 255, 0.28);
+    --ai-prompt-badge-shadow-strong: 0 20px 34px rgba(87, 174, 255, 0.38);
+    --ai-prompt-shell-border: rgba(143, 208, 255, 0.34);
+    --ai-prompt-shell-bg: linear-gradient(180deg, rgba(23, 40, 58, 0.98), rgba(19, 31, 45, 0.98));
+    --ai-prompt-shell-shadow:
+        0 0 0 1px rgba(143, 208, 255, 0.08),
+        0 14px 30px rgba(0, 0, 0, 0.32),
+        0 0 28px rgba(87, 174, 255, 0.12);
+}
+
+html.dark .ai-prompt-box.is-support-agent textarea {
+    color: #9ed8ff;
+    font-weight: 700;
 }
 
 .ai-prompt-box.is-leaving {
@@ -4827,6 +4965,18 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 html.dark .ai-prompt-shell {
     border-color: rgba(255, 255, 255, 0.1);
     background: rgba(36, 36, 40, 0.92);
+}
+
+html.dark .ai-prompt-stream-kind {
+    background: rgba(14, 23, 38, 0.88);
+    border-color: rgba(143, 208, 255, 0.34);
+    color: #8fd0ff;
+}
+
+html.dark .ai-prompt-stream-text {
+    background: linear-gradient(90deg, #8fd0ff 0%, #5ebcff 50%, #7ce8ef 100%);
+    -webkit-background-clip: text;
+    background-clip: text;
 }
 
 html.dark .ai-prompt-shell:focus-within {
@@ -4979,6 +5129,26 @@ html.dark .ai-prompt-shell:focus-within {
 
 .cm-line {
     color: inherit;
+}
+
+.cm-editor .cm-selectionBackground,
+.cm-editor.cm-focused .cm-selectionBackground {
+    background: rgba(82, 169, 255, 0.26) !important;
+}
+
+.cm-editor .cm-content ::selection {
+    background: rgba(82, 169, 255, 0.26) !important;
+    color: var(--editor-plain-text-color, var(--text-color)) !important;
+}
+
+html.dark .cm-editor .cm-selectionBackground,
+html.dark .cm-editor.cm-focused .cm-selectionBackground {
+    background: rgba(104, 184, 255, 0.34) !important;
+}
+
+html.dark .cm-editor .cm-content ::selection {
+    background: rgba(104, 184, 255, 0.34) !important;
+    color: var(--editor-plain-text-color, var(--text-color)) !important;
 }
 
 /* Link Tooltip */

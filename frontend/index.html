@@ -437,6 +437,9 @@
                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
                 </button>
             </div>
+            <div id="progress-stream-ticker" class="progress-stream-ticker" aria-hidden="true">
+                <span id="progress-stream-text" class="progress-stream-text"></span>
+            </div>
             <div class="progress-track">
                 <div id="progress-fill" class="progress-fill"></div>
             </div>
@@ -701,6 +704,10 @@
             </div>
             <div class="ai-prompt-shell">
                 <textarea id="ai-prompt-input" rows="1" placeholder="Press / to Ask AI..."></textarea>
+                <div id="ai-prompt-stream-ticker" class="ai-prompt-stream-ticker" aria-hidden="true">
+                    <span id="ai-prompt-stream-kind" class="ai-prompt-stream-kind"></span>
+                    <span id="ai-prompt-stream-text" class="ai-prompt-stream-text"></span>
+                </div>
                 <button id="ai-prompt-send" title="Send" aria-label="Send to AI">
                     <span class="material-symbols-outlined">arrow_circle_right</span>
                 </button>
