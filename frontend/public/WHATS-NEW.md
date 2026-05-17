@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta7
+# What's New in Version 2.1 Beta8
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
@@ -151,6 +151,26 @@ done
 - **Live LLM Response Display**: Displays streaming delta messages from the LLM in the following scenarios:
   - **OpenAI Compatible Mode**: `Ask AI Prompt Box`, `Translate Document`
   - **LM Studio Mode**: `Ask AI Prompt Box`, `Translate Document`, `SpellCheck`
+
+
+## 2.1 Beta 8
+
+### Additions
+
+- **Highlight Color**: You can select your desired highlight color.
+
+### Bug Fixes and Improvements
+
+- **Enhanced Tab Isolation**: Separates the work history between tabs when multiple tabs are being edited simultaneously, preventing mixing.
+- **Progress Bar Widget**: Made into a common widget so that all features can use it universally.
+- **Maintain Translate Document, Spellcheck Operations**: When switching to another tab during an operation, the work should be maintained and visible upon returning to that tab.
+- **Display Translate Document, Spellcheck Operations**: The progress bar for ongoing operations must remain visible even when switching tabs.
+- **LLM Sequential Processing**: If a new request arrives while an LLM operation is in progress, it must be processed sequentially after the previous task is complete.
+- **Recent Files List**: You can pin files to the recent list by clicking the bookmark button.
+- **Function Unification and Integration**: Similar functions have been grouped into common functionalities and integrated.
+- **Restore Editing Tab**: The application must remember the scroll position and cursor location when returning to an edited tab.
+- **UI Stabilization**: Removed screen flickering issues that occurred during transitions between read mode and edit mode.
+
 
 
 

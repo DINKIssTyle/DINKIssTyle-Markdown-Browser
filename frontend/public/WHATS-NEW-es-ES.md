@@ -1,4 +1,4 @@
-# Novedades en la Versión 2.1 Beta7
+# Novedades en la Versión 2.1 Beta8
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -139,6 +139,26 @@ done
 - **Visualización de Respuesta en Vivo del LLM**: Muestra los mensajes delta transmitidos del LLM en los siguientes escenarios:
   - **Modo Compatible con OpenAI**: `Caja de Indicación para IA`, `Traducir Documento`
   - **Modo LM Studio**: `Caja de Indicación para IA`, `Traducir Documento`, `SpellCheck`
+
+
+
+## 2.1 Beta 8
+
+### Novedades
+
+- **Color de Resaltado**: Puedes seleccionar el color de resaltado deseado.
+
+### Correcciones de errores y mejoras
+
+- **Aislamiento mejorado de pestañas**: Separa el historial de trabajo entre pestañas cuando se editan varias pestañas simultáneamente, evitando mezclas.
+- **Widget de barra de progreso**: Convertido en un widget común para que todas las funciones puedan usarlo universalmente.
+- **Mantener operaciones de documento traducido y corrector ortográfico**: Cuando se cambia a otra pestaña durante una operación, el trabajo debe mantenerse y ser visible al volver a esa pestaña.
+- **Mostrar operaciones de documento traducido y corrector ortográfico**: La barra de progreso para las operaciones en curso debe permanecer visible incluso al cambiar de pestaña.
+- **Procesamiento secuencial del LLM**: Si llega una nueva solicitud mientras se está en curso una operación del LLM, debe procesarse secuencialmente después de que se haya completado la tarea anterior.
+- **Lista de archivos recientes**: Puedes fijar archivos en la lista reciente haciendo clic en el botón de marcador.
+- **Unificación e integración de funciones**: Funciones similares han sido agrupadas en funcionalidades comunes e integradas.
+- **Restaurar pestaña de edición**: La aplicación debe recordar la posición de desplazamiento y la ubicación del cursor al volver a una pestaña editada.
+- **Estabilización de la interfaz de usuario**: Se eliminaron los problemas de parpadeo de pantalla que ocurrían durante las transiciones entre el modo lectura y el modo edición.
 
 
 ---
