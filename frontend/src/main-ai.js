@@ -12,7 +12,7 @@ import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, up
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import gfmReference from './prompts/GFM.md?raw';
-import { StateField, StateEffect } from '@codemirror/state';
+import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
 
 export const setGhostTextEffect = StateEffect.define();
@@ -1624,7 +1624,6 @@ function updateInactiveAIRequestTab(requestContext, nextContent, selectionAnchor
         return false;
     }
     requestTab.currentMarkdownSource = nextContent;
-    requestTab.editorState = null;
     requestTab.editorSelection = { anchor: selectionAnchor, head: selectionHead };
     requestTab.editorSelections = requestTab.editorSelections || {};
     const selectionKey = requestTab.editingSourcePath || requestContext.path || requestTab.path;
@@ -1632,6 +1631,33 @@ function updateInactiveAIRequestTab(requestContext, nextContent, selectionAnchor
         requestTab.editorSelections[selectionKey] = requestTab.editorSelection;
     }
     return true;
+}
+
+function dispatchToInactiveAIRequestTab(requestContext, transactionSpec, nextContent, selectionAnchor, selectionHead) {
+    const requestTab = getAIRequestTab(requestContext);
+    if (!requestTab) {
+        return false;
+    }
+    if (requestTab.editorState?.doc?.toString?.() === requestTab.currentMarkdownSource) {
+        try {
+            const transaction = requestTab.editorState.update(transactionSpec);
+            requestTab.editorState = transaction.state;
+            requestTab.currentMarkdownSource = transaction.state.doc.toString();
+            requestTab.editorSelection = {
+                anchor: transaction.state.selection.main.anchor,
+                head: transaction.state.selection.main.head,
+            };
+            requestTab.editorSelections = requestTab.editorSelections || {};
+            const selectionKey = requestTab.editingSourcePath || requestContext.path || requestTab.path;
+            if (selectionKey) {
+                requestTab.editorSelections[selectionKey] = requestTab.editorSelection;
+            }
+            return true;
+        } catch (error) {
+            console.error('Failed to apply AI edit to inactive tab state', error);
+        }
+    }
+    return updateInactiveAIRequestTab(requestContext, nextContent, selectionAnchor, selectionHead);
 }
 
 function applyAIInsertionToRequestTab(requestContext, insertionText) {
@@ -1651,8 +1677,12 @@ function applyAIInsertionToRequestTab(requestContext, insertionText) {
     const requestTab = getAIRequestTab(requestContext);
     const baseText = requestTab?.currentMarkdownSource || requestContext.docText;
     const nextContent = replaceTextRange(baseText, insertAt, insertAt, insertionText);
-    return updateInactiveAIRequestTab(
+    return dispatchToInactiveAIRequestTab(
         requestContext,
+        {
+            changes: { from: insertAt, to: insertAt, insert: insertionText },
+            selection: EditorSelection.single(insertAt + insertionText.length),
+        },
         nextContent,
         insertAt + insertionText.length,
         insertAt + insertionText.length
@@ -1679,7 +1709,16 @@ function applyAIReplacementToRequestTab(requestContext, replacementText) {
     const requestTab = getAIRequestTab(requestContext);
     const baseText = requestTab?.currentMarkdownSource || requestContext.docText;
     const nextContent = replaceTextRange(baseText, from, to, replacementText);
-    return updateInactiveAIRequestTab(requestContext, nextContent, nextAnchor, nextHead);
+    return dispatchToInactiveAIRequestTab(
+        requestContext,
+        {
+            changes: { from, to, insert: replacementText },
+            selection: EditorSelection.single(nextAnchor, nextHead),
+        },
+        nextContent,
+        nextAnchor,
+        nextHead
+    );
 }
 
 async function sendPrompt() {
