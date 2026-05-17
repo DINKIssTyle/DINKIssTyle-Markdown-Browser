@@ -248,6 +248,7 @@ function getAIProgressTitle(title = "") {
 function updatePromptBusyUI() {
     const isBusy = false;
     const isSupportAgentVisible = !!supportAgentPromptText;
+    const isPromptInputActive = !isSupportAgentVisible && isPromptBoxVisible() && document.activeElement === el.aiPromptInput;
     const promptValue = isSupportAgentVisible ? supportAgentPromptText : lastPromptInputValue;
 
     el.aiPromptBox.classList.toggle('is-busy', isBusy);
@@ -271,7 +272,9 @@ function updatePromptBusyUI() {
 
     el.aiPromptBox.style.setProperty('--ai-prompt-progress', '0%');
     el.aiPromptInput.disabled = false;
-    el.aiPromptInput.value = promptValue;
+    if (!isPromptInputActive) {
+        el.aiPromptInput.value = promptValue;
+    }
     if (isSupportAgentVisible) {
         el.aiPromptInput.placeholder = '';
     } else {
@@ -306,7 +309,6 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
     } else {
         updateProgress(progressTitle, nextProgress);
     }
-    hidePromptBoxElement();
     updatePromptBusyUI();
     showAIWaitingTicker();
 }
@@ -928,7 +930,7 @@ function hideAIPanel() {
 
 function updatePromptInputLayout() {
     if (!el.aiPromptInput || !el.aiPromptBox) return;
-    if (aiPromptBusyState) {
+    if (aiPromptBusyState && !isPromptBoxVisible()) {
         el.aiPromptInput.style.height = '';
         el.aiPromptInput.style.overflowY = 'hidden';
         return;
@@ -983,8 +985,8 @@ function positionPromptBox() {
 }
 
 function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySelection = false } = {}) {
-    if (!isGeneralAIActive() || isAIProgressVisible()) return false;
-    if (isSpellcheckActive()) {
+    if (!isGeneralAIActive()) return false;
+    if (isSpellcheckActive() && !isAIProgressVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
         return false;
     }
@@ -999,7 +1001,6 @@ function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySel
         el.aiPromptInput.value = "";
         lastPromptInputValue = "";
     }
-    clearPromptBusyState();
     showPromptBoxElement();
     updatePromptPlaceholder();
     if (focusInput) {
@@ -1015,12 +1016,7 @@ function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySel
 }
 
 function refreshPromptForSelection({ focusInput = false, preserveInput = true } = {}) {
-    if (isAIProgressVisible()) {
-        hidePromptBoxElement();
-        updatePromptBusyUI();
-        return true;
-    }
-    if (isSpellcheckActive()) {
+    if (isSpellcheckActive() && !isAIProgressVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
         return false;
     }
@@ -1359,10 +1355,6 @@ export function bindAIEvents() {
     };
 
     el.aiPromptClose.onclick = () => {
-        if (isAIProgressVisible()) {
-            cancelActiveAIRequest();
-            return;
-        }
         hidePromptBox();
     };
     el.aiPromptSend.onclick = sendPrompt;
@@ -1457,12 +1449,7 @@ function handleEditorKeydown(e) {
 }
 
 function handleSelectionChange() {
-    if (isAIProgressVisible()) {
-        hidePromptBoxElement();
-        updatePromptBusyUI();
-        return;
-    }
-    if (isSpellcheckActive()) {
+    if (isSpellcheckActive() && !isAIProgressVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
         return;
     }
@@ -1501,7 +1488,7 @@ export function showAskAIPrompt() {
         showToast("Ask AI is available in editor mode.");
         return false;
     }
-    if (isSpellcheckActive()) {
+    if (isSpellcheckActive() && !isAIProgressVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
         return false;
     }

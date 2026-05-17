@@ -8,10 +8,10 @@ import 'katex/dist/katex.min.css';
 import { DEFAULT_CONTENT_FONT_SIZE, MIN_SPLASH_MS } from './config.js';
 
 // ── Module Imports ─────────────────────────────────────────
-import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector } from './main-state.js';
+import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector, normalizeFileURLPath } from './main-state.js';
 import {
     createTab, getActiveTab, syncGlobalsFromTab, renderTabs,
-    createAndSwitchToNewTab, closeTab, reopenClosedTab, activateTabByShortcut,
+    createAndSwitchToNewTab, closeTab, reopenClosedTab, activateTabByShortcut, switchToTab,
 } from './main-tabs.js';
 import {
     handleOpenFile, openPath, openIncomingFiles, openAbout, openFeatures, openShortcuts, openThirdPartyNotices,
@@ -299,7 +299,7 @@ function bindHomeScreen() {
         await renderRecentFiles();
     });
 
-    el.recentList.addEventListener('click', event => {
+    el.recentList.addEventListener('click', async event => {
         const pinButton = event.target.closest('.recent-pin-btn');
         if (pinButton) {
             const item = pinButton.closest('.recent-item');
@@ -310,7 +310,7 @@ function bindHomeScreen() {
 
         const item = event.target.closest('.recent-item');
         if (!item) return;
-        openPath(item.dataset.path, { pushHistory: true, setHome: true });
+        await openRecentFile(item.dataset.path);
     });
 
     el.searchResults.addEventListener('click', event => {
@@ -378,6 +378,19 @@ function bindHomeScreen() {
             await openAbout(true);
         };
     }
+}
+
+async function openRecentFile(path) {
+    const normalizedPath = normalizeFileURLPath(path);
+    const openTab = state.tabs.find(tab => {
+        const tabPath = normalizeFileURLPath(tab.editingSourcePath || tab.path || "");
+        return tabPath === normalizedPath;
+    });
+    if (openTab) {
+        await switchToTab(openTab.id);
+        return;
+    }
+    await openPath(normalizedPath, { pushHistory: true, setHome: true });
 }
 
 function clampRecentFileDisplayLimit(value) {
