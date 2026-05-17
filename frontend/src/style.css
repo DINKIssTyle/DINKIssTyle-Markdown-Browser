@@ -2686,13 +2686,13 @@ html.dark .editor-ai-dock {
             color-mix(in srgb, var(--surface-color) 32%, var(--surface-elevated) 68%),
             var(--surface-elevated));
     box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04);
-    --editor-ai-btn-border: #5b4479;
-    --editor-ai-btn-bg: #543131;
-    --editor-ai-btn-bg-hover: #4a3962;
-    --editor-ai-btn-fg: #d6a6ff;
-    --editor-ai-btn-border-strong: #735597;
-    --editor-ai-btn-bg-active: #4a3962;
-    --editor-ai-btn-fg-active: #f1d6ff;
+    --editor-ai-btn-border: color-mix(in srgb, var(--accent-color) 28%, var(--border-color));
+    --editor-ai-btn-bg: color-mix(in srgb, var(--accent-color) 12%, var(--surface-elevated));
+    --editor-ai-btn-bg-hover: color-mix(in srgb, var(--accent-color) 22%, var(--surface-elevated));
+    --editor-ai-btn-fg: color-mix(in srgb, var(--accent-gradient-end) 82%, var(--text-color));
+    --editor-ai-btn-border-strong: color-mix(in srgb, var(--accent-color) 52%, transparent);
+    --editor-ai-btn-bg-active: color-mix(in srgb, var(--accent-color) 34%, var(--surface-elevated));
+    --editor-ai-btn-fg-active: color-mix(in srgb, var(--accent-gradient-end) 90%, white);
 }
 
 html.dark .editor-ai-dock.is-collapsed {
