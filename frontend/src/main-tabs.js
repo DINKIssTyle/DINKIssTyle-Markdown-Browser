@@ -9,7 +9,7 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { clearTransientEditorOverlays, exitEditMode, getEditorSelectionSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { clearTransientEditorOverlays, exitEditMode, getEditorSelectionSnapshot, getEditorStateSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -65,6 +65,10 @@ export function syncTabFromGlobals(tab) {
     tab.isEditing = state.isEditing;
     tab.editorOriginalContent = state.editorOriginalContent;
     tab.editorSelection = getEditorSelectionSnapshot() || state.editorSelection || null;
+    const editorState = getEditorStateSnapshot();
+    if (state.isEditing && tab.id === state.activeTabId && editorState) {
+        tab.editorState = editorState;
+    }
     tab.editorSelections = tab.editorSelections || {};
     const editorSelectionKey = state.editingSourcePath || state.currentFilePath;
     if (editorSelectionKey && tab.editorSelection) {

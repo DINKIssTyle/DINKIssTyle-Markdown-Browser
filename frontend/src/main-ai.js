@@ -8,7 +8,7 @@ import { persistAppSettings } from './main-settings.js';
 import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/app/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
-import { showToast } from './main-ui.js';
+import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, updateProgress } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import gfmReference from './prompts/GFM.md?raw';
@@ -66,6 +66,7 @@ let unloadingInstanceId = "";
 let aiRequestInFlight = false;
 let aiPromptHideTimer = null;
 let aiPromptBusyState = null;
+let aiProgressTaskId = 0;
 let supportAgentPromptText = "";
 let supportAgentTransitionTimer = null;
 let lastPromptInputValue = "";
@@ -230,11 +231,9 @@ function getPromptBusyPlaceholder(label = "") {
 }
 
 function updatePromptBusyUI() {
-    const isBusy = !!aiPromptBusyState;
-    const isSupportAgentVisible = !!supportAgentPromptText && !isBusy;
-    const promptValue = isBusy
-        ? (aiPromptBusyState.inputText || '')
-        : (isSupportAgentVisible ? supportAgentPromptText : lastPromptInputValue);
+    const isBusy = false;
+    const isSupportAgentVisible = !!supportAgentPromptText;
+    const promptValue = isSupportAgentVisible ? supportAgentPromptText : lastPromptInputValue;
 
     el.aiPromptBox.classList.toggle('is-busy', isBusy);
     el.aiPromptBox.classList.toggle('is-support-agent', isSupportAgentVisible);
@@ -255,19 +254,13 @@ function updatePromptBusyUI() {
         String(isSupportAgentVisible ? AI_SUPPORT_REPORT_MAX_LINES : AI_PROMPT_INPUT_MAX_LINES)
     );
 
-    if (isBusy) {
-        el.aiPromptBox.style.setProperty('--ai-prompt-progress', `${aiPromptBusyState.progress}%`);
-        el.aiPromptInput.value = promptValue;
-        el.aiPromptInput.placeholder = aiPromptBusyState.placeholder;
+    el.aiPromptBox.style.setProperty('--ai-prompt-progress', '0%');
+    el.aiPromptInput.disabled = false;
+    el.aiPromptInput.value = promptValue;
+    if (isSupportAgentVisible) {
+        el.aiPromptInput.placeholder = '';
     } else {
-        el.aiPromptBox.style.setProperty('--ai-prompt-progress', '0%');
-        el.aiPromptInput.disabled = false;
-        el.aiPromptInput.value = promptValue;
-        if (isSupportAgentVisible) {
-            el.aiPromptInput.placeholder = '';
-        } else {
-            updatePromptPlaceholder();
-        }
+        updatePromptPlaceholder();
     }
     updatePromptInputLayout();
 }
@@ -292,8 +285,13 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
         placeholder: getPromptBusyPlaceholder(label),
         inputText: aiPromptBusyState?.inputText || "",
     };
-    positionPromptBox();
-    showPromptBoxElement();
+    const progressTitle = aiPromptBusyState.placeholder;
+    if (!aiProgressTaskId) {
+        aiProgressTaskId = beginProgressTask(progressTitle, nextProgress);
+    } else {
+        updateProgress(progressTitle, nextProgress, { active: true });
+    }
+    hidePromptBoxElement();
     updatePromptBusyUI();
     showAIWaitingTicker();
 }
@@ -318,52 +316,15 @@ function getAIDeltaPreview(text = "") {
 }
 
 function showAIDeltaTicker(kind = "message", text = "") {
-    if (!el.aiPromptStreamTicker || !el.aiPromptStreamKind || !el.aiPromptStreamText) {
-        return;
-    }
-
-    clearTimeout(aiDeltaTickerHideTimer);
-    const tickerVersion = ++aiDeltaTickerVersion;
     const isReasoning = kind === "reasoning";
-    el.aiPromptStreamTicker.hidden = false;
-    el.aiPromptStreamKind.textContent = isReasoning ? "Reasoning" : "Response";
-    el.aiPromptStreamText.textContent = text;
-    el.aiPromptStreamTicker.classList.toggle('is-reasoning', isReasoning);
-    el.aiPromptStreamTicker.classList.remove('is-waiting');
-    el.aiPromptStreamTicker.classList.remove('is-visible');
-    el.aiPromptBox?.classList.remove('is-awaiting-delta');
-    el.aiPromptBox?.classList.add('is-streaming-delta');
-
-    requestAnimationFrame(() => {
-        if (tickerVersion !== aiDeltaTickerVersion) {
-            return;
-        }
-        el.aiPromptStreamTicker?.classList.add('is-visible');
-    });
-
-    aiDeltaTickerHideTimer = setTimeout(() => {
-        if (tickerVersion !== aiDeltaTickerVersion) {
-            return;
-        }
-        el.aiPromptStreamTicker?.classList.remove('is-visible');
-        el.aiPromptBox?.classList.remove('is-streaming-delta');
-    }, AI_DELTA_TICKER_HIDE_MS);
+    showProgressDelta(isReasoning ? `Reasoning: ${text}` : text);
 }
 
 function showAIWaitingTicker() {
-    if (!aiPromptBusyState || !el.aiPromptStreamTicker || !el.aiPromptStreamKind || !el.aiPromptStreamText) {
+    if (!aiPromptBusyState) {
         return;
     }
-    if (el.aiPromptBox?.classList.contains('is-streaming-delta')) {
-        return;
-    }
-
-    el.aiPromptStreamKind.textContent = "Ready";
-    el.aiPromptStreamText.textContent = "Preparing response";
-    el.aiPromptStreamTicker.hidden = false;
-    el.aiPromptStreamTicker.classList.remove('is-reasoning');
-    el.aiPromptStreamTicker.classList.add('is-waiting', 'is-visible');
-    el.aiPromptBox?.classList.add('is-awaiting-delta');
+    showProgressDelta("Preparing response");
 }
 
 function flushAIDeltaTickerQueue() {
@@ -476,11 +437,16 @@ function setPromptBusyInputText(value = "") {
         ...aiPromptBusyState,
         inputText: String(value || ""),
     };
+    updateProgress(String(value || aiPromptBusyState.placeholder), aiPromptBusyState.progress, { active: true });
     updatePromptBusyUI();
 }
 
 function clearPromptBusyState() {
     aiPromptBusyState = null;
+    if (aiProgressTaskId) {
+        finishProgressTask(aiProgressTaskId);
+        aiProgressTaskId = 0;
+    }
     updatePromptBusyUI();
 }
 
@@ -543,9 +509,6 @@ function clearSupportAgentPrompt({ focusInput = false } = {}) {
 function hideAIProgressOverlay() {
     clearAIDeltaTicker();
     clearPromptBusyState();
-    requestAnimationFrame(() => {
-        refreshPromptForSelection({ preserveInput: false });
-    });
 }
 
 function isAIProgressVisible() {
@@ -996,8 +959,7 @@ function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySel
 
 function refreshPromptForSelection({ focusInput = false, preserveInput = true } = {}) {
     if (isAIProgressVisible()) {
-        positionPromptBox();
-        showPromptBoxElement();
+        hidePromptBoxElement();
         updatePromptBusyUI();
         return true;
     }
@@ -1424,8 +1386,7 @@ function handleEditorKeydown(e) {
 
 function handleSelectionChange() {
     if (isAIProgressVisible()) {
-        positionPromptBox();
-        showPromptBoxElement();
+        hidePromptBoxElement();
         updatePromptBusyUI();
         return;
     }
@@ -1479,9 +1440,14 @@ export function showAskAIPrompt() {
     return showPromptBox({ focusInput: true, preserveInput: true, allowEmptySelection: true });
 }
 
-export function hidePromptBox({ clearInput = true, restoreEditorFocus = true } = {}) {
-    if (isAIProgressVisible()) return;
+export function hidePromptBox({ clearInput = true, restoreEditorFocus = true, preserveSupport = false } = {}) {
     aiPromptForcedVisible = false;
+    if (preserveSupport && isSupportAgentPromptVisible()) {
+        positionPromptBox();
+        showPromptBoxElement();
+        updatePromptBusyUI();
+        return;
+    }
     clearSupportAgentPrompt();
     if (supportAgentTransitionTimer) {
         clearTimeout(supportAgentTransitionTimer);
@@ -1607,6 +1573,115 @@ function sanitizeGhostText(text, suffix = "") {
     return ghostText;
 }
 
+function getAIPromptRequestContext(selection) {
+    const from = selection.from;
+    const to = selection.to;
+    const docText = cmView.state.doc.toString();
+    return {
+        tabId: state.activeTabId,
+        path: state.editingSourcePath || state.currentFilePath,
+        docText,
+        selection: {
+            from,
+            to,
+            head: selection.head,
+            anchor: selection.anchor,
+            empty: selection.empty,
+            isAllSelected: from === 0 && to === docText.length,
+        },
+    };
+}
+
+function replaceTextRange(text, from, to, replacement) {
+    const start = Math.max(0, Math.min(from, text.length));
+    const end = Math.max(start, Math.min(to, text.length));
+    return `${text.slice(0, start)}${replacement}${text.slice(end)}`;
+}
+
+function isActiveAIRequestTab(requestContext) {
+    const activePath = state.editingSourcePath || state.currentFilePath;
+    return state.activeTabId === requestContext.tabId
+        && state.isEditing
+        && !!cmView
+        && (!requestContext.path || activePath === requestContext.path);
+}
+
+function getAIRequestTab(requestContext) {
+    const requestTab = state.tabs.find(tab => tab.id === requestContext.tabId) || null;
+    if (!requestTab) {
+        return null;
+    }
+    const tabPath = requestTab.editingSourcePath || requestTab.path;
+    if (requestContext.path && tabPath !== requestContext.path) {
+        return null;
+    }
+    return requestTab;
+}
+
+function updateInactiveAIRequestTab(requestContext, nextContent, selectionAnchor, selectionHead) {
+    const requestTab = getAIRequestTab(requestContext);
+    if (!requestTab) {
+        return false;
+    }
+    requestTab.currentMarkdownSource = nextContent;
+    requestTab.editorState = null;
+    requestTab.editorSelection = { anchor: selectionAnchor, head: selectionHead };
+    requestTab.editorSelections = requestTab.editorSelections || {};
+    const selectionKey = requestTab.editingSourcePath || requestContext.path || requestTab.path;
+    if (selectionKey) {
+        requestTab.editorSelections[selectionKey] = requestTab.editorSelection;
+    }
+    return true;
+}
+
+function applyAIInsertionToRequestTab(requestContext, insertionText) {
+    const insertAt = requestContext.selection.head;
+    if (isActiveAIRequestTab(requestContext)) {
+        cmView.dispatch({
+            changes: { from: insertAt, to: insertAt, insert: insertionText },
+            selection: { anchor: insertAt + insertionText.length }
+        });
+        renderMarkdown(cmView.state.doc.toString());
+        requestAnimationFrame(() => {
+            cmView?.focus();
+        });
+        return true;
+    }
+
+    const requestTab = getAIRequestTab(requestContext);
+    const baseText = requestTab?.currentMarkdownSource || requestContext.docText;
+    const nextContent = replaceTextRange(baseText, insertAt, insertAt, insertionText);
+    return updateInactiveAIRequestTab(
+        requestContext,
+        nextContent,
+        insertAt + insertionText.length,
+        insertAt + insertionText.length
+    );
+}
+
+function applyAIReplacementToRequestTab(requestContext, replacementText) {
+    const { from, to, isAllSelected } = requestContext.selection;
+    const nextHead = isAllSelected ? replacementText.length : from + replacementText.length;
+    const nextAnchor = isAllSelected ? 0 : from;
+
+    if (isActiveAIRequestTab(requestContext)) {
+        cmView.dispatch({
+            changes: { from, to, insert: replacementText },
+            selection: { anchor: nextAnchor, head: nextHead }
+        });
+        renderMarkdown(cmView.state.doc.toString());
+        requestAnimationFrame(() => {
+            cmView?.focus();
+        });
+        return true;
+    }
+
+    const requestTab = getAIRequestTab(requestContext);
+    const baseText = requestTab?.currentMarkdownSource || requestContext.docText;
+    const nextContent = replaceTextRange(baseText, from, to, replacementText);
+    return updateInactiveAIRequestTab(requestContext, nextContent, nextAnchor, nextHead);
+}
+
 async function sendPrompt() {
     if (!isGeneralAIActive()) {
         hidePromptBox();
@@ -1622,11 +1697,11 @@ async function sendPrompt() {
     lastPromptInputValue = "";
 
     const sel = cmView.state.selection.main;
-    const hasSelection = !sel.empty;
-    const isAllSelected = sel.from === 0 && sel.to === cmView.state.doc.length;
-    const docText = cmView.state.doc.toString();
+    const requestContext = getAIPromptRequestContext(sel);
+    const hasSelection = !requestContext.selection.empty;
+    const docText = requestContext.docText;
     const contextualPrompt = hasSelection
-        ? buildAIIntentPrompt(docText, sel.from, sel.to, userPrompt).prompt
+        ? buildAIIntentPrompt(docText, requestContext.selection.from, requestContext.selection.to, userPrompt).prompt
         : buildAskAIQuestionPrompt(userPrompt);
     const systemPrompt = hasSelection ? getAIEditSystemPrompt() : getAIQuestionSystemPrompt();
     if (state.aiSupportAgentEnabled || !hasSelection) {
@@ -1704,11 +1779,7 @@ async function sendPrompt() {
             if (!structuredPayload && shouldInsertAtCursor) {
                 const insertionText = extractFallbackAIReplacement(resultText);
                 if (insertionText.trim()) {
-                    insertPlainTextAtCursor(insertionText);
-                    renderMarkdown(cmView.state.doc.toString());
-                    requestAnimationFrame(() => {
-                        cmView?.focus();
-                    });
+                    applyAIInsertionToRequestTab(requestContext, insertionText);
                     aiRequestInFlight = false;
                     return;
                 }
@@ -1721,14 +1792,10 @@ async function sendPrompt() {
             if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
                 const insertionText = structuredPayload.replacement || extractFallbackAIReplacement(resultText);
                 if (insertionText.trim()) {
-                    insertPlainTextAtCursor(insertionText);
-                    renderMarkdown(cmView.state.doc.toString());
+                    applyAIInsertionToRequestTab(requestContext, insertionText);
                     if (state.aiSupportAgentEnabled || structuredPayload.report) {
                         showSupportAgentPrompt(structuredPayload.report || SUPPORT_AGENT_FALLBACK_REPORT);
                     }
-                    requestAnimationFrame(() => {
-                        cmView?.focus();
-                    });
                     aiRequestInFlight = false;
                     return;
                 }
@@ -1737,9 +1804,6 @@ async function sendPrompt() {
                 ? structuredPayload.report
                 : normalizeSupportReport(resultText);
             showSupportAgentPrompt(questionReport);
-            requestAnimationFrame(() => {
-                cmView?.focus();
-            });
             aiRequestInFlight = false;
             return;
         }
@@ -1753,37 +1817,24 @@ async function sendPrompt() {
 
         if (structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) {
             showSupportAgentPrompt(structuredPayload.report || normalizeSupportReport(resultText));
-            requestAnimationFrame(() => {
-                cmView?.focus();
-            });
             aiRequestInFlight = false;
             return;
         }
 
         if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
-            resultText = structuredPayload.replacement || docText.slice(sel.from, sel.to);
+            resultText = structuredPayload.replacement || docText.slice(requestContext.selection.from, requestContext.selection.to);
             supportReport = structuredPayload.report;
         } else if (state.aiSupportAgentEnabled || hasTaggedSupportReport) {
-            resultText = structuredPayload?.replacement || docText.slice(sel.from, sel.to);
+            resultText = structuredPayload?.replacement || docText.slice(requestContext.selection.from, requestContext.selection.to);
             supportReport = structuredPayload?.report || normalizeSupportReport(resultText);
         } else {
             resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
         }
 
-        cmView.dispatch({
-            changes: { from: sel.from, to: sel.to, insert: resultText },
-            selection: isAllSelected
-                ? { anchor: 0, head: resultText.length }
-                : { anchor: sel.from, head: sel.from + resultText.length }
-        });
-
-        renderMarkdown(cmView.state.doc.toString());
+        applyAIReplacementToRequestTab(requestContext, resultText);
         if (state.aiSupportAgentEnabled || (hasTaggedSupportReport && !structuredPayload?.intent)) {
             showSupportAgentPrompt(supportReport);
         }
-        requestAnimationFrame(() => {
-            cmView?.focus();
-        });
         aiRequestInFlight = false;
     } catch (err) {
         aiRequestInFlight = false;

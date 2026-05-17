@@ -13,7 +13,7 @@ import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
 
-import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField } from '@codemirror/state';
+import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { SearchCursor } from '@codemirror/search';
@@ -49,6 +49,7 @@ let toolbarDisabledTooltipButton = null;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
+const historyCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
@@ -814,6 +815,10 @@ export function getCurrentEditorText() {
     return state.currentMarkdownSource || "";
 }
 
+export function getEditorStateSnapshot() {
+    return cmView?.state || null;
+}
+
 export function isEditorFocused() {
     if (!cmView?.contentDOM) return false;
     const activeElement = document.activeElement;
@@ -849,6 +854,13 @@ function syncEditorStateToBackend() {
     SyncEditorState(state.isEditing, hasUnsaved, savePath, content, tabTitle).catch((error) => {
         LogError(`SyncEditorState failed: ${error}`);
     });
+}
+
+function resetEditorHistoryAroundSync(applySync) {
+    if (!cmView) return;
+    cmView.dispatch({ effects: historyCompartment.reconfigure([]) });
+    applySync();
+    cmView.dispatch({ effects: historyCompartment.reconfigure(history()) });
 }
 
 function formatMarkdownDestination(destination) {
@@ -2130,7 +2142,7 @@ export function clearSpellcheckSuggestions() {
 
 export function clearTransientEditorOverlays() {
     clearSpellcheckSuggestions();
-    hidePromptBox({ restoreEditorFocus: false });
+    hidePromptBox({ restoreEditorFocus: false, preserveSupport: true });
 }
 
 async function runSpellcheck() {
@@ -2626,7 +2638,7 @@ export function initCodeMirror() {
             }])),
             slashMenuKeymap,
             lineNumbers(),
-            history(),
+            historyCompartment.of(history()),
             keymap.of([
                 {
                     key: '/',
@@ -2759,7 +2771,10 @@ export function initCodeMirror() {
                     const val = update.state.doc.toString();
                     state.currentMarkdownSource = val;
                     const tab = getActiveTab();
-                    if (tab) tab.currentMarkdownSource = val;
+                    if (tab) {
+                        tab.currentMarkdownSource = val;
+                        tab.editorState = update.state;
+                    }
                     const didUpdateTabTitle = updateActiveTabTitleFromContent(val);
                     if (didUpdateTabTitle || hadUnsavedChanges !== (state.isEditing && val !== state.editorOriginalContent)) {
                         renderTabs();
@@ -2784,6 +2799,7 @@ export function initCodeMirror() {
                         const tab = getActiveTab();
                         if (tab) {
                             tab.editorSelection = state.editorSelection;
+                            tab.editorState = update.state;
                         }
                     }
                     updatePreviewForEditorChange(update);
@@ -2833,27 +2849,47 @@ export function syncEditorSessionFromState() {
     initCodeMirror();
 
     const nextContent = state.currentMarkdownSource || "";
-    const currentContent = cmView.state.doc.toString();
     const nextSelection = normalizeEditorSelectionSnapshot(state.editorSelection, nextContent.length);
+    const activeTab = getActiveTab();
+    if (activeTab?.editorState?.doc?.toString?.() === nextContent) {
+        cmView.setState(activeTab.editorState);
+        applyEditorFontSize();
+        state.editorSelection = normalizeEditorSelectionSnapshot(
+            {
+                anchor: cmView.state.selection.main.anchor,
+                head: cmView.state.selection.main.head,
+            },
+            nextContent.length
+        );
+        activeTab.editorSelection = state.editorSelection;
+    } else if (activeTab?.editorState) {
+        activeTab.editorState = null;
+    }
+
+    const currentContent = cmView.state.doc.toString();
     if (currentContent !== nextContent) {
         clearSpellcheckSuggestions();
-        cmView.dispatch({
-            changes: { from: 0, to: cmView.state.doc.length, insert: nextContent },
-            selection: EditorSelection.single(nextSelection.anchor, nextSelection.head)
+        resetEditorHistoryAroundSync(() => {
+            cmView.dispatch({
+                changes: { from: 0, to: cmView.state.doc.length, insert: nextContent },
+                selection: EditorSelection.single(nextSelection.anchor, nextSelection.head),
+                annotations: Transaction.addToHistory.of(false)
+            });
         });
     } else {
         const currentSelection = cmView.state.selection.main;
         if (currentSelection.anchor !== nextSelection.anchor || currentSelection.head !== nextSelection.head) {
             cmView.dispatch({
-                selection: EditorSelection.single(nextSelection.anchor, nextSelection.head)
+                selection: EditorSelection.single(nextSelection.anchor, nextSelection.head),
+                annotations: Transaction.addToHistory.of(false)
             });
         }
     }
 
     state.editorSelection = nextSelection;
-    const activeTab = getActiveTab();
     if (activeTab) {
         activeTab.editorSelection = nextSelection;
+        activeTab.editorState = cmView.state;
     }
 
     if (!state.editingSourcePath) {
@@ -2912,9 +2948,16 @@ export function enterEditMode() {
     state.editingPreviewPath = state.currentFilePath;
     state.editingPreviewFolder = state.currentFolder;
 
-    cmView.dispatch({
-        changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource }
+    resetEditorHistoryAroundSync(() => {
+        cmView.dispatch({
+            changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource },
+            annotations: Transaction.addToHistory.of(false)
+        });
     });
+    const tab = getActiveTab();
+    if (tab) {
+        tab.editorState = cmView.state;
+    }
     lastPreviewCursorLine = getCursorLineNumber(cmView.state);
     lastPreviewTopLine = 0;
     if (el.edRenderMode) {
