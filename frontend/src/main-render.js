@@ -45,6 +45,7 @@ const MARKDOWN_ALERT_TYPES = Object.freeze({
     caution: { label: 'Caution', icon: 'report' },
 });
 let previewRenderToken = 0;
+let activeTabRenderToken = 0;
 let livePreviewBlocks = [];
 let imageViewerZoom = 1;
 let imageViewerFit = true;
@@ -1303,6 +1304,9 @@ export async function renderRecentFiles() {
 export async function renderActiveTab() {
     const tab = getActiveTab();
     if (!tab) return;
+    const renderToken = ++activeTabRenderToken;
+    const tabId = tab.id;
+    const shouldContinue = () => renderToken === activeTabRenderToken && state.activeTabId === tabId;
 
     hideLinkTooltip();
     syncEngineSelector();
@@ -1320,10 +1324,11 @@ export async function renderActiveTab() {
     }
 
     const { updateNavButtons } = await import('./main-navigation.js');
+    if (!shouldContinue()) return;
     updateNavButtons();
 
     if (state.currentFilePath === HOME_SCREEN_PATH) {
-        await renderHomeScreen();
+        await renderHomeScreen(shouldContinue);
         return;
     }
 
@@ -1349,9 +1354,9 @@ export async function renderActiveTab() {
     getScroller().classList.toggle('html-mode', state.currentDocumentType === 'html');
     getScroller().classList.toggle('image-mode', state.currentDocumentType === 'image');
     if (state.currentDocumentType === 'html') {
-        await renderHTMLDocument(state.currentFilePath);
+        await renderHTMLDocument(state.currentFilePath, shouldContinue);
     } else if (state.currentDocumentType === 'image') {
-        await renderImageDocument(state.currentFilePath);
+        await renderImageDocument(state.currentFilePath, shouldContinue);
     } else if (state.currentDocumentType === 'unsupported') {
         renderUnsupportedDocument(state.currentFilePath);
     } else {
@@ -1363,6 +1368,7 @@ export async function renderActiveTab() {
         }
         await renderMarkdown(state.currentMarkdownSource);
     }
+    if (!shouldContinue()) return;
 
     const saved = state.navHistory[state.navIndex]?.scroll ?? 0;
     getScroller().scrollTop = saved;
@@ -1397,8 +1403,9 @@ export async function renderActiveTab() {
     refreshSidebarContent();
 }
 
-async function renderHomeScreen() {
+async function renderHomeScreen(shouldContinue = () => true) {
     if (state.isEditing) await exitEditMode(false);
+    if (!shouldContinue()) return;
     // 다른 탭에서 편집 중이었을 때 남아있는 에디터 DOM 정리
     el.editToolbar.classList.add('hidden');
     el.editorView.classList.add('hidden');
@@ -1406,6 +1413,7 @@ async function renderHomeScreen() {
     el.btnEdit.classList.remove('active');
     el.selectEngine.disabled = false;
     await renderRecentFiles();
+    if (!shouldContinue()) return;
     cleanupHTMLFrame();
     clearHighlight();
     getScroller().classList.remove('html-mode');
@@ -1417,12 +1425,16 @@ async function renderHomeScreen() {
     syncEditingPreviewReturnButton();
 
     const { updateNavButtons } = await import('./main-navigation.js');
+    if (!shouldContinue()) return;
     updateNavButtons();
 }
 
 // ── Post Processing ────────────────────────────────────────
 
 export async function previewEditingLinkTarget(rel) {
+    const tab = getActiveTab();
+    const tabId = tab?.id || "";
+    const isSameEditingTab = () => state.activeTabId === tabId && state.isEditing;
     const { pathPart, anchor } = splitLinkTarget(rel);
 
     if (!pathPart && anchor) {
@@ -1453,6 +1465,9 @@ export async function previewEditingLinkTarget(rel) {
             updateProgress('Reading markdown file', 48);
             previewContent = await ReadFile(resolvedPath);
         }
+        if (!isSameEditingTab()) {
+            return;
+        }
 
         state.editingPreviewPath = resolvedPath;
         state.editingPreviewFolder = isBundledDocumentPath(resolvedPath) ? "" : getPathDirname(resolvedPath);
@@ -1460,6 +1475,9 @@ export async function previewEditingLinkTarget(rel) {
         el.htmlFrame.classList.add('hidden');
         updateProgress('Rendering document', 82);
         await renderMarkdown(previewContent);
+        if (!isSameEditingTab()) {
+            return;
+        }
         if (anchor) {
             scrollToAnchor(anchor);
         }
@@ -1469,10 +1487,14 @@ export async function previewEditingLinkTarget(rel) {
 }
 
 export async function restoreEditingPreview() {
+    const tabId = state.activeTabId;
     if (!state.isEditing) return;
     state.editingPreviewPath = state.editingSourcePath || state.currentFilePath;
     state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
     await renderMarkdown(getCurrentEditorText());
+    if (state.activeTabId !== tabId || !state.isEditing) {
+        return;
+    }
 }
 
 export async function openEditingPreviewInNewTab() {
@@ -1485,7 +1507,7 @@ export async function openEditingPreviewInNewTab() {
     await openPath(path, { newTab: true, pushHistory: true, setHome: true });
 }
 
-async function renderImageDocument(path) {
+async function renderImageDocument(path, shouldContinue = () => true) {
     cleanupHTMLFrame({ resetSource: true });
     clearHighlight();
     el.homeScreen.classList.add('hidden');
@@ -1493,6 +1515,7 @@ async function renderImageDocument(path) {
     el.markdownContainer.classList.remove('hidden');
 
     const imageSrc = await ReadImageAsDataURL(path);
+    if (!shouldContinue()) return;
     const imageName = basename(path);
     el.markdownContainer.innerHTML = `
         <div class="image-viewer-shell">
@@ -1801,7 +1824,7 @@ function wireHTMLDocumentLinks(doc) {
     });
 }
 
-async function renderHTMLDocument(path) {
+async function renderHTMLDocument(path, shouldContinue = () => true) {
     cleanupHTMLFrame();
     clearHighlight();
     el.markdownContainer.classList.add('hidden');
@@ -1821,6 +1844,10 @@ async function renderHTMLDocument(path) {
         };
 
         const tryResolveFromDocument = () => {
+            if (!shouldContinue()) {
+                settle(resolve);
+                return false;
+            }
             try {
                 const doc = el.htmlFrame.contentDocument;
                 if (!doc) {
@@ -1849,6 +1876,10 @@ async function renderHTMLDocument(path) {
         };
 
         const loadTimeout = window.setTimeout(() => {
+            if (!shouldContinue()) {
+                settle(resolve);
+                return;
+            }
             if (tryResolveFromDocument()) {
                 settle(resolve);
                 return;

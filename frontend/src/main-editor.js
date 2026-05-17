@@ -3199,35 +3199,15 @@ export async function saveCurrentDocumentAs() {
     const contentToSave = cmView.state.doc.toString();
     const currentPath = state.editingSourcePath || state.currentFilePath || "";
     const defaultName = basename(currentPath) || "Untitled.md";
+    const savingTabId = state.activeTabId;
+    const savingTab = getActiveTab();
     const selectedPath = await ShowSaveFileDialog(defaultName);
     if (!selectedPath) return false;
 
-    const savingTab = getActiveTab();
     try {
         await SaveFile(selectedPath, contentToSave);
 
         const selectedFolder = getPathDirname(selectedPath);
-        state.currentFilePath = selectedPath;
-        state.currentFolder = selectedFolder;
-        state.currentDocumentType = 'markdown';
-        state.currentMarkdownSource = contentToSave;
-        state.editorOriginalContent = contentToSave;
-        state.editingSourcePath = selectedPath;
-        state.editingSourceFolder = selectedFolder;
-        state.editingPreviewPath = selectedPath;
-        state.editingPreviewFolder = selectedFolder;
-        state.homeTargetPath = selectedPath;
-        if (el.currentPath) {
-            el.currentPath.innerText = selectedPath;
-        }
-
-        if (state.navIndex >= 0 && state.navIndex < state.navHistory.length) {
-            state.navHistory[state.navIndex].path = selectedPath;
-        } else {
-            state.navHistory = [{ path: selectedPath, scroll: 0 }];
-            state.navIndex = 0;
-        }
-
         if (savingTab) {
             savingTab.path = selectedPath;
             savingTab.kind = 'document';
@@ -3241,11 +3221,35 @@ export async function saveCurrentDocumentAs() {
             savingTab.editingPreviewPath = selectedPath;
             savingTab.editingPreviewFolder = selectedFolder;
             savingTab.homeTargetPath = selectedPath;
-            savingTab.navHistory = state.navHistory.map(item => ({ ...item }));
-            savingTab.navIndex = state.navIndex;
+            savingTab.navHistory = (savingTab.navHistory || []).map(item => ({ ...item }));
+            if (savingTab.navIndex >= 0 && savingTab.navIndex < savingTab.navHistory.length) {
+                savingTab.navHistory[savingTab.navIndex].path = selectedPath;
+            } else {
+                savingTab.navHistory = [{ path: selectedPath, scroll: 0 }];
+                savingTab.navIndex = 0;
+            }
         }
 
-        syncEditorStateToBackend();
+        if (state.activeTabId === savingTabId) {
+            state.currentFilePath = selectedPath;
+            state.currentFolder = selectedFolder;
+            state.currentDocumentType = 'markdown';
+            state.currentMarkdownSource = contentToSave;
+            state.editorOriginalContent = contentToSave;
+            state.editingSourcePath = selectedPath;
+            state.editingSourceFolder = selectedFolder;
+            state.editingPreviewPath = selectedPath;
+            state.editingPreviewFolder = selectedFolder;
+            state.homeTargetPath = selectedPath;
+            if (el.currentPath) {
+                el.currentPath.innerText = selectedPath;
+            }
+            if (savingTab) {
+                state.navHistory = savingTab.navHistory.map(item => ({ ...item }));
+                state.navIndex = savingTab.navIndex;
+            }
+            syncEditorStateToBackend();
+        }
         renderTabs();
         showToast("File saved successfully.", "check_circle");
         return true;
