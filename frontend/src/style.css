@@ -2452,9 +2452,9 @@ html.dark .ed-temp-value {
     /* 버튼 폰트 색상 */
     --editor-ai-btn-fg-active: #ffffff;
     opacity: 0;
-    transform: translateY(300px);
+    transform: translateY(0);
     pointer-events: none;
-    transition: left 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease, transform 0.22s ease;
+    transition: left 0.22s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.18s ease;
 }
 
 .editor-ai-dock.is-visible {
@@ -2465,7 +2465,7 @@ html.dark .ed-temp-value {
 
 .editor-ai-dock.is-hiding {
     opacity: 0;
-    transform: translateY(8px);
+    transform: translateY(0);
     pointer-events: none;
 }
 

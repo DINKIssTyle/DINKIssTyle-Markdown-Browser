@@ -827,9 +827,14 @@ function showAIDock() {
     });
 }
 
-function hideAIDock() {
+function hideAIDock({ immediate = false } = {}) {
     if (el.editorAiDock.classList.contains('hidden')) return;
     clearTimeout(aiDockHideTimer);
+    if (immediate) {
+        el.editorAiDock.classList.remove('is-visible', 'is-hiding');
+        el.editorAiDock.classList.add('hidden');
+        return;
+    }
     el.editorAiDock.classList.remove('is-visible');
     el.editorAiDock.classList.add('is-hiding');
     aiDockHideTimer = setTimeout(() => {
@@ -846,9 +851,14 @@ function showAIPanel() {
     });
 }
 
-function hideAIPanel() {
+function hideAIPanel({ immediate = false } = {}) {
     if (el.editorAiPanel.classList.contains('hidden')) return;
     clearTimeout(aiPanelHideTimer);
+    if (immediate) {
+        el.editorAiPanel.classList.remove('is-visible', 'is-hiding');
+        el.editorAiPanel.classList.add('hidden');
+        return;
+    }
     el.editorAiPanel.classList.remove('is-visible');
     el.editorAiPanel.classList.add('is-hiding');
     aiPanelHideTimer = setTimeout(() => {
@@ -1970,7 +1980,7 @@ export function syncAIControls() {
     if (showAiDock) {
         showAIDock();
     } else {
-        hideAIDock();
+        hideAIDock({ immediate: !state.isEditing });
     }
     el.editorAiDock.classList.toggle('is-expanded', generalToolbarEnabled);
     el.editorAiDock.classList.toggle('is-collapsed', showAiDock && !generalToolbarEnabled);
@@ -1978,7 +1988,7 @@ export function syncAIControls() {
     if (showAiDock && generalToolbarEnabled && !toolbarCollapsed) {
         showAIPanel();
     } else {
-        hideAIPanel();
+        hideAIPanel({ immediate: !state.isEditing });
     }
     el.edAiToolbarToggle.classList.toggle('hidden', !generalToolbarEnabled);
     el.edGeneralTempControl.classList.toggle('hidden', !generalToolbarEnabled);

@@ -1336,19 +1336,19 @@ export async function renderActiveTab() {
 
     if (state.isEditing) {
         el.editToolbar.classList.remove('hidden');
-        syncAIControls();
         el.editorView.classList.remove('hidden');
         el.mainContainer.classList.add('is-editing');
         el.btnEdit.classList.add('active');
         el.contentView.classList.remove('hidden');
         el.selectEngine.disabled = true;
+        syncAIControls();
     } else {
         el.editToolbar.classList.add('hidden');
-        syncAIControls();
         el.editorView.classList.add('hidden');
         el.mainContainer.classList.remove('is-editing');
         el.btnEdit.classList.remove('active');
         el.selectEngine.disabled = state.currentDocumentType !== 'markdown';
+        syncAIControls();
     }
 
     getScroller().classList.toggle('html-mode', state.currentDocumentType === 'html');

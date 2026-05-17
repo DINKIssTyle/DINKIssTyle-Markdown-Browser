@@ -3133,11 +3133,11 @@ export async function exitEditMode(didSave = false) {
     state.editingPreviewPath = "";
     state.editingPreviewFolder = "";
     el.editToolbar.classList.add('hidden');
-    syncAIControls();
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
     el.btnEdit.classList.remove('active');
     el.selectEngine.disabled = false;
+    syncAIControls();
 
     updateNavButtons();
 
