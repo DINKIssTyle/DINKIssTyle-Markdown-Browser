@@ -12,6 +12,7 @@ import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast,
 import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
+import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
@@ -23,6 +24,7 @@ import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { enqueueLLMTask, ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
+import { showTextPrompt } from './main-dialogs.js';
 
 // ── Module-level State ─────────────────────────────────────
 let slashMenuState = null;
@@ -55,10 +57,6 @@ const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
 const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
 
-function isCancelledAIError(error) {
-    const message = String(error?.message || error || '').toLowerCase();
-    return message.includes('context canceled') || message.includes('context cancelled') || message.includes('canceled');
-}
 const SPELLCHECK_CHUNK_TARGET_LENGTH = 700;
 const SPELLCHECK_CHUNK_MAX_LENGTH = 1000;
 const SPELLCHECK_COORDINATE_RECOVERY_RADIUS = 360;
@@ -1201,12 +1199,6 @@ function bindTranslationProgressEvents() {
     });
 }
 
-function throwIfQueuedLLMTaskCancelled(isCancelled) {
-    if (typeof isCancelled === 'function' && isCancelled()) {
-        throw new Error('context canceled');
-    }
-}
-
 function getStoredTranslationLanguageCodes() {
     try {
         const stored = localStorage.getItem(TRANSLATION_LANGUAGE_STORAGE_KEY);
@@ -1517,7 +1509,7 @@ async function translateCurrentDocument() {
         await enqueueLLMTask({
             label: "Starting translation...",
             run: async ({ isCancelled }) => {
-                throwIfQueuedLLMTaskCancelled(isCancelled);
+                throwIfQueuedTaskCancelled(isCancelled);
                 const taskId = beginProgressTask("Starting translation...", 0);
                 const result = await TranslateDocumentCopies({
                     sourcePath: ready.sourcePath,
@@ -1526,7 +1518,7 @@ async function translateCurrentDocument() {
                     ai: aiConfig,
                     overwriteExisting: existing.length > 0,
                 });
-                throwIfQueuedLLMTaskCancelled(isCancelled);
+                throwIfQueuedTaskCancelled(isCancelled);
                 if (!isProgressTaskActive(taskId)) return;
                 const sidebar = await import('./main-sidebar.js');
                 await sidebar.updateFileTree({ forceRefresh: true });
@@ -1536,7 +1528,7 @@ async function translateCurrentDocument() {
             },
         });
     } catch (error) {
-        if (isCancelledAIError(error)) {
+        if (isCancellationError(error)) {
             LogError(`TranslateDocumentCopies cancelled: ${error?.message || error}`);
             return;
         }
@@ -2244,7 +2236,7 @@ async function runSpellcheck() {
                 let totalSuggestions = 0;
                 const taskId = beginProgressTask(`Checking spelling chunk 1 of ${chunks.length}...`, 0);
                 for (const [chunkIndex, chunk] of chunks.entries()) {
-                    throwIfQueuedLLMTaskCancelled(isCancelled);
+                    throwIfQueuedTaskCancelled(isCancelled);
                     if (!isProgressTaskActive(taskId)) {
                         return;
                     }
@@ -2259,7 +2251,7 @@ async function runSpellcheck() {
                         },
                         ai: aiConfig,
                     });
-                    throwIfQueuedLLMTaskCancelled(isCancelled);
+                    throwIfQueuedTaskCancelled(isCancelled);
                     if (!isProgressTaskActive(taskId)) {
                         return;
                     }
@@ -2303,7 +2295,7 @@ async function runSpellcheck() {
             },
         });
     } catch (error) {
-        if (isCancelledAIError(error)) {
+        if (isCancellationError(error)) {
             LogError(`SpellCheckDocument cancelled: ${error?.message || error}`);
             return;
         }
@@ -3847,46 +3839,7 @@ async function insertDivWrapper() {
 
 // ── Custom Prompt Modal ────────────────────────────────────
 export function showCustomPrompt(title, message, defaultValue = "") {
-    return new Promise((resolve) => {
-        el.modalTitle.textContent = title;
-        el.modalMessage.textContent = message;
-        el.modalInput.value = defaultValue;
-        el.modalOverlay.classList.remove('hidden');
-        el.modalBtnOk.classList.remove('hidden');
-
-        setTimeout(() => el.modalInput.focus(), 50);
-
-        const handleOk = () => {
-            const val = el.modalInput.value;
-            cleanup();
-            resolve(val);
-        };
-
-        const handleCancel = () => {
-            cleanup();
-            resolve(null);
-        };
-
-        const handleKey = (e) => {
-            if (e.key === 'Enter') handleOk();
-            if (e.key === 'Escape') handleCancel();
-        };
-
-        const cleanup = () => {
-            el.modalOverlay.classList.add('hidden');
-            el.modalBtnOk.removeEventListener('click', handleOk);
-            el.modalBtnCancel.removeEventListener('click', handleCancel);
-            el.modalInput.removeEventListener('keydown', handleKey);
-        };
-
-        el.modalBtnOk.addEventListener('click', handleOk);
-        el.modalBtnCancel.addEventListener('click', handleCancel);
-        el.modalInput.addEventListener('keydown', handleKey);
-
-        el.modalInputGroup.classList.remove('hidden');
-        el.modalOptionGrid.classList.add('hidden');
-        el.modalEmojiGrid.classList.add('hidden');
-    });
+    return showTextPrompt(title, message, defaultValue);
 }
 
 export function showOptionGridPrompt(title, message, options, defaultValue = "") {

@@ -6,16 +6,11 @@
 package app
 
 import (
-	"bufio"
-	"bytes"
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
-	"net/http"
 	"sort"
 	"strings"
-	"time"
 	"unicode/utf8"
 )
 
@@ -102,128 +97,14 @@ func buildSpellCheckPrompt(content string, language SpellCheckLanguage) string {
 }
 
 func (a *App) requestSpellCheck(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
-	provider := strings.ToLower(strings.TrimSpace(ai.Provider))
-	if provider == "lmstudio" {
-		return a.requestLMStudioSpellCheck(ctx, ai, prompt)
-	}
-	return a.requestOpenAISpellCheck(ctx, ai, prompt)
-}
-
-func (a *App) requestOpenAISpellCheck(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
-	base := normalizeAIEndpointBase(ai.Endpoint)
-	endpoint := strings.TrimRight(base, "/") + "/v1/chat/completions"
-	payload := map[string]any{
-		"model": ai.Model,
-		"messages": []map[string]string{
-			{"role": "system", "content": "You are a precise multilingual proofreading engine that returns strict JSON only."},
-			{"role": "user", "content": prompt},
-		},
-		"response_format": map[string]string{"type": "json_object"},
-		"stream":          true,
-		"store":           false,
-	}
-	if ai.Temperature > 0 {
-		payload["temperature"] = ai.Temperature
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", err
-	}
-	result, err := a.doOpenAIChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, "spellcheck")
-	if err == nil && strings.TrimSpace(result) != "" {
-		return result, nil
-	}
-	delete(payload, "stream")
-	delete(payload, "store")
-	delete(payload, "response_format")
-	body, marshalErr := json.Marshal(payload)
-	if marshalErr != nil {
-		return "", marshalErr
-	}
-	respBody, fallbackErr := doTranslationPost(ctx, endpoint, ai.Key, body, 300*time.Second)
-	if fallbackErr != nil {
-		if err == nil {
-			return "", fallbackErr
-		}
-		return "", err
-	}
-	return parseOpenAIChatCompletion(respBody)
-}
-
-func (a *App) requestLMStudioSpellCheck(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
-	base := normalizeAIEndpointBase(ai.Endpoint)
-	endpoint := strings.TrimRight(base, "/") + "/api/v1/chat"
-	payload := map[string]any{
-		"model":  ai.Model,
-		"input":  "You are a precise multilingual proofreading engine that returns strict JSON only.\n\n" + prompt,
-		"stream": true,
-		"store":  false,
-	}
-	if ai.Temperature > 0 {
-		payload["temperature"] = ai.Temperature
-	}
-	body, err := json.Marshal(payload)
-	if err != nil {
-		return "", err
-	}
-
-	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
-	if err != nil {
-		return "", err
-	}
-	req.Header.Set("Content-Type", "application/json")
-	req.Header.Set("Accept", "text/event-stream")
-	if strings.TrimSpace(ai.Key) != "" {
-		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(ai.Key))
-	}
-
-	client := &http.Client{Timeout: 300 * time.Second}
-	resp, err := client.Do(req)
-	if err != nil {
-		return "", err
-	}
-	defer resp.Body.Close()
-
-	if resp.StatusCode < 200 || resp.StatusCode >= 300 {
-		respBody, _ := io.ReadAll(resp.Body)
-		return "", fmt.Errorf("HTTP %d: %s", resp.StatusCode, string(respBody))
-	}
-
-	var output strings.Builder
-	reader := bufio.NewReader(resp.Body)
-	var eventData []string
-	for {
-		line, err := reader.ReadString('\n')
-		if err != nil && err != io.EOF {
-			return "", err
-		}
-		trimmed := strings.TrimSpace(line)
-		if strings.HasPrefix(trimmed, "data:") {
-			data := strings.TrimSpace(strings.TrimPrefix(trimmed, "data:"))
-			if data != "" {
-				eventData = append(eventData, data)
-			}
-		} else if trimmed == "" && len(eventData) > 0 {
-			joined := strings.Join(eventData, "\n")
-			eventData = nil
-			var raw map[string]any
-			if json.Unmarshal([]byte(joined), &raw) == nil {
-				a.appendLMStudioStreamContent(raw, &output, "spellcheck")
-			}
-		}
-		if err == io.EOF {
-			if len(eventData) > 0 {
-				joined := strings.Join(eventData, "\n")
-				eventData = nil
-				var raw map[string]any
-				if json.Unmarshal([]byte(joined), &raw) == nil {
-					a.appendLMStudioStreamContent(raw, &output, "spellcheck")
-				}
-			}
-			break
-		}
-	}
-	return output.String(), nil
+	return a.requestAIChat(
+		ctx,
+		ai,
+		"You are a precise multilingual proofreading engine that returns strict JSON only.",
+		prompt,
+		"spellcheck",
+		map[string]string{"type": "json_object"},
+	)
 }
 
 func parseSpellCheckSuggestions(raw string) ([]SpellCheckSuggestion, error) {

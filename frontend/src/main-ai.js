@@ -11,6 +11,8 @@ import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKE
 import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, updateProgress } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
+import { isCancellationError } from './main-cancel.js';
+import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
@@ -76,13 +78,7 @@ let lastPromptInputValue = "";
 let aiPromptForcedVisible = false;
 let aiDockHideTimer = null;
 let aiPanelHideTimer = null;
-let aiDeltaTickerTimer = null;
-let aiDeltaTickerHideTimer = null;
-let aiDeltaTickerCoalesceTimer = null;
-let aiDeltaTickerPendingText = "";
-let aiDeltaTickerQueue = [];
 let aiReasoningTickerIndex = 0;
-let aiDeltaTickerVersion = 0;
 const AI_PROMPT_BASE_WIDTH = 320;
 const AI_PROMPT_MAX_WIDTH = Math.round(AI_PROMPT_BASE_WIDTH * 1.3);
 const AI_PROMPT_INPUT_MAX_LINES = 5;
@@ -313,25 +309,6 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
     showAIWaitingTicker();
 }
 
-function normalizeAIDeltaText(value = "") {
-    return String(value || "")
-        .replace(/```[\s\S]*?```/g, "code block")
-        .replace(/[`*_>#\[\](){}|~-]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
-function getAIDeltaPreview(text = "") {
-    const normalized = normalizeAIDeltaText(text);
-    if (!normalized) {
-        return "";
-    }
-    if (normalized.length <= AI_DELTA_TICKER_MAX_CHARS) {
-        return normalized;
-    }
-    return `${normalized.slice(0, AI_DELTA_TICKER_MAX_CHARS - 1).trim()}...`;
-}
-
 function showAIDeltaTicker(kind = "message", text = "") {
     const isReasoning = kind === "reasoning";
     showProgressDelta(isReasoning ? `Reasoning: ${text}` : text);
@@ -344,59 +321,29 @@ function showAIWaitingTicker() {
     showProgressDelta("Preparing response");
 }
 
-function flushAIDeltaTickerQueue() {
-    aiDeltaTickerTimer = null;
-    if (!aiRequestInFlight && !aiPromptBusyState) {
-        clearAIDeltaTicker();
-        return;
-    }
-
-    const next = aiDeltaTickerQueue.shift();
-    if (next) {
-        showAIDeltaTicker(next.kind, next.text);
-    }
-
-    if (aiDeltaTickerQueue.length > 0) {
-        aiDeltaTickerTimer = setTimeout(flushAIDeltaTickerQueue, AI_DELTA_TICKER_INTERVAL_MS);
-    }
-}
-
-function enqueueAIDeltaTicker(kind = "message", text = "") {
-    const isReasoning = kind === "reasoning";
-    const nextText = isReasoning ? text : getAIDeltaPreview(text);
-    if (!nextText) {
-        return;
-    }
-
-    const nextKind = isReasoning ? "reasoning" : "message";
-    const lastQueued = aiDeltaTickerQueue[aiDeltaTickerQueue.length - 1];
-    if (!isReasoning && lastQueued?.kind === "message") {
-        const mergedText = `${lastQueued.text}${nextText}`;
-        if (mergedText.length <= AI_DELTA_TICKER_MAX_CHARS) {
-            lastQueued.text = mergedText;
-        } else {
-            aiDeltaTickerQueue.push({ kind: nextKind, text: nextText });
+const aiDeltaTicker = createDeltaTicker({
+    render: item => {
+        if (typeof item === "string") {
+            showAIDeltaTicker("message", item);
+            return;
         }
-    } else if (isReasoning && lastQueued?.kind === "reasoning") {
-        lastQueued.text = nextText;
-    } else {
-        aiDeltaTickerQueue.push({ kind: nextKind, text: nextText });
-    }
-    if (aiDeltaTickerQueue.length > AI_DELTA_TICKER_MAX_QUEUE) {
-        aiDeltaTickerQueue = aiDeltaTickerQueue.slice(-AI_DELTA_TICKER_MAX_QUEUE);
-    }
-    if (!aiDeltaTickerTimer) {
-        flushAIDeltaTickerQueue();
-    }
-}
-
-function flushPendingAIDeltaTicker() {
-    clearTimeout(aiDeltaTickerCoalesceTimer);
-    aiDeltaTickerCoalesceTimer = null;
-    const nextText = getAIDeltaPreview(aiDeltaTickerPendingText);
-    aiDeltaTickerPendingText = "";
-    enqueueAIDeltaTicker("message", nextText);
-}
+        showAIDeltaTicker(item.kind, item.text);
+    },
+    clearRender: clearRenderedAIDeltaTicker,
+    normalize: normalizeDeltaText,
+    intervalMs: AI_DELTA_TICKER_INTERVAL_MS,
+    coalesceMs: AI_DELTA_TICKER_COALESCE_MS,
+    minChars: AI_DELTA_TICKER_MIN_CHARS,
+    maxQueue: AI_DELTA_TICKER_MAX_QUEUE,
+    maxChars: AI_DELTA_TICKER_MAX_CHARS,
+    canShow: () => !!aiRequestInFlight || !!aiPromptBusyState,
+    merge: (lastQueued, nextItem) => {
+        if (lastQueued.kind !== "message" || nextItem.kind !== "message") {
+            return null;
+        }
+        return { kind: "message", text: `${lastQueued.text}${nextItem.text}` };
+    },
+});
 
 function queueAIDeltaTicker(kind = "message", text = "") {
     if (!aiRequestInFlight && !aiPromptBusyState) {
@@ -404,35 +351,18 @@ function queueAIDeltaTicker(kind = "message", text = "") {
     }
 
     if (kind === "reasoning") {
-        enqueueAIDeltaTicker("reasoning", `${AI_REASONING_TICKER_LABELS[aiReasoningTickerIndex++ % AI_REASONING_TICKER_LABELS.length]}...`);
+        aiDeltaTicker.enqueue({
+            kind: "reasoning",
+            text: `${AI_REASONING_TICKER_LABELS[aiReasoningTickerIndex++ % AI_REASONING_TICKER_LABELS.length]}...`,
+        });
         return;
     }
 
-    aiDeltaTickerPendingText = `${aiDeltaTickerPendingText}${text}`;
-    const preview = getAIDeltaPreview(aiDeltaTickerPendingText);
-    if (!preview) {
-        return;
-    }
-    const shouldFlushNow = preview.length >= AI_DELTA_TICKER_MIN_CHARS || /[.!?。！？)]$/.test(preview);
-    if (shouldFlushNow) {
-        flushPendingAIDeltaTicker();
-        return;
-    }
-    clearTimeout(aiDeltaTickerCoalesceTimer);
-    aiDeltaTickerCoalesceTimer = setTimeout(flushPendingAIDeltaTicker, AI_DELTA_TICKER_COALESCE_MS);
+    aiDeltaTicker.push(text);
 }
 
-function clearAIDeltaTicker() {
-    clearTimeout(aiDeltaTickerTimer);
-    clearTimeout(aiDeltaTickerHideTimer);
-    clearTimeout(aiDeltaTickerCoalesceTimer);
-    aiDeltaTickerTimer = null;
-    aiDeltaTickerHideTimer = null;
-    aiDeltaTickerCoalesceTimer = null;
-    aiDeltaTickerPendingText = "";
-    aiDeltaTickerQueue = [];
+function clearRenderedAIDeltaTicker() {
     aiReasoningTickerIndex = 0;
-    aiDeltaTickerVersion += 1;
     el.aiPromptBox?.classList.remove('is-streaming-delta', 'is-awaiting-delta');
     el.aiPromptStreamTicker?.classList.remove('is-visible', 'is-reasoning', 'is-waiting');
     if (el.aiPromptStreamTicker) {
@@ -444,6 +374,10 @@ function clearAIDeltaTicker() {
     if (el.aiPromptStreamText) {
         el.aiPromptStreamText.textContent = "";
     }
+}
+
+function clearAIDeltaTicker() {
+    aiDeltaTicker.clear();
 }
 
 function setPromptBusyInputText(value = "") {
@@ -588,11 +522,6 @@ function updateActiveAIProgressQueueLabel() {
         return;
     }
     updateProgress(getAIProgressTitle(aiPromptBusyState.placeholder), aiPromptBusyState.progress);
-}
-
-function isCancelledAIError(error) {
-    const message = String(error?.message || error || '').toLowerCase();
-    return message.includes('context canceled') || message.includes('context cancelled') || message.includes('canceled');
 }
 
 function getEditorSelection() {
@@ -1836,7 +1765,7 @@ async function processAIRequestQueue() {
         job.resolve?.(result);
     } catch (err) {
         console.error("AI prompt error", err);
-        if (isCancelledAIError(err) || job.cancelled) {
+        if (isCancellationError(err) || job.cancelled) {
             showToast("AI request cancelled.");
         } else if (typeof job.run !== 'function') {
             showToast("AI request failed. ❌");

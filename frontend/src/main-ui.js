@@ -6,17 +6,15 @@
 import { state, el, getScroller, escapeRegex, escapeAttr, getPathDirname } from './main-state.js';
 import { SearchMarkdown, CancelAIRequest } from '../wailsjs/go/app/App';
 import { ClipboardGetText, ClipboardSetText, LogError } from '../wailsjs/runtime/runtime';
+import { createCancelledTaskError, isCancellationError } from './main-cancel.js';
+import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
 
 // ── Module-level State ─────────────────────────────────────
 let hlMatches = [];
 let hlCurrent = -1;
 let toastTimer = null;
 let progressHideTimer = null;
-let progressDeltaTimer = null;
 let progressDeltaHideTimer = null;
-let progressDeltaCoalesceTimer = null;
-let progressDeltaPendingText = "";
-let progressDeltaQueue = [];
 let contextMenuState = null;
 let activeProgressTaskId = 0;
 
@@ -42,27 +40,6 @@ const PROGRESS_DELTA_COALESCE_MS = 220;
 const PROGRESS_DELTA_MIN_CHARS = 18;
 const PROGRESS_DELTA_MAX_QUEUE = 18;
 const PROGRESS_DELTA_MAX_CHARS = 88;
-
-function normalizeProgressDeltaText(value = "") {
-    return String(value || "")
-        .replace(/\\n/g, " ")
-        .replace(/```[\s\S]*?```/g, "code block")
-        .replace(/[{}\[\]",:]+/g, " ")
-        .replace(/[`*_>#|~-]+/g, " ")
-        .replace(/\s+/g, " ")
-        .trim();
-}
-
-function getProgressDeltaPreview(value = "") {
-    const normalized = normalizeProgressDeltaText(value);
-    if (!normalized) {
-        return "";
-    }
-    if (normalized.length <= PROGRESS_DELTA_MAX_CHARS) {
-        return normalized;
-    }
-    return `${normalized.slice(0, PROGRESS_DELTA_MAX_CHARS - 1).trim()}...`;
-}
 
 function renderProgressTitle(title, { wavingDots = false } = {}) {
     el.progressTitle.textContent = "";
@@ -142,75 +119,34 @@ function renderProgressDelta(text = "") {
     }, PROGRESS_DELTA_HIDE_MS);
 }
 
-function flushProgressDeltaQueue() {
-    progressDeltaTimer = null;
-    const next = progressDeltaQueue.shift();
-    if (next) {
-        renderProgressDelta(next);
-    }
-    if (progressDeltaQueue.length > 0) {
-        progressDeltaTimer = setTimeout(flushProgressDeltaQueue, PROGRESS_DELTA_INTERVAL_MS);
-    }
-}
-
-function enqueueProgressDeltaPreview(nextText = "") {
-    if (!nextText) {
-        return;
-    }
-    const lastQueued = progressDeltaQueue[progressDeltaQueue.length - 1];
-    if (lastQueued && `${lastQueued}${nextText}`.length <= PROGRESS_DELTA_MAX_CHARS) {
-        progressDeltaQueue[progressDeltaQueue.length - 1] = `${lastQueued}${nextText}`;
-    } else {
-        progressDeltaQueue.push(nextText);
-    }
-    if (progressDeltaQueue.length > PROGRESS_DELTA_MAX_QUEUE) {
-        progressDeltaQueue = progressDeltaQueue.slice(-PROGRESS_DELTA_MAX_QUEUE);
-    }
-    if (!progressDeltaTimer) {
-        flushProgressDeltaQueue();
-    }
-}
-
-function flushPendingProgressDelta() {
-    clearTimeout(progressDeltaCoalesceTimer);
-    progressDeltaCoalesceTimer = null;
-    const nextText = getProgressDeltaPreview(progressDeltaPendingText);
-    progressDeltaPendingText = "";
-    enqueueProgressDeltaPreview(nextText);
-}
+const progressDeltaTicker = createDeltaTicker({
+    render: renderProgressDelta,
+    clearRender: clearRenderedProgressDelta,
+    normalize: value => normalizeDeltaText(value, { stripJsonPunctuation: true }),
+    intervalMs: PROGRESS_DELTA_INTERVAL_MS,
+    coalesceMs: PROGRESS_DELTA_COALESCE_MS,
+    minChars: PROGRESS_DELTA_MIN_CHARS,
+    maxQueue: PROGRESS_DELTA_MAX_QUEUE,
+    maxChars: PROGRESS_DELTA_MAX_CHARS,
+    canShow: () => !!el.progressWidget && !el.progressWidget.classList.contains('hidden'),
+});
 
 export function showProgressDelta(value = "") {
-    if (!el.progressWidget || el.progressWidget.classList.contains('hidden')) {
-        return;
-    }
-    progressDeltaPendingText = `${progressDeltaPendingText}${value}`;
-    const preview = getProgressDeltaPreview(progressDeltaPendingText);
-    if (!preview) {
-        return;
-    }
-    const shouldFlushNow = preview.length >= PROGRESS_DELTA_MIN_CHARS || /[.!?。！？)]$/.test(preview);
-    if (shouldFlushNow) {
-        flushPendingProgressDelta();
-        return;
-    }
-    clearTimeout(progressDeltaCoalesceTimer);
-    progressDeltaCoalesceTimer = setTimeout(flushPendingProgressDelta, PROGRESS_DELTA_COALESCE_MS);
+    progressDeltaTicker.push(value);
 }
 
-function clearProgressDelta() {
-    clearTimeout(progressDeltaTimer);
+function clearRenderedProgressDelta() {
     clearTimeout(progressDeltaHideTimer);
-    clearTimeout(progressDeltaCoalesceTimer);
-    progressDeltaTimer = null;
     progressDeltaHideTimer = null;
-    progressDeltaCoalesceTimer = null;
-    progressDeltaPendingText = "";
-    progressDeltaQueue = [];
     el.progressWidget?.classList.remove('has-stream-delta');
     el.progressStreamTicker?.classList.remove('is-visible');
     if (el.progressStreamText) {
         el.progressStreamText.textContent = "";
     }
+}
+
+function clearProgressDelta() {
+    progressDeltaTicker.clear();
 }
 
 export function beginProgressTask(title, progress = null, options = {}) {
@@ -222,12 +158,6 @@ export function beginProgressTask(title, progress = null, options = {}) {
 
 export function isProgressTaskActive(taskId) {
     return taskId !== 0 && taskId === activeProgressTaskId;
-}
-
-export function createCancelledTaskError() {
-    const error = new Error('Task cancelled');
-    error.name = 'TaskCancelledError';
-    return error;
 }
 
 export function throwIfTaskCancelled(taskId) {
@@ -258,7 +188,7 @@ export function cancelProgressTask(taskId) {
 }
 
 export function isCancelledTaskError(error) {
-    return error?.name === 'TaskCancelledError';
+    return isCancellationError(error);
 }
 
 export async function yieldToUI() {

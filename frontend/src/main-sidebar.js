@@ -11,6 +11,7 @@ import {
 } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
+import { showTextPrompt } from './main-dialogs.js';
 import {
     scrollEditorToLine,
     insertFileLink,
@@ -765,52 +766,7 @@ function closeFileTreeContextMenu() {
 }
 
 function showFileTreeNamePrompt(title, message, defaultValue = "") {
-    return new Promise((resolve) => {
-        el.modalTitle.textContent = title;
-        el.modalMessage.textContent = message;
-        el.modalInput.value = defaultValue;
-        el.modalOverlay.classList.remove('hidden');
-        el.modalBtnOk.classList.remove('hidden');
-        el.modalInputGroup.classList.remove('hidden');
-        el.modalOptionGrid.classList.add('hidden');
-        el.modalEmojiContainer.classList.add('hidden');
-        el.modalTableContainer.classList.add('hidden');
-        el.modalLanguageContainer?.classList.add('hidden');
-
-        const handleOk = () => {
-            const value = el.modalInput.value;
-            cleanup();
-            resolve(value);
-        };
-        const handleCancel = () => {
-            cleanup();
-            resolve(null);
-        };
-        const handleKey = event => {
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                handleOk();
-            }
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                handleCancel();
-            }
-        };
-        const cleanup = () => {
-            el.modalOverlay.classList.add('hidden');
-            el.modalBtnOk.removeEventListener('click', handleOk);
-            el.modalBtnCancel.removeEventListener('click', handleCancel);
-            el.modalInput.removeEventListener('keydown', handleKey);
-        };
-
-        el.modalBtnOk.addEventListener('click', handleOk);
-        el.modalBtnCancel.addEventListener('click', handleCancel);
-        el.modalInput.addEventListener('keydown', handleKey);
-        setTimeout(() => {
-            el.modalInput.focus();
-            el.modalInput.select();
-        }, 50);
-    });
+    return showTextPrompt(title, message, defaultValue, { select: true });
 }
 
 async function ensureDirectoryChildrenLoaded(path) {

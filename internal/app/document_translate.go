@@ -363,24 +363,31 @@ func buildTranslationPrompt(fullDocument string, chunk string, previousSourceTai
 }
 
 func (a *App) requestTranslationChunk(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
-	provider := strings.ToLower(strings.TrimSpace(ai.Provider))
-	if provider == "lmstudio" {
-		return a.requestLMStudioTranslationChunk(ctx, ai, prompt)
-	}
-	return a.requestOpenAITranslationChunk(ctx, ai, prompt)
+	return a.requestAIChat(ctx, ai, "You are a careful Markdown document translator.", prompt, "translation", nil)
 }
 
-func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
+func (a *App) requestAIChat(ctx context.Context, ai TranslationAIConfig, systemPrompt string, userPrompt string, progressKind string, responseFormat map[string]string) (string, error) {
+	provider := strings.ToLower(strings.TrimSpace(ai.Provider))
+	if provider == "lmstudio" {
+		return a.requestLMStudioChat(ctx, ai, systemPrompt, userPrompt, progressKind)
+	}
+	return a.requestOpenAIChat(ctx, ai, systemPrompt, userPrompt, progressKind, responseFormat)
+}
+
+func (a *App) requestOpenAIChat(ctx context.Context, ai TranslationAIConfig, systemPrompt string, userPrompt string, progressKind string, responseFormat map[string]string) (string, error) {
 	base := normalizeAIEndpointBase(ai.Endpoint)
 	endpoint := strings.TrimRight(base, "/") + "/v1/chat/completions"
 	payload := map[string]any{
 		"model": ai.Model,
 		"messages": []map[string]string{
-			{"role": "system", "content": "You are a careful Markdown document translator."},
-			{"role": "user", "content": prompt},
+			{"role": "system", "content": systemPrompt},
+			{"role": "user", "content": userPrompt},
 		},
 		"stream": true,
 		"store":  false,
+	}
+	if responseFormat != nil {
+		payload["response_format"] = responseFormat
 	}
 	if ai.Temperature > 0 {
 		payload["temperature"] = ai.Temperature
@@ -395,11 +402,12 @@ func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationA
 	}
 	delete(payload, "stream")
 	delete(payload, "store")
+	delete(payload, "response_format")
 	body, marshalErr := json.Marshal(payload)
 	if marshalErr != nil {
 		return "", marshalErr
 	}
-	respBody, fallbackErr := doTranslationPost(ctx, endpoint, ai.Key, body, 300*time.Second)
+	respBody, fallbackErr := doAIChatPost(ctx, endpoint, ai.Key, body, 300*time.Second)
 	if fallbackErr != nil {
 		if err == nil {
 			return "", fallbackErr
@@ -409,12 +417,12 @@ func (a *App) requestOpenAITranslationChunk(ctx context.Context, ai TranslationA
 	return parseOpenAIChatCompletion(respBody)
 }
 
-func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai TranslationAIConfig, prompt string) (string, error) {
+func (a *App) requestLMStudioChat(ctx context.Context, ai TranslationAIConfig, systemPrompt string, userPrompt string, progressKind string) (string, error) {
 	base := normalizeAIEndpointBase(ai.Endpoint)
 	endpoint := strings.TrimRight(base, "/") + "/api/v1/chat"
 	payload := map[string]any{
 		"model":  ai.Model,
-		"input":  "You are a careful Markdown document translator.\n\n" + prompt,
+		"input":  systemPrompt + "\n\n" + userPrompt,
 		"stream": true,
 		"store":  false,
 	}
@@ -425,18 +433,21 @@ func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai Translatio
 	if err != nil {
 		return "", err
 	}
+	return a.doLMStudioChatStream(ctx, endpoint, ai.Key, body, 300*time.Second, progressKind)
+}
 
+func (a *App) doLMStudioChatStream(ctx context.Context, endpoint string, apiKey string, body []byte, timeout time.Duration, progressKind string) (string, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
 	if err != nil {
 		return "", err
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	if strings.TrimSpace(ai.Key) != "" {
-		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(ai.Key))
+	if strings.TrimSpace(apiKey) != "" {
+		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
 	}
 
-	client := &http.Client{Timeout: 300 * time.Second}
+	client := &http.Client{Timeout: timeout}
 	resp, err := client.Do(req)
 	if err != nil {
 		return "", err
@@ -467,7 +478,7 @@ func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai Translatio
 			eventData = nil
 			var raw map[string]any
 			if json.Unmarshal([]byte(joined), &raw) == nil {
-				a.appendLMStudioStreamContent(raw, &output, "translation")
+				a.appendLMStudioStreamContent(raw, &output, progressKind)
 			}
 		}
 		if err == io.EOF {
@@ -476,7 +487,7 @@ func (a *App) requestLMStudioTranslationChunk(ctx context.Context, ai Translatio
 				eventData = nil
 				var raw map[string]any
 				if json.Unmarshal([]byte(joined), &raw) == nil {
-					a.appendLMStudioStreamContent(raw, &output, "translation")
+					a.appendLMStudioStreamContent(raw, &output, progressKind)
 				}
 			}
 			break
@@ -644,7 +655,7 @@ func parseOpenAIChatCompletion(respBody []byte) (string, error) {
 	return parsed.Choices[0].Message.Content, nil
 }
 
-func doTranslationPost(ctx context.Context, endpoint string, apiKey string, body []byte, timeout time.Duration) ([]byte, error) {
+func doAIChatPost(ctx context.Context, endpoint string, apiKey string, body []byte, timeout time.Duration) ([]byte, error) {
 	req, err := http.NewRequestWithContext(ctx, "POST", endpoint, bytes.NewReader(body))
 	if err != nil {
 		return nil, err
