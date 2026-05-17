@@ -1877,6 +1877,46 @@ function getSpellcheckState() {
     return cmView?.state.field(spellcheckField, false) || { suggestions: [] };
 }
 
+function getSpellcheckRequestTab(tabId) {
+    return state.tabs.find(tab => tab.id === tabId) || null;
+}
+
+function getSpellcheckRequestState(tabId) {
+    if (tabId === state.activeTabId && cmView) {
+        return cmView.state;
+    }
+    return getSpellcheckRequestTab(tabId)?.editorState || null;
+}
+
+function getSpellcheckSuggestionsForTab(tabId) {
+    return getSpellcheckRequestState(tabId)?.field(spellcheckField, false)?.suggestions || [];
+}
+
+function getSpellcheckContentForTab(tabId, fallbackContent = "") {
+    const requestState = getSpellcheckRequestState(tabId);
+    if (requestState) {
+        return requestState.doc.toString();
+    }
+    return getSpellcheckRequestTab(tabId)?.currentMarkdownSource || fallbackContent;
+}
+
+function setSpellcheckSuggestionsForTab(tabId, suggestions) {
+    if (tabId === state.activeTabId && cmView) {
+        cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of(suggestions) });
+        return true;
+    }
+    const requestTab = getSpellcheckRequestTab(tabId);
+    if (!requestTab?.editorState) {
+        return false;
+    }
+    const transaction = requestTab.editorState.update({
+        effects: setSpellcheckSuggestionsEffect.of(suggestions),
+    });
+    requestTab.editorState = transaction.state;
+    requestTab.currentMarkdownSource = transaction.state.doc.toString();
+    return true;
+}
+
 export function isSpellcheckActive() {
     return spellcheckInProgress || getSpellcheckState().suggestions.length > 0;
 }
@@ -2142,8 +2182,15 @@ export function clearSpellcheckSuggestions() {
     spellcheckCloseButton = null;
 }
 
+function hideSpellcheckChrome() {
+    hideSpellcheckTooltip();
+    spellcheckNavigator?.remove();
+    spellcheckNavigator = null;
+    spellcheckCloseButton = null;
+}
+
 export function clearTransientEditorOverlays() {
-    clearSpellcheckSuggestions();
+    hideSpellcheckChrome();
     hidePromptBox({ restoreEditorFocus: false, preserveSupport: true });
 }
 
@@ -2181,9 +2228,6 @@ async function runSpellcheck() {
         let totalSuggestions = 0;
         const taskId = beginProgressTask(`Checking spelling chunk 1 of ${chunks.length}...`, 0);
         for (const [chunkIndex, chunk] of chunks.entries()) {
-            if (state.activeTabId !== requestTabId) {
-                return;
-            }
             if (!isProgressTaskActive(taskId)) {
                 return;
             }
@@ -2198,9 +2242,6 @@ async function runSpellcheck() {
                 },
                 ai: aiConfig,
             });
-            if (state.activeTabId !== requestTabId) {
-                return;
-            }
             if (!isProgressTaskActive(taskId)) {
                 return;
             }
@@ -2210,8 +2251,8 @@ async function runSpellcheck() {
                 continue;
             }
 
-            const currentContent = getCurrentEditorText();
-            const existing = getSpellcheckState().suggestions;
+            const currentContent = getSpellcheckContentForTab(requestTabId, content);
+            const existing = getSpellcheckSuggestionsForTab(requestTabId);
             const merged = mergeSpellcheckSuggestions(existing, incoming, currentContent);
             const addedCount = merged.length - existing.length;
             if (addedCount <= 0) {
@@ -2219,11 +2260,13 @@ async function runSpellcheck() {
             }
 
             totalSuggestions += addedCount;
-            cmView.dispatch({ effects: setSpellcheckSuggestionsEffect.of(merged) });
-            ensureSpellcheckCloseButton();
-            updateSpellcheckNavigator();
-            if (!activeSpellcheckSuggestionId || existing.length === 0) {
-                focusSpellcheckSuggestion(0);
+            setSpellcheckSuggestionsForTab(requestTabId, merged);
+            if (state.activeTabId === requestTabId) {
+                ensureSpellcheckCloseButton();
+                updateSpellcheckNavigator();
+                if (!activeSpellcheckSuggestionId || existing.length === 0) {
+                    focusSpellcheckSuggestion(0);
+                }
             }
         }
 
@@ -2233,8 +2276,10 @@ async function runSpellcheck() {
             finishProgressTask(taskId);
             return;
         }
-        updateSpellcheckNavigator();
-        const suggestions = getSpellcheckState().suggestions;
+        if (state.activeTabId === requestTabId) {
+            updateSpellcheckNavigator();
+        }
+        const suggestions = getSpellcheckSuggestionsForTab(requestTabId);
         showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
         finishProgressTask(taskId);
     } catch (error) {
@@ -2921,6 +2966,11 @@ export function syncEditorSessionFromState() {
     lastPreviewTopLine = getTopVisibleLineNumber(cmView);
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
+    }
+    if (getSpellcheckState().suggestions.length) {
+        updateSpellcheckNavigator();
+    } else {
+        hideSpellcheckChrome();
     }
     updateSlashMenu();
     syncEditorStateToBackend();
