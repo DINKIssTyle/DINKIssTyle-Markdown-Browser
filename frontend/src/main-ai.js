@@ -559,6 +559,7 @@ async function cancelActiveAIRequest() {
         const nextJob = aiRequestQueue.shift();
         if (nextJob) {
             nextJob.cancelled = true;
+            nextJob.reject?.(new Error('context canceled'));
             showToast("Queued AI request cancelled.");
             updateActiveAIProgressQueueLabel();
             queueMicrotask(processAIRequestQueue);
@@ -1800,6 +1801,22 @@ function enqueueAIRequest(job) {
     queueMicrotask(processAIRequestQueue);
 }
 
+export function enqueueLLMTask({ label = "AI task", run } = {}) {
+    if (typeof run !== 'function') {
+        return Promise.reject(new Error('LLM task runner is required'));
+    }
+    return new Promise((resolve, reject) => {
+        enqueueAIRequest({
+            id: ++nextAIQueueJobId,
+            label,
+            cancelled: false,
+            run,
+            resolve,
+            reject,
+        });
+    });
+}
+
 async function processAIRequestQueue() {
     if (aiRequestInFlight || activeAIQueueJob) {
         return;
@@ -1810,6 +1827,7 @@ async function processAIRequestQueue() {
         return;
     }
     if (job.cancelled) {
+        job.reject?.(new Error('context canceled'));
         queueMicrotask(processAIRequestQueue);
         return;
     }
@@ -1822,17 +1840,21 @@ async function processAIRequestQueue() {
     activeAIQueueJob = job;
     aiRequestInFlight = true;
     clearSupportAgentPrompt();
-    showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
+    showPromptBusyState({ label: job.label || '프롬프트 처리 중', progress: 0 });
 
     try {
-        await runAIRequestJob(job);
+        const result = typeof job.run === 'function'
+            ? await job.run({ isCancelled: () => !!job.cancelled })
+            : await runAIRequestJob(job);
+        job.resolve?.(result);
     } catch (err) {
         console.error("AI prompt error", err);
         if (isCancelledAIError(err) || job.cancelled) {
             showToast("AI request cancelled.");
-        } else {
+        } else if (typeof job.run !== 'function') {
             showToast("AI request failed. ❌");
         }
+        job.reject?.(err);
         hideAIProgressOverlay();
     } finally {
         if (activeAIQueueJob?.id === job.id) {
@@ -1993,6 +2015,7 @@ async function sendPrompt() {
 
     enqueueAIRequest({
         id: ++nextAIQueueJobId,
+        label: '프롬프트 처리 중',
         cancelled: false,
         userPrompt,
         requestContext,

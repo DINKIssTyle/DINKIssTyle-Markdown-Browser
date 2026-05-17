@@ -22,7 +22,7 @@ import { languages } from '@codemirror/language-data';
 import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
+import { enqueueLLMTask, ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 
 // ── Module-level State ─────────────────────────────────────
 let slashMenuState = null;
@@ -1201,6 +1201,12 @@ function bindTranslationProgressEvents() {
     });
 }
 
+function throwIfQueuedLLMTaskCancelled(isCancelled) {
+    if (typeof isCancelled === 'function' && isCancelled()) {
+        throw new Error('context canceled');
+    }
+}
+
 function getStoredTranslationLanguageCodes() {
     try {
         const stored = localStorage.getItem(TRANSLATION_LANGUAGE_STORAGE_KEY);
@@ -1508,20 +1514,27 @@ async function translateCurrentDocument() {
             if (!overwrite) return;
         }
 
-        const taskId = beginProgressTask("Starting translation...", 0);
-        const result = await TranslateDocumentCopies({
-            sourcePath: ready.sourcePath,
-            content: ready.content,
-            languages: selectedLanguages,
-            ai: aiConfig,
-            overwriteExisting: existing.length > 0,
+        await enqueueLLMTask({
+            label: "Starting translation...",
+            run: async ({ isCancelled }) => {
+                throwIfQueuedLLMTaskCancelled(isCancelled);
+                const taskId = beginProgressTask("Starting translation...", 0);
+                const result = await TranslateDocumentCopies({
+                    sourcePath: ready.sourcePath,
+                    content: ready.content,
+                    languages: selectedLanguages,
+                    ai: aiConfig,
+                    overwriteExisting: existing.length > 0,
+                });
+                throwIfQueuedLLMTaskCancelled(isCancelled);
+                if (!isProgressTaskActive(taskId)) return;
+                const sidebar = await import('./main-sidebar.js');
+                await sidebar.updateFileTree({ forceRefresh: true });
+                await insertTranslatedDocumentLinks(ready.sourcePath, result.targets || []);
+                showToast("Translated documents created.", "check_circle");
+                finishProgressTask(taskId);
+            },
         });
-        if (!isProgressTaskActive(taskId)) return;
-        const sidebar = await import('./main-sidebar.js');
-        await sidebar.updateFileTree({ forceRefresh: true });
-        await insertTranslatedDocumentLinks(ready.sourcePath, result.targets || []);
-        showToast("Translated documents created.", "check_circle");
-        finishProgressTask(taskId);
     } catch (error) {
         if (isCancelledAIError(error)) {
             LogError(`TranslateDocumentCopies cancelled: ${error?.message || error}`);
@@ -2217,7 +2230,6 @@ async function runSpellcheck() {
 
     try {
         clearSpellcheckSuggestions();
-        spellcheckInProgress = true;
         hidePromptBox({ restoreEditorFocus: false });
         const chunks = createSpellcheckChunks(content);
         if (chunks.length === 0) {
@@ -2225,63 +2237,71 @@ async function runSpellcheck() {
             return;
         }
 
-        let totalSuggestions = 0;
-        const taskId = beginProgressTask(`Checking spelling chunk 1 of ${chunks.length}...`, 0);
-        for (const [chunkIndex, chunk] of chunks.entries()) {
-            if (!isProgressTaskActive(taskId)) {
-                return;
-            }
-            updateProgress(`Checking spelling chunk ${chunkIndex + 1} of ${chunks.length}...`, Math.round((chunkIndex / chunks.length) * 100));
-            const result = await SpellCheckDocument({
-                content: chunk.content,
-                language: {
-                    code: selectedLanguage.code === 'auto' ? '' : selectedLanguage.code,
-                    name: selectedLanguage.name || '',
-                    nativeName: selectedLanguage.nativeName || '',
-                    auto: selectedLanguage.auto || selectedLanguage.code === 'auto',
-                },
-                ai: aiConfig,
-            });
-            if (!isProgressTaskActive(taskId)) {
-                return;
-            }
+        await enqueueLLMTask({
+            label: `Checking spelling chunk 1 of ${chunks.length}...`,
+            run: async ({ isCancelled }) => {
+                spellcheckInProgress = true;
+                let totalSuggestions = 0;
+                const taskId = beginProgressTask(`Checking spelling chunk 1 of ${chunks.length}...`, 0);
+                for (const [chunkIndex, chunk] of chunks.entries()) {
+                    throwIfQueuedLLMTaskCancelled(isCancelled);
+                    if (!isProgressTaskActive(taskId)) {
+                        return;
+                    }
+                    updateProgress(`Checking spelling chunk ${chunkIndex + 1} of ${chunks.length}...`, Math.round((chunkIndex / chunks.length) * 100));
+                    const result = await SpellCheckDocument({
+                        content: chunk.content,
+                        language: {
+                            code: selectedLanguage.code === 'auto' ? '' : selectedLanguage.code,
+                            name: selectedLanguage.name || '',
+                            nativeName: selectedLanguage.nativeName || '',
+                            auto: selectedLanguage.auto || selectedLanguage.code === 'auto',
+                        },
+                        ai: aiConfig,
+                    });
+                    throwIfQueuedLLMTaskCancelled(isCancelled);
+                    if (!isProgressTaskActive(taskId)) {
+                        return;
+                    }
 
-            const incoming = normalizeSpellcheckSuggestions(result?.suggestions || [], chunk.content, chunk.start);
-            if (incoming.length === 0) {
-                continue;
-            }
+                    const incoming = normalizeSpellcheckSuggestions(result?.suggestions || [], chunk.content, chunk.start);
+                    if (incoming.length === 0) {
+                        continue;
+                    }
 
-            const currentContent = getSpellcheckContentForTab(requestTabId, content);
-            const existing = getSpellcheckSuggestionsForTab(requestTabId);
-            const merged = mergeSpellcheckSuggestions(existing, incoming, currentContent);
-            const addedCount = merged.length - existing.length;
-            if (addedCount <= 0) {
-                continue;
-            }
+                    const currentContent = getSpellcheckContentForTab(requestTabId, content);
+                    const existing = getSpellcheckSuggestionsForTab(requestTabId);
+                    const merged = mergeSpellcheckSuggestions(existing, incoming, currentContent);
+                    const addedCount = merged.length - existing.length;
+                    if (addedCount <= 0) {
+                        continue;
+                    }
 
-            totalSuggestions += addedCount;
-            setSpellcheckSuggestionsForTab(requestTabId, merged);
-            if (state.activeTabId === requestTabId) {
-                ensureSpellcheckCloseButton();
-                updateSpellcheckNavigator();
-                if (!activeSpellcheckSuggestionId || existing.length === 0) {
-                    focusSpellcheckSuggestion(0);
+                    totalSuggestions += addedCount;
+                    setSpellcheckSuggestionsForTab(requestTabId, merged);
+                    if (state.activeTabId === requestTabId) {
+                        ensureSpellcheckCloseButton();
+                        updateSpellcheckNavigator();
+                        if (!activeSpellcheckSuggestionId || existing.length === 0) {
+                            focusSpellcheckSuggestion(0);
+                        }
+                    }
                 }
-            }
-        }
 
-        updateProgress("Checking spelling...", 100, { active: false });
-        if (totalSuggestions === 0) {
-            showToast("No spelling suggestions found.", "check_circle");
-            finishProgressTask(taskId);
-            return;
-        }
-        if (state.activeTabId === requestTabId) {
-            updateSpellcheckNavigator();
-        }
-        const suggestions = getSpellcheckSuggestionsForTab(requestTabId);
-        showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
-        finishProgressTask(taskId);
+                updateProgress("Checking spelling...", 100, { active: false });
+                if (totalSuggestions === 0) {
+                    showToast("No spelling suggestions found.", "check_circle");
+                    finishProgressTask(taskId);
+                    return;
+                }
+                if (state.activeTabId === requestTabId) {
+                    updateSpellcheckNavigator();
+                }
+                const suggestions = getSpellcheckSuggestionsForTab(requestTabId);
+                showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
+                finishProgressTask(taskId);
+            },
+        });
     } catch (error) {
         if (isCancelledAIError(error)) {
             LogError(`SpellCheckDocument cancelled: ${error?.message || error}`);
