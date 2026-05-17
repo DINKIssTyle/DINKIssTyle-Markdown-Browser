@@ -817,6 +817,20 @@ export function getEditorStateSnapshot() {
     return cmView?.state || null;
 }
 
+export function getEditorScrollSnapshot() {
+    if (!cmView?.scrollDOM || !state.isEditing) {
+        return state.editorScrollTop || 0;
+    }
+    return cmView.scrollDOM.scrollTop;
+}
+
+export function getEditorTopLineSnapshot() {
+    if (!cmView || !state.isEditing) {
+        return state.editorTopLine || 1;
+    }
+    return getTopVisibleLineNumber(cmView);
+}
+
 export function isEditorFocused() {
     if (!cmView?.contentDOM) return false;
     const activeElement = document.activeElement;
@@ -2313,6 +2327,13 @@ function bindEditorScrollSync() {
     }
     editorScrollEventsBound = true;
     cmView.scrollDOM.addEventListener('scroll', () => {
+        state.editorScrollTop = cmView.scrollDOM.scrollTop;
+        state.editorTopLine = getTopVisibleLineNumber(cmView);
+        const activeTab = getActiveTab();
+        if (activeTab?.id === state.activeTabId && state.isEditing) {
+            activeTab.editorScrollTop = state.editorScrollTop;
+            activeTab.editorTopLine = state.editorTopLine;
+        }
         schedulePreviewScrollSync(cmView);
     }, { passive: true });
 }
@@ -2867,6 +2888,11 @@ export function initCodeMirror() {
                         const tab = getActiveTab();
                         if (tab) {
                             tab.editorSelection = state.editorSelection;
+                            tab.editorSelections = tab.editorSelections || {};
+                            const selectionKey = state.editingSourcePath || state.currentFilePath;
+                            if (selectionKey) {
+                                tab.editorSelections[selectionKey] = state.editorSelection;
+                            }
                             tab.editorState = update.state;
                         }
                     }
@@ -2922,14 +2948,10 @@ export function syncEditorSessionFromState() {
     if (activeTab?.editorState?.doc?.toString?.() === nextContent) {
         cmView.setState(activeTab.editorState);
         applyEditorFontSize();
-        state.editorSelection = normalizeEditorSelectionSnapshot(
-            {
-                anchor: cmView.state.selection.main.anchor,
-                head: cmView.state.selection.main.head,
-            },
-            nextContent.length
-        );
-        activeTab.editorSelection = state.editorSelection;
+        cmView.dispatch({
+            selection: EditorSelection.single(nextSelection.anchor, nextSelection.head),
+            annotations: Transaction.addToHistory.of(false)
+        });
     } else if (activeTab?.editorState) {
         activeTab.editorState = null;
     }
@@ -2973,6 +2995,15 @@ export function syncEditorSessionFromState() {
         state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
     }
 
+    const restoreTopLine = Math.max(1, Math.round(Number(state.editorTopLine) || 1));
+    const restoreScrollTop = Math.max(0, Number(state.editorScrollTop) || 0);
+    requestAnimationFrame(() => {
+        if (!state.isEditing || !cmView?.scrollDOM) {
+            return;
+        }
+        restoreEditorViewPosition(restoreTopLine, restoreScrollTop);
+    });
+
     lastRenderedPreviewContent = nextContent;
     lastPreviewCursorLine = getCursorLineNumber(cmView.state);
     lastPreviewTopLine = getTopVisibleLineNumber(cmView);
@@ -2986,6 +3017,35 @@ export function syncEditorSessionFromState() {
     }
     updateSlashMenu();
     syncEditorStateToBackend();
+}
+
+function restoreEditorViewPosition(topLine, fallbackScrollTop = 0) {
+    if (!cmView?.scrollDOM) return;
+    const targetLine = Math.max(1, Math.min(topLine, cmView.state.doc.lines));
+    try {
+        const line = cmView.state.doc.line(targetLine);
+        cmView.dispatch({
+            effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 0 })
+        });
+        requestAnimationFrame(() => {
+            if (!state.isEditing || !cmView?.scrollDOM) return;
+            const visibleLine = getTopVisibleLineNumber(cmView);
+            if (Math.abs(visibleLine - targetLine) > 1 && fallbackScrollTop > 0) {
+                cmView.scrollDOM.scrollTop = fallbackScrollTop;
+            }
+            state.editorTopLine = getTopVisibleLineNumber(cmView);
+            state.editorScrollTop = cmView.scrollDOM.scrollTop;
+            const activeTab = getActiveTab();
+            if (activeTab?.id === state.activeTabId) {
+                activeTab.editorTopLine = state.editorTopLine;
+                activeTab.editorScrollTop = state.editorScrollTop;
+            }
+        });
+    } catch (error) {
+        if (fallbackScrollTop > 0) {
+            cmView.scrollDOM.scrollTop = fallbackScrollTop;
+        }
+    }
 }
 
 export async function createNewDocument() {

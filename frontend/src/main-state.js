@@ -302,6 +302,8 @@ export const state = {
     isEditing: false,
     editorOriginalContent: "",
     editorSelection: null,
+    editorScrollTop: 0,
+    editorTopLine: 1,
     editingSourcePath: "",
     editingSourceFolder: "",
     editingPreviewPath: "",

@@ -9,7 +9,7 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { clearTransientEditorOverlays, exitEditMode, getEditorSelectionSnapshot, getEditorStateSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, getEditorSelectionSnapshot, getEditorStateSnapshot, getEditorTopLineSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -41,6 +41,8 @@ export function createTab({ path = HOME_SCREEN_PATH, title = 'New Tab' } = {}) {
         isEditing: false,
         editorOriginalContent: "",
         editorSelection: null,
+        editorScrollTop: 0,
+        editorTopLine: 1,
         editorSelections: {},
         editingSourcePath: "",
         editingSourceFolder: "",
@@ -65,6 +67,12 @@ export function syncTabFromGlobals(tab) {
     tab.isEditing = state.isEditing;
     tab.editorOriginalContent = state.editorOriginalContent;
     tab.editorSelection = getEditorSelectionSnapshot() || state.editorSelection || null;
+    tab.editorScrollTop = state.isEditing && tab.id === state.activeTabId
+        ? getEditorScrollSnapshot()
+        : state.editorScrollTop || tab.editorScrollTop || 0;
+    tab.editorTopLine = state.isEditing && tab.id === state.activeTabId
+        ? getEditorTopLineSnapshot()
+        : state.editorTopLine || tab.editorTopLine || 1;
     const editorState = getEditorStateSnapshot();
     if (state.isEditing && tab.id === state.activeTabId && editorState) {
         tab.editorState = editorState;
@@ -95,6 +103,8 @@ export function syncGlobalsFromTab(tab) {
     state.editorOriginalContent = tab.editorOriginalContent || "";
     tab.editorSelections = tab.editorSelections || {};
     state.editorSelection = tab.editorSelections[tab.editingSourcePath || tab.path] || tab.editorSelection || null;
+    state.editorScrollTop = Number.isFinite(tab.editorScrollTop) ? tab.editorScrollTop : 0;
+    state.editorTopLine = Number.isFinite(tab.editorTopLine) ? tab.editorTopLine : 1;
     state.editingSourcePath = tab.editingSourcePath || "";
     state.editingSourceFolder = tab.editingSourceFolder || "";
     state.editingPreviewPath = tab.editingPreviewPath || "";
@@ -113,6 +123,12 @@ export function saveCurrentScroll() {
         return;
     }
     state.navHistory[state.navIndex].scroll = getScroller().scrollTop;
+    if (state.isEditing) {
+        state.editorScrollTop = getEditorScrollSnapshot();
+        state.editorTopLine = getEditorTopLineSnapshot();
+        tab.editorScrollTop = state.editorScrollTop;
+        tab.editorTopLine = state.editorTopLine;
+    }
     syncTabFromGlobals(tab);
 }
 
