@@ -9,7 +9,7 @@ import {
     syncEngineSelector, getPathDirname, getScroller,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { clearSpellcheckSuggestions, exitEditMode, getEditorSelectionSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { clearTransientEditorOverlays, exitEditMode, getEditorSelectionSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -119,7 +119,7 @@ export async function switchToTab(tabID) {
     if (!nextTab || nextTab.id === state.activeTabId) {
         return;
     }
-    clearSpellcheckSuggestions();
+    clearTransientEditorOverlays();
     saveCurrentScroll();
     state.activeTabId = nextTab.id;
     syncGlobalsFromTab(nextTab);
@@ -202,7 +202,7 @@ function beginPointerDrag(tabNode, event) {
     if (tabId !== state.activeTabId) {
         const nextTab = state.tabs.find(tab => tab.id === tabId);
         if (nextTab) {
-            clearSpellcheckSuggestions();
+            clearTransientEditorOverlays();
             saveCurrentScroll();
             state.activeTabId = nextTab.id;
             syncGlobalsFromTab(nextTab);
@@ -414,7 +414,7 @@ async function moveTabToIndex(sourceTabID, insertionIndex) {
         return;
     }
 
-    clearSpellcheckSuggestions();
+    clearTransientEditorOverlays();
     saveCurrentScroll();
     state.activeTabId = movedTab.id;
     syncGlobalsFromTab(movedTab);
@@ -449,7 +449,7 @@ export async function closeTab(tabID) {
     }
 
     if (isActiveEditingTab) {
-        clearSpellcheckSuggestions();
+        clearTransientEditorOverlays();
         await exitEditMode(false);
     }
 
@@ -478,7 +478,7 @@ export async function closeTab(tabID) {
     }
 
     if (wasActive) {
-        clearSpellcheckSuggestions();
+        clearTransientEditorOverlays();
         const fallback = state.tabs[Math.max(0, idx - 1)] || state.tabs[0];
         state.activeTabId = fallback.id;
         syncGlobalsFromTab(fallback);
@@ -558,6 +558,7 @@ export async function discardTabsForDeletedPath(deletedPath, { isDirectory = fal
     if (state.tabs.length === 0) {
         const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
         state.tabs.push(freshTab);
+        clearTransientEditorOverlays();
         state.activeTabId = freshTab.id;
         syncGlobalsFromTab(freshTab);
         syncEditorSessionFromState();
@@ -568,6 +569,7 @@ export async function discardTabsForDeletedPath(deletedPath, { isDirectory = fal
 
     if (wasActiveDeleted || !state.tabs.some(tab => tab.id === state.activeTabId)) {
         const fallback = state.tabs[0];
+        clearTransientEditorOverlays();
         state.activeTabId = fallback.id;
         syncGlobalsFromTab(fallback);
         syncEditorSessionFromState();
@@ -660,6 +662,7 @@ export async function createAndSwitchToNewTab(path = HOME_SCREEN_PATH, options =
     if (currentTab) {
         syncTabFromGlobals(currentTab);
     }
+    clearTransientEditorOverlays();
     saveCurrentScroll();
     const tab = createTab({
         path,

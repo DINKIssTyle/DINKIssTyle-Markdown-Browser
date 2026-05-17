@@ -2128,6 +2128,11 @@ export function clearSpellcheckSuggestions() {
     spellcheckCloseButton = null;
 }
 
+export function clearTransientEditorOverlays() {
+    clearSpellcheckSuggestions();
+    hidePromptBox({ restoreEditorFocus: false });
+}
+
 async function runSpellcheck() {
     const selectedLanguage = await showSpellcheckLanguagePrompt();
     if (!selectedLanguage) return;
