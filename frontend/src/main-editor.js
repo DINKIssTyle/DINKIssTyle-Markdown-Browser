@@ -8,7 +8,7 @@ import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMe
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
-import { showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
+import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
@@ -1508,7 +1508,7 @@ async function translateCurrentDocument() {
             if (!overwrite) return;
         }
 
-        updateProgress("Starting translation...", 0);
+        const taskId = beginProgressTask("Starting translation...", 0);
         const result = await TranslateDocumentCopies({
             sourcePath: ready.sourcePath,
             content: ready.content,
@@ -1516,10 +1516,12 @@ async function translateCurrentDocument() {
             ai: aiConfig,
             overwriteExisting: existing.length > 0,
         });
+        if (!isProgressTaskActive(taskId)) return;
         const sidebar = await import('./main-sidebar.js');
         await sidebar.updateFileTree({ forceRefresh: true });
         await insertTranslatedDocumentLinks(ready.sourcePath, result.targets || []);
         showToast("Translated documents created.", "check_circle");
+        finishProgressTask(taskId);
     } catch (error) {
         if (isCancelledAIError(error)) {
             LogError(`TranslateDocumentCopies cancelled: ${error?.message || error}`);
@@ -2177,11 +2179,15 @@ async function runSpellcheck() {
         }
 
         let totalSuggestions = 0;
+        const taskId = beginProgressTask(`Checking spelling chunk 1 of ${chunks.length}...`, 0);
         for (const [chunkIndex, chunk] of chunks.entries()) {
             if (state.activeTabId !== requestTabId) {
                 return;
             }
-            updateProgress(`Checking spelling chunk ${chunkIndex + 1} of ${chunks.length}...`, Math.round((chunkIndex / chunks.length) * 100), { active: true });
+            if (!isProgressTaskActive(taskId)) {
+                return;
+            }
+            updateProgress(`Checking spelling chunk ${chunkIndex + 1} of ${chunks.length}...`, Math.round((chunkIndex / chunks.length) * 100));
             const result = await SpellCheckDocument({
                 content: chunk.content,
                 language: {
@@ -2193,6 +2199,9 @@ async function runSpellcheck() {
                 ai: aiConfig,
             });
             if (state.activeTabId !== requestTabId) {
+                return;
+            }
+            if (!isProgressTaskActive(taskId)) {
                 return;
             }
 
@@ -2221,11 +2230,13 @@ async function runSpellcheck() {
         updateProgress("Checking spelling...", 100, { active: false });
         if (totalSuggestions === 0) {
             showToast("No spelling suggestions found.", "check_circle");
+            finishProgressTask(taskId);
             return;
         }
         updateSpellcheckNavigator();
         const suggestions = getSpellcheckState().suggestions;
         showToast(`${suggestions.length} spelling suggestion${suggestions.length === 1 ? '' : 's'} found.`, "spellcheck");
+        finishProgressTask(taskId);
     } catch (error) {
         if (isCancelledAIError(error)) {
             LogError(`SpellCheckDocument cancelled: ${error?.message || error}`);

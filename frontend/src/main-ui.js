@@ -92,7 +92,7 @@ export function showProgress(title, progress = null, options = {}) {
     clearTimeout(progressHideTimer);
     const isWavingTitle = WAVING_PROGRESS_TITLE_PATTERN.test(title);
     renderProgressTitle(title, { wavingDots: isWavingTitle });
-    const isActive = !!options.active || /rendering document|translating document|checking spelling|starting translation/i.test(title);
+    const isActive = options.active !== false;
     el.progressTitle.classList.toggle('shimmering', /rendering document/i.test(title));
     el.progressFill.classList.toggle('active', isActive);
     if (typeof progress === 'number') {
@@ -213,10 +213,10 @@ function clearProgressDelta() {
     }
 }
 
-export function beginProgressTask(title, progress = null) {
+export function beginProgressTask(title, progress = null, options = {}) {
     activeProgressTaskId += 1;
     const taskId = activeProgressTaskId;
-    showProgress(title, progress);
+    showProgress(title, progress, options);
     return taskId;
 }
 

@@ -22,7 +22,7 @@ import {
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
 import { syncAIControls } from './main-ai.js';
-import { applyHighlight, clearHighlight, copyTextToClipboard, showToast } from './main-ui.js';
+import { applyHighlight, beginProgressTask, clearHighlight, copyTextToClipboard, finishProgressTask, showToast, updateProgress } from './main-ui.js';
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../wailsjs/go/app/App';
 import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
 import { refreshSidebarContent } from './main-sidebar.js';
@@ -1433,20 +1433,28 @@ export async function previewEditingLinkTarget(rel) {
         return;
     }
 
-    let previewContent = "";
-    if (isBundledDocumentPath(resolvedPath)) {
-        previewContent = await loadBundledMarkdown(resolvedPath);
-    } else {
-        previewContent = await ReadFile(resolvedPath);
-    }
+    const taskId = beginProgressTask('Loading preview', 24);
+    try {
+        let previewContent = "";
+        if (isBundledDocumentPath(resolvedPath)) {
+            updateProgress('Loading bundled document', 48);
+            previewContent = await loadBundledMarkdown(resolvedPath);
+        } else {
+            updateProgress('Reading markdown file', 48);
+            previewContent = await ReadFile(resolvedPath);
+        }
 
-    state.editingPreviewPath = resolvedPath;
-    state.editingPreviewFolder = isBundledDocumentPath(resolvedPath) ? "" : getPathDirname(resolvedPath);
-    el.markdownContainer.classList.remove('hidden');
-    el.htmlFrame.classList.add('hidden');
-    await renderMarkdown(previewContent);
-    if (anchor) {
-        scrollToAnchor(anchor);
+        state.editingPreviewPath = resolvedPath;
+        state.editingPreviewFolder = isBundledDocumentPath(resolvedPath) ? "" : getPathDirname(resolvedPath);
+        el.markdownContainer.classList.remove('hidden');
+        el.htmlFrame.classList.add('hidden');
+        updateProgress('Rendering document', 82);
+        await renderMarkdown(previewContent);
+        if (anchor) {
+            scrollToAnchor(anchor);
+        }
+    } finally {
+        finishProgressTask(taskId);
     }
 }
 

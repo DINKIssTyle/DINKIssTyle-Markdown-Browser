@@ -289,7 +289,7 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
     if (!aiProgressTaskId) {
         aiProgressTaskId = beginProgressTask(progressTitle, nextProgress);
     } else {
-        updateProgress(progressTitle, nextProgress, { active: true });
+        updateProgress(progressTitle, nextProgress);
     }
     hidePromptBoxElement();
     updatePromptBusyUI();
@@ -437,7 +437,7 @@ function setPromptBusyInputText(value = "") {
         ...aiPromptBusyState,
         inputText: String(value || ""),
     };
-    updateProgress(String(value || aiPromptBusyState.placeholder), aiPromptBusyState.progress, { active: true });
+    updateProgress(String(value || aiPromptBusyState.placeholder), aiPromptBusyState.progress);
     updatePromptBusyUI();
 }
 
