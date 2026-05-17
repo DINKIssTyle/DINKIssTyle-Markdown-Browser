@@ -13,6 +13,7 @@ import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import { isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
+import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor } from './main-theme.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
@@ -76,6 +77,7 @@ let supportAgentPromptText = "";
 let supportAgentTransitionTimer = null;
 let lastPromptInputValue = "";
 let aiPromptForcedVisible = false;
+let settingsAccentSnapshot = null;
 let aiDockHideTimer = null;
 let aiPanelHideTimer = null;
 let aiReasoningTickerIndex = 0;
@@ -992,6 +994,59 @@ function syncSettingsTabs(activeTab = 'editor') {
     el.settingsPanelAi?.classList.toggle('hidden', !isAi);
 }
 
+function renderAccentPresetControls() {
+    renderAccentPresetList(el.lightAccentPresetList, LIGHT_ACCENT_PRESETS, state.lightAccentColor, 'light');
+    renderAccentPresetList(el.darkAccentPresetList, DARK_ACCENT_PRESETS, state.darkAccentColor, 'dark');
+    if (el.lightAccentCustom) {
+        el.lightAccentCustom.value = normalizeAccentColor(state.lightAccentColor);
+    }
+    if (el.darkAccentCustom) {
+        el.darkAccentCustom.value = normalizeAccentColor(state.darkAccentColor, DEFAULT_DARK_ACCENT_COLOR);
+    }
+}
+
+function renderAccentPresetList(container, presets, selectedColor, mode) {
+    if (!container) return;
+    const normalizedSelected = normalizeAccentColor(selectedColor);
+    container.innerHTML = presets.map(color => {
+        const normalized = normalizeAccentColor(color);
+        const active = normalized === normalizedSelected ? ' active' : '';
+        return `
+            <button type="button" class="accent-preset-btn${active}" data-accent-mode="${mode}" data-accent-color="${normalized}" aria-label="${mode} highlight ${normalized}">
+                <span style="background-color: ${normalized}"></span>
+            </button>
+        `;
+    }).join('');
+}
+
+function setAccentColor(mode, color) {
+    const previousColor = mode === 'dark' ? state.darkAccentColor : state.lightAccentColor;
+    const nextColor = normalizeAccentColor(color, mode === 'dark' ? DEFAULT_DARK_ACCENT_COLOR : DEFAULT_LIGHT_ACCENT_COLOR);
+    if (mode === 'dark') {
+        state.darkAccentColor = nextColor;
+    } else {
+        state.lightAccentColor = nextColor;
+        if (state.editorTokenColors?.link === previousColor) {
+            state.editorTokenColors.link = nextColor;
+        }
+        if (state.editorTokenColors?.marker === previousColor) {
+            state.editorTokenColors.marker = nextColor;
+        }
+        el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
+            if ((input.dataset.tokenColorKey === 'link' || input.dataset.tokenColorKey === 'marker') && input.value === previousColor) {
+                input.value = nextColor;
+            }
+        });
+    }
+    applyAccentColors(state.lightAccentColor, state.darkAccentColor);
+    applyEditorTokenColors();
+    renderAccentPresetControls();
+}
+
+function syncCommonSettingsControls() {
+    renderAccentPresetControls();
+}
+
 function renderEditorTokenColorControls() {
     if (!el.editorTokenColorGrid) return;
     if (el.editorTokenPresetList) {
@@ -1124,6 +1179,18 @@ export function bindAIEvents() {
     el.settingsTabCommon?.addEventListener('click', () => syncSettingsTabs('common'));
     el.settingsTabEditor?.addEventListener('click', () => syncSettingsTabs('editor'));
     el.settingsTabAi?.addEventListener('click', () => syncSettingsTabs('ai'));
+    el.lightAccentPresetList?.addEventListener('click', event => {
+        const button = event.target.closest('[data-accent-color]');
+        if (!button) return;
+        setAccentColor(button.dataset.accentMode, button.dataset.accentColor);
+    });
+    el.darkAccentPresetList?.addEventListener('click', event => {
+        const button = event.target.closest('[data-accent-color]');
+        if (!button) return;
+        setAccentColor(button.dataset.accentMode, button.dataset.accentColor);
+    });
+    el.lightAccentCustom?.addEventListener('input', event => setAccentColor('light', event.target.value));
+    el.darkAccentCustom?.addEventListener('input', event => setAccentColor('dark', event.target.value));
     el.editorTokenColorsEnabled?.addEventListener('change', syncEditorTokenColorAvailability);
     el.editorTokenPresetList?.addEventListener('click', event => {
         const button = event.target.closest('[data-token-preset-key]');
@@ -1158,7 +1225,13 @@ export function bindAIEvents() {
 
     // Settings Modal
     el.edSettings.onclick = () => {
+        settingsAccentSnapshot = {
+            light: state.lightAccentColor,
+            dark: state.darkAccentColor,
+            editorTokenColors: { ...(state.editorTokenColors || {}) },
+        };
         syncSettingsTabs('editor');
+        syncCommonSettingsControls();
         syncEditorSettingsControls();
         syncAISettingsSections();
         syncGeneralModelControl();
@@ -1169,6 +1242,14 @@ export function bindAIEvents() {
     };
     el.aiSettingsCancel.onclick = () => {
         closeGeneralModelPopover();
+        if (settingsAccentSnapshot) {
+            state.lightAccentColor = settingsAccentSnapshot.light;
+            state.darkAccentColor = settingsAccentSnapshot.dark;
+            state.editorTokenColors = { ...(settingsAccentSnapshot.editorTokenColors || {}) };
+            settingsAccentSnapshot = null;
+        }
+        applyAccentColors(state.lightAccentColor, state.darkAccentColor);
+        applyEditorTokenColors();
         el.aiSettingsModal.classList.add('hidden');
     };
     el.aiSettingsSave.onclick = async () => {
@@ -1189,6 +1270,9 @@ export function bindAIEvents() {
         window.aiState.fimKey = el.aiFimKey.value;
         window.aiState.fimTemp = parseFloat(el.aiFimTemp.value) || 0;
         state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
+        state.lightAccentColor = normalizeAccentColor(el.lightAccentCustom?.value, state.lightAccentColor);
+        state.darkAccentColor = normalizeAccentColor(el.darkAccentCustom?.value, state.darkAccentColor);
+        applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         collectEditorSettingsFromControls();
         await persistAISettings();
 
@@ -1196,6 +1280,7 @@ export function bindAIEvents() {
         syncGeneralTemperatureControl();
 
         closeGeneralModelPopover();
+        settingsAccentSnapshot = null;
         el.aiSettingsModal.classList.add('hidden');
         showToast("Settings saved.");
     };

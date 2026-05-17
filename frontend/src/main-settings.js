@@ -9,6 +9,8 @@ import { SaveSettings } from '../wailsjs/go/app/App';
 export function buildSettingsPayload(overrides = {}) {
     return {
         theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
+        lightAccentColor: state.lightAccentColor,
+        darkAccentColor: state.darkAccentColor,
         fontSize: state.currentFontSize,
         engine: state.currentMarkdownEngine,
         editorRenderMode: state.currentEditorRenderMode,

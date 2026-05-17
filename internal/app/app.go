@@ -79,6 +79,8 @@ type AIModelInfo struct {
 // AppSettings represents the application settings
 type AppSettings struct {
 	Theme                    string            `json:"theme"`
+	LightAccentColor         string            `json:"lightAccentColor"`
+	DarkAccentColor          string            `json:"darkAccentColor"`
 	FontSize                 int               `json:"fontSize"`
 	Engine                   string            `json:"engine"`
 	EditorRenderMode         string            `json:"editorRenderMode"`
@@ -626,6 +628,8 @@ func (a *App) GetSettings() AppSettings {
 	var settings AppSettings
 	// Default settings
 	settings.Theme = "light" // "dark" | "light"
+	settings.LightAccentColor = "#0071e3"
+	settings.DarkAccentColor = "#0a84ff"
 	settings.FontSize = 16
 	settings.Engine = "marked"              // "marked" | "html"
 	settings.EditorRenderMode = "realtime"  // "realtime" | "cursor"

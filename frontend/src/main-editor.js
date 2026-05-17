@@ -13,6 +13,7 @@ import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
 import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
+import { getCurrentAccentColor } from './main-theme.js';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
@@ -524,7 +525,13 @@ function getEditorThemeName() {
 }
 
 export function getEditorDefaultTokenColors(themeName = getEditorThemeName()) {
-    return { ...(EDITOR_TOKEN_COLOR_DEFAULTS[themeName] || EDITOR_TOKEN_COLOR_DEFAULTS.light) };
+    const defaults = { ...(EDITOR_TOKEN_COLOR_DEFAULTS[themeName] || EDITOR_TOKEN_COLOR_DEFAULTS.light) };
+    if (themeName === 'light') {
+        const accentColor = getCurrentAccentColor();
+        defaults.link = accentColor;
+        defaults.marker = accentColor;
+    }
+    return defaults;
 }
 
 export function getEditorDefaultBackgroundColor(themeName = getEditorThemeName()) {

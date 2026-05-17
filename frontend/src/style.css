@@ -13,6 +13,17 @@
     --surface-elevated: #fbfbfd;
     --text-color: #1d1d1f;
     --accent-color: #0071e3;
+    --accent-color-rgb: 0, 113, 227;
+    --accent-color-hover: #007aff;
+    --accent-color-soft: rgba(var(--accent-color-rgb), 0.1);
+    --accent-color-softer: rgba(var(--accent-color-rgb), 0.08);
+    --accent-color-strong-bg: rgba(var(--accent-color-rgb), 0.2);
+    --accent-color-selected-bg: rgba(var(--accent-color-rgb), 0.14);
+    --accent-color-border: rgba(var(--accent-color-rgb), 0.32);
+    --accent-color-ring: rgba(var(--accent-color-rgb), 0.16);
+    --accent-color-shadow: rgba(var(--accent-color-rgb), 0.28);
+    --accent-gradient-start: #0071e3;
+    --accent-gradient-end: #73bbf8;
     --border-color: rgba(0, 0, 0, 0.1);
     --toolbar-bg: rgba(255, 255, 255, 0.7);
     --font-stack: -apple-system, BlinkMacSystemFont, "SF Pro Text", "SF Pro Display", "Helvetica Neue", Arial, sans-serif;
@@ -29,6 +40,17 @@ html.dark {
     --surface-elevated: #242428;
     --text-color: #f5f5f7;
     --accent-color: #0a84ff;
+    --accent-color-rgb: 10, 132, 255;
+    --accent-color-hover: #2f97ff;
+    --accent-color-soft: rgba(10, 132, 255, 0.1);
+    --accent-color-softer: rgba(10, 132, 255, 0.08);
+    --accent-color-strong-bg: rgba(10, 132, 255, 0.2);
+    --accent-color-selected-bg: rgba(10, 132, 255, 0.14);
+    --accent-color-border: rgba(10, 132, 255, 0.32);
+    --accent-color-ring: rgba(10, 132, 255, 0.16);
+    --accent-color-shadow: rgba(10, 132, 255, 0.28);
+    --accent-gradient-start: #0a84ff;
+    --accent-gradient-end: #8fd0ff;
     --border-color: rgba(255, 255, 255, 0.1);
     --toolbar-bg: rgba(28, 28, 30, 0.7);
 }
@@ -405,7 +427,7 @@ html.dark .tab-sidebar-btn:hover {
 }
 
 .nav-btn.active {
-    background: rgba(0, 113, 227, 0.1) !important;
+    background: rgba(var(--accent-color-rgb), 0.1) !important;
     color: var(--accent-color) !important;
 }
 
@@ -551,7 +573,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 .sidebar-tab-btn.active {
     opacity: 1;
     color: var(--accent-color);
-    background: rgba(0, 113, 227, 0.1);
+    background: rgba(var(--accent-color-rgb), 0.1);
 }
 
 .sidebar-content {
@@ -665,9 +687,9 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 .outline-item:focus-visible,
 .file-tree-item:focus-visible,
 .result-item:focus-visible {
-    outline: 2px solid rgba(0, 113, 227, 0.4);
+    outline: 2px solid rgba(var(--accent-color-rgb), 0.4);
     outline-offset: -2px;
-    background: rgba(0, 113, 227, 0.08);
+    background: rgba(var(--accent-color-rgb), 0.08);
 }
 
 .outline-text {
@@ -818,7 +840,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .file-tree-item.active {
-    background: rgba(0, 113, 227, 0.12);
+    background: rgba(var(--accent-color-rgb), 0.12);
     color: var(--accent-color);
 }
 
@@ -1060,7 +1082,7 @@ html.dark .content-view.image-mode {
     border-radius: 18px;
     border: 1px dashed rgba(127, 127, 127, 0.35);
     background:
-        radial-gradient(circle at top, rgba(0, 122, 255, 0.08), transparent 54%),
+        radial-gradient(circle at top, rgba(var(--accent-color-rgb), 0.08), transparent 54%),
         rgba(255, 255, 255, 0.62);
     text-align: center;
 }
@@ -1124,7 +1146,7 @@ html.dark .empty-state {
 }
 
 .recent-limit-input:focus {
-    outline: 2px solid rgba(0, 122, 255, 0.35);
+    outline: 2px solid rgba(var(--accent-color-rgb), 0.35);
     outline-offset: 2px;
 }
 
@@ -1932,8 +1954,8 @@ html.dark ::-webkit-scrollbar-thumb {
 
 .edit-select:hover,
 .edit-select:focus {
-    border-color: rgba(0, 113, 227, 0.38);
-    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.08);
+    border-color: rgba(var(--accent-color-rgb), 0.38);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.08);
 }
 
 html.platform-linux .render-toggle select,
@@ -2053,7 +2075,7 @@ html.platform-linux .edit-select option {
 .toolbar-popup-item:focus-visible,
 .toolbar-popup-item.active {
     outline: none;
-    background: rgba(0, 113, 227, 0.1);
+    background: rgba(var(--accent-color-rgb), 0.1);
     color: var(--accent-color);
 }
 
@@ -2102,7 +2124,7 @@ html.dark .toolbar-popup {
 
 .editor-find-input-group:focus-within {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 3px rgba(0, 113, 227, 0.1);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.1);
 }
 
 .editor-find-icon {
@@ -2144,7 +2166,7 @@ html.dark .toolbar-popup {
 }
 
 .editor-find-nav-btn:hover {
-    background: rgba(0, 113, 227, 0.08);
+    background: rgba(var(--accent-color-rgb), 0.08);
     color: var(--accent-color);
 }
 
@@ -2236,7 +2258,7 @@ html.dark .toolbar-popup {
 }
 
 .tool-btn:hover {
-    background: rgba(0, 113, 227, 0.08);
+    background: rgba(var(--accent-color-rgb), 0.08);
     color: var(--accent-color);
 }
 
@@ -2446,9 +2468,9 @@ html.dark .ed-temp-value {
     /* 버튼 비활성화 폰트 색상 */
     --editor-ai-btn-fg: #696969;
     /* 버튼 보더 색상 */
-    --editor-ai-btn-border-strong: #73baf87d;
+    --editor-ai-btn-border-strong: var(--accent-color-border);
     /* 버튼 활성화 색상 */
-    --editor-ai-btn-bg-active: #73bbf8;
+    --editor-ai-btn-bg-active: var(--accent-gradient-end);
     /* 버튼 폰트 색상 */
     --editor-ai-btn-fg-active: #ffffff;
     opacity: 0;
@@ -2785,7 +2807,7 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
 
 .editor-slash-item:hover,
 .editor-slash-item.active {
-    background: rgba(0, 113, 227, 0.1);
+    background: rgba(var(--accent-color-rgb), 0.1);
 }
 
 .editor-slash-label {
@@ -2806,7 +2828,7 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
     font-size: 11px;
     font-weight: 700;
     color: var(--accent-color);
-    background: rgba(0, 113, 227, 0.08);
+    background: rgba(var(--accent-color-rgb), 0.08);
     padding: 4px 7px;
     border-radius: 999px;
 }
@@ -3218,10 +3240,10 @@ html.dark .file-tree-context-menu {
     width: 0%;
     border-radius: inherit;
     overflow: hidden;
-    background: linear-gradient(90deg, #2388ff 0%, #28b9ff 55%, #4fd6ff 100%);
+    background: linear-gradient(90deg, var(--accent-color) 0%, var(--accent-gradient-end) 100%);
     box-shadow:
         inset 0 1px 0 rgba(255, 255, 255, 0.28),
-        0 0 12px rgba(40, 185, 255, 0.28);
+        0 0 12px rgba(var(--accent-color-rgb), 0.28);
     transition: width 0.24s ease;
     transform: translateZ(0);
     will-change: width;
@@ -3476,18 +3498,18 @@ html.dark .progress-stream-text {
 
 .modal-option-cell:hover {
     transform: translateY(-1px);
-    border-color: rgba(0, 113, 227, 0.45);
-    background: rgba(0, 113, 227, 0.08);
+    border-color: rgba(var(--accent-color-rgb), 0.45);
+    background: rgba(var(--accent-color-rgb), 0.08);
 }
 
 .modal-option-cell.active {
     border-color: var(--accent-color);
-    background: rgba(0, 113, 227, 0.14);
-    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.16);
+    background: rgba(var(--accent-color-rgb), 0.14);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.16);
 }
 
 .modal-option-cell:focus-visible {
-    outline: 2px solid rgba(0, 113, 227, 0.4);
+    outline: 2px solid rgba(var(--accent-color-rgb), 0.4);
     outline-offset: 2px;
 }
 
@@ -3509,8 +3531,8 @@ html.dark .progress-stream-text {
 }
 
 .modal-option-dot.is-target {
-    background: linear-gradient(135deg, #1f8fff, #3bb5ff);
-    box-shadow: 0 0 0 3px rgba(31, 143, 255, 0.14);
+    background: linear-gradient(135deg, var(--accent-color), var(--accent-gradient-end));
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.14);
 }
 
 .modal-language-container {
@@ -3543,7 +3565,7 @@ html.dark .progress-stream-text {
 
 .language-filter-input:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
 }
 
 .language-list {
@@ -3587,8 +3609,8 @@ html.dark .progress-stream-text {
 }
 
 .language-option:hover {
-    background: rgba(0, 113, 227, 0.08);
-    border-color: rgba(0, 113, 227, 0.24);
+    background: rgba(var(--accent-color-rgb), 0.08);
+    border-color: rgba(var(--accent-color-rgb), 0.24);
 }
 
 .language-option input {
@@ -3645,7 +3667,7 @@ html.dark .progress-stream-text {
     z-index: 950;
     max-width: min(360px, calc(100vw - 24px));
     padding: 8px;
-    border: 1px solid rgba(0, 113, 227, 0.28);
+    border: 1px solid rgba(var(--accent-color-rgb), 0.28);
     border-radius: 10px;
     background: color-mix(in srgb, var(--surface-elevated) 94%, transparent);
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.22);
@@ -3659,7 +3681,7 @@ html.dark .progress-stream-text {
 .spellcheck-tooltip-replacement {
     border: none;
     border-radius: 8px;
-    background: rgba(0, 113, 227, 0.14);
+    background: rgba(var(--accent-color-rgb), 0.14);
     color: var(--accent-color);
     padding: 7px 10px;
     font-size: 13px;
@@ -3669,7 +3691,7 @@ html.dark .progress-stream-text {
 }
 
 .spellcheck-tooltip-replacement:hover {
-    background: rgba(0, 113, 227, 0.22);
+    background: rgba(var(--accent-color-rgb), 0.22);
 }
 
 .spellcheck-tooltip-reason {
@@ -3718,7 +3740,7 @@ html.dark .progress-stream-text {
 }
 
 .spellcheck-nav-btn:hover {
-    background: rgba(0, 113, 227, 0.1);
+    background: rgba(var(--accent-color-rgb), 0.1);
     color: var(--accent-color);
 }
 
@@ -3762,7 +3784,7 @@ html.dark .progress-stream-text {
 
 .modal-input-group input:focus {
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.2);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.2);
 }
 
 .modal-actions {
@@ -3797,8 +3819,8 @@ html.dark .progress-stream-text {
 }
 
 .modal-btn.primary:hover {
-    background: #007aff;
-    box-shadow: 0 4px 12px rgba(0, 113, 227, 0.3);
+    background: var(--accent-color-hover);
+    box-shadow: 0 4px 12px rgba(var(--accent-color-rgb), 0.3);
 }
 
 .modal-btn.danger {
@@ -3889,9 +3911,9 @@ html.dark .progress-stream-text {
 }
 
 .emoji-category-btn.active {
-    background: rgba(0, 113, 227, 0.12);
+    background: rgba(var(--accent-color-rgb), 0.12);
     color: var(--accent-color);
-    border-color: rgba(0, 113, 227, 0.3);
+    border-color: rgba(var(--accent-color-rgb), 0.3);
 }
 
 .modal-emoji-grid {
@@ -3923,14 +3945,14 @@ html.dark .progress-stream-text {
 
 .emoji-item:hover,
 .emoji-item:focus-visible {
-    background: rgba(0, 113, 227, 0.12);
+    background: rgba(var(--accent-color-rgb), 0.12);
     border-color: var(--accent-color);
     transform: scale(1.1);
     z-index: 1;
 }
 
 .emoji-item.selected {
-    background: rgba(0, 113, 227, 0.2);
+    background: rgba(var(--accent-color-rgb), 0.2);
     border-color: var(--accent-color);
 }
 
@@ -3972,16 +3994,16 @@ html.dark .progress-stream-text {
 }
 
 .table-grid-cell.highlighted {
-    background: rgba(0, 113, 227, 0.4);
+    background: rgba(var(--accent-color-rgb), 0.4);
     border-color: var(--accent-color);
-    box-shadow: 0 0 8px rgba(0, 113, 227, 0.3);
+    box-shadow: 0 0 8px rgba(var(--accent-color-rgb), 0.3);
 }
 
 .modal-table-info {
     font-size: 14px;
     font-weight: 700;
     color: var(--accent-color);
-    background: rgba(0, 113, 227, 0.1);
+    background: rgba(var(--accent-color-rgb), 0.1);
     padding: 4px 12px;
     border-radius: 20px;
     min-width: 80px;
@@ -4076,7 +4098,7 @@ html.dark .progress-stream-text {
     background: color-mix(in srgb, var(--accent-color) 11%, var(--surface-elevated));
     border-color: color-mix(in srgb, var(--accent-color) 32%, transparent);
     color: var(--accent-color);
-    box-shadow: 0 10px 24px rgba(0, 113, 227, 0.10);
+    box-shadow: 0 10px 24px rgba(var(--accent-color-rgb), 0.10);
 }
 
 .settings-panel {
@@ -4097,6 +4119,102 @@ html.dark .progress-stream-text {
     font-size: 128px;
     line-height: 1;
     color: color-mix(in srgb, var(--text-muted) 64%, transparent);
+}
+
+.accent-settings-grid {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    gap: 14px;
+}
+
+.accent-setting-block {
+    display: flex;
+    min-width: 0;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.accent-setting-title {
+    font-size: 12px;
+    font-weight: 800;
+    color: var(--text-color);
+}
+
+.accent-preset-list {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+}
+
+.accent-preset-btn {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 auto;
+    padding: 0;
+    border: 2px solid transparent;
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.15s ease;
+}
+
+.accent-preset-btn span {
+    display: block;
+    width: 100%;
+    height: 100%;
+    border-radius: inherit;
+    box-shadow:
+        inset 0 0 0 1px rgba(0, 0, 0, 0.16),
+        0 1px 2px rgba(0, 0, 0, 0.12);
+}
+
+.accent-preset-btn:hover {
+    transform: translateY(-1px);
+}
+
+.accent-preset-btn.active {
+    border-color: var(--accent-color);
+    box-shadow: 0 0 0 3px var(--accent-color-ring);
+}
+
+.accent-custom-field {
+    width: fit-content;
+    min-width: 180px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 12px;
+    padding: 6px 8px;
+    border: 1px solid color-mix(in srgb, var(--border-color) 86%, transparent);
+    border-radius: 7px;
+    background: color-mix(in srgb, var(--surface-elevated) 74%, transparent);
+}
+
+.accent-custom-field span {
+    font-size: 11px;
+    font-weight: 800;
+}
+
+.ai-settings-content .ai-setting-group .accent-custom-field input[type="color"] {
+    width: 22px;
+    height: 22px;
+    min-width: 22px;
+    padding: 0;
+    border: 1px solid color-mix(in srgb, var(--border-color) 84%, transparent);
+    border-radius: 50%;
+    background: transparent;
+    cursor: pointer;
+    appearance: none;
+    -webkit-appearance: none;
+}
+
+.ai-settings-content .ai-setting-group .accent-custom-field input[type="color"]::-webkit-color-swatch-wrapper {
+    padding: 0;
+}
+
+.ai-settings-content .ai-setting-group .accent-custom-field input[type="color"]::-webkit-color-swatch {
+    border: 0;
+    border-radius: 50%;
 }
 
 .ai-settings-panels {
@@ -4256,7 +4374,7 @@ html.dark .ai-settings-content .ai-setting-note {
 .ai-settings-content .ai-model-trigger:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.14);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.14);
 }
 
 .ai-settings-content .ai-model-trigger:disabled {
@@ -4303,8 +4421,8 @@ html.dark .ai-settings-content .ai-setting-note {
 }
 
 .ai-settings-content .ai-model-item.is-selected {
-    border-color: rgba(0, 113, 227, 0.28);
-    background: rgba(0, 113, 227, 0.08);
+    border-color: rgba(var(--accent-color-rgb), 0.28);
+    background: rgba(var(--accent-color-rgb), 0.08);
 }
 
 .ai-settings-content .ai-model-main {
@@ -4585,7 +4703,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 .ai-settings-content .ai-model-main:focus {
     outline: none;
     border-color: var(--accent-color);
-    box-shadow: 0 0 0 2px rgba(0, 113, 227, 0.14);
+    box-shadow: 0 0 0 2px rgba(var(--accent-color-rgb), 0.14);
 }
 
 .ai-enable-toggle {
@@ -4673,6 +4791,10 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
         grid-template-columns: 1fr;
     }
 
+    .accent-settings-grid {
+        grid-template-columns: 1fr;
+    }
+
     .editor-token-color-grid {
         grid-template-columns: repeat(3, minmax(0, 1fr));
     }
@@ -4703,8 +4825,8 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     --ai-prompt-placeholder-color: color-mix(in srgb, var(--text-color) 52%, transparent 48%);
     --ai-prompt-busy-placeholder-color: #ffffff;
     --ai-prompt-max-lines: 5;
-    --ai-prompt-accent-rgb: 70, 174, 247;
-    --ai-prompt-badge-gradient: linear-gradient(120deg, #89f7fe 0%, #66a6ff 100%);
+    --ai-prompt-accent-rgb: var(--accent-color-rgb);
+    --ai-prompt-badge-gradient: linear-gradient(120deg, var(--accent-gradient-end) 0%, var(--accent-color) 100%);
     --ai-prompt-badge-shadow: 0 16px 28px rgba(var(--ai-prompt-accent-rgb), 0.26);
     --ai-prompt-badge-shadow-strong: 0 18px 30px rgba(var(--ai-prompt-accent-rgb), 0.34);
     --ai-prompt-shell-border: rgba(0, 0, 0, 0.08);
@@ -4783,7 +4905,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-shell:focus-within {
-    border-color: rgba(70, 174, 247, 0.58);
+    border-color: rgba(var(--accent-color-rgb), 0.58);
     box-shadow: var(--ai-prompt-shell-focus-shadow);
 }
 
@@ -4794,7 +4916,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     inset: 0 auto 0 0;
     width: var(--ai-prompt-progress, 0%);
     /* background: linear-gradient(90deg, rgba(70, 174, 247, 0.18), rgba(143, 0, 255, 0.14)); */
-    background-image: linear-gradient(70deg, #66a6ff 0%, #89f7fe 100%);
+    background-image: linear-gradient(70deg, var(--accent-color) 0%, var(--accent-gradient-end) 100%);
     pointer-events: none;
     transition: width 0.22s ease;
 }
@@ -4837,7 +4959,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     border-radius: 999px;
     background: rgba(255, 255, 255, 0.92);
     border: 1px solid rgba(35, 136, 255, 0.36);
-    color: #2388ff;
+    color: var(--accent-color);
     font-size: 10px;
     font-weight: 800;
     line-height: 1.2;
@@ -4850,14 +4972,14 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-stream-ticker.is-waiting .ai-prompt-stream-kind {
-    border-color: rgba(70, 174, 247, 0.28);
-    color: #2388ff;
+    border-color: rgba(var(--accent-color-rgb), 0.28);
+    color: var(--accent-color);
 }
 
 .ai-prompt-stream-text {
     min-width: 0;
     overflow: hidden;
-    background: linear-gradient(90deg, #2388ff 0%, #22aef7 52%, #1cc7de 100%);
+    background: linear-gradient(90deg, var(--accent-color) 0%, var(--accent-gradient-end) 100%);
     -webkit-background-clip: text;
     background-clip: text;
     color: transparent;
@@ -4877,9 +4999,9 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
     margin-left: 6px;
     border-radius: 999px;
     background:
-        radial-gradient(circle at 3px 50%, #2388ff 0 2px, transparent 2.5px),
-        radial-gradient(circle at 9px 50%, #2388ff 0 2px, transparent 2.5px),
-        radial-gradient(circle at 15px 50%, #2388ff 0 2px, transparent 2.5px);
+        radial-gradient(circle at 3px 50%, var(--accent-color) 0 2px, transparent 2.5px),
+        radial-gradient(circle at 9px 50%, var(--accent-color) 0 2px, transparent 2.5px),
+        radial-gradient(circle at 15px 50%, var(--accent-color) 0 2px, transparent 2.5px);
     opacity: 0.74;
     animation: ai-prompt-waiting-wave 0.92s ease-in-out infinite;
 }
@@ -4910,7 +5032,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-box.is-support-agent textarea {
-    color: #1077df;
+    color: var(--accent-color);
     cursor: pointer;
 }
 
@@ -4920,27 +5042,27 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 }
 
 .ai-prompt-box.is-support-agent {
-    --ai-prompt-accent-rgb: 16, 119, 223;
-    --ai-prompt-badge-gradient: linear-gradient(120deg, #8fd0ff 0%, #1077df 100%);
-    --ai-prompt-shell-border: rgba(16, 119, 223, 0.14);
+    --ai-prompt-accent-rgb: var(--accent-color-rgb);
+    --ai-prompt-badge-gradient: linear-gradient(120deg, var(--accent-gradient-end) 0%, var(--accent-color) 100%);
+    --ai-prompt-shell-border: rgba(var(--accent-color-rgb), 0.14);
     --ai-prompt-shell-bg: linear-gradient(180deg, rgba(255, 255, 255, 0.98), rgba(246, 251, 255, 0.98));
 }
 
 html.dark .ai-prompt-box.is-support-agent {
-    --ai-prompt-accent-rgb: 116, 194, 255;
-    --ai-prompt-badge-gradient: linear-gradient(120deg, #8fd0ff 0%, #3b95ff 100%);
-    --ai-prompt-badge-shadow: 0 18px 30px rgba(87, 174, 255, 0.28);
-    --ai-prompt-badge-shadow-strong: 0 20px 34px rgba(87, 174, 255, 0.38);
-    --ai-prompt-shell-border: rgba(143, 208, 255, 0.34);
+    --ai-prompt-accent-rgb: var(--accent-color-rgb);
+    --ai-prompt-badge-gradient: linear-gradient(120deg, var(--accent-gradient-end) 0%, var(--accent-color) 100%);
+    --ai-prompt-badge-shadow: 0 18px 30px rgba(var(--accent-color-rgb), 0.28);
+    --ai-prompt-badge-shadow-strong: 0 20px 34px rgba(var(--accent-color-rgb), 0.38);
+    --ai-prompt-shell-border: rgba(var(--accent-color-rgb), 0.34);
     --ai-prompt-shell-bg: linear-gradient(180deg, rgba(23, 40, 58, 0.98), rgba(19, 31, 45, 0.98));
     --ai-prompt-shell-shadow:
-        0 0 0 1px rgba(143, 208, 255, 0.08),
+        0 0 0 1px rgba(var(--accent-color-rgb), 0.08),
         0 14px 30px rgba(0, 0, 0, 0.32),
-        0 0 28px rgba(87, 174, 255, 0.12);
+        0 0 28px rgba(var(--accent-color-rgb), 0.12);
 }
 
 html.dark .ai-prompt-box.is-support-agent textarea {
-    color: #9ed8ff;
+    color: var(--accent-gradient-end);
     font-weight: 700;
 }
 
@@ -5027,7 +5149,7 @@ html.dark .ai-prompt-box.is-support-agent textarea {
 
 .ai-prompt-box button:first-of-type {
     /* color: #1872eb; */
-    color: #46aef7;
+    color: var(--accent-color);
 }
 
 .ai-prompt-box button:hover {
@@ -5050,27 +5172,27 @@ html.dark .ai-prompt-shell {
 
 html.dark .ai-prompt-stream-kind {
     background: rgba(14, 23, 38, 0.88);
-    border-color: rgba(143, 208, 255, 0.34);
-    color: #8fd0ff;
+    border-color: rgba(var(--accent-color-rgb), 0.34);
+    color: var(--accent-gradient-end);
 }
 
 html.dark .ai-prompt-stream-text {
-    background: linear-gradient(90deg, #8fd0ff 0%, #5ebcff 50%, #7ce8ef 100%);
+    background: linear-gradient(90deg, var(--accent-gradient-end) 0%, var(--accent-color) 100%);
     -webkit-background-clip: text;
     background-clip: text;
 }
 
 html.dark .ai-prompt-stream-ticker.is-waiting .ai-prompt-stream-text::after {
     background:
-        radial-gradient(circle at 3px 50%, #8fd0ff 0 2px, transparent 2.5px),
-        radial-gradient(circle at 9px 50%, #8fd0ff 0 2px, transparent 2.5px),
-        radial-gradient(circle at 15px 50%, #8fd0ff 0 2px, transparent 2.5px);
+        radial-gradient(circle at 3px 50%, var(--accent-gradient-end) 0 2px, transparent 2.5px),
+        radial-gradient(circle at 9px 50%, var(--accent-gradient-end) 0 2px, transparent 2.5px),
+        radial-gradient(circle at 15px 50%, var(--accent-gradient-end) 0 2px, transparent 2.5px);
 }
 
 html.dark .ai-prompt-shell:focus-within {
-    border-color: rgba(108, 190, 255, 0.68);
+    border-color: rgba(var(--accent-color-rgb), 0.68);
     box-shadow:
-        0 0 0 1px rgba(108, 190, 255, 0.34),
+        0 0 0 1px rgba(var(--accent-color-rgb), 0.34),
         0 0 0 6px rgba(var(--ai-prompt-accent-rgb), 0.16),
         0 8px 18px rgba(2, 6, 23, 0.18),
         0 18px 32px rgba(2, 6, 23, 0.16);

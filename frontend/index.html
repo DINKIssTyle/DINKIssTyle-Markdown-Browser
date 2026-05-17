@@ -522,10 +522,33 @@
                         </button>
                     </nav>
 
-                    <section id="settings-panel-common" class="settings-panel settings-placeholder-panel hidden"
+                    <section id="settings-panel-common" class="settings-panel hidden"
                         role="tabpanel" aria-labelledby="settings-tab-common">
-                        <span class="material-symbols-outlined settings-placeholder-icon"
-                            aria-hidden="true">person_play</span>
+                        <section class="ai-setting-group">
+                            <div class="ai-setting-header">
+                                <h4>Appearance</h4>
+                            </div>
+                            <div class="accent-settings-grid">
+                                <div class="accent-setting-block">
+                                    <div class="accent-setting-title">Light Highlight</div>
+                                    <div id="light-accent-preset-list" class="accent-preset-list"
+                                        aria-label="Light highlight color presets"></div>
+                                    <label class="accent-custom-field" for="light-accent-custom">
+                                        <span>Custom</span>
+                                        <input type="color" id="light-accent-custom" />
+                                    </label>
+                                </div>
+                                <div class="accent-setting-block">
+                                    <div class="accent-setting-title">Dark Highlight</div>
+                                    <div id="dark-accent-preset-list" class="accent-preset-list"
+                                        aria-label="Dark highlight color presets"></div>
+                                    <label class="accent-custom-field" for="dark-accent-custom">
+                                        <span>Custom</span>
+                                        <input type="color" id="dark-accent-custom" />
+                                    </label>
+                                </div>
+                            </div>
+                        </section>
                     </section>
 
                     <section id="settings-panel-editor" class="settings-panel" role="tabpanel"

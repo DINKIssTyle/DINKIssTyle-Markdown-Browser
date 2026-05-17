@@ -22,6 +22,8 @@ export namespace app {
 	}
 	export class AppSettings {
 	    theme: string;
+	    lightAccentColor: string;
+	    darkAccentColor: string;
 	    fontSize: number;
 	    engine: string;
 	    editorRenderMode: string;
@@ -62,6 +64,8 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.theme = source["theme"];
+	        this.lightAccentColor = source["lightAccentColor"];
+	        this.darkAccentColor = source["darkAccentColor"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];

@@ -29,6 +29,7 @@ import {
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
 import { persistAppSettings } from './main-settings.js';
+import { applyAccentColors, resolveAccentSettings } from './main-theme.js';
 
 import {
     FrontendReady,
@@ -137,8 +138,12 @@ async function loadSettings() {
     state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
     state.recentFileDisplayLimit = clampRecentFileDisplayLimit(s.recentFileDisplayLimit);
     state.outlineHeadingFormatEnabled = !!s.outlineHeadingFormat;
+    const accentSettings = resolveAccentSettings(s);
+    state.lightAccentColor = accentSettings.light;
+    state.darkAccentColor = accentSettings.dark;
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
+    applyAccentColors(state.lightAccentColor, state.darkAccentColor);
     if (el.recentLimitInput) {
         el.recentLimitInput.value = String(state.recentFileDisplayLimit);
     }
@@ -216,6 +221,7 @@ function changeFontSize(delta) {
 
 function toggleTheme() {
     const isDark = document.documentElement.classList.toggle('dark');
+    applyAccentColors(state.lightAccentColor, state.darkAccentColor);
     setEditorTheme(isDark);
     persist();
 }

@@ -12,6 +12,7 @@ import remarkGfm from 'remark-gfm';
 import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
 import hljs from './vendor/highlight.js/highlight.common.js';
+import { getCurrentAccentColor } from './main-theme.js';
 
 import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
@@ -932,6 +933,7 @@ function enhanceCodeBlockSyntaxHighlighting(container) {
 
 function getMermaidConfig() {
     const isDark = document.documentElement.classList.contains('dark');
+    const accentColor = getCurrentAccentColor();
     return {
         startOnLoad: false,
         theme: isDark ? 'dark' : 'default',
@@ -939,9 +941,9 @@ function getMermaidConfig() {
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif',
         themeVariables: {
             // 앱의 포인트 컬러(Accent)를 기본 색상으로 적용
-            primaryColor: isDark ? '#0a84ff' : '#0071e3',
+            primaryColor: accentColor,
             primaryTextColor: isDark ? '#ffffff' : '#ffffff',
-            primaryBorderColor: isDark ? '#0a84ff' : '#0071e3',
+            primaryBorderColor: accentColor,
             lineColor: isDark ? '#8e8e93' : '#636366',
             secondaryColor: isDark ? '#1c1c1e' : '#f5f5f7',
             tertiaryColor: isDark ? '#2c2c2e' : '#e5e5ea',
