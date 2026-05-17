@@ -1263,7 +1263,9 @@ export async function renderMarkdown(content, options = {}) {
 export async function renderRecentFiles() {
     recentFilesCache = await GetRecentFiles();
     const displayLimit = Math.min(99, Math.max(0, Number(state.recentFileDisplayLimit) || 0));
-    const displayedRecentFiles = (recentFilesCache || []).slice(0, displayLimit);
+    const pinnedRecentFiles = (recentFilesCache || []).filter(f => f?.pinned);
+    const regularRecentFiles = (recentFilesCache || []).filter(f => !f?.pinned).slice(0, displayLimit);
+    const displayedRecentFiles = [...pinnedRecentFiles, ...regularRecentFiles];
     if (displayedRecentFiles.length === 0) {
         el.recentList.classList.add('empty');
         const emptyTitle = displayLimit === 0 ? 'Recent documents hidden' : 'No recent documents yet';
@@ -1281,9 +1283,17 @@ export async function renderRecentFiles() {
     }
     el.recentList.classList.remove('empty');
     el.recentList.innerHTML = displayedRecentFiles.map(f => `
-        <div class="recent-item" data-path="${escapeAttr(f.path)}">
-            <span class="recent-name">${escapeHTML(f.name)}</span>
-            <span class="recent-path">${escapeHTML(f.path)}</span>
+        <div class="recent-item${f.pinned ? ' pinned' : ''}" data-path="${escapeAttr(f.path)}">
+            <div class="recent-file-text">
+                <span class="recent-name">${escapeHTML(f.name)}</span>
+                <span class="recent-path">${escapeHTML(f.path)}</span>
+            </div>
+            <button class="recent-pin-btn${f.pinned ? ' active' : ''}" type="button"
+                title="${f.pinned ? 'Unpin from top' : 'Pin to top'}"
+                aria-label="${f.pinned ? 'Unpin from top' : 'Pin to top'}"
+                aria-pressed="${f.pinned ? 'true' : 'false'}">
+                <span class="material-symbols-outlined" aria-hidden="true">bookmark_star</span>
+            </button>
         </div>
     `).join('');
 }

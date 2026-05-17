@@ -83,6 +83,8 @@ export function SpellCheckDocument(arg1:app.SpellCheckRequest):Promise<app.Spell
 
 export function SyncEditorState(arg1:boolean,arg2:boolean,arg3:string,arg4:string,arg5:string):Promise<void>;
 
+export function ToggleRecentFilePinned(arg1:string):Promise<Array<app.RecentFile>>;
+
 export function TouchRecentFile(arg1:string):Promise<void>;
 
 export function TranslateDocumentCopies(arg1:app.TranslateDocumentRequest):Promise<app.TranslatedDocumentResult>;

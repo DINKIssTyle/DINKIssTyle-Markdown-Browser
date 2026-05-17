@@ -49,8 +49,9 @@ func SetIntegrationIcons(appIcon []byte, linuxIcons map[int][]byte) {
 
 // RecentFile represents a recently opened file
 type RecentFile struct {
-	Path string `json:"path"`
-	Name string `json:"name"`
+	Path   string `json:"path"`
+	Name   string `json:"name"`
+	Pinned bool   `json:"pinned"`
 }
 
 // FileResult represents the result of opening a file
@@ -137,10 +138,6 @@ type EditorSessionState struct {
 func (a *App) beginAIRequest() (context.Context, context.CancelFunc, int64) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-
-	if a.activeAICancel != nil {
-		a.activeAICancel()
-	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	a.activeAIRequestID++
@@ -522,27 +519,92 @@ func (a *App) GetRecentFiles() []RecentFile {
 	}
 
 	json.Unmarshal(data, &recent)
-	return recent
+	return orderRecentFiles(recent)
 }
 
 func (a *App) saveRecentFile(path string) {
 	recent := a.GetRecentFiles()
 
 	// Check if already exists
-	newRecent := []RecentFile{{Path: path, Name: filepath.Base(path)}}
+	pinned := false
+	for _, rf := range recent {
+		if rf.Path == path {
+			pinned = rf.Pinned
+			break
+		}
+	}
+
+	newRecent := []RecentFile{{Path: path, Name: filepath.Base(path), Pinned: pinned}}
 	for _, rf := range recent {
 		if rf.Path != path {
 			newRecent = append(newRecent, rf)
 		}
 	}
 
-	// Keep enough history for the configurable display limit.
-	if len(newRecent) > maxRecentFileDisplayLimit {
-		newRecent = newRecent[:maxRecentFileDisplayLimit]
-	}
+	newRecent = trimRecentFiles(orderRecentFiles(newRecent))
 
 	data, _ := json.Marshal(newRecent)
 	os.WriteFile(a.recentPath, data, 0644)
+}
+
+func orderRecentFiles(recent []RecentFile) []RecentFile {
+	ordered := make([]RecentFile, 0, len(recent))
+	for _, rf := range recent {
+		if rf.Pinned {
+			ordered = append(ordered, rf)
+		}
+	}
+	for _, rf := range recent {
+		if !rf.Pinned {
+			ordered = append(ordered, rf)
+		}
+	}
+	return ordered
+}
+
+func trimRecentFiles(recent []RecentFile) []RecentFile {
+	trimmed := make([]RecentFile, 0, len(recent))
+	regularCount := 0
+	for _, rf := range recent {
+		if rf.Pinned {
+			trimmed = append(trimmed, rf)
+			continue
+		}
+		if regularCount >= maxRecentFileDisplayLimit {
+			continue
+		}
+		trimmed = append(trimmed, rf)
+		regularCount++
+	}
+	return trimmed
+}
+
+// ToggleRecentFilePinned pins or unpins a recent file.
+func (a *App) ToggleRecentFilePinned(path string) []RecentFile {
+	cleanPath := strings.TrimSpace(path)
+	if cleanPath == "" {
+		return a.GetRecentFiles()
+	}
+
+	recent := a.GetRecentFiles()
+	for i, rf := range recent {
+		if rf.Path == cleanPath {
+			updated := rf
+			updated.Pinned = !rf.Pinned
+			updated.Name = filepath.Base(cleanPath)
+			recent = append([]RecentFile{updated}, append(recent[:i], recent[i+1:]...)...)
+			recent = trimRecentFiles(orderRecentFiles(recent))
+			data, _ := json.Marshal(recent)
+			os.WriteFile(a.recentPath, data, 0644)
+			return recent
+		}
+	}
+
+	recent = append([]RecentFile{{Path: cleanPath, Name: filepath.Base(cleanPath), Pinned: true}}, recent...)
+	recent = trimRecentFiles(orderRecentFiles(recent))
+	data, _ := json.Marshal(recent)
+	os.WriteFile(a.recentPath, data, 0644)
+	return recent
 }
 
 // TouchRecentFile moves a file to the top of the recent list.

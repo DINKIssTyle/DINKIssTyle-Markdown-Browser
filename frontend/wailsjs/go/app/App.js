@@ -162,6 +162,10 @@ export function SyncEditorState(arg1, arg2, arg3, arg4, arg5) {
   return window['go']['app']['App']['SyncEditorState'](arg1, arg2, arg3, arg4, arg5);
 }
 
+export function ToggleRecentFilePinned(arg1) {
+  return window['go']['app']['App']['ToggleRecentFilePinned'](arg1);
+}
+
 export function TouchRecentFile(arg1) {
   return window['go']['app']['App']['TouchRecentFile'](arg1);
 }

@@ -151,6 +151,7 @@ export namespace app {
 	export class RecentFile {
 	    path: string;
 	    name: string;
+	    pinned: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new RecentFile(source);
@@ -160,6 +161,7 @@ export namespace app {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.path = source["path"];
 	        this.name = source["name"];
+	        this.pinned = source["pinned"];
 	    }
 	}
 	export class SpellCheckLanguage {

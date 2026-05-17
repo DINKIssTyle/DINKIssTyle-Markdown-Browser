@@ -64,6 +64,9 @@ let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
 let unloadingInstanceId = "";
 let aiRequestInFlight = false;
+let aiRequestQueue = [];
+let activeAIQueueJob = null;
+let nextAIQueueJobId = 0;
 let aiPromptHideTimer = null;
 let aiPromptBusyState = null;
 let aiProgressTaskId = 0;
@@ -230,6 +233,18 @@ function getPromptBusyPlaceholder(label = "") {
     return 'Processing prompt...';
 }
 
+function getAIQueuedCount() {
+    return aiRequestQueue.length;
+}
+
+function getAIProgressTitle(title = "") {
+    const queuedCount = getAIQueuedCount();
+    if (queuedCount <= 0) {
+        return title;
+    }
+    return `${title} · ${queuedCount} remaining`;
+}
+
 function updatePromptBusyUI() {
     const isBusy = false;
     const isSupportAgentVisible = !!supportAgentPromptText;
@@ -285,7 +300,7 @@ function showPromptBusyState({ label = "", progress = 0 } = {}) {
         placeholder: getPromptBusyPlaceholder(label),
         inputText: aiPromptBusyState?.inputText || "",
     };
-    const progressTitle = aiPromptBusyState.placeholder;
+    const progressTitle = getAIProgressTitle(aiPromptBusyState.placeholder);
     if (!aiProgressTaskId) {
         aiProgressTaskId = beginProgressTask(progressTitle, nextProgress);
     } else {
@@ -437,7 +452,7 @@ function setPromptBusyInputText(value = "") {
         ...aiPromptBusyState,
         inputText: String(value || ""),
     };
-    updateProgress(String(value || aiPromptBusyState.placeholder), aiPromptBusyState.progress);
+    updateProgress(getAIProgressTitle(String(value || aiPromptBusyState.placeholder)), aiPromptBusyState.progress);
     updatePromptBusyUI();
 }
 
@@ -485,6 +500,30 @@ function showSupportAgentPrompt(reportText) {
     updatePromptBusyUI();
 }
 
+function showSupportAgentPromptForRequestTab(requestContext, reportText) {
+    if (isActiveAIRequestTab(requestContext)) {
+        showSupportAgentPrompt(reportText);
+        return;
+    }
+    const requestTab = getAIRequestTab(requestContext);
+    if (requestTab) {
+        requestTab.pendingAISupportReport = normalizeSupportReport(reportText);
+    }
+}
+
+function showPendingSupportAgentPromptForActiveTab() {
+    const activeTab = state.tabs.find(tab => tab.id === state.activeTabId);
+    if (!activeTab?.pendingAISupportReport || !isActiveAIRequestTab({
+        tabId: activeTab.id,
+        path: activeTab.editingSourcePath || activeTab.path,
+    })) {
+        return;
+    }
+    const reportText = activeTab.pendingAISupportReport;
+    activeTab.pendingAISupportReport = "";
+    showSupportAgentPrompt(reportText);
+}
+
 function applyAIPromptMotionConfig() {
     if (!el.aiPromptBox) return;
     el.aiPromptBox.style.setProperty('--ai-support-agent-pop-duration', `${AI_SUPPORT_AGENT_POP_MS}ms`);
@@ -517,18 +556,35 @@ function isAIProgressVisible() {
 
 async function cancelActiveAIRequest() {
     if (!aiRequestInFlight) {
+        const nextJob = aiRequestQueue.shift();
+        if (nextJob) {
+            nextJob.cancelled = true;
+            showToast("Queued AI request cancelled.");
+            updateActiveAIProgressQueueLabel();
+            queueMicrotask(processAIRequestQueue);
+            return;
+        }
         clearPromptBusyState();
         return;
     }
 
+    if (activeAIQueueJob) {
+        activeAIQueueJob.cancelled = true;
+    }
     aiRequestInFlight = false;
-    hideAIProgressOverlay();
     try {
         await CancelAIRequest();
     } catch (error) {
         console.error('Failed to cancel AI request', error);
     }
     showToast("AI request cancelled.");
+}
+
+function updateActiveAIProgressQueueLabel() {
+    if (!aiPromptBusyState) {
+        return;
+    }
+    updateProgress(getAIProgressTitle(aiPromptBusyState.placeholder), aiPromptBusyState.progress);
 }
 
 function isCancelledAIError(error) {
@@ -1182,7 +1238,10 @@ export function bindAIEvents() {
     el.aiSettingsSave.onclick = async () => {
         state.aiFeaturesDisabled = el.aiFeaturesDisabled.checked;
         if (state.aiFeaturesDisabled && aiRequestInFlight) {
+            aiRequestQueue = [];
             await cancelActiveAIRequest();
+        } else if (state.aiFeaturesDisabled) {
+            aiRequestQueue = [];
         }
         window.aiState.generalProvider = el.aiGeneralProvider.value;
         window.aiState.generalEndpoint = el.aiGeneralEndpoint.value;
@@ -1207,6 +1266,9 @@ export function bindAIEvents() {
 
     // AI Progress Events from Go
     EventsOn('ai:progress', (data) => {
+        if (!aiRequestInFlight) {
+            return;
+        }
         const isCompleted = data.completed === true;
         const progress = Math.round(data.progress || 0);
 
@@ -1233,6 +1295,15 @@ export function bindAIEvents() {
     EventsOn('ai:delta', (data) => {
         queueAIDeltaTicker(data?.kind || "message", data?.text || "");
     });
+
+    el.btnProgressCancel?.addEventListener('click', event => {
+        if (!aiRequestInFlight && aiRequestQueue.length === 0) {
+            return;
+        }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        cancelActiveAIRequest();
+    }, true);
 
     // FIM Toggle
     el.edGeneralAi.onclick = async () => {
@@ -1480,6 +1551,7 @@ function clearGhostText() {
 
 async function requestFIM() {
     if (!cmView || !isFIMEnabled()) return;
+    if (aiRequestInFlight || aiRequestQueue.length > 0) return;
     if (cmView.composing) return;
 
     const selection = cmView.state.selection.main;
@@ -1721,6 +1793,172 @@ function applyAIReplacementToRequestTab(requestContext, replacementText) {
     );
 }
 
+function enqueueAIRequest(job) {
+    aiRequestQueue.push(job);
+    updateActiveAIProgressQueueLabel();
+    showToast(getAIQueuedCount() > 1 ? `${getAIQueuedCount()} AI requests queued.` : "AI request queued.");
+    queueMicrotask(processAIRequestQueue);
+}
+
+async function processAIRequestQueue() {
+    if (aiRequestInFlight || activeAIQueueJob) {
+        return;
+    }
+
+    const job = aiRequestQueue.shift();
+    if (!job) {
+        return;
+    }
+    if (job.cancelled) {
+        queueMicrotask(processAIRequestQueue);
+        return;
+    }
+    if (!isGeneralAIActive()) {
+        aiRequestQueue = [];
+        hideAIProgressOverlay();
+        return;
+    }
+
+    activeAIQueueJob = job;
+    aiRequestInFlight = true;
+    clearSupportAgentPrompt();
+    showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
+
+    try {
+        await runAIRequestJob(job);
+    } catch (err) {
+        console.error("AI prompt error", err);
+        if (isCancelledAIError(err) || job.cancelled) {
+            showToast("AI request cancelled.");
+        } else {
+            showToast("AI request failed. ❌");
+        }
+        hideAIProgressOverlay();
+    } finally {
+        if (activeAIQueueJob?.id === job.id) {
+            activeAIQueueJob = null;
+        }
+        aiRequestInFlight = false;
+        clearPromptBusyState();
+        queueMicrotask(processAIRequestQueue);
+    }
+}
+
+async function runAIRequestJob(job) {
+    let endpoint = job.endpoint;
+    let resultText = "";
+    let supportReport = "";
+
+    if (job.provider === "lmstudio") {
+        let base = endpoint.replace(/\/$/, "");
+        base = base.replace(/\/api\/v1$/, "").replace(/\/v1$/, "");
+        endpoint = base + "/api/v1/chat";
+
+        const payload = {
+            model: job.model,
+            input: `${job.systemPrompt}\n\n${job.contextualPrompt}`,
+            stream: true
+        };
+        if (job.temperature > 0) payload.temperature = job.temperature;
+
+        resultText = await MakeLMStudioRequest(endpoint, job.headers, JSON.stringify(payload));
+    } else {
+        let base = endpoint.replace(/\/$/, "");
+        if (!base.endsWith("/v1")) {
+            base = base + "/v1";
+        }
+        endpoint = base + "/chat/completions";
+
+        const payload = {
+            model: job.model,
+            messages: [
+                { role: "system", content: job.systemPrompt },
+                { role: "user", content: job.contextualPrompt }
+            ],
+            stream: true,
+            store: false
+        };
+        if (job.temperature > 0) payload.temperature = job.temperature;
+
+        const responseJson = await MakeAIRequest(endpoint, job.headers, JSON.stringify(payload));
+        const data = JSON.parse(responseJson);
+        resultText = data.choices[0].message.content;
+    }
+
+    if (job.cancelled) {
+        throw new Error('AI request cancelled');
+    }
+    if (!isGeneralAIActive()) {
+        hideAIProgressOverlay();
+        return;
+    }
+
+    const { hasSelection, requestContext, userPrompt, docText } = job;
+    const hasIntent = containsIntentTag(resultText);
+    const hasTaggedSupportReport = containsSupportReportTag(resultText);
+    const structuredPayload = (hasIntent || hasTaggedSupportReport)
+        ? extractStructuredAIPayload(resultText)
+        : null;
+
+    if (!hasSelection) {
+        const shouldInsertAtCursor = isLikelyInsertionPrompt(userPrompt);
+        if (!structuredPayload && shouldInsertAtCursor) {
+            const insertionText = extractFallbackAIReplacement(resultText);
+            if (insertionText.trim()) {
+                applyAIInsertionToRequestTab(requestContext, insertionText);
+                return;
+            }
+        }
+        if ((structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) &&
+            shouldInsertAtCursor &&
+            structuredPayload?.replacement?.trim()) {
+            structuredPayload.intent = AI_INTENT_VALUES.edit;
+        }
+        if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
+            const insertionText = structuredPayload.replacement || extractFallbackAIReplacement(resultText);
+            if (insertionText.trim()) {
+                applyAIInsertionToRequestTab(requestContext, insertionText);
+                if (state.aiSupportAgentEnabled || structuredPayload.report) {
+                    showSupportAgentPromptForRequestTab(requestContext, structuredPayload.report || SUPPORT_AGENT_FALLBACK_REPORT);
+                }
+                return;
+            }
+        }
+        const questionReport = structuredPayload
+            ? structuredPayload.report
+            : normalizeSupportReport(resultText);
+        showSupportAgentPromptForRequestTab(requestContext, questionReport);
+        return;
+    }
+
+    const shouldForceEditIntent = hasSelection && isLikelySelectedTextTransformPrompt(userPrompt);
+    if ((structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) &&
+        shouldForceEditIntent &&
+        structuredPayload?.replacement?.trim()) {
+        structuredPayload.intent = AI_INTENT_VALUES.edit;
+    }
+
+    if (structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) {
+        showSupportAgentPromptForRequestTab(requestContext, structuredPayload.report || normalizeSupportReport(resultText));
+        return;
+    }
+
+    if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
+        resultText = structuredPayload.replacement || docText.slice(requestContext.selection.from, requestContext.selection.to);
+        supportReport = structuredPayload.report;
+    } else if (state.aiSupportAgentEnabled || hasTaggedSupportReport) {
+        resultText = structuredPayload?.replacement || docText.slice(requestContext.selection.from, requestContext.selection.to);
+        supportReport = structuredPayload?.report || normalizeSupportReport(resultText);
+    } else {
+        resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
+    }
+
+    applyAIReplacementToRequestTab(requestContext, resultText);
+    if (state.aiSupportAgentEnabled || (hasTaggedSupportReport && !structuredPayload?.intent)) {
+        showSupportAgentPromptForRequestTab(requestContext, supportReport);
+    }
+}
+
 async function sendPrompt() {
     if (!isGeneralAIActive()) {
         hidePromptBox();
@@ -1747,146 +1985,29 @@ async function sendPrompt() {
         clearSupportAgentPrompt();
     }
 
-    // Hide prompt box immediately so user can see the editor
-    showPromptBusyState({ label: '프롬프트 처리 중', progress: 0 });
-
-    aiRequestInFlight = true;
     let endpoint = window.aiState.generalEndpoint.trim();
     if (!endpoint.startsWith("http")) endpoint = `http://${endpoint}`;
 
-    try {
-        let resultText = "";
-        let supportReport = "";
+    const headers = { "Content-Type": "application/json" };
+    if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
 
-        if (window.aiState.generalProvider === "lmstudio") {
-            // LM Studio Native logic: baseUrl/api/v1/chat
-            let base = endpoint.replace(/\/$/, "");
-            base = base.replace(/\/api\/v1$/, "").replace(/\/v1$/, "");
-            endpoint = base + "/api/v1/chat";
+    enqueueAIRequest({
+        id: ++nextAIQueueJobId,
+        cancelled: false,
+        userPrompt,
+        requestContext,
+        hasSelection,
+        docText,
+        contextualPrompt,
+        systemPrompt,
+        provider: window.aiState.generalProvider,
+        endpoint,
+        headers,
+        model: window.aiState.generalModel,
+        temperature: window.aiState.generalTemp,
+    });
 
-            const payload = {
-                model: window.aiState.generalModel,
-                input: `${systemPrompt}\n\n${contextualPrompt}`,
-                stream: true
-            };
-            if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
-
-            const headers = { "Content-Type": "application/json" };
-            if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
-
-            resultText = await MakeLMStudioRequest(endpoint, headers, JSON.stringify(payload));
-        } else {
-            // OpenAI Compatible logic: baseUrl/v1/chat/completions
-            let base = endpoint.replace(/\/$/, "");
-            if (!base.endsWith("/v1")) {
-                base = base + "/v1";
-            }
-            endpoint = base + "/chat/completions";
-
-            const headers = { "Content-Type": "application/json" };
-            if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
-
-            const payload = {
-                model: window.aiState.generalModel,
-                messages: [
-                    { role: "system", content: systemPrompt },
-                    { role: "user", content: contextualPrompt }
-                ],
-                stream: true,
-                store: false
-            };
-            if (window.aiState.generalTemp > 0) payload.temperature = window.aiState.generalTemp;
-
-            const responseJson = await MakeAIRequest(endpoint, headers, JSON.stringify(payload));
-            const data = JSON.parse(responseJson);
-            resultText = data.choices[0].message.content;
-        }
-
-        if (!isGeneralAIActive()) {
-            hideAIProgressOverlay();
-            return;
-        }
-
-        const hasIntent = containsIntentTag(resultText);
-        const hasTaggedSupportReport = containsSupportReportTag(resultText);
-        const structuredPayload = (hasIntent || hasTaggedSupportReport)
-            ? extractStructuredAIPayload(resultText)
-            : null;
-
-        if (!hasSelection) {
-            const shouldInsertAtCursor = isLikelyInsertionPrompt(userPrompt);
-            if (!structuredPayload && shouldInsertAtCursor) {
-                const insertionText = extractFallbackAIReplacement(resultText);
-                if (insertionText.trim()) {
-                    applyAIInsertionToRequestTab(requestContext, insertionText);
-                    aiRequestInFlight = false;
-                    return;
-                }
-            }
-            if ((structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) &&
-                shouldInsertAtCursor &&
-                structuredPayload?.replacement?.trim()) {
-                structuredPayload.intent = AI_INTENT_VALUES.edit;
-            }
-            if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
-                const insertionText = structuredPayload.replacement || extractFallbackAIReplacement(resultText);
-                if (insertionText.trim()) {
-                    applyAIInsertionToRequestTab(requestContext, insertionText);
-                    if (state.aiSupportAgentEnabled || structuredPayload.report) {
-                        showSupportAgentPrompt(structuredPayload.report || SUPPORT_AGENT_FALLBACK_REPORT);
-                    }
-                    aiRequestInFlight = false;
-                    return;
-                }
-            }
-            const questionReport = structuredPayload
-                ? structuredPayload.report
-                : normalizeSupportReport(resultText);
-            showSupportAgentPrompt(questionReport);
-            aiRequestInFlight = false;
-            return;
-        }
-
-        const shouldForceEditIntent = hasSelection && isLikelySelectedTextTransformPrompt(userPrompt);
-        if ((structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) &&
-            shouldForceEditIntent &&
-            structuredPayload?.replacement?.trim()) {
-            structuredPayload.intent = AI_INTENT_VALUES.edit;
-        }
-
-        if (structuredPayload?.intent === AI_INTENT_VALUES.question || structuredPayload?.intent === AI_INTENT_VALUES.ambiguous) {
-            showSupportAgentPrompt(structuredPayload.report || normalizeSupportReport(resultText));
-            aiRequestInFlight = false;
-            return;
-        }
-
-        if (structuredPayload?.intent === AI_INTENT_VALUES.edit) {
-            resultText = structuredPayload.replacement || docText.slice(requestContext.selection.from, requestContext.selection.to);
-            supportReport = structuredPayload.report;
-        } else if (state.aiSupportAgentEnabled || hasTaggedSupportReport) {
-            resultText = structuredPayload?.replacement || docText.slice(requestContext.selection.from, requestContext.selection.to);
-            supportReport = structuredPayload?.report || normalizeSupportReport(resultText);
-        } else {
-            resultText = resultText.replace(/^```[a-z]*\n/, '').replace(/\n```$/, '');
-        }
-
-        applyAIReplacementToRequestTab(requestContext, resultText);
-        if (state.aiSupportAgentEnabled || (hasTaggedSupportReport && !structuredPayload?.intent)) {
-            showSupportAgentPrompt(supportReport);
-        }
-        aiRequestInFlight = false;
-    } catch (err) {
-        aiRequestInFlight = false;
-        console.error("AI prompt error", err);
-        if (isCancelledAIError(err)) {
-            showToast("AI request cancelled.");
-        } else {
-            showToast("AI request failed. ❌");
-        }
-        hideAIProgressOverlay();
-    } finally {
-        clearPromptBusyState();
-    }
+    hidePromptBox({ restoreEditorFocus: true });
 }
 
 export function syncAIControls() {
@@ -1902,6 +2023,9 @@ export function syncAIControls() {
 
     if (!isFIMEnabled()) {
         clearGhostText();
+    }
+    if (!aiRequestInFlight && !aiPromptBusyState && !isSupportAgentPromptVisible()) {
+        showPendingSupportAgentPromptForActiveTab();
     }
     const showAiDock = state.isEditing && generalAvailable;
     if (showAiDock) {

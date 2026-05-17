@@ -34,6 +34,7 @@ import {
     FrontendReady,
     GetSettings,
     ClearRecentFiles,
+    ToggleRecentFilePinned,
     HandleFileDrop,
     GetVersion,
     InstallSystemIntegration,
@@ -299,6 +300,14 @@ function bindHomeScreen() {
     });
 
     el.recentList.addEventListener('click', event => {
+        const pinButton = event.target.closest('.recent-pin-btn');
+        if (pinButton) {
+            const item = pinButton.closest('.recent-item');
+            if (!item) return;
+            ToggleRecentFilePinned(item.dataset.path).then(renderRecentFiles);
+            return;
+        }
+
         const item = event.target.closest('.recent-item');
         if (!item) return;
         openPath(item.dataset.path, { pushHistory: true, setHome: true });

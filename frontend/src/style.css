@@ -1214,8 +1214,9 @@ html.dark .empty-state {
 
 .recent-item {
     padding: 16px 24px;
-    display: flex;
-    flex-direction: column;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) 36px;
+    gap: 12px;
     align-items: flex-start;
     border-bottom: 1px solid var(--border-color);
     cursor: pointer;
@@ -1234,6 +1235,13 @@ html.dark .recent-item:hover {
     background: rgba(255, 255, 255, 0.05);
 }
 
+.recent-file-text {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+}
+
 .recent-name {
     font-weight: 600;
     font-size: 16px;
@@ -1244,6 +1252,39 @@ html.dark .recent-item:hover {
     opacity: 0.6;
     margin-top: 4px;
     word-break: break-all;
+}
+
+.recent-pin-btn {
+    width: 32px;
+    height: 32px;
+    margin-top: -4px;
+    border: 0;
+    border-radius: 6px;
+    background: transparent;
+    color: color-mix(in srgb, var(--text-color) 28%, transparent);
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.62;
+    transition: color 0.2s, background 0.2s, opacity 0.2s;
+}
+
+.recent-pin-btn:hover,
+.recent-pin-btn:focus-visible {
+    background: color-mix(in srgb, var(--accent-color) 10%, transparent);
+    color: color-mix(in srgb, var(--accent-color) 70%, var(--text-color));
+    opacity: 1;
+    outline: none;
+}
+
+.recent-pin-btn.active {
+    color: var(--accent-color);
+    opacity: 1;
+}
+
+.recent-pin-btn.active .material-symbols-outlined {
+    font-variation-settings: "FILL" 1;
 }
 
 /* Markdown Rendering Styles (GitHub Flavored) */
