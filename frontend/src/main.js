@@ -310,7 +310,10 @@ function bindHomeScreen() {
         if (pinButton) {
             const item = pinButton.closest('.recent-item');
             if (!item) return;
-            ToggleRecentFilePinned(item.dataset.path).then(renderRecentFiles);
+            const willPin = !pinButton.classList.contains('active');
+            await ToggleRecentFilePinned(item.dataset.path);
+            await renderRecentFiles();
+            showToast(willPin ? 'Pinned to top.' : 'Unpinned from top.', willPin ? 'bookmark_star' : 'bookmark_remove');
             return;
         }
 
