@@ -1311,7 +1311,7 @@ html.dark .recent-item:hover {
 
 /* Markdown Rendering Styles (GitHub Flavored) */
 .markdown-container {
-    max-width: 1012px;
+    max-width: none;
     margin: 0 auto;
     width: 100%;
     line-height: 1.5;
@@ -1319,6 +1319,26 @@ html.dark .recent-item:hover {
     /* 마크다운 콘텐츠는 텍스트 선택 가능하게 명시 */
     user-select: text;
     -webkit-user-select: text;
+}
+
+/* Margins Layout Options */
+:root {
+    --document-padding-inline: 0px;
+}
+html.margin-none {
+    --document-padding-inline: 0px;
+}
+html.margin-narrow {
+    --document-padding-inline: 8%;
+}
+html.margin-wide {
+    --document-padding-inline: 18%;
+}
+
+.markdown-container {
+    padding-left: var(--document-padding-inline);
+    padding-right: var(--document-padding-inline);
+    transition: padding 0.24s ease;
 }
 
 .html-frame {
@@ -2733,9 +2753,9 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
 #markdown-editor {
     flex: 1;
     width: 100%;
-    max-width: 1012px;
+    max-width: none;
     margin: 0 auto;
-    padding: 32px 40px;
+    padding: 32px calc(40px + var(--document-padding-inline));
     background: transparent;
     color: var(--text-color);
     border: none;
@@ -2747,6 +2767,7 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
     user-select: text;
     -webkit-user-select: text;
     tab-size: 4;
+    transition: padding 0.24s ease;
 }
 
 #main-container.is-editing {
@@ -5346,8 +5367,11 @@ html.dark .ai-prompt-shell:focus-within {
     font-family: var(--code-font);
     color: var(--editor-plain-text-color, var(--text-color));
     line-height: 1.6;
-    max-width: 1012px;
+    max-width: none;
     margin: 0 auto;
+    padding-left: calc(16px + var(--document-padding-inline)) !important;
+    padding-right: calc(16px + var(--document-padding-inline)) !important;
+    transition: padding 0.24s ease;
 }
 
 .cm-line {

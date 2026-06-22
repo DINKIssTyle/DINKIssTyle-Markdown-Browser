@@ -1,4 +1,4 @@
-# Version 2.1 Beta8 的新功能
+# Version 2.1 Beta9 的新功能
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -163,6 +163,13 @@ done
 - **恢复编辑标签页**: 当返回已编辑的标签页时，应用程序必须记住滚动位置和光标位置。
 - **UI 稳定化**: 移除了在阅读模式和编辑模式之间切换时出现的屏幕闪烁问题。
 
+
+
+## 2.1 Beta 9
+
+### Bug fixes and improvements
+
+- **移除了 Markdown 渲染宽度限制**：已移除 Markdown 渲染时的宽度限制。
 
 
 ---

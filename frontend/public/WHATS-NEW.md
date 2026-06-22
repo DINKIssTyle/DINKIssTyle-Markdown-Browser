@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta8
+# What's New in Version 2.1 Beta9
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
@@ -172,6 +172,11 @@ done
 - **UI Stabilization**: Removed screen flickering issues that occurred during transitions between read mode and edit mode.
 
 
+## 2.1 Beta 9
+
+### Bug Fixes and Improvements
+
+- **Markdown Rendering Width Limit Removed**: The width restriction during Markdown rendering has been removed.
 
 
 

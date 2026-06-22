@@ -56,6 +56,7 @@ export namespace app {
 	    aiSupportAgent: boolean;
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
+	    documentMargin: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -98,6 +99,7 @@ export namespace app {
 	        this.aiSupportAgent = source["aiSupportAgent"];
 	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
 	        this.lastVersion = source["lastVersion"];
+	        this.documentMargin = source["documentMargin"];
 	    }
 	}
 	export class FileResult {

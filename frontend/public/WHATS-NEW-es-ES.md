@@ -1,4 +1,4 @@
-# Novedades en la Versión 2.1 Beta8
+# Novedades en la Versión 2.1 Beta9
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -159,6 +159,14 @@ done
 - **Unificación e integración de funciones**: Funciones similares han sido agrupadas en funcionalidades comunes e integradas.
 - **Restaurar pestaña de edición**: La aplicación debe recordar la posición de desplazamiento y la ubicación del cursor al volver a una pestaña editada.
 - **Estabilización de la interfaz de usuario**: Se eliminaron los problemas de parpadeo de pantalla que ocurrían durante las transiciones entre el modo lectura y el modo edición.
+
+
+
+## 2.1 Beta 9
+
+### Correcciones y mejoras de errores
+
+- **Se eliminó la limitación de ancho en el renderizado de Markdown**: Se ha eliminado la restricción de ancho durante el renderizado de Markdown.
 
 
 ---

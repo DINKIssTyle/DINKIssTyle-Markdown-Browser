@@ -214,6 +214,7 @@ export const el = {
     settingsPanelCommon: $('settings-panel-common'),
     settingsPanelEditor: $('settings-panel-editor'),
     settingsPanelAi: $('settings-panel-ai'),
+    settingsDocumentMargin: $('settings-document-margin'),
     lightAccentPresetList: $('light-accent-preset-list'),
     darkAccentPresetList: $('dark-accent-preset-list'),
     lightAccentCustom: $('light-accent-custom'),
@@ -331,6 +332,7 @@ export const state = {
     fileTreeFilterEnabled: false,
     recentFileDisplayLimit: 8,
     outlineHeadingFormatEnabled: false,
+    documentMargin: "none",
 };
 
 // ── Pure Utility Functions ─────────────────────────────────

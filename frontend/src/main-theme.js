@@ -91,3 +91,15 @@ export function applyAccentColors(lightAccentColor, darkAccentColor) {
     root.style.setProperty('--accent-gradient-start', color);
     root.style.setProperty('--accent-gradient-end', gradientEnd);
 }
+
+export function applyDocumentMarginStyle(margin) {
+    const html = document.documentElement;
+    html.classList.remove('margin-none', 'margin-narrow', 'margin-wide');
+    if (margin === 'narrow') {
+        html.classList.add('margin-narrow');
+    } else if (margin === 'wide') {
+        html.classList.add('margin-wide');
+    } else {
+        html.classList.add('margin-none');
+    }
+}

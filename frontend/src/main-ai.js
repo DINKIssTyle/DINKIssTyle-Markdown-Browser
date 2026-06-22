@@ -13,7 +13,7 @@ import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import { isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
-import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor } from './main-theme.js';
+import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle } from './main-theme.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
@@ -1045,6 +1045,9 @@ function setAccentColor(mode, color) {
 
 function syncCommonSettingsControls() {
     renderAccentPresetControls();
+    if (el.settingsDocumentMargin) {
+        el.settingsDocumentMargin.value = state.documentMargin || "none";
+    }
 }
 
 function renderEditorTokenColorControls() {
@@ -1125,6 +1128,29 @@ function collectEditorSettingsFromControls() {
     applyEditorBackgroundColor();
 }
 
+function applyLayoutSettingsLocalization() {
+    const isKorean = (navigator.language || '').startsWith('ko');
+    const heading = document.getElementById('settings-heading-layout');
+    const label = document.getElementById('settings-label-margin');
+    const optNone = document.getElementById('settings-option-margin-none');
+    const optNarrow = document.getElementById('settings-option-margin-narrow');
+    const optWide = document.getElementById('settings-option-margin-wide');
+
+    if (isKorean) {
+        if (heading) heading.textContent = '레이아웃';
+        if (label) label.textContent = '여백';
+        if (optNone) optNone.textContent = '없음';
+        if (optNarrow) optNarrow.textContent = '좁게';
+        if (optWide) optWide.textContent = '넓게';
+    } else {
+        if (heading) heading.textContent = 'Layout';
+        if (label) label.textContent = 'Margins';
+        if (optNone) optNone.textContent = 'None';
+        if (optNarrow) optNarrow.textContent = 'Narrow';
+        if (optWide) optWide.textContent = 'Wide';
+    }
+}
+
 export async function initAI() {
     applyAIPromptMotionConfig();
     const s = await GetSettings();
@@ -1165,6 +1191,11 @@ export async function initAI() {
     el.aiToggleImeFix.checked = s.koreanImeEnterFix || false;
     state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
     aiState.fimEnabled = s.aiFimToolbarEnabled === true;
+    state.documentMargin = s.documentMargin || "none";
+    if (el.settingsDocumentMargin) {
+        el.settingsDocumentMargin.value = state.documentMargin;
+    }
+    applyLayoutSettingsLocalization();
     window.aiState = aiState;
     syncAISettingsSections();
     syncAIControls();
@@ -1229,6 +1260,7 @@ export function bindAIEvents() {
             light: state.lightAccentColor,
             dark: state.darkAccentColor,
             editorTokenColors: { ...(state.editorTokenColors || {}) },
+            documentMargin: state.documentMargin,
         };
         syncSettingsTabs('editor');
         syncCommonSettingsControls();
@@ -1246,10 +1278,15 @@ export function bindAIEvents() {
             state.lightAccentColor = settingsAccentSnapshot.light;
             state.darkAccentColor = settingsAccentSnapshot.dark;
             state.editorTokenColors = { ...(settingsAccentSnapshot.editorTokenColors || {}) };
+            state.documentMargin = settingsAccentSnapshot.documentMargin || "none";
             settingsAccentSnapshot = null;
         }
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         applyEditorTokenColors();
+        applyDocumentMarginStyle(state.documentMargin);
+        if (el.settingsDocumentMargin) {
+            el.settingsDocumentMargin.value = state.documentMargin;
+        }
         el.aiSettingsModal.classList.add('hidden');
     };
     el.aiSettingsSave.onclick = async () => {
@@ -1272,7 +1309,9 @@ export function bindAIEvents() {
         state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
         state.lightAccentColor = normalizeAccentColor(el.lightAccentCustom?.value, state.lightAccentColor);
         state.darkAccentColor = normalizeAccentColor(el.darkAccentCustom?.value, state.darkAccentColor);
+        state.documentMargin = el.settingsDocumentMargin?.value || "none";
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
+        applyDocumentMarginStyle(state.documentMargin);
         collectEditorSettingsFromControls();
         await persistAISettings();
 

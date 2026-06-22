@@ -113,6 +113,7 @@ type AppSettings struct {
 	AISupportAgent           bool              `json:"aiSupportAgent"`
 	KoreanImeEnterFix        bool              `json:"koreanImeEnterFix"`
 	LastVersion              string            `json:"lastVersion"`
+	DocumentMargin           string            `json:"documentMargin"`
 }
 
 // App struct
@@ -650,6 +651,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.AIFIMEnabled = true
 	settings.AIFIMToolbarEnabled = false
 	settings.AIFIMTemp = 0.0
+	settings.DocumentMargin = "none"
 
 	data, err := os.ReadFile(a.settingsPath)
 	if err == nil {
