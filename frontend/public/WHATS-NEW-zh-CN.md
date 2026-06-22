@@ -167,10 +167,10 @@ done
 
 ## 2.1 Beta 9
 
-### Bug fixes and improvements
+### 新增功能
 
-- **移除了 Markdown 渲染宽度限制**：已移除 Markdown 渲染时的宽度限制。
-
+- **查看器字体更改**：您可以将您想要的字体设置为 Markdown 查看器的默认字体。
+- **查看器边距调整**：您可以分3个步骤调整 Markdown 查看器的边距宽度。
 
 ---
 (C) 2026 DINKI'ssTyle. 保留所有权利。

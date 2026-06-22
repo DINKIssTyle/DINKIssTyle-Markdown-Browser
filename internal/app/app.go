@@ -114,6 +114,7 @@ type AppSettings struct {
 	KoreanImeEnterFix        bool              `json:"koreanImeEnterFix"`
 	LastVersion              string            `json:"lastVersion"`
 	DocumentMargin           string            `json:"documentMargin"`
+	ViewerFontFamily         string            `json:"viewerFontFamily"`
 }
 
 // App struct
@@ -652,6 +653,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.AIFIMToolbarEnabled = false
 	settings.AIFIMTemp = 0.0
 	settings.DocumentMargin = "none"
+	settings.ViewerFontFamily = ""
 
 	data, err := os.ReadFile(a.settingsPath)
 	if err == nil {
@@ -674,6 +676,9 @@ func normalizeSettings(settings *AppSettings) {
 	}
 	if settings.RecentFileDisplayLimit > maxRecentFileDisplayLimit {
 		settings.RecentFileDisplayLimit = maxRecentFileDisplayLimit
+	}
+	if settings.DocumentMargin == "" {
+		settings.DocumentMargin = "none"
 	}
 }
 

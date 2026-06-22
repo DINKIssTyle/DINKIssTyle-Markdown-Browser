@@ -164,9 +164,10 @@ done
 
 ## 2.1 Beta 9
 
-### Correcciones y mejoras de errores
+### Novedades
 
-- **Se eliminó la limitación de ancho en el renderizado de Markdown**: Se ha eliminado la restricción de ancho durante el renderizado de Markdown.
+- **Cambio de fuente del visor**: Puedes establecer la fuente deseada como predeterminada para el visor de Markdown.
+- **Ajuste del margen del visor**: Puedes ajustar el ancho del margen del visor de Markdown en 3 pasos.
 
 
 ---

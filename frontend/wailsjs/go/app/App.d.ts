@@ -29,6 +29,8 @@ export function GetRelativePath(arg1:string,arg2:string):Promise<string>;
 
 export function GetSettings():Promise<app.AppSettings>;
 
+export function GetSystemFonts():Promise<Array<app.FontInfo>>;
+
 export function GetSystemTheme():Promise<string>;
 
 export function GetTranslationTargets(arg1:string,arg2:Array<app.TranslationLanguage>):Promise<Array<app.TranslatedDocumentTarget>>;

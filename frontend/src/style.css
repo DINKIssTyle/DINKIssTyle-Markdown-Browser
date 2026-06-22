@@ -1319,6 +1319,7 @@ html.dark .recent-item:hover {
     /* 마크다운 콘텐츠는 텍스트 선택 가능하게 명시 */
     user-select: text;
     -webkit-user-select: text;
+    font-family: var(--viewer-font-family, var(--font-stack));
 }
 
 /* Margins Layout Options */

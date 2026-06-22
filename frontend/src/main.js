@@ -29,7 +29,7 @@ import {
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
 import { persistAppSettings } from './main-settings.js';
-import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle } from './main-theme.js';
+import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
 
 import {
     FrontendReady,
@@ -142,10 +142,12 @@ async function loadSettings() {
     state.lightAccentColor = accentSettings.light;
     state.darkAccentColor = accentSettings.dark;
     state.documentMargin = s.documentMargin || "none";
+    state.viewerFontFamily = s.viewerFontFamily || "";
 
     document.documentElement.classList.toggle('dark', s.theme !== "light");
     applyAccentColors(state.lightAccentColor, state.darkAccentColor);
     applyDocumentMarginStyle(state.documentMargin);
+    applyViewerFontFamily(state.viewerFontFamily);
     if (el.recentLimitInput) {
         el.recentLimitInput.value = String(state.recentFileDisplayLimit);
     }

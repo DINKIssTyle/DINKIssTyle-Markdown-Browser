@@ -174,10 +174,10 @@ done
 
 ## 2.1 Beta 9
 
-### Bug Fixes and Improvements
+### Additions
 
-- **Markdown Rendering Width Limit Removed**: The width restriction during Markdown rendering has been removed.
-
+- **Viewer Font Change**: You can set your desired font as the default font for the Markdown viewer.
+- **Viewer Margin Adjustment**: You can adjust the margin width of the Markdown viewer in 3 steps.
 
 
 ---

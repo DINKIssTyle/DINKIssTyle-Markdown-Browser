@@ -57,6 +57,7 @@ export namespace app {
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
 	    documentMargin: string;
+	    viewerFontFamily: string;
 	
 	    static createFrom(source: any = {}) {
 	        return new AppSettings(source);
@@ -100,6 +101,7 @@ export namespace app {
 	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
 	        this.lastVersion = source["lastVersion"];
 	        this.documentMargin = source["documentMargin"];
+	        this.viewerFontFamily = source["viewerFontFamily"];
 	    }
 	}
 	export class FileResult {
@@ -153,6 +155,20 @@ export namespace app {
 		    }
 		    return a;
 		}
+	}
+	export class FontInfo {
+	    family: string;
+	    path: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new FontInfo(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.family = source["family"];
+	        this.path = source["path"];
+	    }
 	}
 	export class RecentFile {
 	    path: string;

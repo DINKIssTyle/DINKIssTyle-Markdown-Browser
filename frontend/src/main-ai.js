@@ -5,7 +5,7 @@
 
 import { state, el } from './main-state.js';
 import { persistAppSettings } from './main-settings.js';
-import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest } from '../wailsjs/go/app/App';
+import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../wailsjs/go/app/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
 import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
 import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, updateProgress } from './main-ui.js';
@@ -13,7 +13,7 @@ import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import { isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
-import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle } from './main-theme.js';
+import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
@@ -1048,6 +1048,9 @@ function syncCommonSettingsControls() {
     if (el.settingsDocumentMargin) {
         el.settingsDocumentMargin.value = state.documentMargin || "none";
     }
+    if (el.settingsViewerFont) {
+        el.settingsViewerFont.value = state.viewerFontFamily || "";
+    }
 }
 
 function renderEditorTokenColorControls() {
@@ -1128,6 +1131,35 @@ function collectEditorSettingsFromControls() {
     applyEditorBackgroundColor();
 }
 
+async function populateSystemFonts() {
+    if (!el.settingsViewerFont) return;
+    try {
+        const fonts = await GetSystemFonts();
+        const defaultOption = el.settingsViewerFont.firstElementChild;
+        el.settingsViewerFont.innerHTML = '';
+        if (defaultOption) {
+            el.settingsViewerFont.appendChild(defaultOption);
+        } else {
+            const opt = document.createElement('option');
+            opt.value = '';
+            opt.id = 'settings-option-font-default';
+            opt.textContent = 'Default';
+            el.settingsViewerFont.appendChild(opt);
+        }
+
+        if (fonts && fonts.length > 0) {
+            fonts.forEach(f => {
+                const opt = document.createElement('option');
+                opt.value = f.family;
+                opt.textContent = f.family;
+                el.settingsViewerFont.appendChild(opt);
+            });
+        }
+    } catch (err) {
+        console.error('Failed to get system fonts:', err);
+    }
+}
+
 function applyLayoutSettingsLocalization() {
     const isKorean = (navigator.language || '').startsWith('ko');
     const heading = document.getElementById('settings-heading-layout');
@@ -1135,6 +1167,8 @@ function applyLayoutSettingsLocalization() {
     const optNone = document.getElementById('settings-option-margin-none');
     const optNarrow = document.getElementById('settings-option-margin-narrow');
     const optWide = document.getElementById('settings-option-margin-wide');
+    const fontLabel = document.getElementById('settings-label-viewer-font');
+    const optFontDefault = document.getElementById('settings-option-font-default');
 
     if (isKorean) {
         if (heading) heading.textContent = '레이아웃';
@@ -1142,12 +1176,16 @@ function applyLayoutSettingsLocalization() {
         if (optNone) optNone.textContent = '없음';
         if (optNarrow) optNarrow.textContent = '좁게';
         if (optWide) optWide.textContent = '넓게';
+        if (fontLabel) fontLabel.textContent = '서체';
+        if (optFontDefault) optFontDefault.textContent = '기본서체 (Default)';
     } else {
         if (heading) heading.textContent = 'Layout';
         if (label) label.textContent = 'Margins';
         if (optNone) optNone.textContent = 'None';
         if (optNarrow) optNarrow.textContent = 'Narrow';
         if (optWide) optWide.textContent = 'Wide';
+        if (fontLabel) fontLabel.textContent = 'Font';
+        if (optFontDefault) optFontDefault.textContent = 'Default';
     }
 }
 
@@ -1194,6 +1232,11 @@ export async function initAI() {
     state.documentMargin = s.documentMargin || "none";
     if (el.settingsDocumentMargin) {
         el.settingsDocumentMargin.value = state.documentMargin;
+    }
+    state.viewerFontFamily = s.viewerFontFamily || "";
+    await populateSystemFonts();
+    if (el.settingsViewerFont) {
+        el.settingsViewerFont.value = state.viewerFontFamily;
     }
     applyLayoutSettingsLocalization();
     window.aiState = aiState;
@@ -1261,6 +1304,7 @@ export function bindAIEvents() {
             dark: state.darkAccentColor,
             editorTokenColors: { ...(state.editorTokenColors || {}) },
             documentMargin: state.documentMargin,
+            viewerFontFamily: state.viewerFontFamily,
         };
         syncSettingsTabs('editor');
         syncCommonSettingsControls();
@@ -1279,13 +1323,18 @@ export function bindAIEvents() {
             state.darkAccentColor = settingsAccentSnapshot.dark;
             state.editorTokenColors = { ...(settingsAccentSnapshot.editorTokenColors || {}) };
             state.documentMargin = settingsAccentSnapshot.documentMargin || "none";
+            state.viewerFontFamily = settingsAccentSnapshot.viewerFontFamily || "";
             settingsAccentSnapshot = null;
         }
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         applyEditorTokenColors();
         applyDocumentMarginStyle(state.documentMargin);
+        applyViewerFontFamily(state.viewerFontFamily);
         if (el.settingsDocumentMargin) {
             el.settingsDocumentMargin.value = state.documentMargin;
+        }
+        if (el.settingsViewerFont) {
+            el.settingsViewerFont.value = state.viewerFontFamily;
         }
         el.aiSettingsModal.classList.add('hidden');
     };
@@ -1310,8 +1359,10 @@ export function bindAIEvents() {
         state.lightAccentColor = normalizeAccentColor(el.lightAccentCustom?.value, state.lightAccentColor);
         state.darkAccentColor = normalizeAccentColor(el.darkAccentCustom?.value, state.darkAccentColor);
         state.documentMargin = el.settingsDocumentMargin?.value || "none";
+        state.viewerFontFamily = el.settingsViewerFont?.value || "";
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         applyDocumentMarginStyle(state.documentMargin);
+        applyViewerFontFamily(state.viewerFontFamily);
         collectEditorSettingsFromControls();
         await persistAISettings();
 

@@ -1,3 +1,5 @@
+import { LAYOUT_MARGIN_NARROW, LAYOUT_MARGIN_WIDE } from './config.js';
+
 export const DEFAULT_LIGHT_ACCENT_COLOR = '#0071e3';
 export const DEFAULT_DARK_ACCENT_COLOR = '#0a84ff';
 
@@ -97,9 +99,21 @@ export function applyDocumentMarginStyle(margin) {
     html.classList.remove('margin-none', 'margin-narrow', 'margin-wide');
     if (margin === 'narrow') {
         html.classList.add('margin-narrow');
+        html.style.setProperty('--document-padding-inline', LAYOUT_MARGIN_NARROW);
     } else if (margin === 'wide') {
         html.classList.add('margin-wide');
+        html.style.setProperty('--document-padding-inline', LAYOUT_MARGIN_WIDE);
     } else {
         html.classList.add('margin-none');
+        html.style.setProperty('--document-padding-inline', '0px');
+    }
+}
+
+export function applyViewerFontFamily(fontFamily) {
+    const root = document.documentElement;
+    if (fontFamily) {
+        root.style.setProperty('--viewer-font-family', `"${fontFamily}", var(--font-stack)`);
+    } else {
+        root.style.setProperty('--viewer-font-family', 'var(--font-stack)');
     }
 }

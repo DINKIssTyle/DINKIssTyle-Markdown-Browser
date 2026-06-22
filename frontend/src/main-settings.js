@@ -22,6 +22,7 @@ export function buildSettingsPayload(overrides = {}) {
         editorBackgroundColor: state.editorBackgroundColor,
         fileTreeFilterEnabled: state.fileTreeFilterEnabled,
         documentMargin: state.documentMargin,
+        viewerFontFamily: state.viewerFontFamily,
         recentFileDisplayLimit: state.recentFileDisplayLimit,
         outlineHeadingFormat: state.outlineHeadingFormatEnabled,
         aiFeaturesDisabled: state.aiFeaturesDisabled,

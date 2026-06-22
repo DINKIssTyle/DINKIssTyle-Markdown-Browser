@@ -54,6 +54,10 @@ export function GetSettings() {
   return window['go']['app']['App']['GetSettings']();
 }
 
+export function GetSystemFonts() {
+  return window['go']['app']['App']['GetSystemFonts']();
+}
+
 export function GetSystemTheme() {
   return window['go']['app']['App']['GetSystemTheme']();
 }

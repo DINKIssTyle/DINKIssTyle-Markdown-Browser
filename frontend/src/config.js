@@ -9,6 +9,10 @@ export const MIN_SPLASH_MS = 300;
 // 시각적 매칭을 위해 조절함
 export const EDITOR_FONT_VISUAL_SCALE = 0.9;
 
+// 레이아웃 여백 설정값 (기본: 좁음 8%, 넓음 18%)
+export const LAYOUT_MARGIN_NARROW = "3%";
+export const LAYOUT_MARGIN_WIDE = "10%";
+
 export const TRANSLATION_LANGUAGES = Object.freeze([
     { code: 'en-US', name: 'English', nativeName: 'English', suffix: '-en-US' },
     { code: 'es-ES', name: 'Spanish', nativeName: 'Español', suffix: '-es-ES' },
