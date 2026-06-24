@@ -333,6 +333,7 @@ export namespace app {
 	    languages: TranslationLanguage[];
 	    ai: TranslationAIConfig;
 	    overwriteExisting: boolean;
+	    inMemory: boolean;
 	
 	    static createFrom(source: any = {}) {
 	        return new TranslateDocumentRequest(source);
@@ -345,6 +346,7 @@ export namespace app {
 	        this.languages = this.convertValues(source["languages"], TranslationLanguage);
 	        this.ai = this.convertValues(source["ai"], TranslationAIConfig);
 	        this.overwriteExisting = source["overwriteExisting"];
+	        this.inMemory = source["inMemory"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
@@ -389,6 +391,7 @@ export namespace app {
 	}
 	export class TranslatedDocumentResult {
 	    targets: TranslatedDocumentTarget[];
+	    translations: Record<string, string>;
 	
 	    static createFrom(source: any = {}) {
 	        return new TranslatedDocumentResult(source);
@@ -397,6 +400,7 @@ export namespace app {
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.targets = this.convertValues(source["targets"], TranslatedDocumentTarget);
+	        this.translations = source["translations"];
 	    }
 	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {

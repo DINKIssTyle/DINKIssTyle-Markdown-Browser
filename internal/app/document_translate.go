@@ -55,10 +55,12 @@ type TranslateDocumentRequest struct {
 	Languages         []TranslationLanguage `json:"languages"`
 	AI                TranslationAIConfig   `json:"ai"`
 	OverwriteExisting bool                  `json:"overwriteExisting"`
+	InMemory          bool                  `json:"inMemory"`
 }
 
 type TranslatedDocumentResult struct {
-	Targets []TranslatedDocumentTarget `json:"targets"`
+	Targets      []TranslatedDocumentTarget `json:"targets"`
+	Translations map[string]string          `json:"translations"`
 }
 
 func (a *App) GetTranslationTargets(sourcePath string, languages []TranslationLanguage) ([]TranslatedDocumentTarget, error) {
@@ -111,7 +113,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 	if err != nil {
 		return TranslatedDocumentResult{}, err
 	}
-	if !req.OverwriteExisting {
+	if !req.InMemory && !req.OverwriteExisting {
 		for _, target := range targets {
 			if target.Exists {
 				return TranslatedDocumentResult{}, fmt.Errorf("%s already exists", target.FileName)
@@ -127,6 +129,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 	totalSteps := len(targets) * len(chunks)
 	completedSteps := 0
 	completedTargets := make([]TranslatedDocumentTarget, 0, len(targets))
+	translations := make(map[string]string)
 
 	for targetIndex, target := range targets {
 		var translated strings.Builder
@@ -184,11 +187,15 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 			}
 		}
 
-		if err := os.WriteFile(target.Path, []byte(translated.String()+"\n"), 0644); err != nil {
-			return TranslatedDocumentResult{}, err
+		translatedText := translated.String()
+		if !req.InMemory {
+			if err := os.WriteFile(target.Path, []byte(translatedText+"\n"), 0644); err != nil {
+				return TranslatedDocumentResult{}, err
+			}
+			target.Exists = true
 		}
-		target.Exists = true
 		completedTargets = append(completedTargets, target)
+		translations[target.Code] = translatedText
 	}
 
 	runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
@@ -198,7 +205,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 		"completed": true,
 	})
 
-	return TranslatedDocumentResult{Targets: completedTargets}, nil
+	return TranslatedDocumentResult{Targets: completedTargets, Translations: translations}, nil
 }
 
 type translationChunk struct {

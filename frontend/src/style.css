@@ -5427,3 +5427,78 @@ html.dark .cm-editor .cm-content ::selection {
     background: rgba(45, 45, 45, 0.9);
     border-color: rgba(255, 255, 255, 0.05);
 }
+
+/* Viewer Translation Modal styling */
+.modal-viewer-translation-container {
+    display: flex;
+    flex-direction: column;
+    gap: 16px;
+    margin-bottom: 20px;
+}
+
+.viewer-translation-field {
+    display: flex;
+    flex-direction: column;
+    gap: 6px;
+}
+
+.viewer-translation-label {
+    font-size: 12px;
+    font-weight: 700;
+    color: var(--text-muted);
+}
+
+.viewer-translation-select {
+    height: 38px;
+    padding: 0 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 8px;
+    background: var(--surface-elevated);
+    color: var(--text-color);
+    font-size: 14px;
+    font-weight: 600;
+    outline: none;
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    --wails-draggable: no-drag;
+}
+
+.viewer-translation-select:hover,
+.viewer-translation-select:focus {
+    border-color: rgba(var(--accent-color-rgb), 0.38);
+    box-shadow: 0 0 0 3px rgba(var(--accent-color-rgb), 0.08);
+}
+
+.viewer-translation-checkbox-row {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-top: 4px;
+}
+
+.viewer-translation-checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-color);
+    cursor: pointer;
+    user-select: none;
+}
+
+.viewer-translation-checkbox-label input {
+    margin: 0;
+    width: 16px;
+    height: 16px;
+    accent-color: var(--accent-color);
+    cursor: pointer;
+}
+
+/* Custom disabled states for nav-btn so that the new viewer translation button gets grayed out when AI is disabled */
+.nav-btn.disabled,
+.nav-btn.ai-required-disabled {
+    opacity: 0.42 !important;
+    cursor: not-allowed !important;
+    filter: grayscale(1);
+}

@@ -1560,6 +1560,185 @@ async function translateCurrentDocument() {
     }
 }
 
+export function showViewerTranslationPrompt() {
+    return new Promise((resolve) => {
+        const modalContent = el.modalOverlay.querySelector('.modal-content');
+        
+        // Populate select elements
+        const storedSource = localStorage.getItem('dkst.viewer.translation.source') || 'auto';
+        const storedTarget = localStorage.getItem('dkst.viewer.translation.target') || 'ko-KR'; // default target language
+        const storedCreateFile = localStorage.getItem('dkst.viewer.translation.createFile') !== 'false';
+
+        const sourceSelect = document.getElementById('viewer-translation-source');
+        const targetSelect = document.getElementById('viewer-translation-target');
+        const createFileCheckbox = document.getElementById('viewer-translation-create-file');
+
+        sourceSelect.innerHTML = `
+            <option value="auto" ${storedSource === 'auto' ? 'selected' : ''}>Auto (Detect)</option>
+            ${TRANSLATION_LANGUAGES.map(lang => `
+                <option value="${escapeAttr(lang.code)}" ${storedSource === lang.code ? 'selected' : ''}>
+                    ${escapeHTML(lang.name)} (${escapeHTML(lang.nativeName)})
+                </option>
+            `).join('')}
+        `;
+
+        targetSelect.innerHTML = TRANSLATION_LANGUAGES.map(lang => `
+            <option value="${escapeAttr(lang.code)}" ${storedTarget === lang.code ? 'selected' : ''}>
+                ${escapeHTML(lang.name)} (${escapeHTML(lang.nativeName)})
+            </option>
+        `).join('');
+
+        if (createFileCheckbox) {
+            createFileCheckbox.checked = storedCreateFile;
+        }
+
+        const cleanup = () => {
+            el.modalOverlay.classList.add('hidden');
+            el.modalViewerTranslationContainer.classList.add('hidden');
+            el.modalBtnOk.removeEventListener('click', handleOk);
+            el.modalBtnCancel.removeEventListener('click', handleCancel);
+            document.removeEventListener('keydown', handleKey, true);
+        };
+
+        const handleOk = () => {
+            const sourceCode = sourceSelect.value;
+            const targetCode = targetSelect.value;
+            const createFileVal = createFileCheckbox ? createFileCheckbox.checked : true;
+            
+            localStorage.setItem('dkst.viewer.translation.source', sourceCode);
+            localStorage.setItem('dkst.viewer.translation.target', targetCode);
+            localStorage.setItem('dkst.viewer.translation.createFile', String(createFileVal));
+
+            cleanup();
+            
+            const sourceLang = sourceCode === 'auto' ? { code: 'auto', name: 'Auto (Detect)' } : TRANSLATION_LANGUAGES.find(l => l.code === sourceCode);
+            const targetLang = TRANSLATION_LANGUAGES.find(l => l.code === targetCode);
+            
+            resolve({ source: sourceLang, target: targetLang, createFile: createFileVal });
+        };
+
+        const handleCancel = () => {
+            cleanup();
+            resolve(null);
+        };
+
+        const handleKey = event => {
+            if (!el.modalOverlay || el.modalOverlay.classList.contains('hidden')) return;
+
+            if (event.key === 'Escape') {
+                event.preventDefault();
+                handleCancel();
+                return;
+            }
+            if (event.key === 'Enter') {
+                event.preventDefault();
+                handleOk();
+                return;
+            }
+        };
+
+        el.modalTitle.textContent = "Translate Document";
+        el.modalMessage.textContent = "";
+        el.modalInputGroup.classList.add('hidden');
+        el.modalOptionGrid.classList.add('hidden');
+        el.modalEmojiContainer.classList.add('hidden');
+        el.modalTableContainer.classList.add('hidden');
+        el.modalLanguageContainer.classList.add('hidden');
+        
+        el.modalViewerTranslationContainer.classList.remove('hidden');
+        el.modalBtnOk.classList.remove('hidden');
+        el.modalBtnOk.textContent = "Translate";
+        el.modalBtnCancel.textContent = "Cancel";
+
+        el.modalOverlay.classList.remove('hidden');
+
+        el.modalBtnOk.addEventListener('click', handleOk);
+        el.modalBtnCancel.addEventListener('click', handleCancel);
+        document.addEventListener('keydown', handleKey, true);
+        
+        setTimeout(() => sourceSelect?.focus(), 50);
+    });
+}
+
+export async function translateViewerDocument() {
+    const selected = await showViewerTranslationPrompt();
+    if (!selected) {
+        return;
+    }
+
+    const sourcePath = state.currentFilePath;
+    if (!sourcePath || sourcePath === '__home__') {
+        showToast("Open a Markdown document first.");
+        return;
+    }
+
+    const aiConfig = getTranslationAIConfig();
+    if (aiConfig.error) {
+        showToast(aiConfig.error, "error", 3200);
+        return;
+    }
+
+    try {
+        let existing = [];
+        if (selected.createFile) {
+            const targets = await GetTranslationTargets(sourcePath, [selected.target]);
+            existing = targets.filter(target => target.exists);
+            if (existing.length > 0) {
+                const message = `These translated files already exist:\n\n${existing.map(target => target.fileName).join('\n')}\n\nOverwrite them?`;
+                const overwrite = await AskConfirm("Overwrite Translations", message, "Overwrite", "Cancel");
+                if (!overwrite) return;
+            }
+        }
+
+        await enqueueLLMTask({
+            label: "Starting translation...",
+            run: async ({ isCancelled }) => {
+                throwIfQueuedTaskCancelled(isCancelled);
+                const taskId = beginProgressTask("Starting translation...", 0);
+                const result = await TranslateDocumentCopies({
+                    sourcePath: sourcePath,
+                    content: state.currentMarkdownSource || "",
+                    languages: [selected.target],
+                    ai: aiConfig,
+                    overwriteExisting: existing.length > 0,
+                    inMemory: !selected.createFile
+                });
+                throwIfQueuedTaskCancelled(isCancelled);
+                if (!isProgressTaskActive(taskId)) return;
+
+                if (selected.createFile) {
+                    const sidebar = await import('./main-sidebar.js');
+                    await sidebar.updateFileTree({ forceRefresh: true });
+                    
+                    if (result.targets && result.targets.length > 0) {
+                        const targetPath = result.targets[0].path;
+                        await openPath(targetPath, { newTab: false, pushHistory: true });
+                    }
+                    showToast("Translated document created.", "check_circle");
+                } else {
+                    if (result.translations && result.translations[selected.target.code]) {
+                        const translatedText = result.translations[selected.target.code];
+                        await renderMarkdown(translatedText);
+                        showToast(`Temporarily translated to ${selected.target.name}.`, "check_circle");
+                    } else {
+                        showToast("Translation failed: Empty response.", "error");
+                    }
+                }
+                finishProgressTask(taskId);
+            },
+        });
+    } catch (error) {
+        if (isCancellationError(error)) {
+            LogError(`TranslateDocumentCopies cancelled: ${error?.message || error}`);
+            return;
+        }
+        LogError(`TranslateDocumentCopies failed: ${error?.message || error}`);
+        showToast(error?.message || "Failed to translate document.", "error", 4200);
+    } finally {
+        hideProgress();
+    }
+}
+
 function getStoredSpellcheckLanguageCode() {
     try {
         const stored = localStorage.getItem(SPELLCHECK_LANGUAGE_STORAGE_KEY);
@@ -3115,6 +3294,9 @@ export function enterEditMode() {
     el.btnBack.disabled = true;
     el.btnForward.disabled = true;
     el.btnHome.disabled = true;
+    if (el.btnTranslate) {
+        el.btnTranslate.disabled = true;
+    }
 
     // Also dispatch an empty ghost text just in case
     if (window.aiState) window.aiState.ghostText = "";
@@ -4293,24 +4475,24 @@ function bindToolbarPopupEvents() {
         }
     });
     document.addEventListener('mouseover', event => {
-        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip], .nav-btn.ai-required-disabled[data-tooltip]') : null;
         if (!button) return;
         showToolbarDisabledTooltip(button);
     });
     document.addEventListener('mouseout', event => {
-        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip], .nav-btn.ai-required-disabled[data-tooltip]') : null;
         if (!button) return;
-        const related = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        const related = event.relatedTarget instanceof Element ? event.relatedTarget.closest('.tool-btn.ai-required-disabled[data-tooltip], .nav-btn.ai-required-disabled[data-tooltip]') : null;
         if (related === button) return;
         hideToolbarDisabledTooltip();
     });
     document.addEventListener('focusin', event => {
-        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip], .nav-btn.ai-required-disabled[data-tooltip]') : null;
         if (!button) return;
         showToolbarDisabledTooltip(button);
     });
     document.addEventListener('focusout', event => {
-        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip]') : null;
+        const button = event.target instanceof Element ? event.target.closest('.tool-btn.ai-required-disabled[data-tooltip], .nav-btn.ai-required-disabled[data-tooltip]') : null;
         if (!button) return;
         hideToolbarDisabledTooltip();
     });

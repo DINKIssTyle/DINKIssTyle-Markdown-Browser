@@ -2228,6 +2228,7 @@ export function syncAIControls() {
     [
         { button: el.edSpellcheck, enabledTitle: "Spellcheck" },
         { button: el.edTranslateDoc, enabledTitle: "Translate Document" },
+        { button: el.btnTranslate, enabledTitle: "Translate" },
     ].forEach(({ button, enabledTitle }) => {
         if (!button) return;
         button.classList.toggle('disabled', aiRequiredToolDisabled);

@@ -54,6 +54,9 @@
                     disabled>
                     <span class="material-symbols-outlined" aria-hidden="true">edit_note</span>
                 </button>
+                <button id="btn-translate" title="Translate" aria-label="Translate" class="nav-btn icon-btn">
+                    <span class="material-symbols-outlined" aria-hidden="true">translate</span>
+                </button>
                 <button id="btn-font-minus" title="Decrease Font Size" aria-label="Decrease Font Size"
                     class="nav-btn icon-btn font-btn">
                     <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
@@ -466,6 +469,22 @@
                 </div>
                 <div id="modal-option-grid" class="modal-option-grid hidden"></div>
                 <div id="modal-language-container" class="modal-language-container hidden"></div>
+                <div id="modal-viewer-translation-container" class="modal-viewer-translation-container hidden">
+                    <div class="viewer-translation-field">
+                        <label for="viewer-translation-source" class="viewer-translation-label">Source Language</label>
+                        <select id="viewer-translation-source" class="viewer-translation-select"></select>
+                    </div>
+                    <div class="viewer-translation-field">
+                        <label for="viewer-translation-target" class="viewer-translation-label">Target Language</label>
+                        <select id="viewer-translation-target" class="viewer-translation-select"></select>
+                    </div>
+                    <div class="viewer-translation-field viewer-translation-checkbox-row">
+                        <label class="viewer-translation-checkbox-label">
+                            <input type="checkbox" id="viewer-translation-create-file" checked />
+                            <span>Generate Translated Document</span>
+                        </label>
+                    </div>
+                </div>
                 <div id="modal-emoji-container" class="modal-emoji-container hidden">
                     <div id="modal-emoji-categories" class="modal-emoji-categories"></div>
                     <div id="modal-emoji-grid" class="modal-emoji-grid"></div>
@@ -522,8 +541,8 @@
                         </button>
                     </nav>
 
-                    <section id="settings-panel-common" class="settings-panel hidden"
-                        role="tabpanel" aria-labelledby="settings-tab-common">
+                    <section id="settings-panel-common" class="settings-panel hidden" role="tabpanel"
+                        aria-labelledby="settings-tab-common">
                         <section class="ai-setting-group">
                             <div class="ai-setting-header">
                                 <h4>Appearance</h4>

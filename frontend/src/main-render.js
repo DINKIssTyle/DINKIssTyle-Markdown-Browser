@@ -1320,6 +1320,12 @@ export async function renderActiveTab() {
         !isBundledDocumentPath(state.currentFilePath);
     el.btnEdit.disabled = !isMarkdown;
 
+    // Disable translate button when not in viewer mode or not a markdown file
+    const isViewerMarkdown = isMarkdown && !state.isEditing;
+    if (el.btnTranslate) {
+        el.btnTranslate.disabled = !isViewerMarkdown;
+    }
+
     if (state.isEditing && !isMarkdown) {
         state.isEditing = false;
         state.editorOriginalContent = "";

@@ -20,7 +20,7 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -271,6 +271,10 @@ function bindToolbar() {
     el.btnNewTab.onclick = () => createAndSwitchToNewTab();
     el.btnNewDoc.onclick = createNewDocument;
     el.btnEdit.onclick = enterEditMode;
+    el.btnTranslate.onclick = () => {
+        if (el.btnTranslate.classList.contains('ai-required-disabled')) return;
+        void translateViewerDocument();
+    };
     el.selectEngine.onchange = async event => {
         if (event.target.value === 'html') {
             syncEngineSelector();

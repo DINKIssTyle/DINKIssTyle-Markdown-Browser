@@ -210,6 +210,9 @@ export function updateNavButtons() {
         el.btnBack.disabled = getUndoDepth() === 0;
         el.btnForward.disabled = getRedoDepth() === 0;
         el.btnHome.disabled = true;
+        if (el.btnTranslate) {
+            el.btnTranslate.disabled = true;
+        }
         return;
     }
 
