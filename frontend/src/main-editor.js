@@ -3267,9 +3267,11 @@ export function enterEditMode() {
     state.editingPreviewPath = state.currentFilePath;
     state.editingPreviewFolder = state.currentFolder;
 
+    const nextSelection = normalizeEditorSelectionSnapshot(state.editorSelection, state.currentMarkdownSource.length);
     resetEditorHistoryAroundSync(() => {
         cmView.dispatch({
             changes: { from: 0, to: cmView.state.doc.length, insert: state.currentMarkdownSource },
+            selection: EditorSelection.single(nextSelection.anchor, nextSelection.head),
             annotations: Transaction.addToHistory.of(false)
         });
     });

@@ -1,4 +1,4 @@
-# Novedades en la Versión 2.1 Beta9
+# Novedades en la Versión 2.1 Beta10
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -168,6 +168,14 @@ done
 
 - **Cambio de fuente del visor**: Puedes establecer la fuente deseada como predeterminada para el visor de Markdown.
 - **Ajuste del margen del visor**: Puedes ajustar el ancho del margen del visor de Markdown en 3 pasos.
+
+
+
+## 2.1 Beta 10
+
+### Novedades
+
+- **Función de traducción para espectadores**: Puedes traducir el documento actual sin editar. Opciones: Traducción temporal, Guardar documento traducido
 
 
 ---

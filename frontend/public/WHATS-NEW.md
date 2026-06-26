@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta9
+# What's New in Version 2.1 Beta10
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
@@ -178,6 +178,14 @@ done
 
 - **Viewer Font Change**: You can set your desired font as the default font for the Markdown viewer.
 - **Viewer Margin Adjustment**: You can adjust the margin width of the Markdown viewer in 3 steps.
+
+
+
+## 2.1 Beta 10
+
+### Additions
+
+- **Viewer Translation Feature**: You can translate the current document without editing. Options: Temporary translation, Save translated document
 
 
 ---

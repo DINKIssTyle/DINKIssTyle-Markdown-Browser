@@ -264,8 +264,10 @@ export async function handleSearch() {
     }
     el.searchResults.innerHTML = results.map(result => `
         <div class="result-item recent-item" data-path="${result.path}" data-keyword="${escapeAttr(query)}" tabindex="0">
-            <span class="recent-name">${result.name}</span>
-            <span class="recent-path">${result.path}</span>
+            <div class="recent-file-text">
+                <span class="recent-name">${result.name}</span>
+                <span class="recent-path">${result.path}</span>
+            </div>
         </div>
     `).join('');
 }
