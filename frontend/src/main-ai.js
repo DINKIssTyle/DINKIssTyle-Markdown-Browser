@@ -78,6 +78,8 @@ let supportAgentTransitionTimer = null;
 let lastPromptInputValue = "";
 let aiPromptForcedVisible = false;
 let settingsAccentSnapshot = null;
+let systemFontsPromise = null;
+let systemFontsLoaded = false;
 let aiDockHideTimer = null;
 let aiPanelHideTimer = null;
 let aiReasoningTickerIndex = 0;
@@ -992,6 +994,9 @@ function syncSettingsTabs(activeTab = 'editor') {
     el.settingsPanelCommon?.classList.toggle('hidden', !isCommon);
     el.settingsPanelEditor?.classList.toggle('hidden', !isEditor);
     el.settingsPanelAi?.classList.toggle('hidden', !isAi);
+    if (isCommon) {
+        void populateSystemFonts();
+    }
 }
 
 function renderAccentPresetControls() {
@@ -1049,7 +1054,18 @@ function syncCommonSettingsControls() {
         el.settingsDocumentMargin.value = state.documentMargin || "none";
     }
     if (el.settingsViewerFont) {
+        ensureCurrentViewerFontOption();
         el.settingsViewerFont.value = state.viewerFontFamily || "";
+    }
+}
+
+function ensureCurrentViewerFontOption() {
+    const currentFamily = state.viewerFontFamily || "";
+    if (!el.settingsViewerFont || !currentFamily || systemFontsLoaded) return;
+    const hasCurrentFamily = Array.from(el.settingsViewerFont.options)
+        .some(option => option.value === currentFamily);
+    if (!hasCurrentFamily) {
+        el.settingsViewerFont.add(new Option(currentFamily, currentFamily));
     }
 }
 
@@ -1132,32 +1148,49 @@ function collectEditorSettingsFromControls() {
 }
 
 async function populateSystemFonts() {
-    if (!el.settingsViewerFont) return;
-    try {
-        const fonts = await GetSystemFonts();
-        const defaultOption = el.settingsViewerFont.firstElementChild;
-        el.settingsViewerFont.innerHTML = '';
-        if (defaultOption) {
-            el.settingsViewerFont.appendChild(defaultOption);
-        } else {
-            const opt = document.createElement('option');
-            opt.value = '';
-            opt.id = 'settings-option-font-default';
-            opt.textContent = 'Default';
-            el.settingsViewerFont.appendChild(opt);
-        }
+    if (!el.settingsViewerFont || systemFontsLoaded) return;
+    if (systemFontsPromise) return systemFontsPromise;
 
-        if (fonts && fonts.length > 0) {
-            fonts.forEach(f => {
+    ensureCurrentViewerFontOption();
+    const selectedFamily = state.viewerFontFamily || "";
+    el.settingsViewerFont.setAttribute('aria-busy', 'true');
+
+    systemFontsPromise = (async () => {
+        try {
+            const fonts = await GetSystemFonts();
+            const defaultOption = el.settingsViewerFont.querySelector('option[value=""]');
+            el.settingsViewerFont.innerHTML = '';
+            if (defaultOption) {
+                el.settingsViewerFont.appendChild(defaultOption);
+            } else {
                 const opt = document.createElement('option');
-                opt.value = f.family;
-                opt.textContent = f.family;
+                opt.value = '';
+                opt.id = 'settings-option-font-default';
+                opt.textContent = 'Default';
                 el.settingsViewerFont.appendChild(opt);
-            });
+            }
+
+            if (fonts && fonts.length > 0) {
+                const fragment = document.createDocumentFragment();
+                fonts.forEach(f => {
+                    const opt = document.createElement('option');
+                    opt.value = f.family;
+                    opt.textContent = f.family;
+                    fragment.appendChild(opt);
+                });
+                el.settingsViewerFont.appendChild(fragment);
+            }
+            systemFontsLoaded = true;
+            el.settingsViewerFont.value = selectedFamily;
+        } catch (err) {
+            systemFontsPromise = null;
+            console.error('Failed to get system fonts:', err);
+        } finally {
+            el.settingsViewerFont.removeAttribute('aria-busy');
         }
-    } catch (err) {
-        console.error('Failed to get system fonts:', err);
-    }
+    })();
+
+    return systemFontsPromise;
 }
 
 function applyLayoutSettingsLocalization() {
@@ -1234,7 +1267,7 @@ export async function initAI() {
         el.settingsDocumentMargin.value = state.documentMargin;
     }
     state.viewerFontFamily = s.viewerFontFamily || "";
-    await populateSystemFonts();
+    ensureCurrentViewerFontOption();
     if (el.settingsViewerFont) {
         el.settingsViewerFont.value = state.viewerFontFamily;
     }

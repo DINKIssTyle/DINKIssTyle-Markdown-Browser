@@ -123,6 +123,8 @@ type App struct {
 	settingsPath      string
 	recentPath        string
 	mu                sync.Mutex
+	systemFontsOnce   sync.Once
+	systemFonts       []FontInfo
 	activeAIRequestID int64
 	activeAICancel    context.CancelFunc
 	frontendReady     bool

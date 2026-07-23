@@ -23,6 +23,14 @@ type FontInfo struct {
 
 // GetSystemFonts scans OS-specific directories for font files and returns family names
 func (a *App) GetSystemFonts() []FontInfo {
+	a.systemFontsOnce.Do(func() {
+		a.systemFonts = scanSystemFonts()
+	})
+
+	return append([]FontInfo(nil), a.systemFonts...)
+}
+
+func scanSystemFonts() []FontInfo {
 	var fontDirs []string
 
 	switch runtime.GOOS {
@@ -74,7 +82,7 @@ func (a *App) GetSystemFonts() []FontInfo {
 						family := strings.TrimSuffix(filepath.Base(path), ext)
 						family = strings.ReplaceAll(family, "-", " ")
 						family = strings.ReplaceAll(family, "_", " ")
-						
+
 						family = strings.TrimSpace(family)
 						if family != "" && !strings.HasPrefix(family, ".") {
 							key := strings.ToLower(family)

@@ -107,7 +107,8 @@ window.addEventListener('DOMContentLoaded', async () => {
 });
 
 async function hideStartupSplash(startedAt) {
-    if (!el.startupSplash) {
+    const splash = el.startupSplash;
+    if (!splash) {
         return;
     }
 
@@ -118,10 +119,41 @@ async function hideStartupSplash(startedAt) {
         await new Promise(resolve => window.setTimeout(resolve, remaining));
     }
 
-    el.startupSplash.classList.add('is-hiding');
-    window.setTimeout(() => {
-        el.startupSplash?.remove();
-    }, 220);
+    splash.classList.add('is-hiding');
+    removeAfterOpacityTransition(splash);
+}
+
+function removeAfterOpacityTransition(element) {
+    let removed = false;
+    const remove = () => {
+        if (removed) return;
+        removed = true;
+        element.remove();
+    };
+    const handleTransitionEnd = event => {
+        if (event.target === element && event.propertyName === 'opacity') {
+            remove();
+        }
+    };
+
+    element.addEventListener('transitionend', handleTransitionEnd);
+    element.addEventListener('transitioncancel', remove, { once: true });
+
+    const styles = window.getComputedStyle(element);
+    const durations = parseCSSTimeList(styles.transitionDuration);
+    const delays = parseCSSTimeList(styles.transitionDelay);
+    const transitionMs = durations.reduce((maximum, duration, index) => (
+        Math.max(maximum, duration + (delays[index % delays.length] || 0))
+    ), 0);
+    window.setTimeout(remove, transitionMs + 50);
+}
+
+function parseCSSTimeList(value) {
+    return String(value || '0s').split(',').map(part => {
+        const time = part.trim();
+        const numericValue = Number.parseFloat(time) || 0;
+        return time.endsWith('ms') ? numericValue : numericValue * 1000;
+    });
 }
 
 // ── Settings ───────────────────────────────────────────────

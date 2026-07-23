@@ -8,6 +8,7 @@
 }
 
 :root {
+    --startup-splash-fade-duration: 220ms;
     --bg-color: #ffffff;
     --surface-color: #f5f5f7;
     --surface-elevated: #fbfbfd;
@@ -91,7 +92,7 @@ body {
         radial-gradient(circle at center, color-mix(in srgb, var(--surface-elevated) 100%, transparent) 0%, var(--bg-color) 72%);
     pointer-events: none;
     opacity: 1;
-    transition: opacity 0.5s ease-in;
+    transition: opacity var(--startup-splash-fade-duration) ease-in;
 }
 
 .startup-splash.is-hiding {
