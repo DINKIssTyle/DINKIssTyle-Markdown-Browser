@@ -430,6 +430,7 @@ function showSupportAgentPrompt(reportText) {
             clearTimeout(supportAgentTransitionTimer);
         }
         requestAnimationFrame(() => {
+            if (!isEditorPromptAvailable() || el.aiPromptBox?.classList.contains('hidden')) return;
             el.aiPromptBox.classList.add('is-transitioning-to-support');
             supportAgentTransitionTimer = setTimeout(() => {
                 el.aiPromptBox?.classList.remove('is-transitioning-to-support');
@@ -477,6 +478,7 @@ function clearSupportAgentPrompt({ focusInput = false } = {}) {
     updatePromptBusyUI();
     if (focusInput) {
         requestAnimationFrame(() => {
+            if (!isEditorPromptAvailable() || el.aiPromptBox?.classList.contains('hidden')) return;
             if (!el.aiPromptInput.disabled) {
                 el.aiPromptInput.focus();
                 updatePromptPlaceholder();
@@ -897,18 +899,36 @@ function updatePromptInputLayout() {
     el.aiPromptInput.style.overflowY = el.aiPromptInput.scrollHeight > maxHeight ? 'auto' : 'hidden';
 }
 
+function isEditorPromptAvailable() {
+    return state.isEditing
+        && !!cmView
+        && el.mainContainer?.classList.contains('is-editing')
+        && !el.editorView?.classList.contains('hidden');
+}
+
 function showPromptBoxElement() {
+    if (!isEditorPromptAvailable()) {
+        hidePromptBoxElement({ immediate: true });
+        return false;
+    }
     clearTimeout(aiPromptHideTimer);
     updatePromptInputLayout();
     el.aiPromptBox.classList.remove('hidden', 'is-leaving');
     requestAnimationFrame(() => {
+        if (!isEditorPromptAvailable() || el.aiPromptBox.classList.contains('hidden')) return;
         el.aiPromptBox.classList.add('is-visible');
     });
+    return true;
 }
 
-function hidePromptBoxElement() {
-    if (el.aiPromptBox.classList.contains('hidden')) return;
+function hidePromptBoxElement({ immediate = false } = {}) {
     clearTimeout(aiPromptHideTimer);
+    if (immediate) {
+        el.aiPromptBox.classList.remove('is-visible', 'is-leaving');
+        el.aiPromptBox.classList.add('hidden');
+        return;
+    }
+    if (el.aiPromptBox.classList.contains('hidden')) return;
     el.aiPromptBox.classList.remove('is-visible');
     el.aiPromptBox.classList.add('is-leaving');
     aiPromptHideTimer = setTimeout(() => {
@@ -928,6 +948,10 @@ function positionPromptBox() {
 }
 
 function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySelection = false } = {}) {
+    if (!isEditorPromptAvailable()) {
+        hidePromptBox({ restoreEditorFocus: false, immediate: true });
+        return false;
+    }
     if (!isGeneralAIActive()) return false;
     if (isSpellcheckActive() && !isAIProgressVisible()) {
         hidePromptBox({ restoreEditorFocus: false });
@@ -948,6 +972,7 @@ function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySel
     updatePromptPlaceholder();
     if (focusInput) {
         requestAnimationFrame(() => {
+            if (!isEditorPromptAvailable() || el.aiPromptBox.classList.contains('hidden')) return;
             el.aiPromptInput.focus();
             updatePromptPlaceholder();
             if (el.aiPromptInput.value) {
@@ -1631,7 +1656,8 @@ export function showPromptBoxAtSelection() {
 }
 
 export function showAskAIPrompt() {
-    if (!state.isEditing || !cmView) {
+    if (!isEditorPromptAvailable()) {
+        hidePromptBox({ restoreEditorFocus: false, immediate: true });
         showToast("Ask AI is available in editor mode.");
         return false;
     }
@@ -1646,9 +1672,9 @@ export function showAskAIPrompt() {
     return showPromptBox({ focusInput: true, preserveInput: true, allowEmptySelection: true });
 }
 
-export function hidePromptBox({ clearInput = true, restoreEditorFocus = true, preserveSupport = false } = {}) {
+export function hidePromptBox({ clearInput = true, restoreEditorFocus = true, preserveSupport = false, immediate = false } = {}) {
     aiPromptForcedVisible = false;
-    if (preserveSupport && isSupportAgentPromptVisible()) {
+    if (preserveSupport && isSupportAgentPromptVisible() && isEditorPromptAvailable()) {
         positionPromptBox();
         showPromptBoxElement();
         updatePromptBusyUI();
@@ -1660,7 +1686,7 @@ export function hidePromptBox({ clearInput = true, restoreEditorFocus = true, pr
         supportAgentTransitionTimer = null;
     }
     el.aiPromptBox?.classList.remove('is-transitioning-to-support');
-    hidePromptBoxElement();
+    hidePromptBoxElement({ immediate });
     if (clearInput) {
         el.aiPromptInput.value = "";
         lastPromptInputValue = "";
@@ -2183,6 +2209,9 @@ export function syncAIControls() {
     }
     if (!aiRequestInFlight && !aiPromptBusyState && !isSupportAgentPromptVisible()) {
         showPendingSupportAgentPromptForActiveTab();
+    }
+    if (!state.isEditing && isPromptBoxVisible()) {
+        hidePromptBox({ restoreEditorFocus: false, immediate: true });
     }
     const showAiDock = state.isEditing && generalAvailable;
     if (showAiDock) {

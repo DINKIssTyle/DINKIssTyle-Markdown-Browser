@@ -1,4 +1,4 @@
-# What's New in Version 2.1 Beta10
+# What's New in Version 2.1 Beta11
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
@@ -186,6 +186,16 @@ done
 ### Additions
 
 - **Viewer Translation Feature**: You can translate the current document without editing. Options: Temporary translation, Save translated document
+
+
+## 2.1 Beta 11
+
+### Improvements & Changes
+
+- **Class Diagram Rendering Fix**: Resolved an issue where text color lacked contrast against the background.
+- **App Startup Speed Improvement**: Fixed a problem causing long preparation times when fonts needed to be reloaded on every launch in environments with many installed fonts.
+- **Document Icon Change**: Minor adjustments made to the document icon for consistency with DKST series documents.
+- **AI Prompt Box**: Fixed an issue where the AI prompt box remained visible even after being closed from the editor.
 
 
 ---

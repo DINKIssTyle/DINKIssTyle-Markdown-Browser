@@ -934,6 +934,7 @@ function enhanceCodeBlockSyntaxHighlighting(container) {
 function getMermaidConfig() {
     const isDark = document.documentElement.classList.contains('dark');
     const accentColor = getCurrentAccentColor();
+    const textColor = isDark ? '#f5f5f7' : '#1d1d1f';
     return {
         startOnLoad: false,
         theme: isDark ? 'dark' : 'default',
@@ -942,7 +943,8 @@ function getMermaidConfig() {
         themeVariables: {
             // 앱의 포인트 컬러(Accent)를 기본 색상으로 적용
             primaryColor: accentColor,
-            primaryTextColor: isDark ? '#ffffff' : '#ffffff',
+            primaryTextColor: textColor,
+            textColor,
             primaryBorderColor: accentColor,
             lineColor: isDark ? '#8e8e93' : '#636366',
             secondaryColor: isDark ? '#1c1c1e' : '#f5f5f7',

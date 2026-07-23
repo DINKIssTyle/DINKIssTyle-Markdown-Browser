@@ -3315,6 +3315,7 @@ export async function exitEditMode(didSave = false) {
     if (!state.isEditing) return;
     hideLinkTooltip();
     clearSpellcheckSuggestions();
+    hidePromptBox({ restoreEditorFocus: false, immediate: true });
     closeSlashMenu();
     clearTimeout(window._renderTimer);
 

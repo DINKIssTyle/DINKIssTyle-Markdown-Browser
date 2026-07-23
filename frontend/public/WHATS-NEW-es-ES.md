@@ -1,4 +1,4 @@
-# Novedades en la Versión 2.1 Beta10
+# Novedades en la Versión 2.1 Beta11
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -177,6 +177,15 @@ done
 
 - **Función de traducción para espectadores**: Puedes traducir el documento actual sin editar. Opciones: Traducción temporal, Guardar documento traducido
 
+
+## 2.1 Beta 11
+
+### Mejoras y Cambios
+
+- **Corrección en el renderizado del diagrama de clases**: Se resolvió un problema donde el color del texto carecía de contraste con el fondo.
+- **Mejora en la velocidad de inicio de la aplicación**: Se corrigió un problema que causaba largos tiempos de preparación cuando las fuentes necesitaban recargarse en cada inicio en entornos con muchas fuentes instaladas.
+- **Cambio del icono del documento**: Se realizaron ajustes menores al icono del documento para mantener la coherencia con los documentos de la serie DKST.
+- **Cuadro de indicaciones de IA**: Se corrigió un problema por el cual el cuadro de indicaciones de la IA permanecía visible incluso después de cerrarlo desde el editor.
 
 ---
 (C) 2026 DINKI'ssTyle. Todos los derechos reservados.
