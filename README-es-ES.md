@@ -121,15 +121,7 @@ Puede descargar el ejecutable de la última versión [haciendo clic aquí](https
 Mueva el ejecutable a la ubicación deseada y úselo.
 
 ### macOS
-El método estándar es mover el ejecutable (el paquete de la aplicación) a la carpeta `Applications` o al directorio `~/Applications`.
-
-**Dado que esta aplicación no tiene una firma de desarrollador confiable, debe eliminar la propiedad 'Cuarentena'.** Al eliminar directamente esta propiedad de cuarentena en la aplicación, se convierte en un archivo confiable.
-> El siguiente comando es para cuando la aplicación está instalada en la carpeta Applications.
-
-```bash
-xattr -cr "/Applications/DKST Markdown Browser.app"
-```
-Después de ingresar el comando, presione `Enter` para desactivar la cuarentena.
+Monte el archivo DMG y muévalo a la carpeta de Aplicaciones para usarlo.
 
 ### Linux (Ubuntu, CentOS, etc.)
 Ejecute el ejecutable y luego haga clic en el enlace de instalación en la parte inferior de la página de inicio para completar la instalación.

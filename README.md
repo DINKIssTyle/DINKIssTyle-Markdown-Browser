@@ -120,15 +120,7 @@ Download the latest release executable [by clicking here](https://github.com/DIN
 Move the executable file to your desired location and use it.
 
 ### macOS
-The standard method is to move the executable (app bundle) to the `Applications` folder or the `~/Applications` directory.
-
-**Since this app does not have a trusted developer signature, you must remove the 'Quarantine' attribute.** Removing the 'Quarantine' attribute set on the app makes it a trusted file.
-> The command below is for when the app is installed in the Applications folder.
-
-```bash
-xattr -cr "/Applications/DKST Markdown Browser.app"
-```
-After entering the command, press `Enter` to remove quarantine.
+Mount the DMG file and move the app to the Applications folder to use it.
 
 ### Linux (Ubuntu, CentOS, etc.)
 Run the executable and follow the installation link at the bottom of the start page to complete the installation.

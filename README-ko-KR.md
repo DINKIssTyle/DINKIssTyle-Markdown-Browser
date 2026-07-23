@@ -140,15 +140,7 @@ DKST Markdown Browser 는 Local LLM 을 활용한 AI 어시스트를 제공하�
 실행 파일을 원하는 위치로 이동하여 사용하십시오.
 
 ### macOS
-표준 방법은 실행 파일(앱 번들)을 `Applications` 폴더 또는 `~/Applications` 디렉터리로 이동하는 것입니다.
-
-**이 앱은 신뢰할 수 있는 개발자 서명이 없으므로 '격리(Quarantine)' 속성을 제거해야 합니다.** 앱에 설정된 '격리' 속성을 직접 제거하면 앱을 신뢰할 수 있는 파일로 만들 수 있습니다.
-> 아래 명령어는 앱이 Applications 폴더에 설치된 경우를 위한 것입니다.
-
-```bash
-xattr -cr "/Applications/DKST Markdown Browser.app"
-```
-명령어를 입력한 후 `Enter`를 눌러 격리를 해제하세요.
+DMG 파일을 마운트하고 앱을 응용프로그램 폴더로 이동하여 사용하십시오.
 
 ### Linux (Ubuntu, CentOS 등)
 실행 파일을 실행한 후, 시작 페이지 하단의 설치 링크를 클릭하여 설치를 완료하세요.

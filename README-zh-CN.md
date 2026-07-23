@@ -120,15 +120,7 @@ DKST Markdown Browser 利用本地 LLM 提供 AI 助手功能，如需设置或�
 请将可执行文件移动到您想要的位置使用。
 
 ### macOS
-标准方法是将可执行文件（应用包）移动到 `Applications` 文件夹或 `~/Applications` 目录。
-
-**由于本应用没有可信的开发者签名，因此需要移除“隔离 (Quarantine)”属性。** 直接移除应用上的“隔离”属性可使应用成为一个受信任的文件。
-> 以下命令适用于应用安装在 Applications 文件夹的情况。
-
-```bash
-xattr -cr "/Applications/DKST Markdown Browser.app"
-```
-输入命令后按 `Enter` 键即可解除隔离。
+挂载DMG文件并将应用程序移到“应用程序”文件夹即可使用。
 
 ### Linux (Ubuntu, CentOS 等)
 运行可执行文件后，请点击启动页面底部的安装链接以完成安装。
