@@ -1,202 +1,60 @@
-# What's New in Version 2.1 Beta11
+# What's New in Version 2.2
 
 <div align="center"><img src="icon-512.png" width="128"/><br><br></div>
 <div align="center">
-  
+
 [Korean (한국어)](WHATS-NEW-ko-KR.md) | [Spanish (Español)](WHATS-NEW-es-ES.md) | [Simplified Chinese (中国语)](WHATS-NEW-zh-CN.md) | [Japanese (日本語)](WHATS-NEW-ja-JP.md)
 
 </div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> Lightweight and elegant cross-platform<br>Markdown viewer and editor!</div>
 
-<div align="center">DKST Markdown Browser has become even more powerful! Check out the major features added in this version.</div>
+<div align="center">DKST Markdown Browser has become even more powerful!<br>Check out the major features added in this version.</div>
+
+## 🚀 Key Changes
+
+## 2.2.0 - 2026. 07. 31 
+- **Removed Beta Badge**: Removed the beta label as the application has reached full stability.
+- macOS **CJK IME Enter Fix Line Break Improvement**: When the `CJK IME Enter Fix` option is enabled in Settings → Editor, pressing Enter once during CJK character input now properly creates a line break.
 
 
-## 🚀 Version 2.1 Key Changes
+## Changes during Version 2.1
 
-### Introduction of the Sidebar
+### Highlights
+- **Integrated Sidebar Introduced**: Added an integrated sidebar featuring File Tree, Outline, and Search functions (CTRL+ALT+S / macOS: CMD+OPT+S)
+- **Markdown Syntax Highlighting**: Added syntax highlighting for code blocks such as Python, Bash, etc.
 
-A button to open the sidebar on the left side of the tab bar has appeared. `Shortcut: CTRL+ALT+S (macOS: CMD+OPT+S)`  
-* **Sidebar Composition**:
-  * **File Tree**: Displays the home folder of open files as a file directory structure. You can view markdown and image files directly by selecting them.
-  * **Outline**: View the outline of your markdown document.
-  * **Search**: The search function, previously located in the main toolbar up to version 2.0, has been merged here.
+#### New Features
+- **Sidebar Dedicated Shortcuts**: Added shortcuts for File Tree (ALT+1), Outline (ALT+2), and Search (ALT+3)
+- **Enhanced Editor Insertion**: Added functionality to directly insert hyperlinks and images from the file tree into the currently edited document
+- **Table Insertion Visualization**: Added an intuitive table insertion feature using keyboard arrow keys after typing the `/table` command
+- **Advanced Emoji Insertion**: Added a modal window for emoji insertion supporting keyboard navigation and organized by categories
+- **AI Multilingual Translation & Spell Check**: Added features to translate the document being edited into a desired language in batch or check and correct spelling
+- **Viewer-Only Translation**: Added functionality to temporarily view translations of current documents without editing, or save translated documents
+- **List & Formatting Options**: Added options to choose Ordered List numbering styles (1. 1. 1. or 1. 2. 3.) and custom highlighter colors
+- **Tiered Toolbar Sets**: Added the ability to choose from 3 editor toolbar sets (Beginner, Rookie, Pro) based on user Markdown proficiency
+- **Viewer Display Settings**: Added options to change default font and adjust margins in 3 levels for the Markdown viewer
+- **Tab & File Management**: Added features for reopening closed tabs (CTRL+SHIFT+T), Save As, and bookmarking (pinning) recent files in the recent files list
 
-### Small but Changed Things
+#### Improvements
+- **Popup Tooltip & UI Improvements**: Display destination address on hyperlink hover with multilingual support, and changed emoji toast notifications to Google Material Symbols
+- **Enhanced Sidebar Usability**: Added keyboard Tab and arrow key navigation support, and improved Outline formatting to distinguish bold text and font size based on heading levels
+- **File Tree Convenience**: Display only supported files when filter is clicked, automatically close tab when open file is deleted, and added 'Open in New Tab' to the right-click menu in read mode
+- **Editing & Tab Experience Improvements**: Display warning icon for unsaved state, open files in a new tab when opening another file, added tab close animation, and restore previous scroll and cursor position when returning to an edited tab
+- **Advanced AI & Task Handling**: Remember last selected language during translation, and display real-time streaming (Delta) responses from LLM in OpenAI and LM Studio modes
+- **Multi-tasking Stability**: Completely isolated task history between tabs during multi-tab editing; maintained translation/spell-check operations across tab switching with continuous status display via a universal progress bar
+- **Task Scheduling**: Queue and process new LLM requests sequentially after current operation completes
+- **Start Page Settings**: Improved settings to allow users to manually customize the number of displayed recent items
+- **Feature Integration & Visual Stabilization**: Grouped and integrated similar features, and eliminated screen flickering during read/edit mode transitions
+- **Design Consistency**: Fine-tuned document icon design for consistency with DKST series documents
 
-* **Popup Tooltip**: When hover your mouse cursor over a hyperlink, the destination address is displayed.
+#### Bug Fixes
+- **Performance Optimization**: Fixed an issue where startup speed degraded due to reloading fonts on every app launch in environments with many installed fonts
+- **AI Prompt Error**: Fixed a visibility issue where the AI prompt window remained on screen even after being closed in the editor
+- **AI Spell Check Error**: Fixed an issue where Spell Check intermittently failed by improving LLM response parsing logic
+- **Rendering Error**: Fixed an issue where an unnecessary '•' symbol was displayed when rendering TASK format
+- **Diagram Readability**: Fixed a class diagram rendering issue where low contrast between background and text colors made text hard to read
+- **Shortcut Conflict Resolution**: Resolved shortcut conflicts caused by expanded features and adjusted related shortcuts comprehensively (reflected in document at the bottom of the start page)
 
 ---
-
-## New Feature and Improvement Plan
-
-- [ ] Use file tree for hyperlinks and image insertion
-
-To be continued.
-
-# Recent Changes
-
-## 2.1 Beta2
-### Added & Bug Fixes & Polish
-
-* **Added: Syntax Highlight for Markdown Rendering**
-
-### Python
-```python
-# Fibonacci sequence
-def fibonacci(n: int) -> list[int]:
-    result = []
-    a, b = 0, 1
-
-    while len(result) < n:
-        result.append(a)
-        a, b = b, a + b
-
-    return result
-
-
-if __name__ == "__main__":
-    print("Fibonacci:", fibonacci(10))
-```
-
-### Bash
-
-```bash
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-NAME="${1:-World}"
-
-if [[ "$NAME" == "admin" ]]; then
-  echo "Welcome, administrator."
-else
-  echo "Hello, $NAME!"
-fi
-
-for file in *.txt; do
-  [[ -e "$file" ]] || continue
-  echo "Found text file: $file"
-done
-```
-
-
-
-
-## 2.1 Beta3
-### Added
-
-- **Insert links and images** directly into the edited document from the file tree.
-- **Table Insertion Visualization**: Try inserting a table with `/table`. You can insert it intuitively using keyboard arrow keys.
-- **Emoji Insertion Advanced** A modal window categorized by category allows you to navigate and select items using only the keyboard for insertion.
-
-### Bug Fixes & Polish
-
-
-- **Fixed popup tooltip;** added multilingual support.
-- **Remove emoji toast**: Now change emojis in toast messages to Google Material Symbols.
-- **File tree filter**: Clicking the filter icon will show only supported files.
-
-
-
-## 2.1 Beta4
-
-### Bug Fixes & Polish
-
-
-
-- **Add Sidebar Shortcuts**: File Tree is ALT+1, Outline is ALT+2, Search is ALT+3.
-- **Sidebar Keyboard Navigation**: Tab key moves to child elements; arrow keys move through the entire sidebar.
-- **Improve Sidebar - Outline Formatting**: Bold text and font size are differentiated based on headings, which can be toggled on or off using format buttons.
-- **TASK format rendering**: Unnecessary • was attached. It has now been removed and renders as intended.
-
-
-## 2.1 Beta5
-
-### Added
-
-- **Generate Multilingual Document Translation**: By pressing the `Translate Document` button in the editor and selecting your desired language, you can generate a translation of the currently edited document all at once.
-- **Ordered List Option**: There is now an Ordered List Continuation option in Settings > Editor > General, and the default is 1. 1. 1. Markdown standard. If you change the option to 1. 2. 3. Incrementing numbers, you can use incrementing numbers like before.
-- **Three Editor Toolbars**: You can select from Beginner, Rooki, or Pro toolbar sets based on your Markdown editing proficiency in the options.
-- **Reopen Closed Tab**: You can reopen a closed tab with `CTRL+SHIFT+T`.
-
-### Bug Fixes & Polish
-
-- **Shortcut Changes**: Due to expanded functionality, there have been changes to the shortcuts. Please check the shortcut documentation at the bottom of the start page.
-- **Edit State Indicator**: Displays a warning icon in the document tab when the document has been edited but not yet saved.
-- **Save As**: You can save the document under a different name.
-- **File Tree Right-Click Menu**: An "Open in New Tab" option has been added. This only works in read mode.
-- **File Tree Right-Click Menu**: An "Open in New Tab" option has been added. This only works in read mode.
-- **Tab Closing Animation**: An animation has been added to the tab bar when closing a tab.
-
-
-
-## 2.1 Beta 6
-
-### AI Feature Enhancements
-- **Spell Checker**: Check and correct spelling in documents.
-
-### Bug Fixes and Improvements
-- **Deleting Files from File Tree**: If a file is open, its tab will also close.
-- **Opening Files While Editing**: Opens in a new tab.
-- **Translation Document Feature**: The application remembers the language last selected by the user.
-- **Adjusting the number of recently opened items**: The number of displayed items can be set by the user on the start page.
-
-
-## 2.1 Beta 7
-
-### Bug Fixes and Improvements
-
-- **`SpellCheck` Failure Fixed**: Improved LLM response parsing to resolve spelling check failures.
-- **Live LLM Response Display**: Displays streaming delta messages from the LLM in the following scenarios:
-  - **OpenAI Compatible Mode**: `Ask AI Prompt Box`, `Translate Document`
-  - **LM Studio Mode**: `Ask AI Prompt Box`, `Translate Document`, `SpellCheck`
-
-
-## 2.1 Beta 8
-
-### Additions
-
-- **Highlight Color**: You can select your desired highlight color.
-
-### Bug Fixes and Improvements
-
-- **Enhanced Tab Isolation**: Separates the work history between tabs when multiple tabs are being edited simultaneously, preventing mixing.
-- **Progress Bar Widget**: Made into a common widget so that all features can use it universally.
-- **Maintain Translate Document, Spellcheck Operations**: When switching to another tab during an operation, the work should be maintained and visible upon returning to that tab.
-- **Display Translate Document, Spellcheck Operations**: The progress bar for ongoing operations must remain visible even when switching tabs.
-- **LLM Sequential Processing**: If a new request arrives while an LLM operation is in progress, it must be processed sequentially after the previous task is complete.
-- **Recent Files List**: You can pin files to the recent list by clicking the bookmark button.
-- **Function Unification and Integration**: Similar functions have been grouped into common functionalities and integrated.
-- **Restore Editing Tab**: The application must remember the scroll position and cursor location when returning to an edited tab.
-- **UI Stabilization**: Removed screen flickering issues that occurred during transitions between read mode and edit mode.
-
-
-## 2.1 Beta 9
-
-### Additions
-
-- **Viewer Font Change**: You can set your desired font as the default font for the Markdown viewer.
-- **Viewer Margin Adjustment**: You can adjust the margin width of the Markdown viewer in 3 steps.
-
-
-
-## 2.1 Beta 10
-
-### Additions
-
-- **Viewer Translation Feature**: You can translate the current document without editing. Options: Temporary translation, Save translated document
-
-
-## 2.1 Beta 11
-
-### Improvements & Changes
-
-- **Class Diagram Rendering Fix**: Resolved an issue where text color lacked contrast against the background.
-- **App Startup Speed Improvement**: Fixed a problem causing long preparation times when fonts needed to be reloaded on every launch in environments with many installed fonts.
-- **Document Icon Change**: Minor adjustments made to the document icon for consistency with DKST series documents.
-- **AI Prompt Box**: Fixed an issue where the AI prompt box remained visible even after being closed from the editor.
-
-
----
-(C) 2026 DINKI'ssTyle. All rights reserved.
+© 2026 DINKI'ssTyle.

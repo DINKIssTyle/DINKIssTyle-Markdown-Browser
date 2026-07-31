@@ -1,191 +1,55 @@
-# Novedades en la Versión 2.1 Beta11
+# Novedades en la Versión 2.2
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Visor y editor de Markdown multiplataforma, ligero y elegante!</div>
 
-<div align="center">¡DKST Markdown Browser se ha vuelto aún más potente! Echa un vistazo a las principales características añadidas en esta versión.</div>
+<div align="center">¡DKST Markdown Browser se ha vuelto aún más potente!<br>Echa un vistazo a las principales características añadida en esta versión.</div>
 
-## 🚀 Cambios Clave de la Versión 2.1
+## 🚀 Cambios Principales
 
-### Introducción de la Barra Lateral
+## 2.2.0 - 2026. 07. 31 
+- **Eliminación de la etiqueta Beta**: Se ha alcanzado la estabilidad suficiente y se ha eliminado la etiqueta Beta.
+- macOS **Mejora del salto de línea CJK IME Enter Fix**: Si la opción `CJK IME Enter Fix` está activada en Configuración → Editor, ahora se puede realizar un salto de línea con una sola pulsación de la tecla Enter durante la entrada de caracteres CJK.
 
-Ha aparecido un botón para abrir la barra lateral en el lado izquierdo de la barra de pestañas. `Atajo: CTRL+ALT+S (macOS: CMD+OPT+S)`
-* **Composición de la Barra Lateral**:
-  * **Árbol de Archivos**: Muestra la carpeta principal de los archivos abiertos como una estructura de directorio. Puedes ver archivos markdown e imagen directamente seleccionándolos.
-  * **Esquema**: Visualiza el esquema de tu documento markdown.
-  * **Búsqueda**: La función de búsqueda, anteriormente ubicada en la barra de herramientas principal hasta la versión 2.0, se ha fusionado aquí.
 
-### Cosas Pequeñas pero Cambiadas
+## Cambios durante la Versión 2.1
 
-* **Información emergente (Popup Tooltip)**: Al pasar el cursor sobre un hipervínculo, se muestra la dirección de destino.
+### Aspectos Destacados (Highlights)
+- **Introducción de la barra lateral integrada**: Se ha añadido una barra lateral integrada que incluye Árbol de archivos, Esquema (Outline) y Búsqueda (CTRL+ALT+S / macOS: CMD+OPT+S)
+- **Resaltado de sintaxis en Markdown (Syntax Highlight)**: Se añadió el resaltado de sintaxis para bloques de código como Python, Bash, etc.
+
+#### Nuevas Funcionalidades (New Features)
+- **Atajos dedicados a la barra lateral**: Se añadieron atajos para el Árbol de archivos (ALT+1), Esquema (ALT+2) y Búsqueda (ALT+3)
+- **Inserción mejorada en el editor**: Se añadió la función para insertar hipervínculos e imágenes directamente desde el árbol de archivos al documento en edición
+- **Visualización de inserción de tablas**: Se añadió la función para insertar tablas de forma intuitiva usando las teclas de dirección del teclado tras introducir el comando `/table`
+- **Inserción avanzada de emojis**: Se añadió una ventana modal de inserción de emojis con navegación por teclado y clasificada por categorías
+- **Traducción multilingüe y revisión ortográfica con IA**: Se añadió la función para traducir por lotes el documento en edición al idioma deseado o revisar y corregir la ortografía
+- **Traducción exclusiva para el visor**: Se añadió la función para traducir temporalmente el documento actual sin editarlo o guardar la versión traducida
+- **Opciones de lista y formato**: Se añadió la opción de selección del método de incremento numérico en listas ordenadas (1. 1. 1. o 1. 2. 3.) y la selección de color personalizado para el resaltador
+- **Barras de herramientas por niveles**: Se añadió la opción de elegir entre 3 conjuntos de barras de herramientas del editor (Principiante, Novato, Pro) según el nivel de experiencia del usuario en Markdown
+- **Configuración de visualización del visor**: Se añadió la función para cambiar la fuente predeterminada del visor de Markdown y ajustar el margen en 3 niveles
+- **Gestión de pestañas y archivos**: Se añadió la reapertura de pestañas cerradas (CTRL+SHIFT+T), Guardar como y la función de fijar (marcador) en la lista de archivos recientes
+
+#### Mejoras (Improvements)
+- **Mejoras en tooltip emergente y UI**: Muestra la dirección de destino al pasar el cursor sobre un hipervínculo con soporte multilingüe, y cambia las notificaciones emergentes de emojis por Google Material Symbols
+- **Usabilidad mejorada de la barra lateral**: Soporte para navegación con la tecla Tab y flechas del teclado, y mejora del formato del Esquema (Outline) para diferenciar negrita y tamaño según el nivel del encabezado
+- **Mayor comodidad en el árbol de archivos**: Muestra solo los archivos compatibles al hacer clic en el filtro, cierra automáticamente la pestaña si se elimina el archivo abierto, y añade 'Abrir en nueva pestaña' al menú contextual del clic derecho en modo lectura
+- **Mejor experiencia de edición y pestañas**: Muestra un icono de advertencia para el estado no guardado, abre en una nueva pestaña al abrir otro archivo, añade animación al cerrar pestañas y recuerda la posición anterior del cursor y desplazamiento al volver a una pestaña editada
+- **IA y procesamiento de tareas avanzados**: Recuerda el último idioma seleccionado al traducir y muestra respuestas de transmisión en tiempo real (Delta) del LLM en los modos OpenAI y LM Studio
+- **Estabilidad multitarea**: Aislamiento completo del historial de trabajo entre pestañas al editar múltiples pestañas simultáneamente; mantiene operaciones de traducción/revisión ortográfica al cambiar de pestaña con estado continuo mediante una barra de progreso universal
+- **Programación de tareas**: Si llega una nueva solicitud mientras una operación de LLM está en curso, se procesa secuencialmente tras completar la tarea anterior
+- **Configuración de la página de inicio**: Se mejoró para que los usuarios puedan ajustar manualmente la cantidad de elementos recientes mostrados
+- **Integración de funciones y estabilización visual**: Agrupación e integración de funciones similares, y eliminación del parpadeo de pantalla al alternar entre modos de lectura y edición
+- **Consistencia de diseño**: Ajuste fino del diseño del icono del documento para mantener la coherencia con los documentos de la serie DKST
+
+#### Correcciones de Errores (Bug Fixes)
+- **Optimización del rendimiento**: Se corrigió el problema de ralentización en el inicio causado por la recarga de fuentes en cada ejecución en entornos con muchas fuentes instaladas
+- **Error en cuadro de diálogo de IA**: Se corrigió el problema de visibilidad donde el cuadro de diálogo de IA permanecía en pantalla tras cerrarlo en el editor
+- **Error en revisión ortográfica con IA**: Se mejoró la lógica de análisis de respuestas del LLM para resolver fallos intermitentes en la revisión ortográfica (SpellCheck)
+- **Error de renderizado**: Se corrigió el problema por el cual se mostraba un símbolo '•' innecesario al renderizar el formato TASK
+- **Legibilidad de diagramas**: Se corrigió un problema de renderizado en diagramas de clases donde la falta de contraste entre el fondo y el texto dificultaba la lectura
+- **Resolución de conflictos de atajos**: Se resolvieron los conflictos de atajos causados por la expansión de funciones y se reajustaron los atajos relacionados de forma integral (reflejado en el documento al final de la página de inicio)
 
 ---
-
-## Plan de Nuevas Funcionalidades y Mejoras
-
-- [ ] Usar el árbol de archivos para hipervínculos e inserción de imágenes
-
-Continuará.
-
-# Cambios Recientes
-
-## 2.1 Beta2
-### Añadidos, Correcciones de Errores y Pulido
-
-* **Añadido: Resaltado de Sintaxis para Renderizado de Markdown**
-
-### Python
-```python
-# Secuencia de Fibonacci
-def fibonacci(n: int) -> list[int]:
-    result = []
-    a, b = 0, 1
-
-    while len(result) < n:
-        result.append(a)
-        a, b = b, a + b
-
-    return result
-
-
-if __name__ == "__main__":
-    print("Fibonacci:", fibonacci(10))
-```
-
-### Bash
-
-```bash
-#!/usr/bin/env bash
-
-set -euo pipefail
-
-NAME="${1:-World}"
-
-if [[ "$NAME" == "admin" ]]; then
-  echo "Welcome, administrator."
-else
-  echo "Hello, $NAME!"
-fi
-
-for file in *.txt; do
-  [[ -e "$file" ]] || continue
-  echo "Found text file: $file"
-done
-```
-
-## 2.1 Beta3
-### Añadidos
-
-- **Insertar enlaces e imágenes** directamente en el documento editado desde el árbol de archivos.
-- **Visualización de Inserción de Tablas**: Intenta insertar una tabla con `/table`. Puedes insertarla intuitivamente usando las teclas de flecha del teclado.
-- **Inserción Avanzada de Emojis**: Una ventana modal categorizada te permite navegar y seleccionar elementos usando solo el teclado para insertar.
-
-### Correcciones de Errores y Pulido
-
-- **Corregido el tooltip emergente;** añadido soporte multilingüe.
-- **Eliminar notificación de emoji**: Ahora cambia los emojis en los mensajes emergentes por Símbolos Material de Google.
-- **Filtro del árbol de archivos**: Al hacer clic en el icono de filtro, solo se muestran los archivos compatibles.
-
-## 2.1 Beta4
-
-### Correcciones de Errores y Pulido
-
-- **Añadir Atajos de Barra Lateral**: Árbol de Archivos es ALT+1, Esquema es ALT+2, Búsqueda es ALT+3.
-- **Navegación por Teclado en la Barra Lateral**: La tecla Tab mueve a los elementos hijos; las teclas de flecha recorren toda la barra lateral.
-- **Mejorar Barra Lateral - Formato del Esquema**: El texto en negrita y el tamaño de fuente se diferencian según los encabezados, que se pueden activar o desactivar usando botones de formato.
-- **Renderizado del formato TASK**: Se adjuntó el • innecesario. Ahora ha sido eliminado y se renderiza como estaba previsto.
-
-## 2.1 Beta5
-
-### Añadidos
-
-- **Generar Traducción de Documento Multilingüe**: Al presionar el botón `Translate Document` en el editor y seleccionar tu idioma deseado, puedes generar una traducción del documento actualmente editado de una vez.
-- **Opción de Lista Ordenada**: Ahora hay una opción de Continuación de Lista Ordenada en Configuración > Editor > General, y el predeterminado es 1. 1. 1. Estándar Markdown. Si cambias la opción a 1. 2. 3., los números incrementales, puedes usar números incrementales como antes.
-- **Tres Barras de Herramientas del Editor**: Puedes seleccionar entre los conjuntos de barras de herramientas Principiante, Novato o Profesional según tu nivel de dominio de la edición en Markdown en las opciones.
-- **Reabrir Pestaña Cerrada**: Puedes reabrir una pestaña cerrada con `CTRL+SHIFT+T`.
-
-### Correcciones y Pulido
-
-- **Cambios de Atajos**: Debido a la funcionalidad ampliada, ha habido cambios en los atajos. Por favor, consulte la documentación de atajos al final de la página de inicio.
-- **Indicador de Estado de Edición**: Muestra un icono de advertencia en la pestaña del documento cuando el documento ha sido editado pero aún no se ha guardado.
-- **Guardar como**: Puede guardar el documento con un nombre diferente.
-- **Menú Contextual del Árbol de Archivos**: Se ha añadido la opción "Abrir en Nueva Pestaña". Esto solo funciona en modo lectura.
-- **Menú Contextual del Árbol de Archivos**: Se ha añadido la opción "Abrir en Nueva Pestaña". Esto solo funciona en modo lectura.
-- **Animación de Cierre de Pestaña**: Se ha añadido una animación a la barra de pestañas al cerrar una pestaña.
-
-
-
-
-## 2.1 Beta 6
-
-### Mejoras de Características de IA
-- **Revisor Ortográfico**: Revisa y corrige la ortografía en los documentos.
-
-
-### Corrección de Errores e Mejoras
-- **Borrar Archivos del Árbol de Archivos**: Si un archivo está abierto, su pestaña también se cerrará.
-- **Abrir Archivos Mientras Se Edita**: Se abre en una nueva pestaña.
-- **Característica de Documentos de Traducción**: La aplicación recuerda el idioma seleccionado por última vez por parte del usuario.
-- **Ajuste del número de elementos en la lista más reciente**: El número de elementos mostrados puede ser configurado por el usuario desde la página inicial.
-
-
-
-## 2.1 Beta 7
-
-### Correcciones e Mejoras de Errores
-
-- **Corregido Fallo en `SpellCheck`**: Se mejoró el análisis de la respuesta del LLM para resolver fallos en la verificación ortográfica.
-- **Visualización de Respuesta en Vivo del LLM**: Muestra los mensajes delta transmitidos del LLM en los siguientes escenarios:
-  - **Modo Compatible con OpenAI**: `Caja de Indicación para IA`, `Traducir Documento`
-  - **Modo LM Studio**: `Caja de Indicación para IA`, `Traducir Documento`, `SpellCheck`
-
-
-
-## 2.1 Beta 8
-
-### Novedades
-
-- **Color de Resaltado**: Puedes seleccionar el color de resaltado deseado.
-
-### Correcciones de errores y mejoras
-
-- **Aislamiento mejorado de pestañas**: Separa el historial de trabajo entre pestañas cuando se editan varias pestañas simultáneamente, evitando mezclas.
-- **Widget de barra de progreso**: Convertido en un widget común para que todas las funciones puedan usarlo universalmente.
-- **Mantener operaciones de documento traducido y corrector ortográfico**: Cuando se cambia a otra pestaña durante una operación, el trabajo debe mantenerse y ser visible al volver a esa pestaña.
-- **Mostrar operaciones de documento traducido y corrector ortográfico**: La barra de progreso para las operaciones en curso debe permanecer visible incluso al cambiar de pestaña.
-- **Procesamiento secuencial del LLM**: Si llega una nueva solicitud mientras se está en curso una operación del LLM, debe procesarse secuencialmente después de que se haya completado la tarea anterior.
-- **Lista de archivos recientes**: Puedes fijar archivos en la lista reciente haciendo clic en el botón de marcador.
-- **Unificación e integración de funciones**: Funciones similares han sido agrupadas en funcionalidades comunes e integradas.
-- **Restaurar pestaña de edición**: La aplicación debe recordar la posición de desplazamiento y la ubicación del cursor al volver a una pestaña editada.
-- **Estabilización de la interfaz de usuario**: Se eliminaron los problemas de parpadeo de pantalla que ocurrían durante las transiciones entre el modo lectura y el modo edición.
-
-
-
-## 2.1 Beta 9
-
-### Novedades
-
-- **Cambio de fuente del visor**: Puedes establecer la fuente deseada como predeterminada para el visor de Markdown.
-- **Ajuste del margen del visor**: Puedes ajustar el ancho del margen del visor de Markdown en 3 pasos.
-
-
-
-## 2.1 Beta 10
-
-### Novedades
-
-- **Función de traducción para espectadores**: Puedes traducir el documento actual sin editar. Opciones: Traducción temporal, Guardar documento traducido
-
-
-## 2.1 Beta 11
-
-### Mejoras y Cambios
-
-- **Corrección en el renderizado del diagrama de clases**: Se resolvió un problema donde el color del texto carecía de contraste con el fondo.
-- **Mejora en la velocidad de inicio de la aplicación**: Se corrigió un problema que causaba largos tiempos de preparación cuando las fuentes necesitaban recargarse en cada inicio en entornos con muchas fuentes instaladas.
-- **Cambio del icono del documento**: Se realizaron ajustes menores al icono del documento para mantener la coherencia con los documentos de la serie DKST.
-- **Cuadro de indicaciones de IA**: Se corrigió un problema por el cual el cuadro de indicaciones de la IA permanecía visible incluso después de cerrarlo desde el editor.
-
----
-(C) 2026 DINKI'ssTyle. Todos los derechos reservados.
+© 2026 DINKI'ssTyle.

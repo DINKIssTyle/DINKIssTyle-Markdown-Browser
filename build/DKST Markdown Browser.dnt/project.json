@@ -12,20 +12,26 @@
     "includeApplicationsLink" : true,
     "includeInstallerPackage" : false,
     "layoutTemplate" : "template2",
+    "notarize" : true,
+    "signDiskImage" : true,
+    "signingIdentity" : "Developer ID Application: Nomin Park (QQ3GJ5KGP2)",
     "volumeName" : "DKST Markdown Browser",
     "windowHeight" : 447,
     "windowWidth" : 620
   },
-  "formatVersion" : 3,
+  "formatVersion" : 5,
   "installer" : {
     "backgroundAlignment" : "center",
     "backgroundScaling" : "proportional",
     "conclusionAction" : "none",
     "conclusionText" : "DKST Markdown Browser was installed successfully.",
     "identifier" : "com.dinkisstyle.mdbrowser.installer",
+    "includePostinstallScript" : false,
+    "includePreinstallScript" : false,
     "installLocation" : "\/Applications",
     "installationDomain" : "localSystem",
     "licenseText" : "",
+    "notarize" : true,
     "readMeText" : "",
     "showConclusion" : true,
     "showLicense" : false,
@@ -35,7 +41,7 @@
     "version" : "2.1.0 b10",
     "welcomeText" : "Welcome to the DKST Markdown Browser installer."
   },
-  "installerIdentity" : "",
+  "installerIdentity" : "Developer ID Installer: Nomin Park (QQ3GJ5KGP2)",
   "signInstaller" : false,
   "targetRelativePath" : "Documents\/GitHub\/DINKIssTyle-Markdown-Browser\/build\/bin\/DKST Markdown Browser.app"
 }
