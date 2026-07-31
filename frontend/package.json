@@ -5,6 +5,7 @@
   "scripts": {
     "dev": "vite",
     "build": "vite build",
+    "test": "node --test",
     "font:subset": "node scripts/generate-material-symbols-subset.mjs",
     "preview": "vite preview"
   },

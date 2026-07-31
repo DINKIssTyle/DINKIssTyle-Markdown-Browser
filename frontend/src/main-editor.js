@@ -11,12 +11,13 @@ import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPrevie
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
-import { EventsOn, LogError } from '../wailsjs/runtime/runtime';
+import { EventsOn, LogError, LogInfo } from '../wailsjs/runtime/runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
 import { getCurrentAccentColor } from './main-theme.js';
+import { normalizeKoreanImeLineBreak } from './ime-enter-fix.mjs';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
-import { EditorView, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
+import { EditorView, ViewPlugin, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
 import { SearchCursor } from '@codemirror/search';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
@@ -57,6 +58,17 @@ const historyCompartment = new Compartment();
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
 const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
+const IME_DIAGNOSTIC_EVENT_TYPES = Object.freeze([
+    'keydown',
+    'compositionstart',
+    'compositionupdate',
+    'compositionend',
+    'beforeinput',
+    'input',
+]);
+const IME_DIAGNOSTIC_LOG_LIMIT = 200;
+let imeDiagnosticSequence = 0;
+let imeDiagnosticStartedAt = 0;
 
 const SPELLCHECK_CHUNK_TARGET_LENGTH = 700;
 const SPELLCHECK_CHUNK_MAX_LENGTH = 1000;
@@ -2799,7 +2811,118 @@ const slashMenuKeymap = Prec.highest(keymap.of([
     }
 ]));
 
-// 한글 IME 엔터 중복 입력 방지 익스텐션 (v2: Transaction Filter 방식)
+function recordImeDiagnostic(kind, details = {}) {
+    let enabled = import.meta.env.DEV || globalThis.__DKST_IME_DEBUG__ === true;
+    if (!enabled) {
+        try {
+            enabled = localStorage.getItem('dkst.debug.ime') === '1';
+        } catch {
+            // localStorage can be unavailable in restricted browser contexts.
+        }
+    }
+    if (!enabled) return;
+
+    const now = performance.now();
+    if (!imeDiagnosticStartedAt) imeDiagnosticStartedAt = now;
+
+    const entry = {
+        sequence: ++imeDiagnosticSequence,
+        elapsedMs: Number((now - imeDiagnosticStartedAt).toFixed(3)),
+        kind,
+        ...details,
+    };
+
+    const log = globalThis.__DKST_IME_LOG__ || (globalThis.__DKST_IME_LOG__ = []);
+    log.push(entry);
+    if (log.length > IME_DIAGNOSTIC_LOG_LIMIT) {
+        log.splice(0, log.length - IME_DIAGNOSTIC_LOG_LIMIT);
+    }
+
+    const message = `[IME Timeline] ${JSON.stringify(entry)}`;
+    console.debug(message);
+    try {
+        LogInfo(message);
+    } catch {
+        // The Wails runtime is unavailable in browser-only development.
+    }
+}
+
+function describeImeDomEvent(event, view) {
+    const details = {
+        type: event.type,
+        isComposing: !!event.isComposing,
+        codeMirrorComposing: view.composing,
+        codeMirrorCompositionStarted: view.compositionStarted,
+        defaultPrevented: event.defaultPrevented,
+    };
+
+    if ('key' in event) {
+        details.key = event.key;
+        details.code = event.code;
+        details.keyCode = event.keyCode;
+        details.repeat = event.repeat;
+    }
+    if ('inputType' in event) {
+        details.inputType = event.inputType;
+        details.data = event.data;
+    }
+    if ('data' in event && !('inputType' in event)) {
+        details.data = event.data;
+    }
+
+    return details;
+}
+
+const imeDiagnostics = ViewPlugin.fromClass(class {
+    constructor(view) {
+        this.view = view;
+        this.handleEvent = (event) => {
+            recordImeDiagnostic('dom', describeImeDomEvent(event, this.view));
+        };
+        for (const type of IME_DIAGNOSTIC_EVENT_TYPES) {
+            view.contentDOM.addEventListener(type, this.handleEvent, true);
+        }
+    }
+
+    update(update) {
+        for (const tr of update.transactions) {
+            const changes = [];
+            tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
+                changes.push({
+                    from: fromA,
+                    to: toA,
+                    newFrom: fromB,
+                    newTo: toB,
+                    insert: inserted.toString(),
+                });
+            });
+            recordImeDiagnostic('transaction', {
+                docChanged: tr.docChanged,
+                userEvent: tr.annotation(Transaction.userEvent) || null,
+                changes,
+                selectionBefore: {
+                    anchor: tr.startState.selection.main.anchor,
+                    head: tr.startState.selection.main.head,
+                },
+                selectionAfter: {
+                    anchor: tr.state.selection.main.anchor,
+                    head: tr.state.selection.main.head,
+                },
+            });
+        }
+    }
+
+    destroy() {
+        for (const type of IME_DIAGNOSTIC_EVENT_TYPES) {
+            this.view.contentDOM.removeEventListener(type, this.handleEvent, true);
+        }
+    }
+});
+
+// WebKit may represent one Enter immediately after a CJK composition as "\n\n".
+// Normalize only that exact DOM input. CodeMirror already handles the Safari
+// keydown/compositionend ordering quirk, so consuming Enter here would swallow
+// the user's intended line break.
 const setImeState = StateEffect.define();
 
 const imeStateField = StateField.define({
@@ -2825,7 +2948,7 @@ const koreanImeEnterFix = [
     EditorView.domEventObservers({
         compositionstart(event, view) {
             view.dispatch({
-                effects: setImeState.of({ composing: true })
+                effects: setImeState.of({ composing: true, justEndedAt: 0 })
             });
         },
         compositionupdate(event, view) {
@@ -2841,59 +2964,33 @@ const koreanImeEnterFix = [
             });
         }
     }),
-    // 1. 키보드 이벤트 단계에서 차단 (설정 활성화 시에만)
-    Prec.highest(keymap.of([{
-        key: "Enter",
-        run: (view) => {
-            if (!state.koreanImeFixEnabled) return false;
-            const ime = view.state.field(imeStateField, false);
-            if (!ime) return false;
-            const delta = Date.now() - ime.justEndedAt;
-            if (ime.composing || delta < 100) {
-                return true;
-            }
-            return false;
-        }
-    }])),
-    // 2. 가짜 엔터로 생긴 줄바꿈 transaction 차단 (줄바꿈만 도려내기, 설정 활성화 시에만)
-    EditorState.transactionFilter.of(tr => {
-        if (!tr.docChanged || !state.koreanImeFixEnabled) return tr;
+    EditorView.inputHandler.of((view, from, to, text) => {
+        const ime = view.state.field(imeStateField, false);
+        if (!ime) return false;
 
-        const ime = tr.startState.field(imeStateField, false);
-        if (!ime) return tr;
-
-        const now = Date.now();
-        const delta = now - ime.justEndedAt;
-
-        let hasNewline = false;
-        tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-            if (inserted.toString().includes("\n")) hasNewline = true;
+        const normalizedText = normalizeKoreanImeLineBreak({
+            enabled: state.koreanImeFixEnabled,
+            text,
+            composing: ime.composing,
+            justEndedAt: ime.justEndedAt,
+            now: Date.now(),
         });
+        if (normalizedText === null) return false;
 
-        if (hasNewline) {
-            // 조합 중이거나 종료 후 150ms 이내인 경우만 감시
-            if (ime.composing || delta < 150) {
-                let changes = [];
-                let modified = false;
-
-                tr.changes.iterChanges((fromA, toA, fromB, toB, inserted) => {
-                    const originalText = inserted.toString();
-                    if (originalText.includes("\n")) {
-                        const strippedText = originalText.replace(/\n/g, "");
-                        changes.push({ from: fromA, to: toA, insert: strippedText });
-                        modified = true;
-                    } else {
-                        changes.push({ from: fromA, to: toA, insert: originalText });
-                    }
-                });
-
-                if (modified) {
-                    return { changes };
-                }
-            }
-        }
-
-        return tr;
+        recordImeDiagnostic('fix', {
+            action: 'normalize-line-break',
+            from,
+            to,
+            originalText: text,
+            normalizedText,
+        });
+        view.dispatch({
+            changes: { from, to, insert: normalizedText },
+            selection: EditorSelection.cursor(from + normalizedText.length),
+            scrollIntoView: true,
+            userEvent: 'input.type',
+        });
+        return true;
     })
 ];
 
@@ -2906,6 +3003,7 @@ export function initCodeMirror() {
     const startState = EditorState.create({
         doc: state.currentMarkdownSource || "",
         extensions: [
+            imeDiagnostics,
             Prec.highest(koreanImeEnterFix),
             Prec.highest(keymap.of([{
                 key: 'Enter',
@@ -2973,7 +3071,6 @@ export function initCodeMirror() {
             markdown({ base: markdownLanguage, codeLanguages: languages }),
             themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
             tokenColorCompartment.of(getTokenColorExtension()),
-            koreanImeEnterFix,
             ghostTextField,
             spellcheckField,
             drawSelection(),
