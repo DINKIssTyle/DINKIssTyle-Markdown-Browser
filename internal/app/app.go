@@ -622,9 +622,18 @@ func (a *App) TouchRecentFile(path string) {
 	a.saveRecentFile(cleanPath)
 }
 
-// ClearRecentFiles clears the list of recently opened files
+// ClearRecentFiles clears unpinned recent files while preserving pinned entries.
 func (a *App) ClearRecentFiles() {
-	os.WriteFile(a.recentPath, []byte("[]"), 0644)
+	recent := a.GetRecentFiles()
+	pinned := make([]RecentFile, 0, len(recent))
+	for _, rf := range recent {
+		if rf.Pinned {
+			pinned = append(pinned, rf)
+		}
+	}
+
+	data, _ := json.Marshal(pinned)
+	os.WriteFile(a.recentPath, data, 0644)
 }
 
 // GetSettings loads the application settings

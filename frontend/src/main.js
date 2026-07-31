@@ -336,6 +336,7 @@ function bindHomeScreen() {
     el.btnClearRecent.onclick = async () => {
         await ClearRecentFiles();
         await renderRecentFiles();
+        showToast('Cleared unpinned recent files.', 'delete');
     };
 
     el.recentLimitInput?.addEventListener('change', async () => {
