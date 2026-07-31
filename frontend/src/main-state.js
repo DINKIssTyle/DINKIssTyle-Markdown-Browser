@@ -138,6 +138,7 @@ export const el = {
     btnEdit: $('btn-edit'),
     btnTranslate: $('btn-translate'),
     editToolbar: $('edit-toolbar'),
+    editorPaneSplitter: $('editor-pane-splitter'),
     editorView: $('editor-view'),
     markdownEditor: $('markdown-editor'),
     edBold: $('ed-bold'),

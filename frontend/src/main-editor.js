@@ -15,6 +15,11 @@ import { EventsOn, LogError, LogInfo } from '../wailsjs/runtime/runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
 import { getCurrentAccentColor } from './main-theme.js';
 import { normalizeKoreanImeLineBreak } from './ime-enter-fix.mjs';
+import {
+    DEFAULT_EDITOR_PANE_PERCENT,
+    editorPanePercentFromClientX,
+    normalizeEditorPanePercent,
+} from './editor-pane-split.mjs';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
 import { EditorView, ViewPlugin, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
@@ -38,6 +43,7 @@ let currentMatchIndex = -1;
 let isFindBarOpen = false;
 let previewScrollSyncFrame = 0;
 let editorScrollEventsBound = false;
+let editorGutterResizeObserver = null;
 let translationProgressEventsBound = false;
 let lastRenderedPreviewContent = "";
 let plainClickSelectionState = null;
@@ -57,6 +63,7 @@ const historyCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
+const EDITOR_PANE_PERCENT_STORAGE_KEY = 'dkst.editor.panePercent';
 const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
 const IME_DIAGNOSTIC_EVENT_TYPES = Object.freeze([
     'keydown',
@@ -3195,6 +3202,7 @@ export function initCodeMirror() {
         state: startState,
         parent: el.editorView
     });
+    bindEditorGutterWidthSync();
     bindEditorScrollSync();
     bindEditorSearchEvents();
 
@@ -3204,6 +3212,27 @@ export function initCodeMirror() {
     // Apply font size
     applyEditorFontSize();
     cmView.contentDOM.style.fontFamily = 'var(--code-font)';
+}
+
+function bindEditorGutterWidthSync() {
+    editorGutterResizeObserver?.disconnect();
+    editorGutterResizeObserver = null;
+
+    const gutters = cmView?.dom.querySelector('.cm-gutters');
+    if (!gutters) return;
+
+    const syncGutterWidth = () => {
+        const gutterWidth = gutters.getBoundingClientRect().width;
+        if (gutterWidth > 0) {
+            cmView?.dom.style.setProperty('--editor-gutter-width', `${gutterWidth}px`);
+        }
+    };
+
+    requestAnimationFrame(syncGutterWidth);
+    if (typeof ResizeObserver === 'function') {
+        editorGutterResizeObserver = new ResizeObserver(syncGutterWidth);
+        editorGutterResizeObserver.observe(gutters);
+    }
 }
 
 export function setEditorTheme(isDark) {
@@ -4603,6 +4632,7 @@ function bindToolbarPopupEvents() {
 }
 
 export function bindEditorEvents() {
+    bindEditorPaneSplitter();
     bindSlashMenuEvents();
     bindTranslationProgressEvents();
     bindToolbarPopupEvents();
@@ -4658,6 +4688,156 @@ export function bindEditorEvents() {
         void saveCurrentDocumentAs();
     };
     el.edSave.onclick = handleSave;
+}
+
+function bindEditorPaneSplitter() {
+    const splitter = el.editorPaneSplitter;
+    const container = el.documentArea;
+    if (!splitter || !container) return;
+
+    let storedPercent = DEFAULT_EDITOR_PANE_PERCENT;
+    try {
+        storedPercent = normalizeEditorPanePercent(localStorage.getItem(EDITOR_PANE_PERCENT_STORAGE_KEY));
+    } catch {
+        // localStorage can be unavailable in restricted browser contexts.
+    }
+    applyEditorPanePercent(storedPercent);
+
+    let activePointerId = null;
+    let pendingClientX = null;
+    let resizeFrame = 0;
+
+    const positionTooltip = event => {
+        const tooltip = el.linkTooltip;
+        if (!tooltip || tooltip.classList.contains('hidden')) return;
+
+        const padding = 8;
+        const gap = 12;
+        const tooltipRect = tooltip.getBoundingClientRect();
+        const left = Math.min(
+            Math.max(padding, event.clientX - (tooltipRect.width / 2)),
+            window.innerWidth - tooltipRect.width - padding
+        );
+        let top = event.clientY - tooltipRect.height - gap;
+        if (top < padding) {
+            top = Math.min(event.clientY + gap, window.innerHeight - tooltipRect.height - padding);
+        }
+
+        tooltip.style.left = `${left}px`;
+        tooltip.style.top = `${top}px`;
+    };
+
+    const showTooltip = event => {
+        if (!el.linkTooltip || activePointerId !== null) return;
+        hideLinkTooltip();
+        el.linkTooltip.innerHTML = '↔ Drag to resize<br>Double-click: Reset';
+        el.linkTooltip.classList.remove('hidden');
+        positionTooltip(event);
+    };
+
+    const updateFromClientX = clientX => {
+        const bounds = container.getBoundingClientRect();
+        applyEditorPanePercent(editorPanePercentFromClientX(clientX, bounds.left, bounds.width));
+    };
+
+    const flushPendingResize = () => {
+        resizeFrame = 0;
+        if (pendingClientX === null) return;
+        updateFromClientX(pendingClientX);
+        pendingClientX = null;
+    };
+
+    const finishResize = event => {
+        if (activePointerId === null || event.pointerId !== activePointerId) return;
+        if (resizeFrame) {
+            cancelAnimationFrame(resizeFrame);
+            resizeFrame = 0;
+        }
+        if (pendingClientX !== null) {
+            updateFromClientX(pendingClientX);
+            pendingClientX = null;
+        }
+        activePointerId = null;
+        document.body.classList.remove('editor-pane-is-resizing');
+        splitter.classList.remove('is-resizing');
+        splitter.blur();
+        persistEditorPanePercent(splitter.getAttribute('aria-valuenow'));
+    };
+
+    splitter.addEventListener('pointerdown', event => {
+        if (event.button !== 0 || activePointerId !== null) return;
+        hideLinkTooltip();
+        activePointerId = event.pointerId;
+        splitter.setPointerCapture?.(event.pointerId);
+        document.body.classList.add('editor-pane-is-resizing');
+        splitter.classList.add('is-resizing');
+        updateFromClientX(event.clientX);
+        event.preventDefault();
+    });
+
+    splitter.addEventListener('pointermove', event => {
+        if (activePointerId === null) {
+            positionTooltip(event);
+            return;
+        }
+        if (event.pointerId !== activePointerId) return;
+        pendingClientX = event.clientX;
+        if (!resizeFrame) {
+            resizeFrame = requestAnimationFrame(flushPendingResize);
+        }
+    });
+    splitter.addEventListener('pointerup', finishResize);
+    splitter.addEventListener('pointercancel', finishResize);
+    splitter.addEventListener('pointerenter', showTooltip);
+    splitter.addEventListener('pointerleave', hideLinkTooltip);
+    splitter.addEventListener('lostpointercapture', event => {
+        if (event.pointerId === activePointerId) finishResize(event);
+    });
+
+    splitter.addEventListener('dblclick', () => {
+        applyEditorPanePercent(DEFAULT_EDITOR_PANE_PERCENT);
+        persistEditorPanePercent(DEFAULT_EDITOR_PANE_PERCENT);
+    });
+
+    splitter.addEventListener('keydown', event => {
+        const currentPercent = normalizeEditorPanePercent(splitter.getAttribute('aria-valuenow'));
+        const step = event.shiftKey ? 10 : 2;
+        let nextPercent = null;
+        if (event.key === 'ArrowLeft') nextPercent = currentPercent - step;
+        if (event.key === 'ArrowRight') nextPercent = currentPercent + step;
+        if (event.key === 'Home') nextPercent = 20;
+        if (event.key === 'End') nextPercent = 80;
+        if (nextPercent === null) return;
+
+        const normalizedPercent = applyEditorPanePercent(nextPercent);
+        persistEditorPanePercent(normalizedPercent);
+        event.preventDefault();
+    });
+}
+
+function applyEditorPanePercent(value) {
+    const percent = normalizeEditorPanePercent(value);
+    el.documentArea?.style.setProperty('--editor-pane-width', `${percent}%`);
+    if (el.editorPaneSplitter) {
+        const roundedPercent = Math.round(percent * 10) / 10;
+        el.editorPaneSplitter.setAttribute('aria-valuenow', String(roundedPercent));
+        el.editorPaneSplitter.setAttribute(
+            'aria-valuetext',
+            `Editor ${roundedPercent}%, preview ${Math.round((100 - percent) * 10) / 10}%`
+        );
+    }
+    return percent;
+}
+
+function persistEditorPanePercent(value) {
+    try {
+        localStorage.setItem(
+            EDITOR_PANE_PERCENT_STORAGE_KEY,
+            String(normalizeEditorPanePercent(value))
+        );
+    } catch {
+        // Keep the current layout even when persistence is unavailable.
+    }
 }
 
 export function scrollEditorToLine(lineNumber) {

@@ -482,6 +482,8 @@ html.dark .nav-btn:hover {
 }
 
 .document-area {
+    --editor-pane-width: 50%;
+    --editor-pane-splitter-width: 8px;
     display: flex;
     flex: 1;
     overflow: hidden;
@@ -1327,12 +1329,15 @@ html.dark .recent-item:hover {
 :root {
     --document-padding-inline: 0px;
 }
+
 html.margin-none {
     --document-padding-inline: 0px;
 }
+
 html.margin-narrow {
     --document-padding-inline: 8%;
 }
+
 html.margin-wide {
     --document-padding-inline: 18%;
 }
@@ -1838,6 +1843,7 @@ html.dark .markdown-container .hljs-deletion {
     #home-screen,
     #html-frame,
     #editor-view,
+    #editor-pane-splitter,
     #search-sidebar,
     #editor-ai-dock,
     #edit-preview-return,
@@ -2777,19 +2783,67 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
 }
 
 #main-container.is-editing .editor-view {
-    border-right: 1px solid var(--border-color);
-    width: 50%;
-    max-width: 50%;
+    order: 1;
+    flex: 0 0 calc(var(--editor-pane-width) - 4px);
+    width: auto;
+    max-width: none;
 }
 
 #main-container.is-editing .content-view {
+    order: 3;
+    flex: 1 1 0;
     display: flex !important;
-    width: 50%;
-    max-width: 50%;
+    width: auto;
+    max-width: none;
     padding: 32px;
     background: var(--bg-color);
     position: relative;
     border-left: none;
+}
+
+.editor-pane-splitter {
+    display: none;
+    flex: 0 0 var(--editor-pane-splitter-width);
+    width: var(--editor-pane-splitter-width);
+    position: relative;
+    order: 2;
+    cursor: col-resize;
+    background: transparent;
+    touch-action: none;
+    user-select: none;
+    -webkit-user-select: none;
+    --wails-draggable: no-drag;
+    z-index: 5;
+}
+
+#main-container.is-editing .editor-pane-splitter {
+    display: block;
+}
+
+.editor-pane-splitter::before {
+    content: '';
+    position: absolute;
+    inset: 0 3px;
+    background: var(--border-color);
+    transition: inset 0.14s ease, background-color 0.14s ease;
+}
+
+.editor-pane-splitter:hover::before,
+.editor-pane-splitter:focus-visible::before,
+.editor-pane-splitter.is-resizing::before {
+    inset: 0 2px;
+    background: var(--accent-color);
+}
+
+.editor-pane-splitter:focus-visible {
+    outline: none;
+}
+
+body.editor-pane-is-resizing,
+body.editor-pane-is-resizing * {
+    cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
 }
 
 .editor-slash-menu {
@@ -3381,6 +3435,7 @@ html.dark .progress-stream-text {
 }
 
 @keyframes progress-title-dot-wave {
+
     0%,
     70%,
     100% {
@@ -5293,6 +5348,7 @@ html.dark .ai-prompt-shell:focus-within {
 }
 
 @keyframes ai-prompt-waiting-wave {
+
     0%,
     100% {
         transform: translateY(0);
@@ -5349,12 +5405,6 @@ html.dark .ai-prompt-shell:focus-within {
     outline: none !important;
 }
 
-.cm-scroller {
-    overflow: auto;
-    padding: 16px 16px 8em 0;
-    background: var(--editor-background-color, transparent);
-}
-
 .cm-gutters {
     background: var(--editor-gutter-background-color, var(--editor-background-color, transparent)) !important;
     color: var(--editor-gutter-text-color, var(--text-muted)) !important;
@@ -5371,9 +5421,15 @@ html.dark .ai-prompt-shell:focus-within {
     line-height: 1.6;
     max-width: none;
     margin: 0 auto;
-    padding-left: calc(16px + var(--document-padding-inline)) !important;
-    padding-right: calc(16px + var(--document-padding-inline)) !important;
+    /* padding-left: calc(1px + var(--document-padding-inline)) !important;
+    padding-right: calc(1px + var(--document-padding-inline)) !important; */
     transition: padding 0.24s ease;
+}
+
+.cm-scroller {
+    overflow: auto;
+    /* padding: 16px var(--editor-gutter-width, 16px) 8em 0; */
+    background: var(--editor-background-color, transparent);
 }
 
 .cm-line {
