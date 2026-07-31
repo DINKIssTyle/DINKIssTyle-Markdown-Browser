@@ -17,8 +17,10 @@ import { getCurrentAccentColor } from './main-theme.js';
 import { normalizeKoreanImeLineBreak } from './ime-enter-fix.mjs';
 import {
     DEFAULT_EDITOR_PANE_PERCENT,
-    editorPanePercentFromClientX,
+    DEFAULT_EDITOR_SPLIT_MODE,
+    editorSplitPercentFromPosition,
     normalizeEditorPanePercent,
+    normalizeEditorSplitMode,
 } from './editor-pane-split.mjs';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
@@ -64,6 +66,10 @@ const historyCompartment = new Compartment();
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
 const EDITOR_PANE_PERCENT_STORAGE_KEY = 'dkst.editor.panePercent';
+const EDITOR_VERTICAL_PANE_PERCENT_STORAGE_KEY = 'dkst.editor.verticalPanePercent';
+const EDITOR_SPLIT_MODE_STORAGE_KEY = 'dkst.editor.splitMode';
+const EDITOR_HORIZONTAL_PREVIEW_FIRST_STORAGE_KEY = 'dkst.editor.horizontalPreviewFirst';
+const EDITOR_VERTICAL_PREVIEW_FIRST_STORAGE_KEY = 'dkst.editor.verticalPreviewFirst';
 const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
 const IME_DIAGNOSTIC_EVENT_TYPES = Object.freeze([
     'keydown',
@@ -406,6 +412,8 @@ const TOOLBAR_DIRECT_TOOL_IDS = Object.freeze([
     'ed-emoji',
     'ed-font-minus',
     'ed-font-plus',
+    'ed-split-swap',
+    'ed-split-direction',
     'ed-cancel',
     'ed-save-as',
     'ed-save',
@@ -444,6 +452,8 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
             'ed-render-mode-menu',
             'ed-font-minus',
             'ed-font-plus',
+            'ed-split-swap',
+            'ed-split-direction',
             'ed-cancel',
             'ed-save-as',
             'ed-save',
@@ -481,6 +491,8 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
             'ed-render-mode-menu',
             'ed-font-minus',
             'ed-font-plus',
+            'ed-split-swap',
+            'ed-split-direction',
             'ed-cancel',
             'ed-save-as',
             'ed-save',
@@ -4695,17 +4707,90 @@ function bindEditorPaneSplitter() {
     const container = el.documentArea;
     if (!splitter || !container) return;
 
-    let storedPercent = DEFAULT_EDITOR_PANE_PERCENT;
+    let splitMode = DEFAULT_EDITOR_SPLIT_MODE;
+    const splitPercent = {
+        horizontal: DEFAULT_EDITOR_PANE_PERCENT,
+        vertical: DEFAULT_EDITOR_PANE_PERCENT,
+    };
+    const previewFirst = {
+        horizontal: false,
+        vertical: true,
+    };
     try {
-        storedPercent = normalizeEditorPanePercent(localStorage.getItem(EDITOR_PANE_PERCENT_STORAGE_KEY));
+        splitMode = normalizeEditorSplitMode(localStorage.getItem(EDITOR_SPLIT_MODE_STORAGE_KEY));
+        splitPercent.horizontal = normalizeEditorPanePercent(
+            localStorage.getItem(EDITOR_PANE_PERCENT_STORAGE_KEY)
+        );
+        splitPercent.vertical = normalizeEditorPanePercent(
+            localStorage.getItem(EDITOR_VERTICAL_PANE_PERCENT_STORAGE_KEY)
+        );
+        previewFirst.horizontal = readStoredBoolean(
+            EDITOR_HORIZONTAL_PREVIEW_FIRST_STORAGE_KEY,
+            false
+        );
+        previewFirst.vertical = readStoredBoolean(
+            EDITOR_VERTICAL_PREVIEW_FIRST_STORAGE_KEY,
+            true
+        );
     } catch {
         // localStorage can be unavailable in restricted browser contexts.
     }
-    applyEditorPanePercent(storedPercent);
 
     let activePointerId = null;
-    let pendingClientX = null;
+    let pendingPointerPosition = null;
     let resizeFrame = 0;
+
+    const applySplitPercent = value => {
+        const percent = normalizeEditorPanePercent(value);
+        splitPercent[splitMode] = percent;
+        container.style.setProperty('--editor-split-position', `${percent}%`);
+
+        const roundedPercent = Math.round(percent * 10) / 10;
+        const trailingPercent = Math.round((100 - percent) * 10) / 10;
+        const firstPane = previewFirst[splitMode] ? 'Preview' : 'Editor';
+        const secondPane = previewFirst[splitMode] ? 'editor' : 'preview';
+        splitter.setAttribute('aria-valuenow', String(roundedPercent));
+        splitter.setAttribute(
+            'aria-valuetext',
+            `${firstPane} ${roundedPercent}%, ${secondPane} ${trailingPercent}%`
+        );
+        return percent;
+    };
+
+    const updateSplitControls = () => {
+        const isVertical = splitMode === 'vertical';
+        container.classList.toggle('editor-split-horizontal', !isVertical);
+        container.classList.toggle('editor-split-vertical', isVertical);
+        container.classList.toggle('editor-preview-first', previewFirst[splitMode]);
+        splitter.setAttribute('aria-orientation', isVertical ? 'horizontal' : 'vertical');
+        splitter.setAttribute(
+            'aria-label',
+            isVertical ? 'Resize preview and editor vertically' : 'Resize editor and preview horizontally'
+        );
+
+        if (el.edSplitDirectionIcon) {
+            el.edSplitDirectionIcon.textContent = isVertical ? 'split_scene' : 'split_scene_2';
+        }
+        if (el.edSplitDirection) {
+            const directionTitle = isVertical ? 'Switch to Horizontal Split' : 'Switch to Vertical Split';
+            el.edSplitDirection.title = directionTitle;
+            el.edSplitDirection.setAttribute('aria-label', directionTitle);
+        }
+        if (el.edSplitSwapIcon) {
+            el.edSplitSwapIcon.textContent = isVertical ? 'swap_vert' : 'swap_horiz';
+        }
+        if (el.edSplitSwap) {
+            const swapTitle = isVertical
+                ? 'Swap Top and Bottom Panes'
+                : 'Swap Left and Right Panes';
+            el.edSplitSwap.title = swapTitle;
+            el.edSplitSwap.setAttribute('aria-label', swapTitle);
+        }
+
+        applySplitPercent(splitPercent[splitMode]);
+    };
+
+    updateSplitControls();
 
     const positionTooltip = event => {
         const tooltip = el.linkTooltip;
@@ -4730,21 +4815,30 @@ function bindEditorPaneSplitter() {
     const showTooltip = event => {
         if (!el.linkTooltip || activePointerId !== null) return;
         hideLinkTooltip();
-        el.linkTooltip.innerHTML = '↔ Drag to resize<br>Double-click: Reset';
+        const resizeArrow = splitMode === 'vertical' ? '↕' : '↔';
+        el.linkTooltip.innerHTML = `${resizeArrow} Drag to resize<br>Double-click: Reset`;
         el.linkTooltip.classList.remove('hidden');
         positionTooltip(event);
     };
 
-    const updateFromClientX = clientX => {
+    const updateFromPointer = pointer => {
         const bounds = container.getBoundingClientRect();
-        applyEditorPanePercent(editorPanePercentFromClientX(clientX, bounds.left, bounds.width));
+        const isVertical = splitMode === 'vertical';
+        const pointerPosition = isVertical ? pointer.clientY : pointer.clientX;
+        const containerStart = isVertical ? bounds.top : bounds.left;
+        const containerSize = isVertical ? bounds.height : bounds.width;
+        applySplitPercent(editorSplitPercentFromPosition(
+            pointerPosition,
+            containerStart,
+            containerSize
+        ));
     };
 
     const flushPendingResize = () => {
         resizeFrame = 0;
-        if (pendingClientX === null) return;
-        updateFromClientX(pendingClientX);
-        pendingClientX = null;
+        if (!pendingPointerPosition) return;
+        updateFromPointer(pendingPointerPosition);
+        pendingPointerPosition = null;
     };
 
     const finishResize = event => {
@@ -4753,15 +4847,18 @@ function bindEditorPaneSplitter() {
             cancelAnimationFrame(resizeFrame);
             resizeFrame = 0;
         }
-        if (pendingClientX !== null) {
-            updateFromClientX(pendingClientX);
-            pendingClientX = null;
+        if (pendingPointerPosition) {
+            updateFromPointer(pendingPointerPosition);
+            pendingPointerPosition = null;
         }
         activePointerId = null;
-        document.body.classList.remove('editor-pane-is-resizing');
+        document.body.classList.remove(
+            'editor-split-is-resizing-horizontal',
+            'editor-split-is-resizing-vertical'
+        );
         splitter.classList.remove('is-resizing');
         splitter.blur();
-        persistEditorPanePercent(splitter.getAttribute('aria-valuenow'));
+        persistEditorSplitPercent(splitMode, splitPercent[splitMode]);
     };
 
     splitter.addEventListener('pointerdown', event => {
@@ -4769,9 +4866,9 @@ function bindEditorPaneSplitter() {
         hideLinkTooltip();
         activePointerId = event.pointerId;
         splitter.setPointerCapture?.(event.pointerId);
-        document.body.classList.add('editor-pane-is-resizing');
+        document.body.classList.add(`editor-split-is-resizing-${splitMode}`);
         splitter.classList.add('is-resizing');
-        updateFromClientX(event.clientX);
+        updateFromPointer(event);
         event.preventDefault();
     });
 
@@ -4781,7 +4878,7 @@ function bindEditorPaneSplitter() {
             return;
         }
         if (event.pointerId !== activePointerId) return;
-        pendingClientX = event.clientX;
+        pendingPointerPosition = { clientX: event.clientX, clientY: event.clientY };
         if (!resizeFrame) {
             resizeFrame = requestAnimationFrame(flushPendingResize);
         }
@@ -4795,46 +4892,73 @@ function bindEditorPaneSplitter() {
     });
 
     splitter.addEventListener('dblclick', () => {
-        applyEditorPanePercent(DEFAULT_EDITOR_PANE_PERCENT);
-        persistEditorPanePercent(DEFAULT_EDITOR_PANE_PERCENT);
+        applySplitPercent(DEFAULT_EDITOR_PANE_PERCENT);
+        persistEditorSplitPercent(splitMode, DEFAULT_EDITOR_PANE_PERCENT);
     });
 
     splitter.addEventListener('keydown', event => {
-        const currentPercent = normalizeEditorPanePercent(splitter.getAttribute('aria-valuenow'));
+        const currentPercent = splitPercent[splitMode];
         const step = event.shiftKey ? 10 : 2;
         let nextPercent = null;
-        if (event.key === 'ArrowLeft') nextPercent = currentPercent - step;
-        if (event.key === 'ArrowRight') nextPercent = currentPercent + step;
+        if (splitMode === 'horizontal' && event.key === 'ArrowLeft') nextPercent = currentPercent - step;
+        if (splitMode === 'horizontal' && event.key === 'ArrowRight') nextPercent = currentPercent + step;
+        if (splitMode === 'vertical' && event.key === 'ArrowUp') nextPercent = currentPercent - step;
+        if (splitMode === 'vertical' && event.key === 'ArrowDown') nextPercent = currentPercent + step;
         if (event.key === 'Home') nextPercent = 20;
         if (event.key === 'End') nextPercent = 80;
         if (nextPercent === null) return;
 
-        const normalizedPercent = applyEditorPanePercent(nextPercent);
-        persistEditorPanePercent(normalizedPercent);
+        const normalizedPercent = applySplitPercent(nextPercent);
+        persistEditorSplitPercent(splitMode, normalizedPercent);
         event.preventDefault();
     });
-}
 
-function applyEditorPanePercent(value) {
-    const percent = normalizeEditorPanePercent(value);
-    el.documentArea?.style.setProperty('--editor-pane-width', `${percent}%`);
-    if (el.editorPaneSplitter) {
-        const roundedPercent = Math.round(percent * 10) / 10;
-        el.editorPaneSplitter.setAttribute('aria-valuenow', String(roundedPercent));
-        el.editorPaneSplitter.setAttribute(
-            'aria-valuetext',
-            `Editor ${roundedPercent}%, preview ${Math.round((100 - percent) * 10) / 10}%`
-        );
+    if (el.edSplitDirection) {
+        el.edSplitDirection.onclick = () => {
+            hideLinkTooltip();
+            splitMode = splitMode === 'horizontal' ? 'vertical' : 'horizontal';
+            updateSplitControls();
+            persistEditorSplitMode(splitMode);
+        };
     }
-    return percent;
+    if (el.edSplitSwap) {
+        el.edSplitSwap.onclick = () => {
+            hideLinkTooltip();
+            previewFirst[splitMode] = !previewFirst[splitMode];
+            updateSplitControls();
+            persistEditorPreviewFirst(splitMode, previewFirst[splitMode]);
+        };
+    }
 }
 
-function persistEditorPanePercent(value) {
+function readStoredBoolean(key, fallback) {
+    const storedValue = localStorage.getItem(key);
+    if (storedValue === 'true') return true;
+    if (storedValue === 'false') return false;
+    return fallback;
+}
+
+function persistEditorSplitMode(mode) {
+    persistEditorSplitSetting(EDITOR_SPLIT_MODE_STORAGE_KEY, normalizeEditorSplitMode(mode));
+}
+
+function persistEditorSplitPercent(mode, value) {
+    const storageKey = mode === 'vertical'
+        ? EDITOR_VERTICAL_PANE_PERCENT_STORAGE_KEY
+        : EDITOR_PANE_PERCENT_STORAGE_KEY;
+    persistEditorSplitSetting(storageKey, normalizeEditorPanePercent(value));
+}
+
+function persistEditorPreviewFirst(mode, value) {
+    const storageKey = mode === 'vertical'
+        ? EDITOR_VERTICAL_PREVIEW_FIRST_STORAGE_KEY
+        : EDITOR_HORIZONTAL_PREVIEW_FIRST_STORAGE_KEY;
+    persistEditorSplitSetting(storageKey, !!value);
+}
+
+function persistEditorSplitSetting(key, value) {
     try {
-        localStorage.setItem(
-            EDITOR_PANE_PERCENT_STORAGE_KEY,
-            String(normalizeEditorPanePercent(value))
-        );
+        localStorage.setItem(key, String(value));
     } catch {
         // Keep the current layout even when persistence is unavailable.
     }

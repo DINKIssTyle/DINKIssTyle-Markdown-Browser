@@ -482,7 +482,7 @@ html.dark .nav-btn:hover {
 }
 
 .document-area {
-    --editor-pane-width: 50%;
+    --editor-split-position: 50%;
     --editor-pane-splitter-width: 8px;
     display: flex;
     flex: 1;
@@ -2783,31 +2783,48 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
 }
 
 #main-container.is-editing .editor-view {
-    order: 1;
-    flex: 0 0 calc(var(--editor-pane-width) - 4px);
     width: auto;
     max-width: none;
+    min-width: 0;
+    min-height: 0;
 }
 
 #main-container.is-editing .content-view {
-    order: 3;
-    flex: 1 1 0;
     display: flex !important;
     width: auto;
     max-width: none;
+    min-width: 0;
+    min-height: 0;
     padding: 32px;
     background: var(--bg-color);
     position: relative;
     border-left: none;
 }
 
+.document-area.editor-split-horizontal {
+    flex-direction: row;
+}
+
+.document-area.editor-split-vertical {
+    flex-direction: column;
+}
+
+#main-container.is-editing .document-area:not(.editor-preview-first) .editor-view,
+#main-container.is-editing .document-area.editor-preview-first .content-view {
+    order: 1;
+    flex: 0 0 calc(var(--editor-split-position) - 4px);
+}
+
+#main-container.is-editing .document-area:not(.editor-preview-first) .content-view,
+#main-container.is-editing .document-area.editor-preview-first .editor-view {
+    order: 3;
+    flex: 1 1 0;
+}
+
 .editor-pane-splitter {
     display: none;
-    flex: 0 0 var(--editor-pane-splitter-width);
-    width: var(--editor-pane-splitter-width);
     position: relative;
     order: 2;
-    cursor: col-resize;
     background: transparent;
     touch-action: none;
     user-select: none;
@@ -2816,22 +2833,51 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
     z-index: 5;
 }
 
+.editor-split-horizontal .editor-pane-splitter {
+    flex: 0 0 var(--editor-pane-splitter-width);
+    width: var(--editor-pane-splitter-width);
+    height: auto;
+    cursor: col-resize;
+}
+
+.editor-split-vertical .editor-pane-splitter {
+    flex: 0 0 var(--editor-pane-splitter-width);
+    width: auto;
+    height: var(--editor-pane-splitter-width);
+    cursor: row-resize;
+}
+
 #main-container.is-editing .editor-pane-splitter {
     display: block;
 }
 
-.editor-pane-splitter::before {
+.editor-split-horizontal .editor-pane-splitter::before,
+.editor-split-vertical .editor-pane-splitter::before {
     content: '';
     position: absolute;
-    inset: 0 3px;
     background: var(--border-color);
     transition: inset 0.14s ease, background-color 0.14s ease;
 }
 
-.editor-pane-splitter:hover::before,
-.editor-pane-splitter:focus-visible::before,
-.editor-pane-splitter.is-resizing::before {
+.editor-split-horizontal .editor-pane-splitter::before {
+    inset: 0 3px;
+}
+
+.editor-split-vertical .editor-pane-splitter::before {
+    inset: 3px 0;
+}
+
+.editor-split-horizontal .editor-pane-splitter:hover::before,
+.editor-split-horizontal .editor-pane-splitter:focus-visible::before,
+.editor-split-horizontal .editor-pane-splitter.is-resizing::before {
     inset: 0 2px;
+    background: var(--accent-color);
+}
+
+.editor-split-vertical .editor-pane-splitter:hover::before,
+.editor-split-vertical .editor-pane-splitter:focus-visible::before,
+.editor-split-vertical .editor-pane-splitter.is-resizing::before {
+    inset: 2px 0;
     background: var(--accent-color);
 }
 
@@ -2839,9 +2885,16 @@ html.dark .editor-ai-dock.is-expanded .editor-ai-trigger {
     outline: none;
 }
 
-body.editor-pane-is-resizing,
-body.editor-pane-is-resizing * {
+body.editor-split-is-resizing-horizontal,
+body.editor-split-is-resizing-horizontal * {
     cursor: col-resize !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+body.editor-split-is-resizing-vertical,
+body.editor-split-is-resizing-vertical * {
+    cursor: row-resize !important;
     user-select: none !important;
     -webkit-user-select: none !important;
 }

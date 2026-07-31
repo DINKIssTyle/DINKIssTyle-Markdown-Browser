@@ -84,9 +84,12 @@ save_as
 search
 settings
 spellcheck
+split_scene
+split_scene_2
 strikethrough_s
 support_agent
 swap_horiz
+swap_vert
 table_chart
 text_decrease
 text_increase
