@@ -78,6 +78,8 @@ let supportAgentTransitionTimer = null;
 let lastPromptInputValue = "";
 let aiPromptForcedVisible = false;
 let settingsAccentSnapshot = null;
+let settingsFormBaseline = "";
+let lastSettingsTab = 'appearance';
 let systemFontsPromise = null;
 let systemFontsLoaded = false;
 let aiDockHideTimer = null;
@@ -1006,22 +1008,123 @@ async function persistAISettings() {
     await persistAppSettings();
 }
 
-function syncSettingsTabs(activeTab = 'editor') {
-    const isCommon = activeTab === 'common';
-    const isEditor = activeTab === 'editor';
-    const isAi = activeTab === 'ai';
+function syncSettingsTabs(activeTab = 'appearance') {
+    const normalizedTab = activeTab === 'common' ? 'appearance' : activeTab;
+    const isCommon = normalizedTab === 'appearance';
+    const isReading = normalizedTab === 'reading';
+    const isEditor = normalizedTab === 'editor';
+    const isAi = normalizedTab === 'ai';
+    lastSettingsTab = normalizedTab;
     el.settingsTabCommon?.classList.toggle('active', isCommon);
+    el.settingsTabReading?.classList.toggle('active', isReading);
     el.settingsTabEditor?.classList.toggle('active', isEditor);
     el.settingsTabAi?.classList.toggle('active', isAi);
     el.settingsTabCommon?.setAttribute('aria-selected', String(isCommon));
+    el.settingsTabReading?.setAttribute('aria-selected', String(isReading));
     el.settingsTabEditor?.setAttribute('aria-selected', String(isEditor));
     el.settingsTabAi?.setAttribute('aria-selected', String(isAi));
+    el.settingsTabCommon?.setAttribute('tabindex', isCommon ? '0' : '-1');
+    el.settingsTabReading?.setAttribute('tabindex', isReading ? '0' : '-1');
+    el.settingsTabEditor?.setAttribute('tabindex', isEditor ? '0' : '-1');
+    el.settingsTabAi?.setAttribute('tabindex', isAi ? '0' : '-1');
     el.settingsPanelCommon?.classList.toggle('hidden', !isCommon);
+    el.settingsPanelReading?.classList.toggle('hidden', !isReading);
     el.settingsPanelEditor?.classList.toggle('hidden', !isEditor);
     el.settingsPanelAi?.classList.toggle('hidden', !isAi);
-    if (isCommon) {
+    if (el.settingsContentScroll) {
+        el.settingsContentScroll.scrollTop = 0;
+    }
+    if (isReading) {
         void populateSystemFonts();
     }
+}
+
+function getSettingsFormSignature() {
+    if (!el.aiSettingsModal) return "";
+    const values = Array.from(el.aiSettingsModal.querySelectorAll('input, select')).map(control => ({
+        id: control.id || control.dataset.tokenColorKey || control.name || control.type,
+        value: control.type === 'checkbox' ? control.checked : control.value,
+    }));
+    return JSON.stringify(values);
+}
+
+function setSettingsDirtyState(isDirty) {
+    if (el.aiSettingsSave) {
+        el.aiSettingsSave.disabled = !isDirty;
+    }
+    if (el.settingsDirtyStatus) {
+        el.settingsDirtyStatus.textContent = isDirty ? 'Unsaved changes' : 'No unsaved changes';
+        el.settingsDirtyStatus.classList.toggle('is-dirty', isDirty);
+    }
+}
+
+function captureSettingsBaseline() {
+    settingsFormBaseline = getSettingsFormSignature();
+    setSettingsDirtyState(false);
+}
+
+function updateSettingsDirtyState() {
+    if (el.aiSettingsModal?.classList.contains('hidden')) return;
+    setSettingsDirtyState(getSettingsFormSignature() !== settingsFormBaseline);
+}
+
+function syncSegmentedControl(container, dataAttribute, value) {
+    container?.querySelectorAll(`button[${dataAttribute}]`).forEach(button => {
+        const isActive = button.getAttribute(dataAttribute) === value;
+        button.classList.toggle('active', isActive);
+        button.setAttribute('aria-pressed', String(isActive));
+    });
+}
+
+function syncSettingsSwitchLabels() {
+    el.aiSettingsModal?.querySelectorAll('.settings-switch').forEach(control => {
+        const input = control.querySelector('input[type="checkbox"]');
+        const label = control.querySelector('.settings-switch-label');
+        if (input && label) {
+            label.textContent = input.checked ? 'On' : 'Off';
+        }
+    });
+}
+
+function resetSettingsPasswordVisibility() {
+    el.aiSettingsModal?.querySelectorAll('[data-password-target]').forEach(button => {
+        const input = document.getElementById(button.dataset.passwordTarget);
+        if (input) input.type = 'password';
+        button.setAttribute('aria-label', 'Show API key');
+        const icon = button.querySelector('.material-symbols-outlined');
+        if (icon) icon.textContent = 'preview';
+    });
+}
+
+function syncSettingsProxyControls() {
+    syncSegmentedControl(el.settingsMarginSegmented, 'data-margin-value', el.settingsDocumentMargin?.value || 'none');
+    syncSegmentedControl(el.editorToolbarSegmented, 'data-toolbar-value', el.editorToolbarMode?.value || 'beginner');
+    if (el.aiFeaturesEnabled && el.aiFeaturesDisabled) {
+        el.aiFeaturesEnabled.checked = !el.aiFeaturesDisabled.checked;
+    }
+    syncSettingsSwitchLabels();
+}
+
+function syncAccentColorValues() {
+    const lightValue = document.getElementById('light-accent-value');
+    const darkValue = document.getElementById('dark-accent-value');
+    if (lightValue) lightValue.textContent = normalizeAccentColor(state.lightAccentColor).toUpperCase();
+    if (darkValue) darkValue.textContent = normalizeAccentColor(state.darkAccentColor, DEFAULT_DARK_ACCENT_COLOR).toUpperCase();
+}
+
+function syncEditorSettingsPreview() {
+    const preview = el.aiSettingsModal?.querySelector('.settings-editor-preview');
+    if (!preview) return;
+    const colors = {};
+    el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
+        colors[input.dataset.tokenColorKey] = input.value;
+    });
+    preview.style.setProperty('--editor-background-color', el.editorBackgroundColor?.value || getEditorDefaultBackgroundColor());
+    preview.style.setProperty('--editor-text-color', colors.plain || '#24292f');
+    preview.style.setProperty('--editor-heading-color', colors.heading || colors.plain || '#8250df');
+    preview.style.setProperty('--editor-strong-color', colors.emphasis || '#cf222e');
+    preview.style.setProperty('--editor-link-color', colors.link || state.lightAccentColor);
+    preview.style.setProperty('--editor-marker-color', colors.marker || state.lightAccentColor);
 }
 
 function renderAccentPresetControls() {
@@ -1033,6 +1136,7 @@ function renderAccentPresetControls() {
     if (el.darkAccentCustom) {
         el.darkAccentCustom.value = normalizeAccentColor(state.darkAccentColor, DEFAULT_DARK_ACCENT_COLOR);
     }
+    syncAccentColorValues();
 }
 
 function renderAccentPresetList(container, presets, selectedColor, mode) {
@@ -1071,6 +1175,8 @@ function setAccentColor(mode, color) {
     applyAccentColors(state.lightAccentColor, state.darkAccentColor);
     applyEditorTokenColors();
     renderAccentPresetControls();
+    syncEditorSettingsPreview();
+    updateSettingsDirtyState();
 }
 
 function syncCommonSettingsControls() {
@@ -1082,6 +1188,7 @@ function syncCommonSettingsControls() {
         ensureCurrentViewerFontOption();
         el.settingsViewerFont.value = state.viewerFontFamily || "";
     }
+    syncSettingsProxyControls();
 }
 
 function ensureCurrentViewerFontOption() {
@@ -1130,6 +1237,8 @@ function syncEditorSettingsControls() {
     }
     renderEditorTokenColorControls();
     syncEditorTokenColorAvailability();
+    syncSettingsProxyControls();
+    syncEditorSettingsPreview();
 }
 
 function syncEditorTokenColorAvailability() {
@@ -1138,6 +1247,13 @@ function syncEditorTokenColorAvailability() {
     el.editorTokenColorGrid?.querySelectorAll('input[type="color"]').forEach(input => {
         input.disabled = !enabled;
     });
+    el.editorTokenPresetList?.querySelectorAll('button').forEach(button => {
+        button.disabled = !enabled;
+    });
+    if (el.editorBackgroundColor) {
+        el.editorBackgroundColor.disabled = !enabled;
+    }
+    document.getElementById('editor-token-advanced')?.classList.toggle('is-locked', !enabled);
 }
 
 function applyEditorTokenColorPreset(presetKey) {
@@ -1152,6 +1268,8 @@ function applyEditorTokenColorPreset(presetKey) {
     if (el.editorBackgroundColor) {
         el.editorBackgroundColor.value = presetBackground;
     }
+    syncEditorSettingsPreview();
+    updateSettingsDirtyState();
 }
 
 function collectEditorSettingsFromControls() {
@@ -1219,32 +1337,8 @@ async function populateSystemFonts() {
 }
 
 function applyLayoutSettingsLocalization() {
-    const isKorean = (navigator.language || '').startsWith('ko');
-    const heading = document.getElementById('settings-heading-layout');
-    const label = document.getElementById('settings-label-margin');
-    const optNone = document.getElementById('settings-option-margin-none');
-    const optNarrow = document.getElementById('settings-option-margin-narrow');
-    const optWide = document.getElementById('settings-option-margin-wide');
-    const fontLabel = document.getElementById('settings-label-viewer-font');
     const optFontDefault = document.getElementById('settings-option-font-default');
-
-    if (isKorean) {
-        if (heading) heading.textContent = '레이아웃';
-        if (label) label.textContent = '여백';
-        if (optNone) optNone.textContent = '없음';
-        if (optNarrow) optNarrow.textContent = '좁게';
-        if (optWide) optWide.textContent = '넓게';
-        if (fontLabel) fontLabel.textContent = '서체';
-        if (optFontDefault) optFontDefault.textContent = '기본서체 (Default)';
-    } else {
-        if (heading) heading.textContent = 'Layout';
-        if (label) label.textContent = 'Margins';
-        if (optNone) optNone.textContent = 'None';
-        if (optNarrow) optNarrow.textContent = 'Narrow';
-        if (optWide) optWide.textContent = 'Wide';
-        if (fontLabel) fontLabel.textContent = 'Font';
-        if (optFontDefault) optFontDefault.textContent = 'Default';
-    }
+    if (optFontDefault) optFontDefault.textContent = 'System default';
 }
 
 export async function initAI() {
@@ -1271,6 +1365,9 @@ export async function initAI() {
 
     // UI Load
     el.aiFeaturesDisabled.checked = state.aiFeaturesDisabled;
+    if (el.aiFeaturesEnabled) {
+        el.aiFeaturesEnabled.checked = !state.aiFeaturesDisabled;
+    }
     el.aiGeneralProvider.value = aiState.generalProvider;
     el.aiGeneralEndpoint.value = aiState.generalEndpoint;
     el.aiGeneralModel.value = aiState.generalModel;
@@ -1308,9 +1405,45 @@ export async function initAI() {
 }
 
 export function bindAIEvents() {
-    el.settingsTabCommon?.addEventListener('click', () => syncSettingsTabs('common'));
+    el.settingsTabCommon?.addEventListener('click', () => syncSettingsTabs('appearance'));
+    el.settingsTabReading?.addEventListener('click', () => syncSettingsTabs('reading'));
     el.settingsTabEditor?.addEventListener('click', () => syncSettingsTabs('editor'));
     el.settingsTabAi?.addEventListener('click', () => syncSettingsTabs('ai'));
+    const settingsTabs = [
+        { element: el.settingsTabCommon, name: 'appearance' },
+        { element: el.settingsTabReading, name: 'reading' },
+        { element: el.settingsTabEditor, name: 'editor' },
+        { element: el.settingsTabAi, name: 'ai' },
+    ].filter(item => item.element);
+    settingsTabs.forEach((item, index) => {
+        item.element.addEventListener('keydown', event => {
+            if (!['ArrowDown', 'ArrowRight', 'ArrowUp', 'ArrowLeft', 'Home', 'End'].includes(event.key)) return;
+            event.preventDefault();
+            const direction = event.key === 'ArrowDown' || event.key === 'ArrowRight' ? 1 : -1;
+            const nextIndex = event.key === 'Home'
+                ? 0
+                : event.key === 'End'
+                    ? settingsTabs.length - 1
+                    : (index + direction + settingsTabs.length) % settingsTabs.length;
+            const nextItem = settingsTabs[nextIndex];
+            syncSettingsTabs(nextItem.name);
+            nextItem.element.focus();
+        });
+    });
+    el.settingsMarginSegmented?.addEventListener('click', event => {
+        const button = event.target.closest('[data-margin-value]');
+        if (!button || !el.settingsDocumentMargin) return;
+        el.settingsDocumentMargin.value = button.dataset.marginValue;
+        syncSegmentedControl(el.settingsMarginSegmented, 'data-margin-value', button.dataset.marginValue);
+        el.settingsDocumentMargin.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    el.editorToolbarSegmented?.addEventListener('click', event => {
+        const button = event.target.closest('[data-toolbar-value]');
+        if (!button || !el.editorToolbarMode) return;
+        el.editorToolbarMode.value = button.dataset.toolbarValue;
+        syncSegmentedControl(el.editorToolbarSegmented, 'data-toolbar-value', button.dataset.toolbarValue);
+        el.editorToolbarMode.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     el.lightAccentPresetList?.addEventListener('click', event => {
         const button = event.target.closest('[data-accent-color]');
         if (!button) return;
@@ -1323,13 +1456,48 @@ export function bindAIEvents() {
     });
     el.lightAccentCustom?.addEventListener('input', event => setAccentColor('light', event.target.value));
     el.darkAccentCustom?.addEventListener('input', event => setAccentColor('dark', event.target.value));
-    el.editorTokenColorsEnabled?.addEventListener('change', syncEditorTokenColorAvailability);
+    el.editorTokenColorsEnabled?.addEventListener('change', () => {
+        syncEditorTokenColorAvailability();
+        syncSettingsSwitchLabels();
+    });
     el.editorTokenPresetList?.addEventListener('click', event => {
         const button = event.target.closest('[data-token-preset-key]');
         if (!button || button.disabled) return;
         applyEditorTokenColorPreset(button.dataset.tokenPresetKey);
     });
     el.aiFeaturesDisabled.addEventListener('change', syncAISettingsSections);
+    el.aiFeaturesEnabled?.addEventListener('change', () => {
+        el.aiFeaturesDisabled.checked = !el.aiFeaturesEnabled.checked;
+        el.aiFeaturesDisabled.dispatchEvent(new Event('change', { bubbles: true }));
+        syncSettingsSwitchLabels();
+    });
+    el.aiSettingsModal?.addEventListener('input', event => {
+        if (event.target.matches('#editor-background-color, [data-token-color-key]')) {
+            syncEditorSettingsPreview();
+        }
+        if (event.target.matches('input[type="checkbox"]')) {
+            syncSettingsSwitchLabels();
+        }
+        updateSettingsDirtyState();
+    });
+    el.aiSettingsModal?.addEventListener('change', event => {
+        if (event.target.matches('#editor-background-color, [data-token-color-key]')) {
+            syncEditorSettingsPreview();
+        }
+        syncSettingsProxyControls();
+        updateSettingsDirtyState();
+    });
+    el.aiSettingsModal?.addEventListener('click', event => {
+        const passwordToggle = event.target.closest('[data-password-target]');
+        if (!passwordToggle) return;
+        const input = document.getElementById(passwordToggle.dataset.passwordTarget);
+        if (!input) return;
+        const showValue = input.type === 'password';
+        input.type = showValue ? 'text' : 'password';
+        passwordToggle.setAttribute('aria-label', showValue ? 'Hide API key' : 'Show API key');
+        const icon = passwordToggle.querySelector('.material-symbols-outlined');
+        if (icon) icon.textContent = showValue ? 'preview_off' : 'preview';
+    });
     el.aiGeneralProvider.addEventListener('change', handleGeneralProviderChange);
     el.aiGeneralEndpoint.addEventListener('change', handleGeneralEndpointChange);
     el.aiGeneralEndpoint.addEventListener('blur', handleGeneralEndpointChange);
@@ -1364,18 +1532,29 @@ export function bindAIEvents() {
             documentMargin: state.documentMargin,
             viewerFontFamily: state.viewerFontFamily,
         };
-        syncSettingsTabs('editor');
+        syncSettingsTabs(lastSettingsTab);
         syncCommonSettingsControls();
         syncEditorSettingsControls();
+        if (el.aiFeaturesDisabled) {
+            el.aiFeaturesDisabled.checked = state.aiFeaturesDisabled;
+        }
+        syncSettingsProxyControls();
+        resetSettingsPasswordVisibility();
         syncAISettingsSections();
         syncGeneralModelControl();
         if (el.aiGeneralProvider.value === 'lmstudio') {
             refreshLMStudioModels({ keepOpen: false });
         }
         el.aiSettingsModal.classList.remove('hidden');
+        requestAnimationFrame(() => {
+            captureSettingsBaseline();
+            const activeTab = el.aiSettingsModal.querySelector('.settings-tab.active');
+            activeTab?.focus();
+        });
     };
     el.aiSettingsCancel.onclick = () => {
         closeGeneralModelPopover();
+        resetSettingsPasswordVisibility();
         if (settingsAccentSnapshot) {
             state.lightAccentColor = settingsAccentSnapshot.light;
             state.darkAccentColor = settingsAccentSnapshot.dark;
@@ -1394,8 +1573,44 @@ export function bindAIEvents() {
         if (el.settingsViewerFont) {
             el.settingsViewerFont.value = state.viewerFontFamily;
         }
+        setSettingsDirtyState(false);
         el.aiSettingsModal.classList.add('hidden');
+        el.edSettings.focus();
     };
+    el.settingsClose?.addEventListener('click', () => el.aiSettingsCancel.click());
+    el.aiSettingsModal?.addEventListener('click', event => {
+        if (event.target === el.aiSettingsModal) {
+            el.aiSettingsCancel.click();
+        }
+    });
+    document.addEventListener('keydown', event => {
+        if (el.aiSettingsModal?.classList.contains('hidden')) return;
+        if (event.key === 'Escape') {
+            event.preventDefault();
+            if (!el.aiGeneralModelPopover?.classList.contains('hidden')) {
+                closeGeneralModelPopover();
+                return;
+            }
+            el.aiSettingsCancel.click();
+        } else if (event.key === 'Enter' && (event.metaKey || event.ctrlKey) && !el.aiSettingsSave.disabled) {
+            event.preventDefault();
+            el.aiSettingsSave.click();
+        } else if (event.key === 'Tab') {
+            const focusable = Array.from(el.aiSettingsModal.querySelectorAll(
+                'button:not([disabled]), input:not([disabled]):not([tabindex="-1"]), select:not([disabled]), summary'
+            )).filter(node => node.offsetParent !== null);
+            if (!focusable.length) return;
+            const first = focusable[0];
+            const last = focusable[focusable.length - 1];
+            if (event.shiftKey && document.activeElement === first) {
+                event.preventDefault();
+                last.focus();
+            } else if (!event.shiftKey && document.activeElement === last) {
+                event.preventDefault();
+                first.focus();
+            }
+        }
+    });
     el.aiSettingsSave.onclick = async () => {
         state.aiFeaturesDisabled = el.aiFeaturesDisabled.checked;
         if (state.aiFeaturesDisabled && aiRequestInFlight) {
@@ -1428,8 +1643,11 @@ export function bindAIEvents() {
         syncGeneralTemperatureControl();
 
         closeGeneralModelPopover();
+        resetSettingsPasswordVisibility();
         settingsAccentSnapshot = null;
+        captureSettingsBaseline();
         el.aiSettingsModal.classList.add('hidden');
+        el.edSettings.focus();
         showToast("Settings saved.");
     };
 
@@ -2325,6 +2543,10 @@ export function syncAIControls() {
 
 function syncAISettingsSections() {
     const aiDisabled = el.aiFeaturesDisabled.checked;
+    if (el.aiFeaturesEnabled) {
+        el.aiFeaturesEnabled.checked = !aiDisabled;
+    }
+    syncSettingsSwitchLabels();
 
     const lockedControls = [
         el.aiGeneralProvider,
@@ -2512,8 +2734,10 @@ function handleDocumentClickForModelPopover(event) {
 }
 
 function handleDocumentKeydownForModelPopover(event) {
-    if (event.key === 'Escape') {
-        if (isGeneralModelPopoverOpen()) closeGeneralModelPopover();
+    if (event.key === 'Escape' && isGeneralModelPopoverOpen()) {
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        closeGeneralModelPopover();
     }
 }
 
@@ -2531,6 +2755,7 @@ function handleGeneralModelListClick(event) {
         updateGeneralModelTrigger();
         renderLMStudioModelPicker();
         closeGeneralModelPopover();
+        updateSettingsDirtyState();
         return;
     }
 
