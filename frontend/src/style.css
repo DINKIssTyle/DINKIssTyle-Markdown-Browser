@@ -2290,6 +2290,11 @@ html.dark .toolbar-popup {
     color: var(--accent-color);
 }
 
+#ed-preview-toggle.preview-off {
+    background: var(--accent-color-selected-bg);
+    color: var(--accent-color);
+}
+
 .tool-btn.disabled {
     opacity: 0.42;
     cursor: not-allowed;
@@ -2897,6 +2902,18 @@ body.editor-split-is-resizing-vertical * {
     cursor: row-resize !important;
     user-select: none !important;
     -webkit-user-select: none !important;
+}
+
+@media screen {
+    #main-container.is-editing .document-area.editor-preview-hidden .content-view,
+    #main-container.is-editing .document-area.editor-preview-hidden .editor-pane-splitter {
+        display: none !important;
+    }
+
+    #main-container.is-editing .document-area.editor-preview-hidden .editor-view {
+        order: 1;
+        flex: 1 1 100%;
+    }
 }
 
 .editor-slash-menu {

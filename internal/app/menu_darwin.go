@@ -99,6 +99,9 @@ func BuildAppMenu(app *App) *menu.Menu {
 	viewMenu.AddText("Toggle Search Panel", keys.CmdOrCtrl("f"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:toggle-search")
 	})
+	viewMenu.AddText("Toggle Editor Preview", keys.CmdOrCtrl("g"), func(_ *menu.CallbackData) {
+		runtime.EventsEmit(app.ctx, "menu:toggle-editor-preview")
+	})
 	viewMenu.AddSeparator()
 	viewMenu.AddText("Actual Size", keys.CmdOrCtrl("0"), func(_ *menu.CallbackData) {
 		runtime.EventsEmit(app.ctx, "menu:font-reset")

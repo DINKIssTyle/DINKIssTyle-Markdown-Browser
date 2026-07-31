@@ -36,6 +36,7 @@ This is the list of shortcuts for the DKST Markdown Browser.
 |---|---|---|
 | Search Code Shortcuts | `/` + Arrow Key Enter or type feature name Enter | Searches all available code shortcuts on the keyboard. |
 | Ask AI | Select text, then press `/` key | Receives help from AI regarding the selected text. |
+| Toggle Preview | Ctrl+G (Windows/Linux), ⌘+G (macOS) | Shows or hides the preview pane while editing. |
 |Toggle Line Commenting|Ctrl+/ ⌘+/|Toggles commenting on the current line.|
 |Indentation|Ctrl+],Ctrl+[, ⌘+], ⌘+[|Adjusts the indentation of the current line.|
 | General text | Follow OS default shortcuts | General text editing functions follow the OS default shortcuts. |

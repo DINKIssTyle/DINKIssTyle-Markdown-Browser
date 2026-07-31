@@ -31,6 +31,7 @@ Esta es la lista de atajos para el Navegador Markdown DKST.
 |---|---|---|
 | Buscar Atajos de Código | `/` + Tecla Flecha Intro o escribir nombre de la función Intro | Busca todos los atajos de código disponibles en el teclado. |
 | Preguntar a la IA | Seleccionar texto y luego presionar la tecla `/` | Recibe ayuda de la IA sobre el texto seleccionado. |
+| Alternar vista previa | Ctrl+G (Windows/Linux), ⌘+G (macOS) | Muestra u oculta el panel de vista previa durante la edición. |
 | Alternar Comentario de Línea | Ctrl+/ ⌘+/ | Alterna el comentario en la línea actual. |
 | Sangría | Ctrl+],Ctrl+[, ⌘+], ⌘+[ | Ajusta la sangría de la línea actual. |
 | Texto General | Seguir los atajos predeterminados del SO | Las funciones de edición de texto general siguen los atajos predeterminados del sistema operativo. |

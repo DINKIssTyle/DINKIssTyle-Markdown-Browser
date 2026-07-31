@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES, getSlashCommands as getConfiguredSlashCommands } from './config.js';
-import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr } from './main-state.js';
+import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
@@ -414,6 +414,7 @@ const TOOLBAR_DIRECT_TOOL_IDS = Object.freeze([
     'ed-font-plus',
     'ed-split-swap',
     'ed-split-direction',
+    'ed-preview-toggle',
     'ed-cancel',
     'ed-save-as',
     'ed-save',
@@ -454,6 +455,7 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
             'ed-font-plus',
             'ed-split-swap',
             'ed-split-direction',
+            'ed-preview-toggle',
             'ed-cancel',
             'ed-save-as',
             'ed-save',
@@ -493,6 +495,7 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
             'ed-font-plus',
             'ed-split-swap',
             'ed-split-direction',
+            'ed-preview-toggle',
             'ed-cancel',
             'ed-save-as',
             'ed-save',
@@ -4716,6 +4719,7 @@ function bindEditorPaneSplitter() {
         horizontal: false,
         vertical: true,
     };
+    let isPreviewVisible = true;
     try {
         splitMode = normalizeEditorSplitMode(localStorage.getItem(EDITOR_SPLIT_MODE_STORAGE_KEY));
         splitPercent.horizontal = normalizeEditorPanePercent(
@@ -4790,7 +4794,24 @@ function bindEditorPaneSplitter() {
         applySplitPercent(splitPercent[splitMode]);
     };
 
+    const updatePreviewToggle = () => {
+        container.classList.toggle('editor-preview-hidden', !isPreviewVisible);
+        el.edPreviewToggle?.classList.toggle('preview-off', !isPreviewVisible);
+        if (el.edPreviewToggleIcon) {
+            el.edPreviewToggleIcon.textContent = isPreviewVisible ? 'preview' : 'preview_off';
+        }
+        if (el.edPreviewToggle) {
+            const previewAction = isPreviewVisible ? 'Hide Preview' : 'Show Preview';
+            const previewTitle = `${previewAction} (${isMacOS() ? '⌘G' : 'Ctrl+G'})`;
+            el.edPreviewToggle.title = previewTitle;
+            el.edPreviewToggle.setAttribute('aria-label', previewAction);
+            el.edPreviewToggle.setAttribute('aria-pressed', String(isPreviewVisible));
+        }
+        requestAnimationFrame(() => cmView?.requestMeasure());
+    };
+
     updateSplitControls();
+    updatePreviewToggle();
 
     const positionTooltip = event => {
         const tooltip = el.linkTooltip;
@@ -4929,6 +4950,19 @@ function bindEditorPaneSplitter() {
             persistEditorPreviewFirst(splitMode, previewFirst[splitMode]);
         };
     }
+    if (el.edPreviewToggle) {
+        el.edPreviewToggle.onclick = () => {
+            hideLinkTooltip();
+            isPreviewVisible = !isPreviewVisible;
+            updatePreviewToggle();
+        };
+    }
+}
+
+export function toggleEditorPreview() {
+    if (!state.isEditing || !el.edPreviewToggle) return false;
+    el.edPreviewToggle.click();
+    return true;
 }
 
 function readStoredBoolean(key, fallback) {

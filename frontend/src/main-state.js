@@ -176,6 +176,8 @@ export const el = {
     edSplitSwapIcon: $('ed-split-swap-icon'),
     edSplitDirection: $('ed-split-direction'),
     edSplitDirectionIcon: $('ed-split-direction-icon'),
+    edPreviewToggle: $('ed-preview-toggle'),
+    edPreviewToggleIcon: $('ed-preview-toggle-icon'),
     edCancel: $('ed-cancel'),
     edSaveAs: $('ed-save-as'),
     edSave: $('ed-save'),

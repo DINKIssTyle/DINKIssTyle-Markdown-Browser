@@ -20,7 +20,7 @@ import {
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
 import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, toggleEditorPreview } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
@@ -536,6 +536,7 @@ function bindMenuEvents() {
     EventsOn('menu:refresh', () => reloadCurrent());
     EventsOn('system:open-file', async path => openIncomingFiles([path]));
     EventsOn('menu:toggle-search', () => toggleSearch());
+    EventsOn('menu:toggle-editor-preview', () => toggleEditorPreview());
     EventsOn('menu:save', async () => {
         if (state.isEditing) {
             await saveCurrentDocument({ confirm: false, exitAfterSave: false });
@@ -606,13 +607,15 @@ async function handleGlobalKeydown(event) {
         && event.key.toLowerCase() === 'n';
     const isToggleThemeShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
         && event.key.toLowerCase() === 'k';
+    const isEditorPreviewShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
+        && event.key.toLowerCase() === 'g';
 
     // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
     // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)
-            && (['w', 's', 'e', 'f', 't', 'n', 'k'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isReopenClosedTabShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut);
+            && (['w', 's', 'e', 'f', 't', 'n', 'k'].includes(event.key.toLowerCase()) || /^[1-9]$/.test(event.key) || isAskAIShortcut || isReopenClosedTabShortcut || isEditorFontDownShortcut || isEditorFontUpShortcut || isEditorFontResetShortcut || isEditorPreviewShortcut);
         if (isSidebarTabShortcut) {
             event.preventDefault();
             toggleSidebarTabFromShortcut(event.code);
@@ -667,6 +670,12 @@ async function handleGlobalKeydown(event) {
     if (isToggleThemeShortcut) {
         event.preventDefault();
         toggleTheme();
+        return;
+    }
+
+    if (isEditorPreviewShortcut && state.isEditing) {
+        event.preventDefault();
+        toggleEditorPreview();
         return;
     }
 

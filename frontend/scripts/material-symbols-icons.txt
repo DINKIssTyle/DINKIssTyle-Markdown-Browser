@@ -74,6 +74,8 @@ markdown
 mood
 more_horiz
 open_in_new
+preview
+preview_off
 print
 priority_high
 redo
