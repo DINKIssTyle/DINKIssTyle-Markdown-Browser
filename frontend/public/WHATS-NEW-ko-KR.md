@@ -1,3 +1,7 @@
+<div align="left"><img src="img/textflow.png" width="32"/></div>
+
+DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경험해보세요. 스니펫을 단축어를 이용해 문서 작성을 돕습니다. AI 지원은 물론, OCR, 플로팅 스크린샷과 같은 다양한 기능을 통해 작업 효율을 높여줍니다. [더 알아보기](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
+
 # 버전 2.2의 새로운 기능
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
@@ -23,7 +27,7 @@
 
 ## 2.2.0
 #### 개선 사항 (Improvements)
-- macOS **CJK IME Enter Fix 줄바꿈 개선**: 설정 → Editor 에서 `CJK IME Enter Fix` 옵션이 활성화된 경우, CJK 문자 입력 중 엔터키 한번으로 줄바꿈이 가능합니다.
+- **CJK IME Enter Fix 줄바꿈 개선**: 설정 → Editor 에서 `CJK IME Enter Fix` 옵션이 활성화된 경우, CJK 문자 입력 중 엔터키 한번으로 줄바꿈이 가능합니다. (영향을 받는 플랫폼: macOS, Linux)
 
 #### 기타
 - **베타 표시 제거**: 충분히 안정화되어 베타 표시를 제거했습니다.

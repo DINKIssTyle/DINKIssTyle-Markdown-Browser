@@ -1,16 +1,38 @@
-# Novedades en la Versión 2.2
+
+<div align="left"><img src="img/textflow.png" width="32"/></div>
+
+Si estás satisfecho con el DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda en la creación de documentos utilizando atajos. Con soporte de IA, OCR, capturas de pantalla flotantes y varias otras características, mejora la eficiencia de tu flujo de trabajo. [Más información](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
+
+# Nuevas características en la versión 2.2
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
-<div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Visor y editor de Markdown multiplataforma, ligero y elegante!</div>
+<div align="center" style="font-size: 1.2rem; font-weight: 700;">¡Un visor y editor de Markdown multiplataforma, ligero y elegante!</div>
 
-<div align="center">¡DKST Markdown Browser se ha vuelto aún más potente!<br>Echa un vistazo a las principales características añadida en esta versión.</div>
+<div align="center">DKST Markdown Browser se ha vuelto más potente. ¡Echa un vistazo a las principales características añadidas en esta versión!</div>
 
-## 🚀 Cambios Principales
+# Cambios
 
-## 2.2.0 - 2026. 07. 31 
-- **Eliminación de la etiqueta Beta**: Se ha alcanzado la estabilidad suficiente y se ha eliminado la etiqueta Beta.
-- macOS **Mejora del salto de línea CJK IME Enter Fix**: Si la opción `CJK IME Enter Fix` está activada en Configuración → Editor, ahora se puede realizar un salto de línea con una sola pulsación de la tecla Enter durante la entrada de caracteres CJK.
+## 2.2.1
+
+#### Funcionalidades añadidas (Nuevas características)
+- **Alternar Horizontal/Vertical en Modo Edición**: Ahora puedes establecer la dirección de vista previa y división en modo edición.
+- **Ajustar Posición del Editor/Vista Previa en Modo Edición**: Puedes cambiar la posición de diseño del editor y la vista previa en modo edición.
+- **Ajustar Proporción de División en Modo Edición**: Arrastra la barra divisora para ajustar la proporción entre el editor y la vista previa. Consejo: Hacer doble clic en la barra divisora restablece la proporción a 1:1.
+- **Deshabilitar Vista Previa en Modo Edición**: Activa o desactiva fácilmente la vista previa desde la barra de herramientas del editor. Consejo: Atajo Ctrl+G / CMD+G
+
+#### Mejoras
+- **Rediseño Completo de la Pantalla de Preferencias**: Totalmente renovada con un diseño moderno y sofisticado.
+- **Botón de Limpiar Lista Reciente**: El comportamiento ha cambiado para limpiar la lista sin incluir archivos fijados.
+
+
+## 2.2.0
+#### Mejoras
+- **Mejora de Salto de Línea para CJK IME Enter Fix**: Cuando la opción `CJK IME Enter Fix` está activada en Configuración → Editor, presionar Enter una vez permite saltos de línea mientras se ingresan caracteres CJK. (Plataformas afectadas: macOS, Linux)
+
+#### Otros
+- **Eliminación de Etiqueta Beta**: Se eliminó la etiqueta beta ya que es suficientemente estable.
+
 
 
 ## Cambios durante la Versión 2.1

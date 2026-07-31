@@ -1,21 +1,38 @@
-# What's New in Version 2.2
 
-<div align="center"><img src="icon-512.png" width="128"/><br><br></div>
-<div align="center">
+<div align="left"><img src="img/textflow.png" width="32"/></div>
 
-[Korean (한국어)](WHATS-NEW-ko-KR.md) | [Spanish (Español)](WHATS-NEW-es-ES.md) | [Simplified Chinese (中国语)](WHATS-NEW-zh-CN.md) | [Japanese (日本語)](WHATS-NEW-ja-JP.md)
+If you are satisfied with the DKST Markdown Browser, try **DKST Text Flow**. It helps with document creation using shortcuts. With AI support, OCR, floating screenshots, and various other features, it enhances your workflow efficiency. [Learn More](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
 
-</div>
+# New Features in Version 2.2
 
-<div align="center" style="font-size: 1.2rem; font-weight: 700;"> Lightweight and elegant cross-platform<br>Markdown viewer and editor!</div>
+<div align="center"><img src="icon-512.png" width="128"/></div>
 
-<div align="center">DKST Markdown Browser has become even more powerful!<br>Check out the major features added in this version.</div>
+<div align="center" style="font-size: 1.2rem; font-weight: 700;">A Lightweight and Elegant Cross-platform<br>Markdown Viewer & Editor!</div>
 
-## 🚀 Key Changes
+<div align="center">DKST Markdown Browser has become more powerful!<br>Check out the major features added in this version.</div>
 
-## 2.2.0 - 2026. 07. 31 
-- **Removed Beta Badge**: Removed the beta label as the application has reached full stability.
-- macOS **CJK IME Enter Fix Line Break Improvement**: When the `CJK IME Enter Fix` option is enabled in Settings → Editor, pressing Enter once during CJK character input now properly creates a line break.
+# Changes
+
+## 2.2.1
+
+#### Added Features (New Features)
+- **Toggle Horizontal/Vertical in Edit Mode**: You can now set the preview and split direction in edit mode.
+- **Adjust Editor/Preview Position in Edit Mode**: You can change the layout position of the editor and preview in edit mode.
+- **Adjust Split Ratio in Edit Mode**: Drag the splitter bar to adjust the ratio between the editor and preview. Tip: Double-clicking the splitter bar resets it to a 1:1 ratio.
+- **Disable Preview in Edit Mode**: Easily turn the preview on or off from the editor toolbar. Tip: Shortcut Ctrl+G / CMD+G
+
+#### Improvements
+- **Complete Redesign of Preferences Screen**: Newly revamped with a modern and sophisticated design.
+- **Recent List Clear Button**: The behavior has changed to clear the list without including pinned files.
+
+
+## 2.2.0
+#### Improvements
+- **CJK IME Enter Fix Line Break Improvement**: When the `CJK IME Enter Fix` option is enabled in Settings → Editor, pressing Enter once allows line breaks while inputting CJK characters. (Affected platforms: macOS, Linux)
+
+#### Others
+- **Beta Tag Removal**: Removed the beta tag as it is sufficiently stable.
+
 
 
 ## Changes during Version 2.1

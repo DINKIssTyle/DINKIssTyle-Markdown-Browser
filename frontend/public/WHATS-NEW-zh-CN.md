@@ -1,16 +1,37 @@
-# Version 2.2 的新功能
+
+<div align="left"><img src="img/textflow.png" width="32"/></div>
+
+如果您喜欢 DKST Markdown Browser，请体验 **DKST Text Flow**。它使用快捷方式来帮助您撰写文档。除了 AI 支持之外，它还提供了 OCR、浮动截图等各种功能来提高工作效率。[了解更多](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
+
+# 版本 2.2 的新功能
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
-<div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻量级优雅的跨平台<br>Markdown 查看器和编辑器！</div>
+<div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！</div>
 
-<div align="center">DKST Markdown Browser 变得更加强大了！<br>来看看此版本新增的主要功能。</div>
+<div align="center">DKST Markdown Browser 变得更加强大了！请查看本版本新增的主要功能。</div>
 
-## 🚀 主要变更
+# 更新内容
 
-## 2.2.0 - 2026. 07. 31 
-- **移除 Beta 标识**: 应用已足够稳定，因此移除了 Beta 标识。
-- macOS **CJK IME Enter Fix 换行改进**: 在 设置 → Editor 中启用 `CJK IME Enter Fix` 选项时，输入 CJK 字符期间按一次回车键即可换行。
+## 2.2.1
+
+#### 新增功能 (New Features)
+- **编辑模式横向/纵向切换**: 在编辑模式中，您可以设置预览和分割方向。
+- **调整编辑模式编辑器/预览位置**: 您可以更改编辑模式下编辑器和预览的布局位置。
+- **调整编辑模式分割比例**: 通过拖动分割条来调整编辑器和预览的分割比例。提示：双击分割条可重置为 1:1 比例。
+- **在编辑模式中关闭预览**: 您可以在编辑器工具栏中轻松开关预览。提示：快捷键 Ctrl+G / CMD+G
+
+#### 改进 (Improvements)
+- **设置界面全面翻新**: 以现代而时尚的设计焕然一新。
+- **最近列表清除按钮**: 现在清空列表的操作不包括固定的文件。
+
+
+## 2.2.0
+#### 改进 (Improvements)
+- **CJK IME Enter Fix 줄바꿈 개선**: 当设置 -> Editor 中激活了 `CJK IME Enter Fix` 选项时，在 CJK 输入过程中按一次回车键即可换行。（受影响平台：macOS, Linux）
+
+#### 其他
+- **移除 Beta 标记**: 已足够稳定，故移除了 Beta 标记。
 
 
 ## Version 2.1 期间变更

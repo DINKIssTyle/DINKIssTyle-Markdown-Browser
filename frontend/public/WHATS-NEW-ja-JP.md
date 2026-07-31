@@ -1,16 +1,38 @@
-# バージョン 2.2 の新機能
+
+<div align="left"><img src="img/textflow.png" width="32"/></div>
+
+DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow**を体験してみてください。スニペットショートカットが執筆作業をサポートします。AI支援はもちろん、OCRやフローティングスクリーンショットなど多様な機能で作業効率を高めます。[詳細はこちら](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
+
+# バージョン 2.2の新機能
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
-<div align="center" style="font-size: 1.2rem; font-weight: 700;">軽量でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！</div>
+<div align="center" style="font-size: 1.2rem; font-weight: 700;">軽快でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！</div>
 
-<div align="center">DKST Markdown Browserがさらにパワフルになりました！<br>このバージョンで追加された主な機能をご覧ください。</div>
+<div align="center">DKST Markdown Browserがさらに強力になりました！今回のバージョンで追加された主な機能をご確認ください。</div>
 
-## 🚀 主な変更点
+# 変更点
 
-## 2.2.0 - 2026. 07. 31 
-- **ベータ表示の削除**: 十分に安定したため、ベータ表示を削除しました。
-- macOS **CJK IME Enter Fix 改行の改善**: 設定 → Editor で `CJK IME Enter Fix` オプションが有効な場合、CJK文字入力中にEnterキー1回で改行が可能になりました。
+## 2.2.1
+
+#### 追加機能 (New Features)
+- **編集モードでの縦/横切り替え**: 編集モードでプレビューと分割方向を設定できるようになりました。
+- **編集モードでのエディタ/プレビューの位置調整**: 編集モードでエディタとプレビューの配置を変更できます。
+- **編集モードでの分割比率調整**: 分割バーをドラッグすることで、エディタとプレビューの表示比率を調整できます。ヒント：分割バーをダブルクリックすると1:1でリセットされます。
+- **編集モードでのプレビューの無効化**: エディタツールバーからプレビューを簡単にオン/オフできます。ヒント：ショートカット Ctrl+G / CMD+G
+
+#### 改善点 (Improvements)
+- **設定画面の全面刷新**: モダンで洗練されたデザインに生まれ変わりました。
+- **最近使ったファイルのクリアボタン**: 固定ファイルを除き、リストを空にする動作に変更されました。
+
+
+## 2.2.0
+#### 改善点 (Improvements)
+- **CJK IME Enter Fixによる改行の改善**: 設定 → Editor で `CJK IME Enter Fix` オプションが有効な場合、CJK文字入力中にエンターキー1回で改行が可能になりました。（影響を受けるプラットフォーム：macOS, Linux）
+
+#### その他
+- **ベータ表示の削除**: 十分に安定化したため、ベータ表示を削除しました。
+
 
 
 ## バージョン 2.1 期間中の変更点
