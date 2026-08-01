@@ -2776,6 +2776,40 @@ function rememberPlainEditorClick(event, view) {
         return false;
     }
 
+    const pos = view.posAtCoords({ x: event.clientX, y: event.clientY });
+    if (pos == null) {
+        return false;
+    }
+
+    if (!view.hasFocus) {
+        const scrollTop = view.scrollDOM.scrollTop;
+        plainClickSelectionState = { handledFocusReturn: true };
+
+        // WebKit may start a native selection from CodeMirror's old DOM caret
+        // when a blurred, manually scrolled editor is clicked. Own this first
+        // pointer-down so no old-to-new selection range is ever painted.
+        event.preventDefault();
+        view.dispatch({
+            selection: { anchor: pos },
+            userEvent: 'select.pointer',
+        });
+        view.contentDOM.focus({ preventScroll: true });
+        view.scrollDOM.scrollTop = scrollTop;
+
+        requestAnimationFrame(() => {
+            if (cmView !== view) return;
+            const selection = view.state.selection.main;
+            if (!selection.empty || selection.from !== pos) {
+                view.dispatch({
+                    selection: { anchor: pos },
+                    userEvent: 'select.pointer',
+                });
+            }
+            view.scrollDOM.scrollTop = scrollTop;
+        });
+        return true;
+    }
+
     plainClickSelectionState = {
         x: event.clientX,
         y: event.clientY,
@@ -2787,6 +2821,10 @@ function rememberPlainEditorClick(event, view) {
 function collapsePlainEditorClick(event, view) {
     const clickState = plainClickSelectionState;
     plainClickSelectionState = null;
+
+    if (clickState?.handledFocusReturn) {
+        return false;
+    }
 
     if (!clickState || !isPlainEditorPrimaryClick(event) || !isEditorContentClick(event, view)) {
         return false;
