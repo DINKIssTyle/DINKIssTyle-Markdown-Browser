@@ -597,7 +597,7 @@
                             <header class="settings-panel-header">
                                 <div class="settings-panel-kicker">Personalization</div>
                                 <h2>Appearance</h2>
-                                <p>Choose highlight colors that stay clear in both light and dark mode.</p>
+                                <p>Customize highlight colors and choose which actions stay visible in the main toolbar.</p>
                             </header>
                             <section class="ai-setting-group settings-card">
                                 <div class="settings-card-heading">
@@ -638,6 +638,77 @@
                                                 <span id="dark-accent-value" class="settings-color-value">#0A84FF</span>
                                                 <input type="color" id="dark-accent-custom" />
                                             </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            </section>
+                            <section class="ai-setting-group settings-card">
+                                <div class="settings-card-heading">
+                                    <div>
+                                        <h4>Main toolbar</h4>
+                                        <p>Choose which shortcut buttons appear. Hidden commands remain available from menus and keyboard shortcuts.</p>
+                                    </div>
+                                    <span class="material-symbols-outlined settings-card-heading-icon" aria-hidden="true">instant_mix</span>
+                                </div>
+                                <div class="toolbar-visibility-grid">
+                                    <div class="toolbar-visibility-item">
+                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">add_notes</span>
+                                        <label class="toolbar-visibility-copy" for="settings-toolbar-new-document">
+                                            <strong>New document</strong>
+                                            <small>Create a blank Markdown document</small>
+                                        </label>
+                                        <label class="settings-switch">
+                                            <input id="settings-toolbar-new-document" type="checkbox" checked />
+                                            <span aria-hidden="true"></span>
+                                            <span class="settings-switch-label">On</span>
+                                        </label>
+                                    </div>
+                                    <div class="toolbar-visibility-item">
+                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">edit_note</span>
+                                        <label class="toolbar-visibility-copy" for="settings-toolbar-edit">
+                                            <strong>Edit Markdown</strong>
+                                            <small>Open the current document in the editor</small>
+                                        </label>
+                                        <label class="settings-switch">
+                                            <input id="settings-toolbar-edit" type="checkbox" checked />
+                                            <span aria-hidden="true"></span>
+                                            <span class="settings-switch-label">On</span>
+                                        </label>
+                                    </div>
+                                    <div class="toolbar-visibility-item">
+                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">translate</span>
+                                        <label class="toolbar-visibility-copy" for="settings-toolbar-translate">
+                                            <strong>Translate</strong>
+                                            <small>Translate the current document</small>
+                                        </label>
+                                        <label class="settings-switch">
+                                            <input id="settings-toolbar-translate" type="checkbox" checked />
+                                            <span aria-hidden="true"></span>
+                                            <span class="settings-switch-label">On</span>
+                                        </label>
+                                    </div>
+                                    <div class="toolbar-visibility-item">
+                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">format_size</span>
+                                        <label class="toolbar-visibility-copy" for="settings-toolbar-font-size">
+                                            <strong>Font size</strong>
+                                            <small>Show both decrease and increase buttons</small>
+                                        </label>
+                                        <label class="settings-switch">
+                                            <input id="settings-toolbar-font-size" type="checkbox" checked />
+                                            <span aria-hidden="true"></span>
+                                            <span class="settings-switch-label">On</span>
+                                        </label>
+                                    </div>
+                                    <div class="toolbar-visibility-item">
+                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">dark_mode</span>
+                                        <label class="toolbar-visibility-copy" for="settings-toolbar-theme">
+                                            <strong>Theme</strong>
+                                            <small>Switch between light and dark mode</small>
+                                        </label>
+                                        <label class="settings-switch">
+                                            <input id="settings-toolbar-theme" type="checkbox" checked />
+                                            <span aria-hidden="true"></span>
+                                            <span class="settings-switch-label">On</span>
                                         </label>
                                     </div>
                                 </div>

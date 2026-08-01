@@ -81,6 +81,11 @@ type AppSettings struct {
 	Theme                    string            `json:"theme"`
 	LightAccentColor         string            `json:"lightAccentColor"`
 	DarkAccentColor          string            `json:"darkAccentColor"`
+	MainToolbarNewDocument   bool              `json:"mainToolbarNewDocument"`
+	MainToolbarEdit          bool              `json:"mainToolbarEdit"`
+	MainToolbarTranslate     bool              `json:"mainToolbarTranslate"`
+	MainToolbarFontSize      bool              `json:"mainToolbarFontSize"`
+	MainToolbarTheme         bool              `json:"mainToolbarTheme"`
 	FontSize                 int               `json:"fontSize"`
 	Engine                   string            `json:"engine"`
 	EditorRenderMode         string            `json:"editorRenderMode"`
@@ -643,6 +648,11 @@ func (a *App) GetSettings() AppSettings {
 	settings.Theme = "light" // "dark" | "light"
 	settings.LightAccentColor = "#0071e3"
 	settings.DarkAccentColor = "#0a84ff"
+	settings.MainToolbarNewDocument = true
+	settings.MainToolbarEdit = true
+	settings.MainToolbarTranslate = true
+	settings.MainToolbarFontSize = true
+	settings.MainToolbarTheme = true
 	settings.FontSize = 16
 	settings.Engine = "marked"              // "marked" | "html"
 	settings.EditorRenderMode = "realtime"  // "realtime" | "cursor"

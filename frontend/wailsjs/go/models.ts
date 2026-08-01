@@ -24,6 +24,11 @@ export namespace app {
 	    theme: string;
 	    lightAccentColor: string;
 	    darkAccentColor: string;
+	    mainToolbarNewDocument: boolean;
+	    mainToolbarEdit: boolean;
+	    mainToolbarTranslate: boolean;
+	    mainToolbarFontSize: boolean;
+	    mainToolbarTheme: boolean;
 	    fontSize: number;
 	    engine: string;
 	    editorRenderMode: string;
@@ -68,6 +73,11 @@ export namespace app {
 	        this.theme = source["theme"];
 	        this.lightAccentColor = source["lightAccentColor"];
 	        this.darkAccentColor = source["darkAccentColor"];
+	        this.mainToolbarNewDocument = source["mainToolbarNewDocument"];
+	        this.mainToolbarEdit = source["mainToolbarEdit"];
+	        this.mainToolbarTranslate = source["mainToolbarTranslate"];
+	        this.mainToolbarFontSize = source["mainToolbarFontSize"];
+	        this.mainToolbarTheme = source["mainToolbarTheme"];
 	        this.fontSize = source["fontSize"];
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];

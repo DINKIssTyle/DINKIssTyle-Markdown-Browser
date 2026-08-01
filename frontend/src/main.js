@@ -28,7 +28,7 @@ import {
 } from './main-ui.js';
 import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
-import { persistAppSettings } from './main-settings.js';
+import { loadMainToolbarVisibility, persistAppSettings } from './main-settings.js';
 import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
 
 import {
@@ -173,6 +173,7 @@ async function loadSettings() {
     const accentSettings = resolveAccentSettings(s);
     state.lightAccentColor = accentSettings.light;
     state.darkAccentColor = accentSettings.dark;
+    loadMainToolbarVisibility(s);
     state.documentMargin = s.documentMargin || "none";
     state.viewerFontFamily = s.viewerFontFamily || "";
 
