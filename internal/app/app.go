@@ -40,6 +40,8 @@ var linuxIconPNGBySize map[int][]byte
 const (
 	defaultRecentFileDisplayLimit = 8
 	maxRecentFileDisplayLimit     = 99
+	compactScreenMaxWidth         = 1280
+	compactScreenMaxHeight        = 768
 )
 
 func SetIntegrationIcons(appIcon []byte, linuxIcons map[int][]byte) {
@@ -205,6 +207,53 @@ func (a *App) Startup(ctx context.Context) {
 	}
 
 	a.queueOpenRequests(os.Args[1:], "")
+}
+
+// DomReady adjusts the initial window state after the native window is ready.
+// Compact displays use the operating system's maximised work area, while larger
+// displays keep the configured 1200x800 startup size.
+func (a *App) DomReady(ctx context.Context) {
+	screens, err := runtime.ScreenGetAll(ctx)
+	if err != nil {
+		return
+	}
+
+	screen, ok := startupScreen(screens)
+	if ok && shouldMaximiseOnStartup(screen) {
+		runtime.WindowMaximise(ctx)
+	}
+}
+
+func startupScreen(screens []runtime.Screen) (runtime.Screen, bool) {
+	for _, screen := range screens {
+		if screen.IsCurrent {
+			return screen, true
+		}
+	}
+	for _, screen := range screens {
+		if screen.IsPrimary {
+			return screen, true
+		}
+	}
+	if len(screens) > 0 {
+		return screens[0], true
+	}
+	return runtime.Screen{}, false
+}
+
+func shouldMaximiseOnStartup(screen runtime.Screen) bool {
+	width := screen.Size.Width
+	height := screen.Size.Height
+	if width <= 0 {
+		width = screen.Width
+	}
+	if height <= 0 {
+		height = screen.Height
+	}
+	if width <= 0 || height <= 0 {
+		return false
+	}
+	return width <= compactScreenMaxWidth || height <= compactScreenMaxHeight
 }
 
 func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath string, content string, title string) {
