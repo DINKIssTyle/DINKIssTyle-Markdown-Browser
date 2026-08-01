@@ -213,6 +213,8 @@ func (a *App) Startup(ctx context.Context) {
 // Compact displays use the operating system's maximised work area, while larger
 // displays keep the configured 1200x800 startup size.
 func (a *App) DomReady(ctx context.Context) {
+	installHistoryNavigationBridge(ctx)
+
 	screens, err := runtime.ScreenGetAll(ctx)
 	if err != nil {
 		return

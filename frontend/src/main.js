@@ -17,7 +17,7 @@ import {
     handleOpenFile, openPath, openIncomingFiles, openAbout, openFeatures, openShortcuts, openThirdPartyNotices,
     openWhatsNew, shouldOpenAdditionalFileInNewTab,
     goBack, goForward, goHome, reloadCurrent, updateNavButtons,
-    bindHistoryMouseNavigation,
+    bindHistoryMouseNavigation, bindNativeHistoryNavigation,
 } from './main-navigation.js';
 import { bindDocumentMetadataUI, renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
 import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, toggleEditorPreview } from './main-editor.js';
@@ -328,6 +328,7 @@ function bindToolbar() {
     el.editPreviewOpenTab.onclick = () => openEditingPreviewInNewTab();
     document.addEventListener('keydown', handleGlobalKeydown, true);
     bindHistoryMouseNavigation(document);
+    bindNativeHistoryNavigation(window);
     bindEditorEvents();
 }
 

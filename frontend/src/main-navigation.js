@@ -20,9 +20,15 @@ import {
 } from './main-ui.js';
 import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../wailsjs/go/app/App';
 import { BrowserOpenURL, LogError, LogInfo } from '../wailsjs/runtime/runtime';
+import { createHorizontalSwipeTracker, HISTORY_BACK, HISTORY_FORWARD } from './history-input.mjs';
 
 // ── Module-level State ─────────────────────────────────────
 let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
+let lastHistoryGestureTrigger = Number.NEGATIVE_INFINITY;
+const historyInputTargets = new WeakSet();
+const nativeHistoryTargets = new WeakSet();
+const NATIVE_HISTORY_EVENT = 'dkst:native-history-navigation';
+const HISTORY_GESTURE_DEDUP_MS = 500;
 
 // ── File Opening ───────────────────────────────────────────
 
@@ -543,9 +549,26 @@ export async function openExternalURL(href) {
 // ── Mouse History Navigation ───────────────────────────────
 
 export function bindHistoryMouseNavigation(target) {
+    if (!target || historyInputTargets.has(target)) return;
+    historyInputTargets.add(target);
+
     ['mousedown', 'mouseup', 'pointerup'].forEach(type => {
         target.addEventListener(type, handleGlobalHistoryMouseEvent, true);
     });
+
+    if (isMacOS()) {
+        const swipeTracker = createHorizontalSwipeTracker();
+        target.addEventListener('wheel', event => handleHistorySwipeWheel(event, swipeTracker), {
+            capture: true,
+            passive: false,
+        });
+    }
+}
+
+export function bindNativeHistoryNavigation(target = window) {
+    if (!target || nativeHistoryTargets.has(target)) return;
+    nativeHistoryTargets.add(target);
+    target.addEventListener(NATIVE_HISTORY_EVENT, handleNativeHistoryNavigation);
 }
 
 function handleHistoryMouseButton(event) {
@@ -558,8 +581,8 @@ function handleHistoryMouseButton(event) {
         return false;
     }
 
-    // macOS에서는 Native Bridge가 이 버튼들을 처리하므로 프런트엔드 직접 감지는 건너뜁니다.
-    // (WebKit Webview는 이 버튼들을 신뢰성 있게 전달하지 못하기 때문입니다)
+    // WKWebView does not reliably expose auxiliary mouse buttons as DOM events.
+    // The AppKit bridge translates them into NATIVE_HISTORY_EVENT instead.
     if (isMacOS() && (historyButton === 3 || historyButton === 4)) {
         return false;
     }
@@ -605,4 +628,67 @@ function getHistoryMouseButton(event) {
 
 function handleGlobalHistoryMouseEvent(event) {
     handleHistoryMouseButton(event);
+}
+
+function handleNativeHistoryNavigation(event) {
+    const direction = event?.detail?.direction;
+    if (direction !== HISTORY_BACK && direction !== HISTORY_FORWARD) return;
+    performViewerHistoryNavigation(direction, event.detail.source !== 'mouse');
+}
+
+function handleHistorySwipeWheel(event, swipeTracker) {
+    if (isActiveMarkdownEditTab() || isEditableTarget(event.target) || event.ctrlKey) {
+        swipeTracker.reset();
+        return;
+    }
+
+    if (canScrollHorizontally(event.target, event.deltaX)) {
+        swipeTracker.reset();
+        return;
+    }
+
+    const direction = swipeTracker.update(event.deltaX, event.deltaY, event.timeStamp);
+    if (!direction) return;
+
+    event.preventDefault();
+    event.stopPropagation();
+    performViewerHistoryNavigation(direction, true);
+}
+
+function performViewerHistoryNavigation(direction, deduplicateGesture = false) {
+    if (isActiveMarkdownEditTab()) {
+        return false;
+    }
+
+    if (deduplicateGesture) {
+        const now = performance.now();
+        if (now - lastHistoryGestureTrigger < HISTORY_GESTURE_DEDUP_MS) {
+            return true;
+        }
+        lastHistoryGestureTrigger = now;
+    }
+
+    if (direction === HISTORY_BACK) {
+        goBack();
+    } else {
+        goForward();
+    }
+    return true;
+}
+
+function canScrollHorizontally(target, deltaX) {
+    if (!target || !deltaX) return false;
+
+    const ownerDocument = target.ownerDocument || document;
+    let node = target.nodeType === 1 ? target : target.parentElement;
+    while (node) {
+        const maxScrollLeft = node.scrollWidth - node.clientWidth;
+        if (maxScrollLeft > 1) {
+            if (deltaX < 0 && node.scrollLeft > 1) return true;
+            if (deltaX > 0 && node.scrollLeft < maxScrollLeft - 1) return true;
+        }
+        if (node === ownerDocument.documentElement) break;
+        node = node.parentElement;
+    }
+    return false;
 }
