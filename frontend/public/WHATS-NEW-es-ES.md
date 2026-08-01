@@ -13,6 +13,20 @@ Si estás satisfecho con el DKST Markdown Browser, prueba **DKST Text Flow**. Ay
 
 # Cambios
 
+## 2.2.2
+
+#### Nuevas Funcionalidades
+
+- **Soporte para Front Matter**: Al abrir un documento Markdown con Front Matter, aparece un botón de admiración en la barra de direcciones y la pestaña muestra el título definido en los metadatos.
+- **Inserción de Front Matter**: En modo edición, presionar el botón de admiración inserta una plantilla básica que incluye título, autor, fecha, etiquetas, estado borrador, etc. Una vez insertado el Front Matter, el título se establece por defecto en la primera línea del documento Markdown, el autor utiliza el valor de Configuración → Pestaña Editor → Nombre del autor y la fecha se ingresa al crear.
+- **Personalización de la Visualización del Botón de la Barra Principal**: Puedes configurar qué botones (Nuevo Documento, Modo Edición, Traducir, Tamaño de Fuente, Tema) se muestran en la barra principal en Configuración → Apariencia. Cada función tiene una tecla de acceso rápido única.
+- **Navegación Historial Mejorada**: Se resolvió un problema por el cual la navegación del historial (avanzar/retroceder) no respondía al usar la almohadilla táctil o el ratón en macOS. Se agregó retroalimentación visual para los gestos de la almohadilla táctil en Windows, macOS y Linux.
+
+#### Mejoras
+
+- **Solucionado el Problema de Selección de Texto Durante el Movimiento del Cursor del Editor**: Se resolvió un problema por el cual se seleccionaba texto desde la última ubicación de edición hasta una nueva ubicación al desplazarse después de acciones como la navegación por pestañas o la apertura de ventanas de configuración, especialmente cuando el cursor se movía a un área no visible.
+- **Soporte Mejorado para Baja Resolución**: Se abordó un problema por el cual la barra de título no se mostraba en espacios de trabajo de baja resolución como 1280x720, ejecutándose automáticamente en modo maximizado cuando la resolución del dispositivo es baja.
+
 ## 2.2.1
 
 #### Funcionalidades añadidas (Nuevas características)

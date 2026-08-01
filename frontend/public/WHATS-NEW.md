@@ -4,6 +4,7 @@
 If you are satisfied with the DKST Markdown Browser, try **DKST Text Flow**. It helps with document creation using shortcuts. With AI support, OCR, floating screenshots, and various other features, it enhances your workflow efficiency. [Learn More](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
 
 # New Features in Version 2.2
+[한국어](WHATS-NEW-ko-KR.md) | [Español](WHATS-NEW-es-ES.md) | [中文](WHATS-NEW-zh-CN.md) | [日本語](WHATS-NEW-ja-JP.md)
 
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
@@ -12,6 +13,20 @@ If you are satisfied with the DKST Markdown Browser, try **DKST Text Flow**. It 
 <div align="center">DKST Markdown Browser has become more powerful!<br>Check out the major features added in this version.</div>
 
 # Changes
+
+## 2.2.2
+
+#### New Features
+
+- **Front Matter Support**: When opening a Markdown document with Front Matter, an exclamation mark button appears in the address bar, and the tab displays the title defined in the metadata.
+- **Inserting Front Matter**: In edit mode, pressing the exclamation mark button inserts a basic template including title, author, date, tags, draft status, etc. Once Front Matter is inserted, the title defaults to the first line of the Markdown document, the author uses the value from Settings → Editor Tab → Author name, and the date is entered upon creation.
+- **Customizing Main Toolbar Button Display**: You can configure which buttons (New Document, Edit Mode, Translate, Font Size, Theme) are displayed on the main toolbar in Settings → Appearance. Each function has a unique shortcut key.
+- **Improved History Navigation**: Resolved an issue where history navigation (forward/backward) was unresponsive when using trackpad or mouse on macOS. Added visual feedback for trackpad gestures across Windows, macOS, and Linux.
+
+#### Improvements
+
+- **Fixed Text Selection Issue During Editor Cursor Movement**: Resolved an issue where text was selected from the last edit location to a new location when scrolling after actions like tab navigation or opening settings windows, especially when the cursor moved to an unseen area.
+- **Enhanced Low Resolution Support**: Addressed an issue where the title bar would not display on low-resolution workspaces like 1280x720 by automatically running in maximized mode when the device resolution is low.
 
 ## 2.2.1
 
