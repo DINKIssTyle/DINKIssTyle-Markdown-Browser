@@ -20,15 +20,25 @@ import {
 } from './main-ui.js';
 import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../wailsjs/go/app/App';
 import { BrowserOpenURL, LogError, LogInfo } from '../wailsjs/runtime/runtime';
-import { createHorizontalSwipeTracker, HISTORY_BACK, HISTORY_FORWARD } from './history-input.mjs';
+import {
+    createHorizontalSwipeTracker,
+    horizontalGestureDisposition,
+    HISTORY_BACK,
+    HISTORY_FORWARD,
+    HORIZONTAL_GESTURE_HISTORY,
+} from './history-input.mjs';
 
 // ── Module-level State ─────────────────────────────────────
 let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
-let lastHistoryGestureTrigger = Number.NEGATIVE_INFINITY;
+let lastHistoryGestureTrigger = { direction: '', timeStamp: Number.NEGATIVE_INFINITY };
 const historyInputTargets = new WeakSet();
 const nativeHistoryTargets = new WeakSet();
 const NATIVE_HISTORY_EVENT = 'dkst:native-history-navigation';
-const HISTORY_GESTURE_DEDUP_MS = 500;
+const HISTORY_GESTURE_DEDUP_MS = 250;
+const HISTORY_GESTURE_SETTLE_MS = 120;
+let historySwipeFeedback = null;
+let historySwipeFeedbackHideTimer = 0;
+let activeHistorySwipeController = null;
 
 // ── File Opening ───────────────────────────────────────────
 
@@ -556,13 +566,15 @@ export function bindHistoryMouseNavigation(target) {
         target.addEventListener(type, handleGlobalHistoryMouseEvent, true);
     });
 
-    if (isMacOS()) {
-        const swipeTracker = createHorizontalSwipeTracker();
-        target.addEventListener('wheel', event => handleHistorySwipeWheel(event, swipeTracker), {
-            capture: true,
-            passive: false,
-        });
-    }
+    const swipeController = {
+        tracker: createHorizontalSwipeTracker(),
+        pending: null,
+        settleTimer: 0,
+    };
+    target.addEventListener('wheel', event => handleHistorySwipeWheel(event, swipeController), {
+        capture: true,
+        passive: false,
+    });
 }
 
 export function bindNativeHistoryNavigation(target = window) {
@@ -633,39 +645,151 @@ function handleGlobalHistoryMouseEvent(event) {
 function handleNativeHistoryNavigation(event) {
     const direction = event?.detail?.direction;
     if (direction !== HISTORY_BACK && direction !== HISTORY_FORWARD) return;
-    performViewerHistoryNavigation(direction, event.detail.source !== 'mouse');
+    const isSwipe = event.detail.source !== 'mouse';
+    if (isSwipe && activeHistorySwipeController) {
+        resetHistorySwipeController(activeHistorySwipeController, false);
+    }
+    if (isSwipe && canNavigateHistory(direction)) {
+        updateHistorySwipeFeedback(direction, 1, true);
+        finishHistorySwipeFeedback(true);
+    }
+    performViewerHistoryNavigation(direction, isSwipe);
 }
 
-function handleHistorySwipeWheel(event, swipeTracker) {
+function handleHistorySwipeWheel(event, swipeController) {
     if (isActiveMarkdownEditTab() || isEditableTarget(event.target) || event.ctrlKey) {
-        swipeTracker.reset();
+        resetHistorySwipeController(swipeController, true);
         return;
     }
 
-    if (canScrollHorizontally(event.target, event.deltaX)) {
-        swipeTracker.reset();
+    const ownerWindow = event.target?.ownerDocument?.defaultView || window;
+    const disposition = horizontalGestureDisposition(
+        event.target,
+        event.deltaX,
+        node => ownerWindow.getComputedStyle(node),
+    );
+    if (disposition !== HORIZONTAL_GESTURE_HISTORY) {
+        resetHistorySwipeController(swipeController, true);
         return;
     }
 
-    const direction = swipeTracker.update(event.deltaX, event.deltaY, event.timeStamp);
-    if (!direction) return;
+    const gesture = swipeController.tracker.update(event.deltaX, event.deltaY, event.timeStamp);
+    if (!gesture) return;
+    if (gesture.cancelled || !canNavigateHistory(gesture.direction)) {
+        resetHistorySwipeController(swipeController, true);
+        return;
+    }
 
     event.preventDefault();
     event.stopPropagation();
-    performViewerHistoryNavigation(direction, true);
+
+    swipeController.pending = gesture;
+    activeHistorySwipeController = swipeController;
+    updateHistorySwipeFeedback(gesture.direction, gesture.progress, gesture.ready);
+    clearTimeout(swipeController.settleTimer);
+    swipeController.settleTimer = window.setTimeout(
+        () => settleHistorySwipeGesture(swipeController),
+        HISTORY_GESTURE_SETTLE_MS,
+    );
+}
+
+function settleHistorySwipeGesture(swipeController) {
+    const gesture = swipeController.pending;
+    swipeController.pending = null;
+    swipeController.settleTimer = 0;
+    swipeController.tracker.reset();
+    if (activeHistorySwipeController === swipeController) {
+        activeHistorySwipeController = null;
+    }
+
+    if (gesture?.ready && canNavigateHistory(gesture.direction)) {
+        finishHistorySwipeFeedback(true);
+        performViewerHistoryNavigation(gesture.direction, true);
+        return;
+    }
+    finishHistorySwipeFeedback(false);
+}
+
+function resetHistorySwipeController(swipeController, animateCancellation = false) {
+    clearTimeout(swipeController.settleTimer);
+    swipeController.settleTimer = 0;
+    swipeController.pending = null;
+    swipeController.tracker.reset();
+    if (activeHistorySwipeController === swipeController) {
+        activeHistorySwipeController = null;
+    }
+    if (animateCancellation) {
+        finishHistorySwipeFeedback(false);
+    }
+}
+
+function updateHistorySwipeFeedback(direction, progress, ready) {
+    const feedback = ensureHistorySwipeFeedback();
+    clearTimeout(historySwipeFeedbackHideTimer);
+    historySwipeFeedbackHideTimer = 0;
+
+    const normalizedProgress = Math.max(0, Math.min(1, Number(progress) || 0));
+    feedback.dataset.direction = direction;
+    feedback.style.setProperty('--history-swipe-progress', String(normalizedProgress));
+    feedback.style.setProperty('--history-swipe-opacity', String(0.3 + normalizedProgress * 0.7));
+    feedback.style.setProperty('--history-swipe-scale', String(0.78 + normalizedProgress * 0.22));
+    feedback.style.setProperty('--history-swipe-turn', `${normalizedProgress}turn`);
+    feedback.style.setProperty('--history-swipe-back-shift', `${(1 - normalizedProgress) * 4}px`);
+    feedback.style.setProperty('--history-swipe-forward-shift', `${(normalizedProgress - 1) * 4}px`);
+    feedback.querySelector('.history-swipe-feedback-icon').textContent = direction === HISTORY_BACK
+        ? 'arrow_back'
+        : 'arrow_forward';
+    feedback.querySelector('.history-swipe-feedback-label').textContent = direction === HISTORY_BACK
+        ? 'Back'
+        : 'Forward';
+    feedback.classList.remove('is-cancelling', 'is-committing');
+    feedback.classList.toggle('is-ready', Boolean(ready));
+    feedback.classList.add('is-visible');
+}
+
+function finishHistorySwipeFeedback(committed) {
+    if (!historySwipeFeedback?.classList.contains('is-visible')) return;
+
+    clearTimeout(historySwipeFeedbackHideTimer);
+    historySwipeFeedback.classList.remove('is-ready', 'is-cancelling', 'is-committing');
+    historySwipeFeedback.classList.add(committed ? 'is-committing' : 'is-cancelling');
+    historySwipeFeedbackHideTimer = window.setTimeout(() => {
+        historySwipeFeedback?.classList.remove('is-visible', 'is-cancelling', 'is-committing');
+        historySwipeFeedbackHideTimer = 0;
+    }, committed ? 220 : 160);
+}
+
+function ensureHistorySwipeFeedback() {
+    if (historySwipeFeedback?.isConnected) return historySwipeFeedback;
+
+    historySwipeFeedback = document.createElement('div');
+    historySwipeFeedback.className = 'history-swipe-feedback';
+    historySwipeFeedback.setAttribute('aria-hidden', 'true');
+    historySwipeFeedback.innerHTML = `
+        <div class="history-swipe-feedback-surface">
+            <div class="history-swipe-feedback-progress"></div>
+            <span class="history-swipe-feedback-icon material-symbols-outlined"></span>
+        </div>
+        <span class="history-swipe-feedback-label"></span>
+    `;
+    document.body.appendChild(historySwipeFeedback);
+    return historySwipeFeedback;
 }
 
 function performViewerHistoryNavigation(direction, deduplicateGesture = false) {
-    if (isActiveMarkdownEditTab()) {
+    if (isActiveMarkdownEditTab() || !canNavigateHistory(direction)) {
         return false;
     }
 
     if (deduplicateGesture) {
         const now = performance.now();
-        if (now - lastHistoryGestureTrigger < HISTORY_GESTURE_DEDUP_MS) {
+        if (
+            direction === lastHistoryGestureTrigger.direction
+            && now - lastHistoryGestureTrigger.timeStamp < HISTORY_GESTURE_DEDUP_MS
+        ) {
             return true;
         }
-        lastHistoryGestureTrigger = now;
+        lastHistoryGestureTrigger = { direction, timeStamp: now };
     }
 
     if (direction === HISTORY_BACK) {
@@ -676,19 +800,9 @@ function performViewerHistoryNavigation(direction, deduplicateGesture = false) {
     return true;
 }
 
-function canScrollHorizontally(target, deltaX) {
-    if (!target || !deltaX) return false;
-
-    const ownerDocument = target.ownerDocument || document;
-    let node = target.nodeType === 1 ? target : target.parentElement;
-    while (node) {
-        const maxScrollLeft = node.scrollWidth - node.clientWidth;
-        if (maxScrollLeft > 1) {
-            if (deltaX < 0 && node.scrollLeft > 1) return true;
-            if (deltaX > 0 && node.scrollLeft < maxScrollLeft - 1) return true;
-        }
-        if (node === ownerDocument.documentElement) break;
-        node = node.parentElement;
+function canNavigateHistory(direction) {
+    if (direction === HISTORY_BACK) {
+        return state.navIndex > 0;
     }
-    return false;
+    return state.navIndex >= 0 && state.navIndex < state.navHistory.length - 1;
 }
