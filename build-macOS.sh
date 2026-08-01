@@ -12,8 +12,18 @@ ARCH="${1:-universal}"   # arm64 | amd64 | universal (default)
 OUT_DIR="./dist/macos"
 ENTITLEMENTS="build/darwin/entitlements.plist"
 DOC_ICON_SRC="./build/darwin/markdown-doc.icns"
+ICON_COMPOSER_SRC="./build/darwin/appicon.icon"
+ICON_COMPOSER_NAME="appicon"
 CONFIG_FILE="internal/app/config.go"
 APP_VERSION_LDFLAG="dinkisstyle-markdown-browser/internal/app.AppVersion"
+ICON_ASSET_DIR=""
+
+cleanup_build_temp() {
+    if [ -n "${ICON_ASSET_DIR}" ] && [ -d "${ICON_ASSET_DIR}" ]; then
+        rm -rf "${ICON_ASSET_DIR}"
+    fi
+}
+trap cleanup_build_temp EXIT
 
 read_app_version() {
     local version
@@ -97,6 +107,38 @@ if [ ! -s "${ICNS_PATH}" ] && [ -f "${ICON_SRC}" ]; then
     echo "   ✅ iconfile.icns created successfully."
 fi
 
+# ── Modern macOS Icon Asset (Icon Composer → Assets.car) ─────
+# macOS 26+ applies an automatic glass treatment to legacy ICNS files. Compile
+# the Icon Composer document so the app can explicitly control those effects.
+if [ -d "${ICON_COMPOSER_SRC}" ] && command -v xcrun >/dev/null 2>&1; then
+    ACTOOL_PATH="$(xcrun --find actool 2>/dev/null || true)"
+    if [ -n "${ACTOOL_PATH}" ]; then
+        ICON_ASSET_DIR="$(mktemp -d /tmp/DKSTAppIconAssets.XXXXXX)"
+        echo "🎨 Compiling modern macOS icon assets..."
+        if ! "${ACTOOL_PATH}" "${ICON_COMPOSER_SRC}" \
+            --compile "${ICON_ASSET_DIR}" \
+            --notices --warnings --errors \
+            --output-partial-info-plist "${ICON_ASSET_DIR}/partial.plist" \
+            --app-icon "${ICON_COMPOSER_NAME}" \
+            --enable-on-demand-resources NO \
+            --development-region en \
+            --target-device mac \
+            --minimum-deployment-target 26.0 \
+            --platform macosx \
+            > "${ICON_ASSET_DIR}/actool-results.plist"; then
+            echo "⚠️  Warning: Failed to compile Icon Composer assets; using the legacy ICNS fallback." >&2
+            rm -rf "${ICON_ASSET_DIR}"
+            ICON_ASSET_DIR=""
+        elif [ ! -s "${ICON_ASSET_DIR}/Assets.car" ]; then
+            echo "⚠️  Warning: actool did not create Assets.car; using the legacy ICNS fallback." >&2
+            rm -rf "${ICON_ASSET_DIR}"
+            ICON_ASSET_DIR=""
+        else
+            echo "   ✅ Modern macOS icon assets created successfully."
+        fi
+    fi
+fi
+
 # ── Build Execution ─────────────────────────────────────────────
 echo "🔨 Starting Build for ${ARCH}..."
 wails build \
@@ -109,13 +151,32 @@ wails build \
 APP_BUNDLE="./build/bin/${APP_NAME}.app"
 if [ -d "${APP_BUNDLE}" ]; then
     echo "📝 Processing application bundle metadata and signing..."
-    
-    # Remove hidden metadata attributes that can break code signing
-    xattr -cr "${APP_BUNDLE}"
+
+    # Wails regenerates iconfile.icns from appicon.png while packaging, which
+    # reduces the quality of the smaller icon sizes. Restore the prepared ICNS
+    # before signing so the final app bundle keeps the supplied icon unchanged.
+    if [ ! -s "${ICNS_PATH}" ]; then
+        echo "❌ App icon not found or empty: ${ICNS_PATH}" >&2
+        exit 1
+    fi
+    echo "🖼  Restoring the prepared application icon..."
+    cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
+
+    if [ -n "${ICON_ASSET_DIR}" ] && [ -s "${ICON_ASSET_DIR}/Assets.car" ]; then
+        echo "🎨 Installing modern macOS icon assets..."
+        cp "${ICON_ASSET_DIR}/Assets.car" "${APP_BUNDLE}/Contents/Resources/Assets.car"
+        if ! /usr/libexec/PlistBuddy -c "Set :CFBundleIconName ${ICON_COMPOSER_NAME}" "${APP_BUNDLE}/Contents/Info.plist" 2>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string ${ICON_COMPOSER_NAME}" "${APP_BUNDLE}/Contents/Info.plist"
+        fi
+    fi
 
     if [ -f "${DOC_ICON_SRC}" ]; then
         cp "${DOC_ICON_SRC}" "${APP_BUNDLE}/Contents/Resources/markdown-doc.icns"
     fi
+
+    # Remove hidden metadata attributes that can break code signing. Run this
+    # after copying resources so their extended attributes are removed as well.
+    xattr -cr "${APP_BUNDLE}"
     
     EXE_PATH="${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
     
