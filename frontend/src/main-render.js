@@ -13,6 +13,7 @@ import remarkHtml from 'remark-html';
 import mermaid from 'mermaid';
 import hljs from './vendor/highlight.js/highlight.common.js';
 import { getCurrentAccentColor } from './main-theme.js';
+import { parseDocumentFrontMatter } from './frontmatter.mjs';
 
 import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
@@ -975,7 +976,10 @@ async function renderMarkdownToHTML(content) {
 }
 
 function splitMarkdownIntoBlocks(content) {
-    const normalized = String(content || '').replace(/\r\n/g, '\n');
+    const frontMatter = parseDocumentFrontMatter(content);
+    const markdownBody = frontMatter.hasFrontMatter ? frontMatter.body : content;
+    const lineOffset = frontMatter.hasFrontMatter ? frontMatter.bodyStartLine - 1 : 0;
+    const normalized = String(markdownBody || '').replace(/\r\n/g, '\n');
     const blocks = [];
     const lines = normalized.split('\n');
     let blockLines = [];
@@ -1006,7 +1010,7 @@ function splitMarkdownIntoBlocks(content) {
     };
 
     lines.forEach((line, index) => {
-        const lineNumber = index + 1;
+        const lineNumber = index + 1 + lineOffset;
         if (blockLines.length === 0) {
             if (!line.trim()) return;
             blockStartLine = lineNumber;
@@ -1244,12 +1248,16 @@ export async function renderMarkdown(content, options = {}) {
         preserveLiveBlocks = false,
     } = options;
 
+    syncDocumentMetadataUI(content);
+
     if (state.isEditing && !preserveLiveBlocks) {
         await renderMarkdownLiveBlocks(content, token);
         return;
     }
 
-    const html = await renderMarkdownToHTML(content);
+    const frontMatter = parseDocumentFrontMatter(content);
+    const renderableContent = frontMatter.hasFrontMatter ? frontMatter.body : content;
+    const html = await renderMarkdownToHTML(renderableContent);
     if (token !== previewRenderToken) {
         return;
     }
@@ -1261,6 +1269,93 @@ export async function renderMarkdown(content, options = {}) {
         livePreviewBlocks = [];
     }
     refreshSidebarContent();
+}
+
+function metadataEntries(data = {}) {
+    return Object.entries(data);
+}
+
+function metadataLabel(key) {
+    return String(key || '')
+        .replace(/[_-]+/g, ' ')
+        .replace(/([a-z0-9])([A-Z])/g, '$1 $2');
+}
+
+function renderMetadataValue(key, value) {
+    if (Array.isArray(value)) {
+        if (!value.length) return '<span class="document-meta-empty">—</span>';
+        return `<span class="document-meta-tags">${value.map(item => (
+            `<span class="document-meta-tag">${escapeHTML(String(item))}</span>`
+        )).join('')}</span>`;
+    }
+    if (typeof value === 'boolean') {
+        return `<span class="document-meta-boolean${value ? '' : ' is-false'}">${value ? 'True' : 'False'}</span>`;
+    }
+    if (value && typeof value === 'object') {
+        return `<pre class="document-meta-pre">${escapeHTML(JSON.stringify(value, null, 2))}</pre>`;
+    }
+    const text = value == null || value === '' ? '—' : String(value);
+    return `<span${key === 'title' ? ' class="document-meta-value-title"' : ''}>${escapeHTML(text)}</span>`;
+}
+
+function renderDocumentMetadataModal(frontMatter) {
+    if (!el.documentMetaBody) return;
+    if (!frontMatter.valid) {
+        const message = frontMatter.error?.message || 'The YAML front matter could not be parsed.';
+        el.documentMetaBody.innerHTML = `<div class="document-meta-error"><strong>Invalid front matter</strong><br>${escapeHTML(message)}</div>`;
+        return;
+    }
+
+    const entries = metadataEntries(frontMatter.data);
+    if (!entries.length) {
+        el.documentMetaBody.innerHTML = '<div class="document-meta-error">This front matter block does not contain any metadata.</div>';
+        return;
+    }
+
+    el.documentMetaBody.innerHTML = `<dl class="document-meta-grid">${entries.map(([key, value]) => `
+        <dt>${escapeHTML(metadataLabel(key))}</dt>
+        <dd>${renderMetadataValue(key, value)}</dd>
+    `).join('')}</dl>`;
+}
+
+export function syncDocumentMetadataUI(content = state.currentMarkdownSource) {
+    const isMarkdown = state.currentDocumentType === 'markdown' && state.currentFilePath !== HOME_SCREEN_PATH;
+    const frontMatter = isMarkdown ? parseDocumentFrontMatter(content) : { hasFrontMatter: false };
+    el.documentMetaButton?.classList.toggle('hidden', !frontMatter.hasFrontMatter);
+    el.documentMetaButton?.classList.toggle('has-error', frontMatter.hasFrontMatter && !frontMatter.valid);
+
+    if (!frontMatter.hasFrontMatter) {
+        el.documentMetaModal?.classList.add('hidden');
+    } else if (!el.documentMetaModal?.classList.contains('hidden')) {
+        renderDocumentMetadataModal(frontMatter);
+    }
+    return frontMatter;
+}
+
+export function bindDocumentMetadataUI() {
+    if (!el.documentMetaButton || bindDocumentMetadataUI.bound) return;
+    bindDocumentMetadataUI.bound = true;
+
+    const close = ({ restoreFocus = true } = {}) => {
+        el.documentMetaModal?.classList.add('hidden');
+        if (restoreFocus) el.documentMetaButton?.focus();
+    };
+    el.documentMetaButton.addEventListener('click', () => {
+        const frontMatter = syncDocumentMetadataUI();
+        if (!frontMatter.hasFrontMatter) return;
+        renderDocumentMetadataModal(frontMatter);
+        el.documentMetaModal.classList.remove('hidden');
+        requestAnimationFrame(() => el.documentMetaClose?.focus());
+    });
+    el.documentMetaClose?.addEventListener('click', () => close());
+    el.documentMetaModal?.addEventListener('click', event => {
+        if (event.target === el.documentMetaModal) close();
+    });
+    document.addEventListener('keydown', event => {
+        if (event.key !== 'Escape' || el.documentMetaModal?.classList.contains('hidden')) return;
+        event.preventDefault();
+        close();
+    });
 }
 
 // ── Recent Files Rendering ─────────────────────────────────
@@ -1320,6 +1415,7 @@ export async function renderActiveTab() {
     const isMarkdown = state.currentDocumentType === 'markdown' &&
         state.currentFilePath !== HOME_SCREEN_PATH &&
         !isBundledDocumentPath(state.currentFilePath);
+    syncDocumentMetadataUI(isMarkdown ? state.currentMarkdownSource : '');
     el.btnEdit.disabled = !isMarkdown;
 
     // Disable translate button when not in viewer mode or not a markdown file

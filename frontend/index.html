@@ -37,6 +37,10 @@
 
             <div class="address-bar">
                 <span id="current-path">DKST Markdown Browser</span>
+                <button id="document-meta-button" class="address-meta-button hidden" type="button"
+                    title="Document metadata" aria-label="Show document metadata" aria-haspopup="dialog">
+                    <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                </button>
             </div>
 
             <div class="action-group">
@@ -139,6 +143,8 @@
                         <div class="edit-tool-group">
                             <button id="ed-find-replace" title="Find & Replace (⌘F)" class="tool-btn"><span
                                     class="material-symbols-outlined">manage_search</span></button>
+                            <button id="ed-page-info" title="Insert Page Info" aria-label="Insert Page Info"
+                                class="tool-btn"><span class="material-symbols-outlined">info</span></button>
                             <button id="ed-spellcheck" title="Spellcheck" class="tool-btn"><span
                                     class="material-symbols-outlined">spellcheck</span></button>
                             <button id="ed-translate-doc" title="Translate Document" class="tool-btn"><span
@@ -478,6 +484,26 @@
                 Tab</button>
         </div>
 
+        <div id="document-meta-modal" class="modal-overlay hidden">
+            <div class="modal-content document-meta-content" role="dialog" aria-modal="true"
+                aria-labelledby="document-meta-title">
+                <header class="document-meta-header">
+                    <div class="document-meta-heading">
+                        <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                        <div>
+                            <div class="document-meta-kicker">Page info</div>
+                            <h3 id="document-meta-title">Document metadata</h3>
+                        </div>
+                    </div>
+                    <button id="document-meta-close" class="document-meta-close" type="button"
+                        aria-label="Close document metadata">
+                        <span class="material-symbols-outlined" aria-hidden="true">close</span>
+                    </button>
+                </header>
+                <div id="document-meta-body" class="document-meta-body"></div>
+            </div>
+        </div>
+
         <!-- Custom Modal for Prompts -->
         <div id="modal-overlay" class="modal-overlay hidden">
             <div id="modal-content" class="modal-content">
@@ -763,6 +789,16 @@
                                 <p>Tune writing behavior, toolbar complexity, and syntax colors.</p>
                             </header>
                             <section class="ai-setting-group ai-setting-group-editor settings-card settings-row-card">
+                                <label class="settings-control-row" for="editor-author-name">
+                                    <span class="settings-control-copy">
+                                        <strong>Author name</strong>
+                                        <small>Used when inserting Page Info front matter into a document.</small>
+                                    </span>
+                                    <span class="settings-control-slot">
+                                        <input id="editor-author-name" type="text" placeholder="Leave blank"
+                                            autocomplete="off" />
+                                    </span>
+                                </label>
                                 <div class="settings-control-row">
                                     <span class="settings-control-copy">
                                         <strong>Scroll synchronization</strong>

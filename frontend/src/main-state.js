@@ -4,6 +4,7 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
+import { getFrontMatterTitle, parseDocumentFrontMatter } from './frontmatter.mjs';
 
 // ── Constants ──────────────────────────────────────────────
 export const HOME_SCREEN_PATH = '__home__';
@@ -76,6 +77,10 @@ export const getScroller = () => document.getElementById('content-view');
 export const el = {
     startupSplash: $('startup-splash'),
     currentPath: $('current-path'),
+    documentMetaButton: $('document-meta-button'),
+    documentMetaModal: $('document-meta-modal'),
+    documentMetaClose: $('document-meta-close'),
+    documentMetaBody: $('document-meta-body'),
     tabsList: $('tabs-list'),
     btnNewTab: $('btn-new-tab'),
     homeScreen: $('home-screen'),
@@ -164,6 +169,7 @@ export const el = {
     edInsertMenu: $('ed-insert-menu'),
     edMoreMenu: $('ed-more-menu'),
     edFindReplace: $('ed-find-replace'),
+    edPageInfo: $('ed-page-info'),
     edSpellcheck: $('ed-spellcheck'),
     edTranslateDoc: $('ed-translate-doc'),
     edRenderMode: $('ed-render-mode'),
@@ -243,6 +249,7 @@ export const el = {
     editorPreviewScrollSync: $('editor-preview-scroll-sync'),
     editorOrderedListStyle: $('editor-ordered-list-style'),
     editorToolbarMode: $('editor-toolbar-mode'),
+    editorAuthorName: $('editor-author-name'),
     editorTokenColorsEnabled: $('editor-token-colors-enabled'),
     editorBackgroundColor: $('editor-background-color'),
     editorTokenPresetList: $('editor-token-preset-list'),
@@ -338,6 +345,7 @@ export const state = {
     editingPreviewFolder: "",
     currentEditorRenderMode: "realtime",
     editorToolbarMode: "beginner",
+    editorAuthor: "",
     editorPreviewScrollSyncEnabled: true,
     editorOrderedListStyle: "standard",
     editorTokenColorsEnabled: true,
@@ -533,9 +541,6 @@ export function formatDisplayPath(path) {
 
 export function deriveTabTitle(path, content, { maxContentLength = Infinity } = {}) {
     if (path === HOME_SCREEN_PATH) return 'Start';
-    if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
-    const localizedTitle = getLocalizedBundledDocumentTitle(path);
-    if (localizedTitle) return localizedTitle;
     if (documentTypeFromPath(path) === 'html') {
         const doc = new DOMParser().parseFromString(content, 'text/html');
         const title = doc.querySelector('title')?.textContent?.trim();
@@ -545,10 +550,18 @@ export function deriveTabTitle(path, content, { maxContentLength = Infinity } = 
     const titleContent = Number.isFinite(maxContentLength)
         ? String(content || '').slice(0, maxContentLength)
         : String(content || '');
-    const heading = titleContent.match(/^#\s+(.+)$/m)?.[1]?.trim();
+    const metadataTitle = getFrontMatterTitle(titleContent);
+    if (metadataTitle) return metadataTitle.slice(0, 96);
+
+    if (path === THIRD_PARTY_NOTICES_PATH) return 'Open Source Notices';
+    const localizedTitle = getLocalizedBundledDocumentTitle(path);
+    if (localizedTitle) return localizedTitle;
+
+    const markdownBody = parseDocumentFrontMatter(titleContent).body;
+    const heading = markdownBody.match(/^#\s+(.+)$/m)?.[1]?.trim();
     if (heading) return heading;
 
-    const firstLine = titleContent
+    const firstLine = markdownBody
         .split('\n')
         .map(line => line.trim())
         .find(line => line && !line.startsWith('---'));

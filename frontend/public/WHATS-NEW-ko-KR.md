@@ -1,3 +1,13 @@
+---
+title: "DKST Markdown Browser 2.2"
+author: "DINKI'ssTyle"
+team: "DKST"
+date: "2026-08-01"
+tags: ["readme"]
+draft: false
+---
+
+
 <div align="left"><img src="img/textflow.png" width="32"/></div>
 
 DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경험해보세요. 스니펫을 단축어를 이용해 문서 작성을 돕습니다. AI 지원은 물론, OCR, 플로팅 스크린샷과 같은 다양한 기능을 통해 작업 효율을 높여줍니다. [더 알아보기](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
@@ -11,6 +21,13 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 <div align="center">DKST 마크다운 브라우저가 더욱 강력해졌습니다!<br>이번 버전에 추가된 주요 기능을 확인해 보세요.</div>
 
 # 변경 사항
+
+## 2.2.2
+
+#### 추가된 사항 (New Features)
+
+- **프런트 매터(Front Matter) 지원**: 프런트 매터가 포함된 마크다운 문서를 열면 주소창에 느낌표 버튼이 나타나며, 탭에는 메타데이터에서 정의된 제목이 표시됩니다.
+- **프런트 매터(Front Matter) 삽입**: 편집 모드에서 느낌표 버튼을 누르면 제목, 작성자, 날짜, 태그, 초안 여부 등의 기본 템플릿이 삽입됩니다. 프런트 매터가 삽입되면, 제목은 마크다운 문서의 첫 줄이 기본으로 들어가고, 작성자는 설정 → Editor 탭 → Author name 값을 사용하며, 날짜는 작성 시점이 입력됩니다.
 
 ## 2.2.1
 

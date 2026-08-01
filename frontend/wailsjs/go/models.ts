@@ -33,6 +33,7 @@ export namespace app {
 	    engine: string;
 	    editorRenderMode: string;
 	    editorToolbarMode: string;
+	    editorAuthor: string;
 	    editorPreviewScrollSync: boolean;
 	    editorOrderedListStyle: string;
 	    editorTokenColorsEnabled: boolean;
@@ -82,6 +83,7 @@ export namespace app {
 	        this.engine = source["engine"];
 	        this.editorRenderMode = source["editorRenderMode"];
 	        this.editorToolbarMode = source["editorToolbarMode"];
+	        this.editorAuthor = source["editorAuthor"];
 	        this.editorPreviewScrollSync = source["editorPreviewScrollSync"];
 	        this.editorOrderedListStyle = source["editorOrderedListStyle"];
 	        this.editorTokenColorsEnabled = source["editorTokenColorsEnabled"];

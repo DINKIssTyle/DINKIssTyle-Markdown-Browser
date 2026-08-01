@@ -90,6 +90,7 @@ type AppSettings struct {
 	Engine                   string            `json:"engine"`
 	EditorRenderMode         string            `json:"editorRenderMode"`
 	EditorToolbarMode        string            `json:"editorToolbarMode"`
+	EditorAuthor             string            `json:"editorAuthor"`
 	EditorPreviewScrollSync  bool              `json:"editorPreviewScrollSync"`
 	EditorOrderedListStyle   string            `json:"editorOrderedListStyle"`
 	EditorTokenColorsEnabled bool              `json:"editorTokenColorsEnabled"`
@@ -657,6 +658,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.Engine = "marked"              // "marked" | "html"
 	settings.EditorRenderMode = "realtime"  // "realtime" | "cursor"
 	settings.EditorToolbarMode = "beginner" // "beginner" | "rookie" | "pro"
+	settings.EditorAuthor = ""
 	settings.EditorPreviewScrollSync = true
 	settings.EditorOrderedListStyle = "standard" // "standard" | "incremental"
 	settings.EditorTokenColorsEnabled = true

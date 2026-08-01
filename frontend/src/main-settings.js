@@ -59,6 +59,7 @@ export function buildSettingsPayload(overrides = {}) {
         engine: state.currentMarkdownEngine,
         editorRenderMode: state.currentEditorRenderMode,
         editorToolbarMode: state.editorToolbarMode,
+        editorAuthor: state.editorAuthor,
         editorPreviewScrollSync: state.editorPreviewScrollSyncEnabled,
         editorOrderedListStyle: state.editorOrderedListStyle,
         editorTokenColorsEnabled: state.editorTokenColorsEnabled,

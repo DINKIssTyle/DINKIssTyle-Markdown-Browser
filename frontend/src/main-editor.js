@@ -7,7 +7,7 @@ import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_F
 import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { getActiveTab, renderTabs } from './main-tabs.js';
-import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip } from './main-render.js';
+import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip, syncDocumentMetadataUI } from './main-render.js';
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../wailsjs/go/app/App';
@@ -34,6 +34,7 @@ import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { enqueueLLMTask, ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 import { showTextPrompt } from './main-dialogs.js';
+import { buildDocumentFrontMatter, formatLocalISODate, getFirstMarkdownLineTitle, parseDocumentFrontMatter } from './frontmatter.mjs';
 
 // ── Module-level State ─────────────────────────────────────
 let slashMenuState = null;
@@ -373,6 +374,63 @@ const spellcheckField = StateField.define({
     provide: field => EditorView.decorations.from(field, value => value.decorations),
 });
 
+function buildFrontMatterDraftDecorations(doc) {
+    const source = doc.toString();
+    const frontMatter = parseDocumentFrontMatter(source);
+    if (!frontMatter.hasFrontMatter) return Decoration.none;
+
+    const decorations = [];
+    const closingLine = doc.lineAt(Math.max(0, frontMatter.bodyStart - 1)).number;
+    for (let lineNumber = 1; lineNumber <= closingLine; lineNumber += 1) {
+        decorations.push(Decoration.line({ class: 'cm-frontmatter-plain' }).range(doc.line(lineNumber).from));
+    }
+
+    const yamlSource = source.slice(frontMatter.yamlStart, frontMatter.yamlEnd);
+    const match = /^draft[ \t]*:[ \t]*(true|false)(?=[ \t]*(?:#.*)?$)/gmi.exec(yamlSource);
+    if (!match) return Decoration.set(decorations, true);
+
+    const valueOffset = match[0].lastIndexOf(match[1]);
+    const from = frontMatter.yamlStart + match.index + valueOffset;
+    const value = match[1].toLowerCase();
+    decorations.push(Decoration.mark({
+        class: 'cm-frontmatter-boolean',
+        attributes: {
+            'data-draft-value': value,
+            'aria-label': `Draft ${value}. Click to toggle.`,
+            'aria-checked': String(value === 'true'),
+            role: 'switch',
+            title: `Click to change draft to ${value === 'true' ? 'false' : 'true'}`,
+        },
+    }).range(from, from + match[1].length));
+    return Decoration.set(decorations, true);
+}
+
+const frontMatterDraftField = StateField.define({
+    create(editorState) {
+        return buildFrontMatterDraftDecorations(editorState.doc);
+    },
+    update(decorations, transaction) {
+        return transaction.docChanged ? buildFrontMatterDraftDecorations(transaction.newDoc) : decorations;
+    },
+    provide: field => EditorView.decorations.from(field),
+});
+
+function toggleFrontMatterDraft(view, marker) {
+    const position = view.posAtDOM(marker, 0);
+    const line = view.state.doc.lineAt(position);
+    const match = line.text.match(/^(draft[ \t]*:[ \t]*)(true|false)([ \t]*(?:#.*)?)$/i);
+    if (!match) return false;
+
+    const from = line.from + match[1].length;
+    const to = from + match[2].length;
+    const nextValue = match[2].toLowerCase() === 'true' ? 'false' : 'true';
+    view.dispatch({
+        changes: { from, to, insert: nextValue },
+        userEvent: 'input',
+    });
+    return true;
+}
+
 const HTML_VOID_TAGS = [
     'area', 'base', 'br', 'col', 'embed', 'hr', 'img', 'input',
     'link', 'meta', 'param', 'source', 'track', 'wbr'
@@ -389,6 +447,7 @@ const TOOLBAR_COLLAPSED_BUTTON_IDS = Object.freeze([
 ]);
 const TOOLBAR_DIRECT_TOOL_IDS = Object.freeze([
     'ed-find-replace',
+    'ed-page-info',
     'ed-spellcheck',
     'ed-translate-doc',
     'ed-bold',
@@ -438,6 +497,7 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
     rookie: Object.freeze({
         show: [
             'ed-find-replace',
+            'ed-page-info',
             'ed-spellcheck',
             'ed-translate-doc',
             'ed-bold',
@@ -482,6 +542,7 @@ const TOOLBAR_MODE_CONFIG = Object.freeze({
     pro: Object.freeze({
         show: [
             'ed-find-replace',
+            'ed-page-info',
             'ed-spellcheck',
             'ed-translate-doc',
             'ed-bold',
@@ -3095,6 +3156,7 @@ export function initCodeMirror() {
             tokenColorCompartment.of(getTokenColorExtension()),
             ghostTextField,
             spellcheckField,
+            frontMatterDraftField,
             drawSelection(),
             dropCursor(),
             EditorView.lineWrapping,
@@ -3126,7 +3188,12 @@ export function initCodeMirror() {
                     scheduleHideSpellcheckTooltip();
                     return false;
                 },
-                click(event) {
+                click(event, view) {
+                    const draftMarker = event.target instanceof Element ? event.target.closest('.cm-frontmatter-boolean') : null;
+                    if (draftMarker) {
+                        event.preventDefault();
+                        return toggleFrontMatterDraft(view, draftMarker);
+                    }
                     const marker = event.target instanceof Element ? event.target.closest('.cm-spellcheck-marker') : null;
                     const id = marker?.dataset?.spellcheckId;
                     if (!id) return false;
@@ -3164,6 +3231,7 @@ export function initCodeMirror() {
                     const hadUnsavedChanges = state.isEditing && state.currentMarkdownSource !== state.editorOriginalContent;
                     const val = update.state.doc.toString();
                     state.currentMarkdownSource = val;
+                    syncDocumentMetadataUI(val);
                     const tab = getActiveTab();
                     if (tab) {
                         tab.currentMarkdownSource = val;
@@ -4662,6 +4730,9 @@ export function bindEditorEvents() {
     el.edUl.onclick = () => applyBlockMarker('ul');
     el.edOl.onclick = () => applyBlockMarker('ol');
     el.edHr.onclick = () => insertHorizontalRule();
+    if (el.edPageInfo) {
+        el.edPageInfo.onclick = insertPageInfoFrontMatter;
+    }
 
     el.edLink.onclick = insertLink;
     el.edImage.onclick = insertImage;
@@ -4703,6 +4774,39 @@ export function bindEditorEvents() {
         void saveCurrentDocumentAs();
     };
     el.edSave.onclick = handleSave;
+}
+
+function insertPageInfoFrontMatter() {
+    if (!cmView) return;
+    const content = cmView.state.doc.toString();
+    const existing = parseDocumentFrontMatter(content);
+    if (existing.hasFrontMatter) {
+        cmView.dispatch({
+            selection: { anchor: existing.yamlStart, head: existing.yamlEnd },
+            scrollIntoView: true,
+        });
+        cmView.focus();
+        showToast('Page Info already exists.');
+        return;
+    }
+
+    const title = getFirstMarkdownLineTitle(content);
+    const block = buildDocumentFrontMatter({
+        title,
+        author: state.editorAuthor || '',
+        date: formatLocalISODate(),
+        tags: ['tag1', 'tag2', 'tag3'],
+        draft: false,
+    });
+    const insertAt = content.startsWith('\uFEFF') ? 1 : 0;
+    cmView.dispatch({
+        changes: { from: insertAt, insert: block },
+        selection: EditorSelection.cursor(insertAt + block.length),
+        scrollIntoView: true,
+        userEvent: 'input',
+    });
+    cmView.focus();
+    showToast('Page Info inserted. Click the draft value to toggle it.');
 }
 
 function bindEditorPaneSplitter() {

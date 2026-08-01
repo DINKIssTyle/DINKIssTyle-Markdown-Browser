@@ -1226,6 +1226,9 @@ function renderEditorTokenColorControls() {
 }
 
 function syncEditorSettingsControls() {
+    if (el.editorAuthorName) {
+        el.editorAuthorName.value = state.editorAuthor || '';
+    }
     if (el.editorPreviewScrollSync) {
         el.editorPreviewScrollSync.checked = state.editorPreviewScrollSyncEnabled;
     }
@@ -1279,6 +1282,7 @@ function applyEditorTokenColorPreset(presetKey) {
 }
 
 function collectEditorSettingsFromControls() {
+    state.editorAuthor = el.editorAuthorName?.value?.trim() || '';
     state.editorPreviewScrollSyncEnabled = el.editorPreviewScrollSync?.checked ?? true;
     state.editorOrderedListStyle = el.editorOrderedListStyle?.value === 'incremental' ? 'incremental' : 'standard';
     state.editorToolbarMode = ['beginner', 'rookie', 'pro'].includes(el.editorToolbarMode?.value)

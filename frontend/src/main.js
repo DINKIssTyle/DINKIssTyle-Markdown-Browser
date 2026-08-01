@@ -19,7 +19,7 @@ import {
     goBack, goForward, goHome, reloadCurrent, updateNavButtons,
     bindHistoryMouseNavigation,
 } from './main-navigation.js';
-import { renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
+import { bindDocumentMetadataUI, renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
 import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, toggleEditorPreview } from './main-editor.js';
 import {
     showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
@@ -59,6 +59,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         await renderRecentFiles();
 
         bindToolbar();
+        bindDocumentMetadataUI();
         bindHomeScreen();
         bindSystemInstallModal();
         bindHighlightNav();
@@ -165,6 +166,7 @@ async function loadSettings() {
     state.currentEngine = state.currentMarkdownEngine;
     state.currentEditorRenderMode = s.editorRenderMode || "realtime";
     state.editorToolbarMode = ["beginner", "rookie", "pro"].includes(s.editorToolbarMode) ? s.editorToolbarMode : "beginner";
+    state.editorAuthor = s.editorAuthor || "";
     state.editorOrderedListStyle = s.editorOrderedListStyle === "incremental" ? "incremental" : "standard";
     state.lastVersion = s.lastVersion || "";
     state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
