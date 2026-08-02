@@ -14,6 +14,10 @@ export function CancelAIRequest() {
   return window['go']['app']['App']['CancelAIRequest']();
 }
 
+export function CheckForUpdate() {
+  return window['go']['app']['App']['CheckForUpdate']();
+}
+
 export function ClearRecentFiles() {
   return window['go']['app']['App']['ClearRecentFiles']();
 }

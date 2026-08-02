@@ -19,6 +19,7 @@ import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_
 import { isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
 import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
+import { collectUpdateSettingsFromControls, syncUpdateSettingsControls } from './main-update.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
@@ -1019,23 +1020,28 @@ function syncSettingsTabs(activeTab = 'appearance') {
     const isReading = normalizedTab === 'reading';
     const isEditor = normalizedTab === 'editor';
     const isAi = normalizedTab === 'ai';
+    const isUpdate = normalizedTab === 'update';
     lastSettingsTab = normalizedTab;
     el.settingsTabCommon?.classList.toggle('active', isCommon);
     el.settingsTabReading?.classList.toggle('active', isReading);
     el.settingsTabEditor?.classList.toggle('active', isEditor);
     el.settingsTabAi?.classList.toggle('active', isAi);
+    el.settingsTabUpdate?.classList.toggle('active', isUpdate);
     el.settingsTabCommon?.setAttribute('aria-selected', String(isCommon));
     el.settingsTabReading?.setAttribute('aria-selected', String(isReading));
     el.settingsTabEditor?.setAttribute('aria-selected', String(isEditor));
     el.settingsTabAi?.setAttribute('aria-selected', String(isAi));
+    el.settingsTabUpdate?.setAttribute('aria-selected', String(isUpdate));
     el.settingsTabCommon?.setAttribute('tabindex', isCommon ? '0' : '-1');
     el.settingsTabReading?.setAttribute('tabindex', isReading ? '0' : '-1');
     el.settingsTabEditor?.setAttribute('tabindex', isEditor ? '0' : '-1');
     el.settingsTabAi?.setAttribute('tabindex', isAi ? '0' : '-1');
+    el.settingsTabUpdate?.setAttribute('tabindex', isUpdate ? '0' : '-1');
     el.settingsPanelCommon?.classList.toggle('hidden', !isCommon);
     el.settingsPanelReading?.classList.toggle('hidden', !isReading);
     el.settingsPanelEditor?.classList.toggle('hidden', !isEditor);
     el.settingsPanelAi?.classList.toggle('hidden', !isAi);
+    el.settingsPanelUpdate?.classList.toggle('hidden', !isUpdate);
     if (el.settingsContentScroll) {
         el.settingsContentScroll.scrollTop = 0;
     }
@@ -1414,16 +1420,48 @@ export async function initAI() {
     return aiState;
 }
 
+export function openSettings(activeTab = lastSettingsTab) {
+    settingsAccentSnapshot = {
+        light: state.lightAccentColor,
+        dark: state.darkAccentColor,
+        editorTokenColors: { ...(state.editorTokenColors || {}) },
+        documentMargin: state.documentMargin,
+        viewerFontFamily: state.viewerFontFamily,
+    };
+    syncSettingsTabs(activeTab);
+    syncCommonSettingsControls();
+    syncEditorSettingsControls();
+    syncUpdateSettingsControls();
+    if (el.aiFeaturesDisabled) {
+        el.aiFeaturesDisabled.checked = state.aiFeaturesDisabled;
+    }
+    syncSettingsProxyControls();
+    resetSettingsPasswordVisibility();
+    syncAISettingsSections();
+    syncGeneralModelControl();
+    if (el.aiGeneralProvider.value === 'lmstudio') {
+        refreshLMStudioModels({ keepOpen: false });
+    }
+    el.aiSettingsModal.classList.remove('hidden');
+    requestAnimationFrame(() => {
+        captureSettingsBaseline();
+        const activeTabElement = el.aiSettingsModal.querySelector('.settings-tab.active');
+        activeTabElement?.focus();
+    });
+}
+
 export function bindAIEvents() {
     el.settingsTabCommon?.addEventListener('click', () => syncSettingsTabs('appearance'));
     el.settingsTabReading?.addEventListener('click', () => syncSettingsTabs('reading'));
     el.settingsTabEditor?.addEventListener('click', () => syncSettingsTabs('editor'));
     el.settingsTabAi?.addEventListener('click', () => syncSettingsTabs('ai'));
+    el.settingsTabUpdate?.addEventListener('click', () => syncSettingsTabs('update'));
     const settingsTabs = [
         { element: el.settingsTabCommon, name: 'appearance' },
         { element: el.settingsTabReading, name: 'reading' },
         { element: el.settingsTabEditor, name: 'editor' },
         { element: el.settingsTabAi, name: 'ai' },
+        { element: el.settingsTabUpdate, name: 'update' },
     ].filter(item => item.element);
     settingsTabs.forEach((item, index) => {
         item.element.addEventListener('keydown', event => {
@@ -1534,34 +1572,7 @@ export function bindAIEvents() {
     document.addEventListener('keydown', handleDocumentKeydownForModelPopover);
 
     // Settings Modal
-    el.edSettings.onclick = () => {
-        settingsAccentSnapshot = {
-            light: state.lightAccentColor,
-            dark: state.darkAccentColor,
-            editorTokenColors: { ...(state.editorTokenColors || {}) },
-            documentMargin: state.documentMargin,
-            viewerFontFamily: state.viewerFontFamily,
-        };
-        syncSettingsTabs(lastSettingsTab);
-        syncCommonSettingsControls();
-        syncEditorSettingsControls();
-        if (el.aiFeaturesDisabled) {
-            el.aiFeaturesDisabled.checked = state.aiFeaturesDisabled;
-        }
-        syncSettingsProxyControls();
-        resetSettingsPasswordVisibility();
-        syncAISettingsSections();
-        syncGeneralModelControl();
-        if (el.aiGeneralProvider.value === 'lmstudio') {
-            refreshLMStudioModels({ keepOpen: false });
-        }
-        el.aiSettingsModal.classList.remove('hidden');
-        requestAnimationFrame(() => {
-            captureSettingsBaseline();
-            const activeTab = el.aiSettingsModal.querySelector('.settings-tab.active');
-            activeTab?.focus();
-        });
-    };
+    el.edSettings.onclick = () => openSettings();
     el.aiSettingsCancel.onclick = () => {
         closeGeneralModelPopover();
         resetSettingsPasswordVisibility();
@@ -1643,6 +1654,7 @@ export function bindAIEvents() {
         state.darkAccentColor = normalizeAccentColor(el.darkAccentCustom?.value, state.darkAccentColor);
         state.documentMargin = el.settingsDocumentMargin?.value || "none";
         state.viewerFontFamily = el.settingsViewerFont?.value || "";
+        collectUpdateSettingsFromControls();
         collectMainToolbarSettingsFromControls();
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         applyDocumentMarginStyle(state.documentMargin);

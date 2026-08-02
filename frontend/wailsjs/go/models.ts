@@ -62,6 +62,8 @@ export namespace app {
 	    aiSupportAgent: boolean;
 	    koreanImeEnterFix: boolean;
 	    lastVersion: string;
+	    updateCheckInterval: string;
+	    lastUpdateCheck: string;
 	    documentMargin: string;
 	    viewerFontFamily: string;
 	
@@ -112,6 +114,8 @@ export namespace app {
 	        this.aiSupportAgent = source["aiSupportAgent"];
 	        this.koreanImeEnterFix = source["koreanImeEnterFix"];
 	        this.lastVersion = source["lastVersion"];
+	        this.updateCheckInterval = source["updateCheckInterval"];
+	        this.lastUpdateCheck = source["lastUpdateCheck"];
 	        this.documentMargin = source["documentMargin"];
 	        this.viewerFontFamily = source["viewerFontFamily"];
 	    }
@@ -435,6 +439,74 @@ export namespace app {
 	}
 	
 	
+	export class UpdateAsset {
+	    name: string;
+	    downloadUrl: string;
+	    size: number;
+	    digest: string;
+
+	    static createFrom(source: any = {}) {
+	        return new UpdateAsset(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.name = source["name"];
+	        this.downloadUrl = source["downloadUrl"];
+	        this.size = source["size"];
+	        this.digest = source["digest"];
+	    }
+	}
+	export class UpdateInfo {
+	    available: boolean;
+	    currentVersion: string;
+	    latestVersion: string;
+	    releaseName: string;
+	    releaseNotes: string;
+	    releaseUrl: string;
+	    publishedAt: string;
+	    checkedAt: string;
+	    operatingSystem: string;
+	    architecture: string;
+	    asset?: UpdateAsset;
+
+	    static createFrom(source: any = {}) {
+	        return new UpdateInfo(source);
+	    }
+
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.available = source["available"];
+	        this.currentVersion = source["currentVersion"];
+	        this.latestVersion = source["latestVersion"];
+	        this.releaseName = source["releaseName"];
+	        this.releaseNotes = source["releaseNotes"];
+	        this.releaseUrl = source["releaseUrl"];
+	        this.publishedAt = source["publishedAt"];
+	        this.checkedAt = source["checkedAt"];
+	        this.operatingSystem = source["operatingSystem"];
+	        this.architecture = source["architecture"];
+	        this.asset = this.convertValues(source["asset"], UpdateAsset);
+	    }
+
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
 
 }
 
@@ -456,4 +528,3 @@ export namespace options {
 	}
 
 }
-

@@ -21,14 +21,78 @@ let activeProgressTaskId = 0;
 // ── Toast ──────────────────────────────────────────────────
 
 export function showToast(msg, icon = null, duration = 2400) {
+	resetToast();
     if (icon) {
-        el.toast.innerHTML = `<span class="material-symbols-outlined toast-icon">${icon}</span><span class="toast-text">${msg}</span>`;
+        const iconElement = document.createElement('span');
+        iconElement.className = 'material-symbols-outlined toast-icon';
+        iconElement.textContent = icon;
+        const textElement = document.createElement('span');
+        textElement.className = 'toast-text';
+        textElement.textContent = msg;
+        el.toast.append(iconElement, textElement);
     } else {
         el.toast.textContent = msg;
     }
     el.toast.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.toast.classList.remove('show'), duration);
+}
+
+export function showActionToast(msg, { icon = null, actionLabel = '', onAction = null, dismissible = true, duration = 0 } = {}) {
+    resetToast();
+    el.toast.classList.add('is-interactive');
+
+    if (icon) {
+        const iconElement = document.createElement('span');
+        iconElement.className = 'material-symbols-outlined toast-icon';
+        iconElement.textContent = icon;
+        el.toast.append(iconElement);
+    }
+
+    const textElement = document.createElement('span');
+    textElement.className = 'toast-text';
+    textElement.textContent = msg;
+    el.toast.append(textElement);
+
+    if (actionLabel) {
+        const action = document.createElement('button');
+        action.type = 'button';
+        action.className = 'toast-action';
+        action.textContent = actionLabel;
+        action.addEventListener('click', () => {
+            hideToast();
+            onAction?.();
+        });
+        el.toast.append(action);
+    }
+
+    if (dismissible) {
+        const dismiss = document.createElement('button');
+        dismiss.type = 'button';
+        dismiss.className = 'toast-dismiss';
+        dismiss.setAttribute('aria-label', 'Dismiss notification');
+        dismiss.innerHTML = '<span class="material-symbols-outlined" aria-hidden="true">close</span>';
+        dismiss.addEventListener('click', hideToast);
+        el.toast.append(dismiss);
+    }
+
+    el.toast.classList.add('show');
+    if (duration > 0) {
+        toastTimer = setTimeout(hideToast, duration);
+    }
+}
+
+export function hideToast() {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    el.toast.classList.remove('show', 'is-interactive');
+}
+
+function resetToast() {
+    clearTimeout(toastTimer);
+    toastTimer = null;
+    el.toast.classList.remove('show', 'is-interactive');
+    el.toast.replaceChildren();
 }
 
 // ── Progress Widget ────────────────────────────────────────

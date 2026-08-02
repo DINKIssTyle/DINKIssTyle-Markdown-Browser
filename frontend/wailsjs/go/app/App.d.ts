@@ -9,6 +9,8 @@ export function AskSaveDiscardCancel(arg1:string,arg2:string):Promise<string>;
 
 export function CancelAIRequest():Promise<void>;
 
+export function CheckForUpdate():Promise<app.UpdateInfo>;
+
 export function ClearRecentFiles():Promise<void>;
 
 export function ConfirmOpenExternalURL(arg1:string):Promise<boolean>;

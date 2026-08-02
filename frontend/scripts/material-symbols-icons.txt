@@ -30,6 +30,7 @@ description
 device_thermostat
 disabled_by_default
 dock_to_left
+download
 draft
 drive_file_rename_outline
 edit_note
@@ -73,11 +74,13 @@ manage_search
 markdown
 mood
 more_horiz
+new_releases
 open_in_new
 preview
 preview_off
 print
 priority_high
+progress_activity
 redo
 refresh
 report
@@ -92,6 +95,7 @@ strikethrough_s
 support_agent
 swap_horiz
 swap_vert
+system_update
 table_chart
 text_decrease
 text_increase

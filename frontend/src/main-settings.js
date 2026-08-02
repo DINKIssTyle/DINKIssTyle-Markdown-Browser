@@ -90,6 +90,8 @@ export function buildSettingsPayload(overrides = {}) {
         aiSupportAgent: state.aiSupportAgentEnabled,
         koreanImeEnterFix: state.koreanImeFixEnabled,
         lastVersion: state.lastVersion,
+        updateCheckInterval: state.updateCheckInterval,
+        lastUpdateCheck: state.lastUpdateCheck,
         ...overrides,
     };
 }

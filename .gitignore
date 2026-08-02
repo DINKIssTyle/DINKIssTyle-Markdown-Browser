@@ -9,6 +9,7 @@ frontend/package.json.md5
 dinkisstyle-markdown-browser
 note
 *_test.go
+!internal/app/update_test.go
 
 frontend/wailsjs/runtime/runtime.d.ts
 frontend/wailsjs/runtime/runtime.js

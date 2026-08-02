@@ -121,6 +121,8 @@ type AppSettings struct {
 	AISupportAgent           bool              `json:"aiSupportAgent"`
 	KoreanImeEnterFix        bool              `json:"koreanImeEnterFix"`
 	LastVersion              string            `json:"lastVersion"`
+	UpdateCheckInterval      string            `json:"updateCheckInterval"`
+	LastUpdateCheck          string            `json:"lastUpdateCheck"`
 	DocumentMargin           string            `json:"documentMargin"`
 	ViewerFontFamily         string            `json:"viewerFontFamily"`
 }
@@ -131,6 +133,7 @@ type App struct {
 	settingsPath      string
 	recentPath        string
 	mu                sync.Mutex
+	settingsMu        sync.Mutex
 	systemFontsOnce   sync.Once
 	systemFonts       []FontInfo
 	activeAIRequestID int64
@@ -695,6 +698,12 @@ func (a *App) ClearRecentFiles() {
 
 // GetSettings loads the application settings
 func (a *App) GetSettings() AppSettings {
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	return a.getSettingsUnlocked()
+}
+
+func (a *App) getSettingsUnlocked() AppSettings {
 	var settings AppSettings
 	// Default settings
 	settings.Theme = "light" // "dark" | "light"
@@ -728,6 +737,7 @@ func (a *App) GetSettings() AppSettings {
 	settings.AIFIMTemp = 0.0
 	settings.DocumentMargin = "none"
 	settings.ViewerFontFamily = ""
+	settings.UpdateCheckInterval = updateCheckIntervalWeekly
 
 	data, err := os.ReadFile(a.settingsPath)
 	if err == nil {
@@ -739,12 +749,23 @@ func (a *App) GetSettings() AppSettings {
 
 // SaveSettings saves the application settings
 func (a *App) SaveSettings(settings AppSettings) {
+	a.settingsMu.Lock()
+	defer a.settingsMu.Unlock()
+	a.saveSettingsUnlocked(settings)
+}
+
+func (a *App) saveSettingsUnlocked(settings AppSettings) {
 	normalizeSettings(&settings)
 	data, _ := json.Marshal(settings)
 	os.WriteFile(a.settingsPath, data, 0644)
 }
 
 func normalizeSettings(settings *AppSettings) {
+	switch settings.UpdateCheckInterval {
+	case updateCheckIntervalNever, updateCheckIntervalDaily, updateCheckIntervalWeekly, updateCheckIntervalMonthly:
+	default:
+		settings.UpdateCheckInterval = updateCheckIntervalWeekly
+	}
 	if settings.RecentFileDisplayLimit < 0 {
 		settings.RecentFileDisplayLimit = 0
 	}

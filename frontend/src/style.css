@@ -4,7 +4,7 @@
     font-family: "Material Symbols Outlined";
     font-style: normal;
     font-weight: 400;
-    src: url("./assets/fonts/material-symbols-outlined.woff2") format("woff2");
+    src: url("./assets/fonts/material-symbols-outlined.woff2?v=109") format("woff2");
 }
 
 :root {
@@ -3220,6 +3220,50 @@ html:not(.dark) .toast {
     transform: translateX(-50%) translateY(0);
 }
 
+.toast.is-interactive {
+    max-width: min(520px, calc(100vw - 24px));
+    pointer-events: auto;
+}
+
+.toast-action,
+.toast-dismiss {
+    border: 0;
+    color: #fff;
+    cursor: pointer;
+}
+
+.toast-action {
+    padding: 4px 8px;
+    border-radius: 6px;
+    background: rgba(255, 255, 255, 0.14);
+    font: inherit;
+    font-weight: 750;
+}
+
+.toast-action:hover,
+.toast-action:focus-visible {
+    background: rgba(255, 255, 255, 0.24);
+}
+
+.toast-dismiss {
+    width: 24px;
+    height: 24px;
+    padding: 0;
+    display: grid;
+    place-items: center;
+    border-radius: 6px;
+    background: transparent;
+}
+
+.toast-dismiss:hover,
+.toast-dismiss:focus-visible {
+    background: rgba(255, 255, 255, 0.14);
+}
+
+.toast-dismiss .material-symbols-outlined {
+    font-size: 17px;
+}
+
 .progress-widget {
     position: fixed;
     right: 24px;
@@ -6339,6 +6383,194 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
     opacity: 0.66;
 }
 
+.settings-update-check-row {
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 16px;
+    border-top: 1px solid var(--border-color);
+}
+
+.settings-update-button,
+.settings-update-download {
+    min-height: 38px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 7px;
+}
+
+.settings-update-button .material-symbols-outlined,
+.settings-update-download .material-symbols-outlined {
+    font-size: 18px;
+}
+
+.settings-update-button.is-loading .material-symbols-outlined {
+    animation: update-button-spin 0.9s linear infinite;
+}
+
+@keyframes update-button-spin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+.settings-update-last-checked {
+    color: var(--text-muted);
+    font-size: 11px;
+    text-align: right;
+}
+
+.settings-update-status {
+    gap: 16px;
+}
+
+.settings-update-status-heading {
+    display: flex;
+    align-items: flex-start;
+    gap: 12px;
+}
+
+.settings-update-status-heading>.material-symbols-outlined {
+    width: 34px;
+    height: 34px;
+    flex: 0 0 34px;
+    display: grid;
+    place-items: center;
+    border-radius: 10px;
+    color: var(--accent-color);
+    background: var(--accent-color-soft);
+}
+
+.settings-update-status[data-state="available"] .settings-update-status-heading>.material-symbols-outlined {
+    color: #fff;
+    background: var(--accent-color);
+}
+
+.settings-update-status[data-state="current"] .settings-update-status-heading>.material-symbols-outlined {
+    color: #34c759;
+    background: color-mix(in srgb, #34c759 13%, transparent);
+}
+
+.settings-update-status[data-state="error"] .settings-update-status-heading>.material-symbols-outlined {
+    color: #ff453a;
+    background: color-mix(in srgb, #ff453a 13%, transparent);
+}
+
+.settings-update-status-heading h4 {
+    margin: 0;
+    color: var(--text-color);
+    font-size: 14px;
+}
+
+.settings-update-status-heading p {
+    margin: 4px 0 0;
+    color: var(--text-muted);
+    font-size: 12px;
+    line-height: 1.45;
+}
+
+.settings-update-versions {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+    align-items: center;
+    gap: 12px;
+}
+
+.settings-update-versions>div {
+    min-width: 0;
+    padding: 12px 14px;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-color);
+}
+
+.settings-update-versions>div span,
+.settings-update-versions>div strong {
+    display: block;
+}
+
+.settings-update-versions>div span {
+    color: var(--text-muted);
+    font-size: 10px;
+    font-weight: 650;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+}
+
+.settings-update-versions>div strong {
+    margin-top: 3px;
+    color: var(--text-color);
+    font-size: 17px;
+}
+
+.settings-update-versions>.material-symbols-outlined {
+    color: var(--text-muted);
+    font-size: 18px;
+}
+
+.settings-update-download {
+    align-self: flex-start;
+}
+
+.settings-update-release-link {
+    color: var(--accent-color);
+    font-size: 11px;
+    font-weight: 700;
+    text-decoration: none;
+}
+
+.settings-update-release-link:hover {
+    text-decoration: underline;
+}
+
+.settings-update-release-notes {
+    max-height: 240px;
+    padding: 14px 16px;
+    overflow: auto;
+    border: 1px solid var(--border-color);
+    border-radius: 10px;
+    background: var(--bg-color);
+    color: var(--text-color);
+    font-size: 12px;
+    line-height: 1.55;
+    user-select: text;
+    -webkit-user-select: text;
+}
+
+.settings-update-release-notes>:first-child {
+    margin-top: 0;
+}
+
+.settings-update-release-notes>:last-child {
+    margin-bottom: 0;
+}
+
+.settings-update-release-notes h1,
+.settings-update-release-notes h2,
+.settings-update-release-notes h3,
+.settings-update-release-notes h4 {
+    margin: 14px 0 7px;
+    font-size: 14px;
+}
+
+.settings-update-release-notes ul,
+.settings-update-release-notes ol {
+    padding-left: 20px;
+}
+
+.settings-update-release-notes a {
+    color: var(--accent-color);
+}
+
+.settings-update-release-notes pre {
+    padding: 10px;
+    overflow: auto;
+    border-radius: 7px;
+    background: var(--surface-color);
+}
+
 html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"]),
 html.dark .ai-settings-content .ai-setting-group select,
 html.dark .ai-settings-content .ai-model-trigger {
@@ -6396,6 +6628,15 @@ html.dark .settings-switch input+span::after {
         height: 24px;
         flex-basis: 24px;
         font-size: 16px;
+    }
+
+    .settings-update-check-row {
+        align-items: flex-start;
+        flex-direction: column;
+    }
+
+    .settings-update-last-checked {
+        text-align: left;
     }
 
     .settings-content-scroll {

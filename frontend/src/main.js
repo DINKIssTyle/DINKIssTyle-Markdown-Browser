@@ -26,7 +26,8 @@ import {
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
-import { initAI, bindAIEvents, showAskAIPrompt } from './main-ai.js';
+import { initAI, bindAIEvents, openSettings, showAskAIPrompt } from './main-ai.js';
+import { bindUpdateEvents, runAutomaticUpdateCheck } from './main-update.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
 import { loadMainToolbarVisibility, persistAppSettings } from './main-settings.js';
 import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
@@ -71,6 +72,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         // AI Init
         window.aiState = await initAI();
         bindAIEvents();
+        bindUpdateEvents({ openSettings });
 
         // Step 2: Check for pending startup files BEFORE rendering the first tab
         const startupPaths = await FrontendReady();
@@ -98,6 +100,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         updateNavButtons();
+        void runAutomaticUpdateCheck();
 
         document.addEventListener('copy', () => {
             showToast('Copied to clipboard.');
@@ -169,6 +172,10 @@ async function loadSettings() {
     state.editorAuthor = s.editorAuthor || "";
     state.editorOrderedListStyle = s.editorOrderedListStyle === "incremental" ? "incremental" : "standard";
     state.lastVersion = s.lastVersion || "";
+    state.updateCheckInterval = ['never', 'daily', 'weekly', 'monthly'].includes(s.updateCheckInterval)
+        ? s.updateCheckInterval
+        : 'weekly';
+    state.lastUpdateCheck = s.lastUpdateCheck || "";
     state.fileTreeFilterEnabled = !!s.fileTreeFilterEnabled;
     state.recentFileDisplayLimit = clampRecentFileDisplayLimit(s.recentFileDisplayLimit);
     state.outlineHeadingFormatEnabled = !!s.outlineHeadingFormat;

@@ -451,7 +451,7 @@
         </div>
 
         <!-- Toast message -->
-        <div id="toast" class="toast"></div>
+        <div id="toast" class="toast" role="status" aria-live="polite"></div>
 
         <div id="progress-widget" class="progress-widget hidden" aria-live="polite">
             <div class="progress-widget-header">
@@ -612,6 +612,14 @@
                             <span class="settings-tab-copy">
                                 <strong>AI</strong>
                                 <small>Models and connection</small>
+                            </span>
+                        </button>
+                        <button id="settings-tab-update" class="settings-tab" type="button" role="tab"
+                            aria-selected="false" aria-controls="settings-panel-update">
+                            <span class="material-symbols-outlined" aria-hidden="true">system_update</span>
+                            <span class="settings-tab-copy">
+                                <strong>Update</strong>
+                                <small>Version and releases</small>
                             </span>
                         </button>
                     </nav>
@@ -904,6 +912,80 @@
                                         <div id="editor-token-color-grid" class="editor-token-color-grid"></div>
                                     </div>
                                 </details>
+                            </section>
+                        </section>
+
+                        <section id="settings-panel-update" class="settings-panel hidden" role="tabpanel"
+                            aria-labelledby="settings-tab-update">
+                            <header class="settings-panel-header">
+                                <div class="settings-panel-kicker">Software update</div>
+                                <h2>Update</h2>
+                                <p>Choose how often to check GitHub Releases or check manually at any time.</p>
+                            </header>
+                            <section class="ai-setting-group settings-card settings-row-card">
+                                <label class="settings-control-row" for="update-check-interval">
+                                    <span class="settings-control-copy">
+                                        <strong>Update check frequency</strong>
+                                        <small>Automatic checks run in the background without delaying startup.</small>
+                                    </span>
+                                    <span class="settings-control-slot settings-control-slot-wide">
+                                        <select id="update-check-interval">
+                                            <option value="never">Do not check automatically</option>
+                                            <option value="daily">Once a day</option>
+                                            <option value="weekly">Once a week</option>
+                                            <option value="monthly">Once a month</option>
+                                        </select>
+                                    </span>
+                                </label>
+                                <div class="settings-update-check-row">
+                                    <button id="update-check-now" class="modal-btn primary settings-update-button"
+                                        type="button">
+                                        <span class="material-symbols-outlined" aria-hidden="true">refresh</span>
+                                        <span>Check for updates now</span>
+                                    </button>
+                                    <span id="update-last-checked" class="settings-update-last-checked">Not checked yet</span>
+                                </div>
+                            </section>
+                            <section id="update-status-card"
+                                class="ai-setting-group settings-card settings-update-status" aria-live="polite">
+                                <div class="settings-update-status-heading">
+                                    <span id="update-status-icon" class="material-symbols-outlined"
+                                        aria-hidden="true">info</span>
+                                    <div>
+                                        <h4 id="update-status-title">Ready to check</h4>
+                                        <p id="update-status-message">Check now to compare this app with the latest
+                                            published release.</p>
+                                    </div>
+                                </div>
+                                <div class="settings-update-versions">
+                                    <div>
+                                        <span>Current version</span>
+                                        <strong id="update-current-version">—</strong>
+                                    </div>
+                                    <span class="material-symbols-outlined" aria-hidden="true">arrow_forward</span>
+                                    <div>
+                                        <span>Online version</span>
+                                        <strong id="update-online-version">—</strong>
+                                    </div>
+                                </div>
+                                <button id="update-download" class="modal-btn primary settings-update-download hidden"
+                                    type="button">
+                                    <span class="material-symbols-outlined" aria-hidden="true">download</span>
+                                    <span>Download new version</span>
+                                </button>
+                            </section>
+                            <section class="ai-setting-group settings-card settings-update-notes-card">
+                                <div class="settings-card-heading">
+                                    <div>
+                                        <h4>Release notes</h4>
+                                        <p>Changes included in the latest published release.</p>
+                                    </div>
+                                    <a id="update-release-page" class="settings-update-release-link hidden" href="#">View
+                                        on GitHub</a>
+                                </div>
+                                <div id="update-release-notes" class="settings-update-release-notes">
+                                    Release notes will appear here after an update check.
+                                </div>
                             </section>
                         </section>
 
