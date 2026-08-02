@@ -68,11 +68,47 @@ test('cancels feedback when cumulative movement becomes vertical', () => {
 test('starts a fresh progress session after the gesture becomes idle', () => {
     const tracker = createHorizontalSwipeTracker({ threshold: 100, idleResetMs: 100 });
 
-    assert.equal(tracker.update(-110, 0, 10).ready, true);
+    assert.equal(tracker.update(-80, 0, 10).ready, false);
     const restarted = tracker.update(30, 0, 200);
     assert.equal(restarted.direction, HISTORY_FORWARD);
     assert.equal(restarted.progress, 0.3);
     assert.equal(restarted.ready, false);
+});
+
+test('preserves partial progress across a pause when native gesture phases control reset', () => {
+    const tracker = createHorizontalSwipeTracker({
+        threshold: 100,
+        idleResetMs: 100,
+        resetOnIdle: false,
+    });
+
+    assert.equal(tracker.update(-40, 0, 10).progress, 0.4);
+    const resumed = tracker.update(-20, 0, 500);
+    assert.equal(resumed.direction, HISTORY_BACK);
+    assert.equal(resumed.progress, 0.6);
+    assert.equal(resumed.ready, false);
+});
+
+test('keeps a completed gesture latched through pauses and small movements', () => {
+    const tracker = createHorizontalSwipeTracker({ threshold: 100, idleResetMs: 100 });
+
+    assert.equal(tracker.update(-105, 0, 10).ready, true);
+    assert.deepEqual(tracker.update(8, 20, 500), {
+        cancelled: false,
+        direction: HISTORY_BACK,
+        progress: 1,
+        ready: true,
+    });
+});
+
+test('releases a completed gesture after a deliberate reversal', () => {
+    const tracker = createHorizontalSwipeTracker({ threshold: 100 });
+
+    assert.equal(tracker.update(-105, 0, 10).ready, true);
+    const reversed = tracker.update(40, 0, 20);
+    assert.equal(reversed.direction, HISTORY_BACK);
+    assert.equal(reversed.progress, 0.65);
+    assert.equal(reversed.ready, false);
 });
 
 test('reduces progress when the user reverses before releasing', () => {

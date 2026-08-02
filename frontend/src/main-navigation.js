@@ -34,6 +34,7 @@ let lastHistoryGestureTrigger = { direction: '', timeStamp: Number.NEGATIVE_INFI
 const historyInputTargets = new WeakSet();
 const nativeHistoryTargets = new WeakSet();
 const NATIVE_HISTORY_EVENT = 'dkst:native-history-navigation';
+const NATIVE_HISTORY_GESTURE_PHASE_EVENT = 'dkst:native-history-gesture-phase';
 const HISTORY_GESTURE_DEDUP_MS = 250;
 const HISTORY_GESTURE_SETTLE_MS = 120;
 let historySwipeFeedback = null;
@@ -567,7 +568,9 @@ export function bindHistoryMouseNavigation(target) {
     });
 
     const swipeController = {
-        tracker: createHorizontalSwipeTracker(),
+        tracker: createHorizontalSwipeTracker({
+            resetOnIdle: !usesNativeHistoryGesturePhases(),
+        }),
         pending: null,
         settleTimer: 0,
     };
@@ -581,6 +584,7 @@ export function bindNativeHistoryNavigation(target = window) {
     if (!target || nativeHistoryTargets.has(target)) return;
     nativeHistoryTargets.add(target);
     target.addEventListener(NATIVE_HISTORY_EVENT, handleNativeHistoryNavigation);
+    target.addEventListener(NATIVE_HISTORY_GESTURE_PHASE_EVENT, handleNativeHistoryGesturePhase);
 }
 
 function handleHistoryMouseButton(event) {
@@ -656,6 +660,21 @@ function handleNativeHistoryNavigation(event) {
     performViewerHistoryNavigation(direction, isSwipe);
 }
 
+function handleNativeHistoryGesturePhase(event) {
+    const swipeController = activeHistorySwipeController;
+    if (!swipeController) return;
+
+    if (event?.detail?.phase === 'ended') {
+        settleHistorySwipeGesture(swipeController);
+    } else if (event?.detail?.phase === 'cancelled') {
+        resetHistorySwipeController(swipeController, true);
+    }
+}
+
+function usesNativeHistoryGesturePhases() {
+    return isMacOS() && Boolean(window.go?.app?.App);
+}
+
 function handleHistorySwipeWheel(event, swipeController) {
     if (isActiveMarkdownEditTab() || isEditableTarget(event.target) || event.ctrlKey) {
         resetHistorySwipeController(swipeController, true);
@@ -687,10 +706,13 @@ function handleHistorySwipeWheel(event, swipeController) {
     activeHistorySwipeController = swipeController;
     updateHistorySwipeFeedback(gesture.direction, gesture.progress, gesture.ready);
     clearTimeout(swipeController.settleTimer);
-    swipeController.settleTimer = window.setTimeout(
-        () => settleHistorySwipeGesture(swipeController),
-        HISTORY_GESTURE_SETTLE_MS,
-    );
+    swipeController.settleTimer = 0;
+    if (!usesNativeHistoryGesturePhases()) {
+        swipeController.settleTimer = window.setTimeout(
+            () => settleHistorySwipeGesture(swipeController),
+            HISTORY_GESTURE_SETTLE_MS,
+        );
+    }
 }
 
 function settleHistorySwipeGesture(swipeController) {

@@ -7281,8 +7281,12 @@ html.dark .cm-editor .cm-content ::selection {
     background: var(--accent-color);
 }
 
+.history-swipe-feedback.is-committing {
+    animation: history-swipe-commit-fade 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+}
+
 .history-swipe-feedback.is-committing .history-swipe-feedback-surface {
-    animation: history-swipe-commit 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
+    animation: history-swipe-commit-scale 220ms cubic-bezier(0.2, 0.9, 0.2, 1) both;
 }
 
 .history-swipe-feedback.is-cancelling {
@@ -7297,19 +7301,30 @@ html.dark .cm-editor .cm-content ::selection {
     transform: translate(18px, -50%);
 }
 
-@keyframes history-swipe-commit {
+@keyframes history-swipe-commit-fade {
     0% {
         opacity: 1;
-        transform: scale(1);
     }
 
     45% {
         opacity: 1;
-        transform: scale(1.15);
     }
 
     100% {
         opacity: 0;
+    }
+}
+
+@keyframes history-swipe-commit-scale {
+    0% {
+        transform: scale(1);
+    }
+
+    45% {
+        transform: scale(1.15);
+    }
+
+    100% {
         transform: scale(0.86);
     }
 }

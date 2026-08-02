@@ -21,6 +21,7 @@ package app
 
 static id DKSTHistoryMouseMonitor = nil;
 static id DKSTHistorySwipeMonitor = nil;
+static id DKSTHistoryScrollMonitor = nil;
 
 static void DKSTDispatchHistoryNavigation(WKWebView *webView, NSString *direction, NSString *source) {
     if (webView == nil) {
@@ -31,6 +32,18 @@ static void DKSTDispatchHistoryNavigation(WKWebView *webView, NSString *directio
         @"window.dispatchEvent(new CustomEvent('dkst:native-history-navigation',"
          "{detail:{direction:'%@',source:'%@'}}));",
         direction, source];
+    [webView evaluateJavaScript:script completionHandler:nil];
+}
+
+static void DKSTDispatchHistoryGesturePhase(WKWebView *webView, NSString *phase) {
+    if (webView == nil) {
+        return;
+    }
+
+    NSString *script = [NSString stringWithFormat:
+        @"window.dispatchEvent(new CustomEvent('dkst:native-history-gesture-phase',"
+         "{detail:{phase:'%@'}}));",
+        phase];
     [webView evaluateJavaScript:script completionHandler:nil];
 }
 
@@ -48,6 +61,10 @@ static void DKSTInstallHistoryNavigationBridge(void *inctx) {
         if (DKSTHistorySwipeMonitor != nil) {
             [NSEvent removeMonitor:DKSTHistorySwipeMonitor];
             DKSTHistorySwipeMonitor = nil;
+        }
+        if (DKSTHistoryScrollMonitor != nil) {
+            [NSEvent removeMonitor:DKSTHistoryScrollMonitor];
+            DKSTHistoryScrollMonitor = nil;
         }
 
         NSWindow *mainWindow = ctx.mainWindow;
@@ -79,6 +96,20 @@ static void DKSTInstallHistoryNavigationBridge(void *inctx) {
                 NSString *direction = event.deltaX < 0 ? @"back" : @"forward";
                 DKSTDispatchHistoryNavigation(webView, direction, @"swipe");
                 return nil;
+            }];
+
+        DKSTHistoryScrollMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskScrollWheel
+            handler:^NSEvent *(NSEvent *event) {
+                if (event.window != mainWindow) {
+                    return event;
+                }
+
+                if ((event.phase & NSEventPhaseEnded) != 0) {
+                    DKSTDispatchHistoryGesturePhase(webView, @"ended");
+                } else if ((event.phase & NSEventPhaseCancelled) != 0) {
+                    DKSTDispatchHistoryGesturePhase(webView, @"cancelled");
+                }
+                return event;
             }];
     });
 }

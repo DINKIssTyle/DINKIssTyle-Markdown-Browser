@@ -47,15 +47,19 @@ export function createHorizontalSwipeTracker({
     threshold = 120,
     idleResetMs = 180,
     horizontalRatio = 1.25,
+    readyReleaseRatio = 0.72,
+    resetOnIdle = true,
 } = {}) {
     let accumulatedX = 0;
     let accumulatedY = 0;
     let lastTimeStamp = Number.NEGATIVE_INFINITY;
+    let latchedDirection = null;
 
     function reset() {
         accumulatedX = 0;
         accumulatedY = 0;
         lastTimeStamp = Number.NEGATIVE_INFINITY;
+        latchedDirection = null;
     }
 
     function update(deltaX, deltaY, timeStamp) {
@@ -63,7 +67,7 @@ export function createHorizontalSwipeTracker({
         const y = Number(deltaY) || 0;
         const now = Number.isFinite(timeStamp) ? timeStamp : 0;
 
-        if (now - lastTimeStamp > idleResetMs) {
+        if (resetOnIdle && !latchedDirection && now - lastTimeStamp > idleResetMs) {
             accumulatedX = 0;
             accumulatedY = 0;
         }
@@ -71,6 +75,21 @@ export function createHorizontalSwipeTracker({
 
         accumulatedX += x;
         accumulatedY += y;
+
+        if (latchedDirection) {
+            const retainedDistance = latchedDirection === HISTORY_BACK
+                ? -accumulatedX
+                : accumulatedX;
+            if (retainedDistance >= threshold * readyReleaseRatio) {
+                return {
+                    cancelled: false,
+                    direction: latchedDirection,
+                    progress: 1,
+                    ready: true,
+                };
+            }
+            latchedDirection = null;
+        }
 
         const horizontalDistance = Math.abs(accumulatedX);
         const verticalDistance = Math.abs(accumulatedY);
@@ -86,11 +105,17 @@ export function createHorizontalSwipeTracker({
             };
         }
 
+        const direction = accumulatedX < 0 ? HISTORY_BACK : HISTORY_FORWARD;
+        const ready = horizontalDistance >= threshold;
+        if (ready) {
+            latchedDirection = direction;
+        }
+
         return {
             cancelled: false,
-            direction: accumulatedX < 0 ? HISTORY_BACK : HISTORY_FORWARD,
+            direction,
             progress: Math.min(horizontalDistance / threshold, 1),
-            ready: horizontalDistance >= threshold,
+            ready,
         };
     }
 
