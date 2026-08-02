@@ -22,6 +22,10 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 # 변경 사항
 
+## 2.2.3
+#### 개선 사항 (Improvements)
+- **CJK 호환성 추가 개선**:
+
 ## 2.2.2
 
 #### 추가된 사항 (New Features)

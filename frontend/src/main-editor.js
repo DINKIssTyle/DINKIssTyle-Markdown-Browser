@@ -14,7 +14,8 @@ import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, Sho
 import { EventsOn, LogError, LogInfo } from '../wailsjs/runtime/runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
 import { getCurrentAccentColor } from './main-theme.js';
-import { normalizeKoreanImeLineBreak } from './ime-enter-fix.mjs';
+import { isImeKeyboardEvent, normalizeKoreanImeLineBreak, shouldMoveSlashSelectionAfterImeCommit, shouldRunSlashCommandAfterImeCommit } from './ime-enter-fix.mjs';
+import { getDeferredStandardOrderedListMarker, getStandardOrderedListEnterEdit } from './ordered-list-enter.mjs';
 import {
     DEFAULT_EDITOR_PANE_PERCENT,
     DEFAULT_EDITOR_SPLIT_MODE,
@@ -2751,10 +2752,18 @@ function filterSlashCommands(query = "") {
     });
 }
 
-function isImeComposing(view = cmView) {
+function isImeComposing(view = cmView, event = null) {
     if (!view) return false;
     const ime = view.state.field(imeStateField, false);
-    return !!ime?.composing || !!view.composing;
+    return isImeKeyboardEvent({
+        eventIsComposing: event?.isComposing,
+        keyCode: event?.keyCode,
+        codeMirrorComposing: view.composing,
+        codeMirrorCompositionStarted: view.compositionStarted,
+        observedComposing: ime?.composing,
+        justEndedAt: ime?.justEndedAt,
+        now: Date.now(),
+    });
 }
 
 function isPlainEditorPrimaryClick(event) {
@@ -2850,48 +2859,48 @@ function collapsePlainEditorClick(event, view) {
     return false;
 }
 
-function insertStandardOrderedListItem(view) {
+function getStandardOrderedListItemEdit(view, inputCursor) {
     if (state.editorOrderedListStyle !== 'standard') return false;
 
     const { state: editorState } = view;
-    if (editorState.selection.ranges.length !== 1) {
+    const hasInputCursor = Number.isInteger(inputCursor);
+    if (!hasInputCursor && editorState.selection.ranges.length !== 1) {
         return false;
     }
 
-    const range = editorState.selection.main;
+    const range = hasInputCursor
+        ? EditorSelection.cursor(inputCursor)
+        : editorState.selection.main;
     if (!range.empty || !markdownLanguage.isActiveAt(editorState, range.from, -1)) {
         return false;
     }
 
     const line = editorState.doc.lineAt(range.from);
-    const beforeCursor = line.text.slice(0, range.from - line.from);
-    const afterCursor = line.text.slice(range.from - line.from);
-    const match = beforeCursor.match(/^(\s*)\d+([.)])(\s+)(.*)$/);
-    if (!match) {
-        return false;
-    }
+    const edit = getStandardOrderedListEnterEdit(line.text, range.from - line.from);
+    if (!edit) return false;
 
-    const [, indent, delimiter, spacing, beforeContent] = match;
-    const marker = `${indent}1${delimiter}${spacing}`;
-    const markerLength = indent.length + 1 + delimiter.length + spacing.length;
-    const itemIsEmpty = !beforeContent.trim() && !afterCursor.trim();
+    return {
+        changes: {
+            from: line.from + edit.fromOffset,
+            to: line.from + edit.toOffset,
+            insert: edit.insert,
+        },
+        cursor: line.from + edit.cursorOffset,
+        previousLineText: line.text,
+        relativeEdit: edit,
+    };
+}
 
-    const changes = editorState.changeByRange(range => {
-        if (itemIsEmpty) {
-            return {
-                range: EditorSelection.cursor(line.from + indent.length),
-                changes: { from: line.from + indent.length, to: line.from + markerLength, insert: '' }
-            };
-        }
+function insertStandardOrderedListItem(view, inputCursor) {
+    const edit = getStandardOrderedListItemEdit(view, inputCursor);
+    if (!edit) return false;
 
-        const insert = `\n${marker}`;
-        return {
-            range: EditorSelection.cursor(range.from + insert.length),
-            changes: { from: range.from, to: range.from, insert }
-        };
-    });
-
-    view.dispatch(editorState.update(changes, { scrollIntoView: true, userEvent: "input" }));
+    view.dispatch(view.state.update({
+        changes: edit.changes,
+        selection: EditorSelection.cursor(edit.cursor),
+        scrollIntoView: true,
+        userEvent: "input",
+    }));
     return true;
 }
 
@@ -3040,6 +3049,59 @@ const imeDiagnostics = ViewPlugin.fromClass(class {
     }
 });
 
+// CodeMirror intentionally drops keydown events while an IME composition is
+// active. Observe them in the capture phase so slash-menu keys can first
+// commit the marked text and then run their editor action.
+const imeSlashMenuKeyHandler = ViewPlugin.fromClass(class {
+    constructor(view) {
+        this.view = view;
+        this.handleKeydown = (event) => {
+            if (!state.koreanImeFixEnabled || !slashMenuState) return;
+
+            const composing = isImeComposing(this.view, event);
+            const selectedCommand = slashMenuState.commands[slashMenuState.selectedIndex];
+            const runCommand = shouldRunSlashCommandAfterImeCommit({
+                enabled: state.koreanImeFixEnabled,
+                key: event.key,
+                composing,
+                hasMenu: true,
+                hasCommand: !!selectedCommand,
+            });
+            const moveSelection = shouldMoveSlashSelectionAfterImeCommit({
+                enabled: state.koreanImeFixEnabled,
+                key: event.key,
+                composing,
+                hasMenu: true,
+                hasCommand: !!selectedCommand,
+            });
+            if (!runCommand && !moveSelection) return;
+
+            const commandId = selectedCommand.id;
+            const commandFrom = slashMenuState.from;
+            event.preventDefault();
+            event.stopImmediatePropagation();
+            recordImeDiagnostic('fix', {
+                action: runCommand ? 'commit-and-run-slash-command' : 'commit-and-move-slash-selection',
+                key: event.key,
+                commandId,
+                commandFrom,
+                eventIsComposing: !!event.isComposing,
+                keyCode: event.keyCode,
+            });
+            runSlashMenuActionAfterImeCommit(this.view, {
+                key: event.key,
+                commandId,
+                commandFrom,
+            });
+        };
+        view.contentDOM.addEventListener('keydown', this.handleKeydown, true);
+    }
+
+    destroy() {
+        this.view.contentDOM.removeEventListener('keydown', this.handleKeydown, true);
+    }
+});
+
 // WebKit may represent one Enter immediately after a CJK composition as "\n\n".
 // Normalize only that exact DOM input. CodeMirror already handles the Safari
 // keydown/compositionend ordering quirk, so consuming Enter here would swallow
@@ -3063,6 +3125,57 @@ const imeStateField = StateField.define({
     }
 });
 
+const pendingImeListContinuations = new WeakMap();
+
+function applyPendingImeListContinuation(view) {
+    const pending = pendingImeListContinuations.get(view);
+    if (!pending || cmView !== view) return;
+
+    const ime = view.state.field(imeStateField, false);
+    if (view.compositionStarted || ime?.composing) {
+        pending.waitedForComposition = true;
+        return;
+    }
+
+    pendingImeListContinuations.delete(view);
+    const { position, marker, previousLineText } = pending;
+    const { doc, selection } = view.state;
+    if (position <= 0 || position > doc.length) return;
+
+    const targetLine = doc.lineAt(position);
+    const selectionLine = doc.lineAt(selection.main.head);
+    const previousLine = doc.lineAt(position - 1);
+    if (targetLine.from !== position || selectionLine.from !== position || previousLine.text !== previousLineText) {
+        return;
+    }
+
+    const changes = view.state.changes({ from: position, insert: marker });
+    const mappedSelection = selection.main.empty && selection.main.from === position
+        ? EditorSelection.cursor(position + marker.length)
+        : selection.map(changes);
+
+    recordImeDiagnostic('fix', {
+        action: 'apply-list-continuation',
+        position,
+        marker,
+        waitedForComposition: pending.waitedForComposition,
+    });
+    view.dispatch({
+        changes,
+        selection: mappedSelection,
+        scrollIntoView: true,
+        userEvent: 'input',
+    });
+}
+
+function scheduleImeListContinuation(view, continuation) {
+    pendingImeListContinuations.set(view, {
+        ...continuation,
+        waitedForComposition: false,
+    });
+    requestAnimationFrame(() => applyPendingImeListContinuation(view));
+}
+
 const koreanImeEnterFix = [
     imeStateField,
     // 조합 상태는 "관찰"만 합니다.
@@ -3083,6 +3196,10 @@ const koreanImeEnterFix = [
             view.dispatch({
                 effects: setImeState.of({ composing: false, justEndedAt: Date.now() })
             });
+            requestAnimationFrame(() => applyPendingImeListContinuation(view));
+        },
+        blur(event, view) {
+            pendingImeListContinuations.delete(view);
         }
     }),
     EditorView.inputHandler.of((view, from, to, text) => {
@@ -3105,12 +3222,25 @@ const koreanImeEnterFix = [
             originalText: text,
             normalizedText,
         });
+
+        const listEdit = from === to ? getStandardOrderedListItemEdit(view, from) : null;
+        const deferredMarker = listEdit && listEdit.changes.from === from && listEdit.changes.to === from
+            ? getDeferredStandardOrderedListMarker(listEdit.relativeEdit, normalizedText)
+            : '';
+
         view.dispatch({
             changes: { from, to, insert: normalizedText },
             selection: EditorSelection.cursor(from + normalizedText.length),
             scrollIntoView: true,
             userEvent: 'input.type',
         });
+        if (deferredMarker) {
+            scheduleImeListContinuation(view, {
+                position: from + normalizedText.length,
+                marker: deferredMarker,
+                previousLineText: listEdit.previousLineText,
+            });
+        }
         return true;
     })
 ];
@@ -3124,6 +3254,7 @@ export function initCodeMirror() {
     const startState = EditorState.create({
         doc: state.currentMarkdownSource || "",
         extensions: [
+            imeSlashMenuKeyHandler,
             imeDiagnostics,
             Prec.highest(koreanImeEnterFix),
             Prec.highest(keymap.of([{
@@ -3237,25 +3368,6 @@ export function initCodeMirror() {
                     if (!id) return false;
                     event.preventDefault();
                     showSpellcheckTooltip(findSpellcheckSuggestion(id));
-                    return true;
-                },
-                keydown(event, view) {
-                    if (!slashMenuState) return false;
-                    if (!isImeComposing(view)) return false;
-                    if (!['ArrowDown', 'ArrowUp'].includes(event.key)) return false;
-
-                    event.preventDefault();
-                    event.stopPropagation();
-
-                    view.contentDOM.blur();
-                    requestAnimationFrame(() => {
-                        view.focus();
-                        if (event.key === 'ArrowDown') {
-                            moveSlashSelection(1);
-                        } else {
-                            moveSlashSelection(-1);
-                        }
-                    });
                     return true;
                 }
             }),
@@ -4082,6 +4194,27 @@ function moveSlashSelection(delta) {
     renderSlashMenu();
 }
 
+function runSlashMenuActionAfterImeCommit(view, { key, commandId, commandFrom }) {
+    view.contentDOM.blur();
+    requestAnimationFrame(() => {
+        if (cmView !== view) return;
+
+        view.focus();
+        updateSlashMenu();
+        if (!slashMenuState || slashMenuState.from !== commandFrom) return;
+        const selectedIndex = slashMenuState.commands.findIndex(command => command.id === commandId);
+        if (selectedIndex < 0) return;
+
+        if (key === 'Enter') {
+            void executeSlashCommand(commandId);
+            return;
+        }
+
+        slashMenuState.selectedIndex = selectedIndex;
+        moveSlashSelection(key === 'ArrowDown' ? 1 : -1);
+    });
+}
+
 async function executeSlashCommand(commandId) {
     if (!cmView || !slashMenuState) return;
     const command = slashMenuState.commands.find(item => item.id === commandId);
@@ -4452,7 +4585,7 @@ export function showOptionGridPrompt(title, message, options, defaultValue = "")
         el.modalOverlay.classList.remove('hidden');
         el.modalInputGroup.classList.add('hidden');
         el.modalOptionGrid.classList.remove('hidden');
-        el.modalEmojiGrid.classList.add('hidden');
+        el.modalEmojiContainer.classList.add('hidden');
         el.modalBtnOk.classList.remove('hidden');
 
         syncActiveState();
@@ -4541,6 +4674,7 @@ export function showEmojiPicker() {
         el.modalInputGroup.classList.add('hidden');
         el.modalOptionGrid.classList.add('hidden');
         el.modalEmojiContainer.classList.remove('hidden');
+        el.modalEmojiGrid.classList.remove('hidden');
         el.modalOverlay.classList.remove('hidden');
 
         const renderCategories = () => {

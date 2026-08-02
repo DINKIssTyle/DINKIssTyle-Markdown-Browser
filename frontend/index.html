@@ -241,16 +241,15 @@
                         </div>
                         <div class="spacer"></div>
                         <div class="edit-tool-group">
-                            <button id="ed-split-swap" title="Swap Editor and Preview" class="tool-btn"
-                                type="button" aria-label="Swap editor and preview positions"><span
-                                    id="ed-split-swap-icon" class="material-symbols-outlined">swap_horiz</span></button>
+                            <button id="ed-split-swap" title="Swap Editor and Preview" class="tool-btn" type="button"
+                                aria-label="Swap editor and preview positions"><span id="ed-split-swap-icon"
+                                    class="material-symbols-outlined">swap_horiz</span></button>
                             <button id="ed-split-direction" title="Switch to Vertical Split" class="tool-btn"
-                                type="button" aria-label="Switch to vertical split"><span
-                                    id="ed-split-direction-icon"
+                                type="button" aria-label="Switch to vertical split"><span id="ed-split-direction-icon"
                                     class="material-symbols-outlined">split_scene_2</span></button>
                             <button id="ed-preview-toggle" title="Hide Preview" class="tool-btn" type="button"
-                                aria-label="Hide preview" aria-pressed="true"
-                                aria-keyshortcuts="Meta+G Control+G"><span id="ed-preview-toggle-icon"
+                                aria-label="Hide preview" aria-pressed="true" aria-keyshortcuts="Meta+G Control+G"><span
+                                    id="ed-preview-toggle-icon"
                                     class="material-symbols-outlined">preview</span></button>
                         </div>
                         <div class="edit-separator"></div>
@@ -623,7 +622,8 @@
                             <header class="settings-panel-header">
                                 <div class="settings-panel-kicker">Personalization</div>
                                 <h2>Appearance</h2>
-                                <p>Customize highlight colors and choose which actions stay visible in the main toolbar.</p>
+                                <p>Customize highlight colors and choose which actions stay visible in the main toolbar.
+                                </p>
                             </header>
                             <section class="ai-setting-group settings-card">
                                 <div class="settings-card-heading">
@@ -646,7 +646,8 @@
                                         <label class="accent-custom-field" for="light-accent-custom">
                                             <span>Custom color</span>
                                             <span class="settings-color-control">
-                                                <span id="light-accent-value" class="settings-color-value">#0071E3</span>
+                                                <span id="light-accent-value"
+                                                    class="settings-color-value">#0071E3</span>
                                                 <input type="color" id="light-accent-custom" />
                                             </span>
                                         </label>
@@ -672,13 +673,16 @@
                                 <div class="settings-card-heading">
                                     <div>
                                         <h4>Main toolbar</h4>
-                                        <p>Choose which shortcut buttons appear. Hidden commands remain available from menus and keyboard shortcuts.</p>
+                                        <p>Choose which shortcut buttons appear. Hidden commands remain available from
+                                            menus and keyboard shortcuts.</p>
                                     </div>
-                                    <span class="material-symbols-outlined settings-card-heading-icon" aria-hidden="true">instant_mix</span>
+                                    <span class="material-symbols-outlined settings-card-heading-icon"
+                                        aria-hidden="true">instant_mix</span>
                                 </div>
                                 <div class="toolbar-visibility-grid">
                                     <div class="toolbar-visibility-item">
-                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">add_notes</span>
+                                        <span class="material-symbols-outlined toolbar-visibility-icon"
+                                            aria-hidden="true">add_notes</span>
                                         <label class="toolbar-visibility-copy" for="settings-toolbar-new-document">
                                             <strong>New document</strong>
                                             <small>Create a blank Markdown document</small>
@@ -690,7 +694,8 @@
                                         </label>
                                     </div>
                                     <div class="toolbar-visibility-item">
-                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">edit_note</span>
+                                        <span class="material-symbols-outlined toolbar-visibility-icon"
+                                            aria-hidden="true">edit_note</span>
                                         <label class="toolbar-visibility-copy" for="settings-toolbar-edit">
                                             <strong>Edit Markdown</strong>
                                             <small>Open the current document in the editor</small>
@@ -702,7 +707,8 @@
                                         </label>
                                     </div>
                                     <div class="toolbar-visibility-item">
-                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">translate</span>
+                                        <span class="material-symbols-outlined toolbar-visibility-icon"
+                                            aria-hidden="true">translate</span>
                                         <label class="toolbar-visibility-copy" for="settings-toolbar-translate">
                                             <strong>Translate</strong>
                                             <small>Translate the current document</small>
@@ -714,7 +720,8 @@
                                         </label>
                                     </div>
                                     <div class="toolbar-visibility-item">
-                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">format_size</span>
+                                        <span class="material-symbols-outlined toolbar-visibility-icon"
+                                            aria-hidden="true">format_size</span>
                                         <label class="toolbar-visibility-copy" for="settings-toolbar-font-size">
                                             <strong>Font size</strong>
                                             <small>Show both decrease and increase buttons</small>
@@ -726,7 +733,8 @@
                                         </label>
                                     </div>
                                     <div class="toolbar-visibility-item">
-                                        <span class="material-symbols-outlined toolbar-visibility-icon" aria-hidden="true">dark_mode</span>
+                                        <span class="material-symbols-outlined toolbar-visibility-icon"
+                                            aria-hidden="true">dark_mode</span>
                                         <label class="toolbar-visibility-copy" for="settings-toolbar-theme">
                                             <strong>Theme</strong>
                                             <small>Switch between light and dark mode</small>
@@ -812,8 +820,9 @@
                                 </div>
                                 <div class="settings-control-row">
                                     <span class="settings-control-copy">
-                                        <strong>CJK IME Enter fix</strong>
-                                        <small>Prevent extra blank lines when committing text with a CJK IME.</small>
+                                        <strong>Enhanced CJK input compatibility</strong>
+                                        <small>Improves Korean, Chinese, and Japanese input compatibility, including fixes
+                                            for line breaks and slash commands.</small>
                                     </span>
                                     <label class="settings-switch" for="ai-toggle-ime-fix">
                                         <input type="checkbox" id="ai-toggle-ime-fix" />
@@ -824,7 +833,8 @@
                                 <label class="settings-control-row" for="editor-ordered-list-style">
                                     <span class="settings-control-copy">
                                         <strong>Ordered list continuation</strong>
-                                        <small>Choose the marker inserted after pressing Enter in a numbered list.</small>
+                                        <small>Choose the marker inserted after pressing Enter in a numbered
+                                            list.</small>
                                     </span>
                                     <span class="settings-control-slot">
                                         <select id="editor-ordered-list-style">
@@ -840,7 +850,8 @@
                                     </span>
                                     <div id="editor-toolbar-segmented" class="settings-segmented" role="group"
                                         aria-label="Editor toolbar complexity">
-                                        <button type="button" data-toolbar-value="beginner" class="active">Beginner</button>
+                                        <button type="button" data-toolbar-value="beginner"
+                                            class="active">Beginner</button>
                                         <button type="button" data-toolbar-value="rookie">Rookie</button>
                                         <button type="button" data-toolbar-value="pro">Pro</button>
                                     </div>
@@ -868,7 +879,8 @@
                                     <div class="settings-preview-gutter">1<br>2<br>3</div>
                                     <div class="settings-preview-code">
                                         <span class="preview-heading"># A better writing space</span>
-                                        <span><span class="preview-marker">-</span> Focus on your <span class="preview-strong">ideas</span></span>
+                                        <span><span class="preview-marker">-</span> Focus on your <span
+                                                class="preview-strong">ideas</span></span>
                                         <span><span class="preview-link">[Preview]</span> changes as you write.</span>
                                     </div>
                                 </div>
@@ -906,7 +918,8 @@
                                 <div class="settings-control-row">
                                     <span class="settings-control-copy">
                                         <strong>AI features</strong>
-                                        <small>Show AI controls in the editor and allow configured models to run.</small>
+                                        <small>Show AI controls in the editor and allow configured models to
+                                            run.</small>
                                     </span>
                                     <label class="settings-switch" for="ai-features-enabled">
                                         <input type="checkbox" id="ai-features-enabled" />
@@ -942,8 +955,9 @@
                                         <label class="ai-setting-field">Model
                                             <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
                                             <div id="ai-general-model-picker" class="ai-model-picker hidden">
-                                                <button type="button" id="ai-general-model-trigger" class="ai-model-trigger"
-                                                    aria-haspopup="dialog" aria-expanded="false">
+                                                <button type="button" id="ai-general-model-trigger"
+                                                    class="ai-model-trigger" aria-haspopup="dialog"
+                                                    aria-expanded="false">
                                                     <span id="ai-general-model-trigger-label"
                                                         class="ai-model-trigger-label">Choose a model...</span>
                                                     <span class="material-symbols-outlined ai-model-trigger-caret"
@@ -961,7 +975,8 @@
                                                 <input type="password" id="ai-general-key" placeholder="Bearer token" />
                                                 <button type="button" class="settings-password-toggle"
                                                     data-password-target="ai-general-key" aria-label="Show API key">
-                                                    <span class="material-symbols-outlined" aria-hidden="true">preview</span>
+                                                    <span class="material-symbols-outlined"
+                                                        aria-hidden="true">preview</span>
                                                 </button>
                                             </span>
                                         </label>
@@ -994,12 +1009,14 @@
                                                 <input type="password" id="ai-fim-key" placeholder="Bearer token" />
                                                 <button type="button" class="settings-password-toggle"
                                                     data-password-target="ai-fim-key" aria-label="Show API key">
-                                                    <span class="material-symbols-outlined" aria-hidden="true">preview</span>
+                                                    <span class="material-symbols-outlined"
+                                                        aria-hidden="true">preview</span>
                                                 </button>
                                             </span>
                                         </label>
                                         <label class="ai-setting-field">Temperature
-                                            <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1" value="0" />
+                                            <input type="number" id="ai-fim-temp" min="0" max="1" step="0.1"
+                                                value="0" />
                                         </label>
                                     </div>
                                 </section>
@@ -1008,9 +1025,10 @@
                     </div>
                 </div>
                 <footer class="settings-footer">
-                    <span id="settings-dirty-status" class="settings-dirty-status" aria-live="polite">No unsaved changes</span>
+                    <span id="settings-dirty-status" class="settings-dirty-status" aria-live="polite">No unsaved
+                        changes</span>
                     <div class="settings-footer-actions">
-                    <button id="ai-settings-cancel" class="modal-btn secondary">Cancel</button>
+                        <button id="ai-settings-cancel" class="modal-btn secondary">Cancel</button>
                         <button id="ai-settings-save" class="modal-btn primary" disabled>Save changes</button>
                     </div>
                 </footer>
