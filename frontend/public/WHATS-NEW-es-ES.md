@@ -13,6 +13,17 @@ Si estás satisfecho con el DKST Markdown Browser, prueba **DKST Text Flow**. Ay
 
 # Cambios
 
+## 2.2.3
+
+#### Nuevas Funcionalidades
+- **Comprobación de actualizaciones**: Puedes comprobar y descargar actualizaciones dentro de la aplicación sin pasar por la web.
+  - Disponible en Configuración → pestaña Actualización.
+  - Limitación: Actualmente, solo se admite la descarga sin actualizaciones automáticas.
+
+#### Mejoras
+- **Compatibilidad CJK mejorada**: Se corrigieron problemas en los que presionar Enter al crear una lista causaba compromisos de caracteres no deseados o terminación de la lista. También se corrigió el problema por el cual los caracteres se comprometían y pasaban a la siguiente acción incluso al presionar Enter o las teclas de flecha mientras se usaban comandos (/).
+- **Respuesta mejorada al navegar por el historial**: Se mejoró la fluidez de la animación mostrada al deslizar con una tableta táctil.
+
 ## 2.2.2
 
 #### Nuevas Funcionalidades

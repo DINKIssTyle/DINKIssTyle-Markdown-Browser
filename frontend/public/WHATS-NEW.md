@@ -14,6 +14,16 @@ If you are satisfied with the DKST Markdown Browser, try **DKST Text Flow**. It 
 
 # Changes
 
+## 2.2.3
+#### New Features
+- **Update Check**: You can check and download updates within the app without going through the web.
+  - Available in Settings → Update tab.
+  - Limitation: Currently, only download is supported without automatic updates.
+
+#### Improvements
+- **Enhanced CJK Compatibility**: Fixed issues where pressing Enter while creating a list caused unintended character commits or list termination. Also fixed the issue where characters would commit and move to the next action even when pressing Enter or arrow keys while using commands (/).
+- **Improved History Browsing Feedback**: Enhanced the smoothness of the animation displayed when swiping with a trackpad.
+
 ## 2.2.2
 
 #### New Features

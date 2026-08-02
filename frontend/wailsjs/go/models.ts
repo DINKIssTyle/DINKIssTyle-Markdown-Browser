@@ -439,16 +439,17 @@ export namespace app {
 	}
 	
 	
+	
 	export class UpdateAsset {
 	    name: string;
 	    downloadUrl: string;
 	    size: number;
 	    digest: string;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateAsset(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.name = source["name"];
@@ -469,11 +470,11 @@ export namespace app {
 	    operatingSystem: string;
 	    architecture: string;
 	    asset?: UpdateAsset;
-
+	
 	    static createFrom(source: any = {}) {
 	        return new UpdateInfo(source);
 	    }
-
+	
 	    constructor(source: any = {}) {
 	        if ('string' === typeof source) source = JSON.parse(source);
 	        this.available = source["available"];
@@ -488,7 +489,7 @@ export namespace app {
 	        this.architecture = source["architecture"];
 	        this.asset = this.convertValues(source["asset"], UpdateAsset);
 	    }
-
+	
 		convertValues(a: any, classs: any, asMap: boolean = false): any {
 		    if (!a) {
 		        return a;
@@ -528,3 +529,4 @@ export namespace options {
 	}
 
 }
+
