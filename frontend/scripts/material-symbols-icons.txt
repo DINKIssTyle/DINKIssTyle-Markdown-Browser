@@ -101,6 +101,7 @@ text_decrease
 text_increase
 translate
 undo
+unfold_more
 update
 vertical_align_top
 wand_stars

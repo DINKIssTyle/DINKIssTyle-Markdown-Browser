@@ -24,6 +24,7 @@ export namespace app {
 	    theme: string;
 	    lightAccentColor: string;
 	    darkAccentColor: string;
+	    scrollbarVisibility: string;
 	    mainToolbarNewDocument: boolean;
 	    mainToolbarEdit: boolean;
 	    mainToolbarTranslate: boolean;
@@ -76,6 +77,7 @@ export namespace app {
 	        this.theme = source["theme"];
 	        this.lightAccentColor = source["lightAccentColor"];
 	        this.darkAccentColor = source["darkAccentColor"];
+	        this.scrollbarVisibility = source["scrollbarVisibility"];
 	        this.mainToolbarNewDocument = source["mainToolbarNewDocument"];
 	        this.mainToolbarEdit = source["mainToolbarEdit"];
 	        this.mainToolbarTranslate = source["mainToolbarTranslate"];

@@ -234,8 +234,10 @@ export const el = {
     settingsContentScroll: document.querySelector('.settings-content-scroll'),
     settingsDirtyStatus: $('settings-dirty-status'),
     settingsMarginSegmented: $('settings-margin-segmented'),
+    settingsScrollbarVisibilitySegmented: $('settings-scrollbar-visibility-segmented'),
     editorToolbarSegmented: $('editor-toolbar-segmented'),
     settingsDocumentMargin: $('settings-document-margin'),
+    settingsScrollbarVisibility: $('settings-scrollbar-visibility'),
     settingsViewerFont: $('settings-viewer-font'),
     settingsToolbarNewDocument: $('settings-toolbar-new-document'),
     settingsToolbarEdit: $('settings-toolbar-edit'),
@@ -367,6 +369,7 @@ export const state = {
     editorBackgroundColor: "",
     lightAccentColor: "#0071e3",
     darkAccentColor: "#0a84ff",
+    scrollbarVisibility: "always",
     mainToolbarButtons: {
         newDocument: true,
         edit: true,

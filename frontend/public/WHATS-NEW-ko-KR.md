@@ -2,7 +2,7 @@
 title: "DKST Markdown Browser 2.2"
 author: "DINKI'ssTyle"
 team: "DKST"
-date: "2026-08-01"
+date: "2026-08-06"
 tags: ["readme"]
 draft: false
 ---
@@ -21,6 +21,12 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 <div align="center">DKST 마크다운 브라우저가 더욱 강력해졌습니다!<br>이번 버전에 추가된 주요 기능을 확인해 보세요.</div>
 
 # 변경 사항
+
+## 2.2.4
+
+#### 개선 사항 (Improvements)
+- **스크롤바 색상 변경**: 무채색 스크롤바를 사용자 지정 액센트 컬러로 변경하여 현재 스크롤 위치를 직관적으로 확인할 수 있습니다.
+- **스크롤바 표시 옵션**: Appearance → Show scroll bars 에서 스크롤바가 나타나는 시점을 '스크롤할 때(When scrolling)' 또는 '항상(Always)' 중에서 선택할 수 있습니다.
 
 ## 2.2.3
 #### 추가된 사항 (New Features)

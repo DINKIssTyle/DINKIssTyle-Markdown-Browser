@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="en" class="dark">
+<html lang="en" class="dark" data-scrollbar-visibility="always">
 
 <head>
     <meta charset="UTF-8" />
@@ -630,8 +630,8 @@
                             <header class="settings-panel-header">
                                 <div class="settings-panel-kicker">Personalization</div>
                                 <h2>Appearance</h2>
-                                <p>Customize highlight colors and choose which actions stay visible in the main toolbar.
-                                </p>
+                                <p>Customize colors, shared interface behavior, and the actions shown in the main
+                                    toolbar.</p>
                             </header>
                             <section class="ai-setting-group settings-card">
                                 <div class="settings-card-heading">
@@ -674,6 +674,38 @@
                                                 <input type="color" id="dark-accent-custom" />
                                             </span>
                                         </label>
+                                    </div>
+                                </div>
+                            </section>
+                            <section class="ai-setting-group settings-card">
+                                <div class="settings-card-heading">
+                                    <div>
+                                        <h4>Interface</h4>
+                                        <p>Control shared interface behavior in the editor and reader.</p>
+                                    </div>
+                                    <span class="material-symbols-outlined settings-card-heading-icon"
+                                        aria-hidden="true">instant_mix</span>
+                                </div>
+                                <div class="interface-settings-grid">
+                                    <div class="interface-setting-item">
+                                        <span class="material-symbols-outlined interface-setting-icon"
+                                            aria-hidden="true">unfold_more</span>
+                                        <span class="interface-setting-copy">
+                                            <strong>Show scroll bars</strong>
+                                            <small>Choose when scroll bars appear in the editor and reader.</small>
+                                        </span>
+                                        <div id="settings-scrollbar-visibility-segmented" class="settings-segmented"
+                                            role="group" aria-label="Show scroll bars">
+                                            <button type="button" data-scrollbar-value="when-scrolling">When
+                                                scrolling</button>
+                                            <button type="button" data-scrollbar-value="always"
+                                                class="active">Always</button>
+                                        </div>
+                                        <select id="settings-scrollbar-visibility" class="settings-native-proxy"
+                                            tabindex="-1" aria-hidden="true">
+                                            <option value="when-scrolling">When scrolling</option>
+                                            <option value="always" selected>Always</option>
+                                        </select>
                                     </div>
                                 </div>
                             </section>

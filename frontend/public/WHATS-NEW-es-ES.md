@@ -13,6 +13,10 @@ Si estás satisfecho con el DKST Markdown Browser, prueba **DKST Text Flow**. Ay
 
 # Cambios
 
+#### Mejoras
+- **Cambio de color de la barra de desplazamiento**: La barra de desplazamiento monocromática ahora se puede cambiar a un color de acento personalizado, lo que permite a los usuarios ver intuitivamente su posición actual de desplazamiento.
+- **Opciones de visualización de la barra de desplazamiento**: En Apariencia → Mostrar barras de desplazamiento, puedes elegir cuándo aparecen las barras: 'Al desplazarse' o 'Siempre'.
+
 ## 2.2.3
 
 #### Nuevas Funcionalidades

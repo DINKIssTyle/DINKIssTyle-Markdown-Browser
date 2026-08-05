@@ -8,7 +8,7 @@
   "frontend:dev:serverUrl": "auto",
   "info": {
     "productName": "DKST Markdown Browser",
-    "productVersion": "2.2.3",
+    "productVersion": "2.2.4",
     "comments": "An elegant cross-platform viewer for Markdown and HTML files.",
     "fileAssociations": [
       {

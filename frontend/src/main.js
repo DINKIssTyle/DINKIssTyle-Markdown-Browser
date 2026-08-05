@@ -29,7 +29,7 @@ import {
 import { initAI, bindAIEvents, openSettings, showAskAIPrompt } from './main-ai.js';
 import { bindUpdateEvents, runAutomaticUpdateCheck } from './main-update.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
-import { loadMainToolbarVisibility, persistAppSettings } from './main-settings.js';
+import { loadMainToolbarVisibility, loadScrollbarVisibility, persistAppSettings } from './main-settings.js';
 import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
 
 import {
@@ -182,6 +182,7 @@ async function loadSettings() {
     const accentSettings = resolveAccentSettings(s);
     state.lightAccentColor = accentSettings.light;
     state.darkAccentColor = accentSettings.dark;
+    loadScrollbarVisibility(s);
     loadMainToolbarVisibility(s);
     state.documentMargin = s.documentMargin || "none";
     state.viewerFontFamily = s.viewerFontFamily || "";

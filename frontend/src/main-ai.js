@@ -6,9 +6,12 @@
 import { state, el } from './main-state.js';
 import {
     applyMainToolbarVisibility,
+    applyScrollbarVisibility,
     collectMainToolbarSettingsFromControls,
+    collectScrollbarSettingsFromControls,
     persistAppSettings,
     syncMainToolbarSettingsControls,
+    syncScrollbarSettingsControls,
 } from './main-settings.js';
 import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../wailsjs/go/app/App';
 import { EventsOn } from '../wailsjs/runtime/runtime';
@@ -1109,6 +1112,11 @@ function resetSettingsPasswordVisibility() {
 
 function syncSettingsProxyControls() {
     syncSegmentedControl(el.settingsMarginSegmented, 'data-margin-value', el.settingsDocumentMargin?.value || 'none');
+    syncSegmentedControl(
+        el.settingsScrollbarVisibilitySegmented,
+        'data-scrollbar-value',
+        el.settingsScrollbarVisibility?.value || 'always',
+    );
     syncSegmentedControl(el.editorToolbarSegmented, 'data-toolbar-value', el.editorToolbarMode?.value || 'beginner');
     if (el.aiFeaturesEnabled && el.aiFeaturesDisabled) {
         el.aiFeaturesEnabled.checked = !el.aiFeaturesDisabled.checked;
@@ -1192,6 +1200,7 @@ function setAccentColor(mode, color) {
 
 function syncCommonSettingsControls() {
     renderAccentPresetControls();
+    syncScrollbarSettingsControls();
     syncMainToolbarSettingsControls();
     if (el.settingsDocumentMargin) {
         el.settingsDocumentMargin.value = state.documentMargin || "none";
@@ -1485,6 +1494,17 @@ export function bindAIEvents() {
         syncSegmentedControl(el.settingsMarginSegmented, 'data-margin-value', button.dataset.marginValue);
         el.settingsDocumentMargin.dispatchEvent(new Event('change', { bubbles: true }));
     });
+    el.settingsScrollbarVisibilitySegmented?.addEventListener('click', event => {
+        const button = event.target.closest('[data-scrollbar-value]');
+        if (!button || !el.settingsScrollbarVisibility) return;
+        el.settingsScrollbarVisibility.value = button.dataset.scrollbarValue;
+        syncSegmentedControl(
+            el.settingsScrollbarVisibilitySegmented,
+            'data-scrollbar-value',
+            button.dataset.scrollbarValue,
+        );
+        el.settingsScrollbarVisibility.dispatchEvent(new Event('change', { bubbles: true }));
+    });
     el.editorToolbarSegmented?.addEventListener('click', event => {
         const button = event.target.closest('[data-toolbar-value]');
         if (!button || !el.editorToolbarMode) return;
@@ -1655,10 +1675,12 @@ export function bindAIEvents() {
         state.documentMargin = el.settingsDocumentMargin?.value || "none";
         state.viewerFontFamily = el.settingsViewerFont?.value || "";
         collectUpdateSettingsFromControls();
+        collectScrollbarSettingsFromControls();
         collectMainToolbarSettingsFromControls();
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         applyDocumentMarginStyle(state.documentMargin);
         applyViewerFontFamily(state.viewerFontFamily);
+        applyScrollbarVisibility();
         applyMainToolbarVisibility();
         collectEditorSettingsFromControls();
         await persistAISettings();

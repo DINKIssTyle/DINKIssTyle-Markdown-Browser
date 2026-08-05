@@ -14,6 +14,13 @@ If you are satisfied with the DKST Markdown Browser, try **DKST Text Flow**. It 
 
 # Changes
 
+## 2.2.4
+
+#### Improvements
+- **Scrollbar Color Change**: The monochrome scrollbar can now be changed to a custom accent color, allowing users to intuitively see their current scroll position.
+- **Scrollbar Display Options**: In Appearance → Show scroll bars, you can choose when the scrollbars appear: 'When scrolling' or 'Always'.
+
+
 ## 2.2.3
 #### New Features
 - **Update Check**: You can check and download updates within the app without going through the web.

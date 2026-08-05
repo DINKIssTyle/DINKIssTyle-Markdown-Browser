@@ -83,6 +83,7 @@ type AppSettings struct {
 	Theme                    string            `json:"theme"`
 	LightAccentColor         string            `json:"lightAccentColor"`
 	DarkAccentColor          string            `json:"darkAccentColor"`
+	ScrollbarVisibility      string            `json:"scrollbarVisibility"`
 	MainToolbarNewDocument   bool              `json:"mainToolbarNewDocument"`
 	MainToolbarEdit          bool              `json:"mainToolbarEdit"`
 	MainToolbarTranslate     bool              `json:"mainToolbarTranslate"`
@@ -709,6 +710,7 @@ func (a *App) getSettingsUnlocked() AppSettings {
 	settings.Theme = "light" // "dark" | "light"
 	settings.LightAccentColor = "#0071e3"
 	settings.DarkAccentColor = "#0a84ff"
+	settings.ScrollbarVisibility = "always" // "when-scrolling" | "always"
 	settings.MainToolbarNewDocument = true
 	settings.MainToolbarEdit = true
 	settings.MainToolbarTranslate = true
@@ -761,6 +763,11 @@ func (a *App) saveSettingsUnlocked(settings AppSettings) {
 }
 
 func normalizeSettings(settings *AppSettings) {
+	switch settings.ScrollbarVisibility {
+	case "when-scrolling", "always":
+	default:
+		settings.ScrollbarVisibility = "always"
+	}
 	switch settings.UpdateCheckInterval {
 	case updateCheckIntervalNever, updateCheckIntervalDaily, updateCheckIntervalWeekly, updateCheckIntervalMonthly:
 	default:

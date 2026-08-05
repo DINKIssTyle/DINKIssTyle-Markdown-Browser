@@ -15,6 +15,29 @@ func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, 
 	return function(request)
 }
 
+func TestNormalizeSettingsScrollbarVisibility(t *testing.T) {
+	tests := []struct {
+		name  string
+		value string
+		want  string
+	}{
+		{name: "always", value: "always", want: "always"},
+		{name: "when scrolling", value: "when-scrolling", want: "when-scrolling"},
+		{name: "missing defaults to always", value: "", want: "always"},
+		{name: "invalid defaults to always", value: "sometimes", want: "always"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			settings := AppSettings{ScrollbarVisibility: test.value}
+			normalizeSettings(&settings)
+			if settings.ScrollbarVisibility != test.want {
+				t.Fatalf("ScrollbarVisibility = %q, want %q", settings.ScrollbarVisibility, test.want)
+			}
+		})
+	}
+}
+
 func TestCompareVersions(t *testing.T) {
 	tests := []struct {
 		left  string

@@ -4,7 +4,7 @@
     font-family: "Material Symbols Outlined";
     font-style: normal;
     font-weight: 400;
-    src: url("./assets/fonts/material-symbols-outlined.woff2?v=109") format("woff2");
+    src: url("./assets/fonts/material-symbols-outlined.woff2?v=110") format("woff2");
 }
 
 :root {
@@ -1946,20 +1946,55 @@ html.dark .markdown-container .hljs-deletion {
 
 /* Scrollbar */
 ::-webkit-scrollbar {
+    -webkit-appearance: none;
     width: 8px;
+    height: 8px;
 }
 
 ::-webkit-scrollbar-track {
+    -webkit-appearance: none;
     background: transparent;
 }
 
 ::-webkit-scrollbar-thumb {
-    background: rgba(0, 0, 0, 0.1);
+    -webkit-appearance: none;
+    background: var(--accent-color);
     border-radius: 4px;
+    min-height: 28px;
+    transition: background-color 140ms ease;
 }
 
-html.dark ::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color-hover);
+}
+
+html[data-scrollbar-visibility="always"] #content-view,
+html[data-scrollbar-visibility="always"] .cm-scroller {
+    overflow-y: scroll;
+}
+
+html[data-scrollbar-visibility="always"] #content-view::-webkit-scrollbar,
+html[data-scrollbar-visibility="always"] .cm-scroller::-webkit-scrollbar {
+    -webkit-appearance: none;
+    width: 8px;
+    background: transparent;
+}
+
+html[data-scrollbar-visibility="always"] #content-view::-webkit-scrollbar-thumb,
+html[data-scrollbar-visibility="always"] .cm-scroller::-webkit-scrollbar-thumb {
+    -webkit-appearance: none;
+    min-height: 28px;
+    background: var(--accent-color);
+}
+
+html[data-scrollbar-visibility="when-scrolling"] #content-view::-webkit-scrollbar-thumb,
+html[data-scrollbar-visibility="when-scrolling"] .cm-scroller::-webkit-scrollbar-thumb {
+    background: transparent;
+}
+
+html[data-scrollbar-visibility="when-scrolling"] #content-view.is-scrollbar-active::-webkit-scrollbar-thumb,
+html[data-scrollbar-visibility="when-scrolling"] .cm-scroller.is-scrollbar-active::-webkit-scrollbar-thumb {
+    background: var(--accent-color);
 }
 
 /* ── Edit Toolbar ─────────────────────────────────────── */
@@ -4396,7 +4431,7 @@ html.dark .progress-stream-text {
 }
 
 .modal-emoji-grid::-webkit-scrollbar-thumb {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--accent-color);
     border-radius: 3px;
 }
 
@@ -5467,7 +5502,7 @@ html.dark .ai-settings-content .ai-setting-group input:not([type="checkbox"])::p
 .settings-content-scroll::-webkit-scrollbar-thumb {
     border: 2px solid transparent;
     border-radius: 999px;
-    background: color-mix(in srgb, var(--text-color) 18%, transparent);
+    background: var(--accent-color);
     background-clip: padding-box;
 }
 
@@ -5556,6 +5591,54 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
     display: grid;
     grid-template-columns: repeat(2, minmax(0, 1fr));
     gap: 8px;
+}
+
+.interface-settings-grid {
+    display: grid;
+    gap: 8px;
+}
+
+.interface-setting-item {
+    min-width: 0;
+    min-height: 68px;
+    padding: 12px;
+    display: grid;
+    grid-template-columns: 30px minmax(0, 1fr) auto;
+    align-items: center;
+    gap: 10px;
+    border: 1px solid var(--border-color);
+    border-radius: 11px;
+    background: color-mix(in srgb, var(--surface-color) 68%, transparent);
+}
+
+.interface-setting-icon {
+    width: 30px;
+    height: 30px;
+    display: grid;
+    place-items: center;
+    border-radius: 8px;
+    color: var(--text-muted);
+    background: color-mix(in srgb, var(--text-color) 6%, transparent);
+    font-size: 18px;
+}
+
+.interface-setting-copy {
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.interface-setting-copy strong {
+    color: var(--text-color);
+    font-size: 11px;
+    font-weight: 700;
+}
+
+.interface-setting-copy small {
+    color: var(--text-muted);
+    font-size: 9px;
+    line-height: 1.35;
 }
 
 .toolbar-visibility-item {
@@ -6423,6 +6506,8 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
 }
 
 .settings-update-status {
+    display: flex;
+    flex-direction: column;
     gap: 16px;
 }
 
@@ -6511,7 +6596,8 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
 }
 
 .settings-update-download {
-    align-self: flex-start;
+    align-self: center;
+    margin-top: 8px;
 }
 
 .settings-update-release-link {
@@ -6682,6 +6768,14 @@ html.dark .settings-switch input+span::after {
     .settings-segmented button {
         min-width: 0;
         flex: 1 1 0;
+    }
+
+    .interface-setting-item {
+        grid-template-columns: 30px minmax(0, 1fr);
+    }
+
+    .interface-setting-item .settings-segmented {
+        grid-column: 2;
     }
 }
 
