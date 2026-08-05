@@ -56,9 +56,22 @@ export PATH="$HOME/go/bin:/usr/local/go/bin:/opt/homebrew/bin:$PATH"
 
 command -v wails >/dev/null 2>&1 || { echo "❌ wails is not installed. Install it with 'go install github.com/wailsapp/wails/v2/cmd/wails@latest'."; exit 1; }
 command -v go    >/dev/null 2>&1 || { echo "❌ Go is not installed."; exit 1; }
+command -v npm   >/dev/null 2>&1 || { echo "❌ npm is not installed. Install Node.js and npm first."; exit 1; }
 
 sync_wails_product_version
 mkdir -p "${OUT_DIR}"
+
+# Keep node_modules in sync with package-lock.json. Wails runs the frontend
+# build but does not refresh an existing, stale dependency installation.
+echo "📦 Refreshing frontend dependencies..."
+(
+    cd frontend
+    if [ -f package-lock.json ]; then
+        npm ci
+    else
+        npm install
+    fi
+)
 
 # ── Signing Identity Resolution ─────────────────────────────
 resolve_signing_identity() {
