@@ -32,8 +32,40 @@
     --code-font: "SF Mono", Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace;
     --header-height: 56px;
     --sidebar-width: 300px;
-    --active-sidebar-offset: 0px;
     --editor-ai-dock-height: 42px;
+
+    /* ── Mobile Toolbar Button Dimension Constants (4 Categories) ─────── */
+    /* 1. Mobile Main Toolbar Buttons (#toolbar .nav-btn) */
+    --mobile-main-toolbar-btn-width: 46px;
+    --mobile-main-toolbar-btn-height: 46px;
+    --mobile-main-toolbar-icon-size: 26px;
+    --mobile-main-toolbar-btn-gap: 16px;
+
+    /* 2. Mobile Sidebar & New Tab Buttons (#tab-strip .tab-sidebar-btn, .tab-add-btn) */
+    --mobile-tab-bar-btn-width: 44px;
+    --mobile-tab-bar-btn-height: 44px;
+    --mobile-tab-bar-icon-size: 26px;
+    --mobile-tab-bar-btn-gap: 8px;
+
+    /* 3. Mobile Editor Toolbar Buttons (#edit-toolbar .tool-btn) */
+    --mobile-editor-toolbar-btn-min-width: 44px;
+    --mobile-editor-toolbar-btn-height: 44px;
+    --mobile-editor-toolbar-icon-size: 26px;
+    --mobile-editor-toolbar-btn-gap: 4px;
+
+    /* 4. Mobile AI Toolbar Buttons (#editor-ai-dock .tool-btn, .editor-ai-trigger, .editor-ai-toggle-btn) */
+    --mobile-ai-toolbar-btn-min-width: 34px;
+    --mobile-ai-toolbar-btn-height: 32px;
+    --mobile-ai-toolbar-icon-size: 18px;
+    --mobile-ai-toolbar-btn-gap: 6px;
+
+    /* ── Mobile Tab Item Display Constants ────────────────────────────── */
+    --mobile-tabs-list-height: 40px;
+    --mobile-tab-item-height: 34px;
+    --mobile-tab-item-min-width: 90px;
+    --mobile-tab-item-max-width: 220px;
+    --mobile-tab-item-font-size: 13px;
+    --mobile-tab-close-icon-size: 18px;
 }
 
 html.dark {
@@ -6907,6 +6939,111 @@ html.platform-mobile .is-touch-releasing {
     transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease !important;
 }
 
+/* ── Mobile Toolbar Button Dimensions (Using :root Constants) ────────── */
+/* Ensure toolbar containers dynamically expand to fit custom button heights */
+html.platform-mobile .toolbar {
+    height: auto !important;
+    min-height: var(--header-height);
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+html.platform-mobile .tab-strip {
+    height: auto !important;
+    min-height: 44px;
+    padding-top: 4px;
+    padding-bottom: 4px;
+}
+
+html.platform-mobile .edit-toolbar {
+    height: auto !important;
+    min-height: 40px;
+}
+
+html.platform-mobile .editor-ai-dock {
+    height: auto !important;
+    min-height: var(--editor-ai-dock-height);
+}
+
+/* 1. Mobile Main Toolbar Buttons (#toolbar .nav-btn) */
+html.platform-mobile #toolbar .nav-btn {
+    width: var(--mobile-main-toolbar-btn-width) !important;
+    height: var(--mobile-main-toolbar-btn-height) !important;
+}
+
+html.platform-mobile #toolbar :is(.nav-group, .action-group) {
+    gap: var(--mobile-main-toolbar-btn-gap) !important;
+}
+
+html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
+    font-size: var(--mobile-main-toolbar-icon-size) !important;
+}
+
+/* 2. Mobile Sidebar & New Tab Buttons (#tab-strip .tab-sidebar-btn, .tab-add-btn) */
+html.platform-mobile #tab-strip .tab-sidebar-btn,
+html.platform-mobile #tab-strip .tab-add-btn {
+    width: var(--mobile-tab-bar-btn-width) !important;
+    height: var(--mobile-tab-bar-btn-height) !important;
+}
+
+html.platform-mobile #tab-strip {
+    gap: var(--mobile-tab-bar-btn-gap) !important;
+}
+
+html.platform-mobile #tab-strip .tab-sidebar-btn .material-symbols-outlined,
+html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
+    font-size: var(--mobile-tab-bar-icon-size) !important;
+}
+
+/* Mobile Tab Item Display (Tabs List, Tab Item Height, Min/Max Width & Font Size) */
+html.platform-mobile .tabs-list {
+    height: var(--mobile-tabs-list-height) !important;
+}
+
+html.platform-mobile .tab-item {
+    height: var(--mobile-tab-item-height) !important;
+    min-width: var(--mobile-tab-item-min-width) !important;
+    max-width: var(--mobile-tab-item-max-width) !important;
+}
+
+html.platform-mobile .tab-title {
+    font-size: var(--mobile-tab-item-font-size) !important;
+}
+
+html.platform-mobile .tab-close-btn .material-symbols-outlined {
+    font-size: var(--mobile-tab-close-icon-size) !important;
+}
+
+/* 3. Mobile Editor Toolbar Buttons (#edit-toolbar .tool-btn) */
+html.platform-mobile #edit-toolbar .tool-btn {
+    min-width: var(--mobile-editor-toolbar-btn-min-width) !important;
+    height: var(--mobile-editor-toolbar-btn-height) !important;
+}
+
+html.platform-mobile .edit-toolbar-row {
+    gap: var(--mobile-editor-toolbar-btn-gap) !important;
+}
+
+html.platform-mobile #edit-toolbar .tool-btn .material-symbols-outlined {
+    font-size: var(--mobile-editor-toolbar-icon-size) !important;
+}
+
+/* 4. Mobile AI Toolbar Buttons (#editor-ai-dock .tool-btn, .editor-ai-trigger, .editor-ai-toggle-btn) */
+html.platform-mobile #editor-ai-dock .tool-btn,
+html.platform-mobile #editor-ai-dock .editor-ai-trigger,
+html.platform-mobile #editor-ai-dock .editor-ai-toggle-btn {
+    min-width: var(--mobile-ai-toolbar-btn-min-width) !important;
+    height: var(--mobile-ai-toolbar-btn-height) !important;
+}
+
+html.platform-mobile #editor-ai-dock .editor-ai-anchor {
+    gap: var(--mobile-ai-toolbar-btn-gap) !important;
+}
+
+html.platform-mobile #editor-ai-dock :is(.tool-btn, .editor-ai-trigger, .editor-ai-toggle-btn) .material-symbols-outlined {
+    font-size: var(--mobile-ai-toolbar-icon-size) !important;
+}
+
 html.platform-mobile :is(.cm-editor, .cm-content, .cm-scroller, .cm-line, textarea, #markdown-container, #app, body) {
     -webkit-touch-callout: none !important;
 }
@@ -6924,9 +7061,10 @@ html.platform-ios :is(#markdown-container, .cm-content) {
 }
 
 /* Disable sticky hover effects on mobile (iOS, iPadOS, Android) touch interaction */
-@media (hover: none), (pointer: coarse) {
-    html.platform-mobile :is(
-        button,
+@media (hover: none),
+(pointer: coarse) {
+
+    html.platform-mobile :is(button,
         a,
         [role="button"],
         .nav-btn,
@@ -6951,8 +7089,7 @@ html.platform-ios :is(#markdown-container, .cm-content) {
         .edit-preview-open-tab,
         .settings-tab,
         .settings-close-btn,
-        .context-menu-item
-    ):hover:not(.is-touch-pressed):not(.active):not([aria-pressed="true"]) {
+        .context-menu-item):hover:not(.is-touch-pressed):not(.active):not([aria-pressed="true"]) {
         background-color: transparent !important;
         background: transparent !important;
         box-shadow: none !important;
@@ -6966,18 +7103,22 @@ html.platform-ios :is(#markdown-container, .cm-content) {
         background-color: var(--accent-color) !important;
         color: #ffffff !important;
     }
+
     html.platform-mobile .action-btn.secondary:hover:not(.is-touch-pressed) {
         background-color: var(--surface-color) !important;
         color: var(--text-color) !important;
     }
+
     html.platform-mobile .modal-btn.primary:hover:not(.is-touch-pressed) {
         background-color: var(--accent-color) !important;
         color: #ffffff !important;
     }
+
     html.platform-mobile .modal-btn.secondary:hover:not(.is-touch-pressed) {
         background-color: var(--surface-color) !important;
         color: var(--text-color) !important;
     }
+
     html.platform-mobile .modal-btn.danger:hover:not(.is-touch-pressed) {
         background-color: #ff3b30 !important;
         color: #ffffff !important;
@@ -7742,11 +7883,9 @@ html.dark .cm-editor .cm-content ::selection {
     position: absolute;
     inset: -3px;
     border-radius: 50%;
-    background: conic-gradient(
-        from -90deg,
-        var(--accent-color) var(--history-swipe-turn),
-        color-mix(in srgb, var(--text-color) 10%, transparent) 0
-    );
+    background: conic-gradient(from -90deg,
+            var(--accent-color) var(--history-swipe-turn),
+            color-mix(in srgb, var(--text-color) 10%, transparent) 0);
     -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
     mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 0);
 }
@@ -7847,6 +7986,7 @@ html.dark .cm-editor .cm-content ::selection {
 }
 
 @media (prefers-reduced-motion: reduce) {
+
     .history-swipe-feedback,
     .history-swipe-feedback-surface,
     .history-swipe-feedback-icon {
