@@ -12,6 +12,8 @@ note
 *_test.go
 !internal/app/update_test.go
 
+bin/
+
 # Wails 3 mobile generated files
 build/ios/xcode/overlay.json
 build/ios/xcode/gen/

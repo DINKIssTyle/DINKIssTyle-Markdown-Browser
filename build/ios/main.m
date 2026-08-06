@@ -54,8 +54,9 @@ configurationForConnectingSceneSession:(UISceneSession *)connectingSceneSession
 
 int main(int argc, char * argv[]) {
     @autoreleasepool {
-        // Force linker to retain WailsSceneDelegate class symbol
+        // Force linker to retain WailsSceneDelegate and WailsAppDelegate class symbols
         (void)[WailsSceneDelegate class];
+        (void)[WailsAppDelegate class];
 
         // Disable buffering so stdout/stderr from Go log.Printf flush immediately
         setvbuf(stdout, NULL, _IONBF, 0);
