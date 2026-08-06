@@ -1,4 +1,5 @@
 build/bin
+.task/
 frontend/dist
 frontend/node_modules
 .DS_Store
@@ -11,5 +12,11 @@ note
 *_test.go
 !internal/app/update_test.go
 
-frontend/wailsjs/runtime/runtime.d.ts
-frontend/wailsjs/runtime/runtime.js
+# Wails 3 mobile generated files
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
+build/android/overlay.json
+build/android/gen/
+build/android/.gradle/
+build/android/app/build/
+build/android/app/src/main/jniLibs/

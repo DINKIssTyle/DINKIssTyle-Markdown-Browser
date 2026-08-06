@@ -18,8 +18,6 @@ import (
 	"path/filepath"
 	"strings"
 	"time"
-
-	"github.com/wailsapp/wails/v2/pkg/runtime"
 )
 
 const translationChunkTargetRunes = 6000
@@ -144,7 +142,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 			if totalSteps > 0 {
 				progress = int(float64(completedSteps) / float64(totalSteps) * 100)
 			}
-			runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
+			a.emit("translation:progress", map[string]any{
 				"label":       fmt.Sprintf("Translating document %d of %d", targetIndex+1, len(targets)),
 				"progress":    progress,
 				"active":      true,
@@ -174,7 +172,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 			}
 			completedSteps++
 			if totalSteps > 0 {
-				runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
+				a.emit("translation:progress", map[string]any{
 					"label":       fmt.Sprintf("Translating document %d of %d", targetIndex+1, len(targets)),
 					"progress":    int(float64(completedSteps) / float64(totalSteps) * 100),
 					"active":      true,
@@ -198,7 +196,7 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 		translations[target.Code] = translatedText
 	}
 
-	runtime.EventsEmit(a.ctx, "translation:progress", map[string]any{
+	a.emit("translation:progress", map[string]any{
 		"label":     "Translation completed",
 		"progress":  100,
 		"active":    false,
@@ -511,7 +509,7 @@ func (a *App) appendLMStudioStreamContent(raw map[string]any, output *strings.Bu
 		}
 		output.WriteString(next)
 		if progressKind != "" {
-			runtime.EventsEmit(a.ctx, "progress:delta", map[string]any{
+			a.emit("progress:delta", map[string]any{
 				"kind": progressKind,
 				"text": next,
 			})
@@ -612,7 +610,7 @@ func (a *App) appendOpenAIStreamEvent(joined string, output *strings.Builder, pr
 	for _, next := range extractOpenAIStreamContent(raw) {
 		output.WriteString(next)
 		if progressKind != "" {
-			runtime.EventsEmit(a.ctx, "progress:delta", map[string]any{
+			a.emit("progress:delta", map[string]any{
 				"kind": progressKind,
 				"text": next,
 			})

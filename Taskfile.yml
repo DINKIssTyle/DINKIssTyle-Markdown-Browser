@@ -1,0 +1,62 @@
+version: '3'
+
+vars:
+  APP_NAME: "DKST Markdown Browser"
+  BIN_DIR: "build/bin"
+  PACKAGE_MANAGER: '{{.PACKAGE_MANAGER | default "npm"}}'
+  VITE_PORT: '{{.WAILS_VITE_PORT | default 9245}}'
+  GOOS: '{{.GOOS | default OS}}'
+
+includes:
+  common: ./build/Taskfile.yml
+  windows: ./build/windows/Taskfile.yml
+  darwin: ./build/darwin/Taskfile.yml
+  linux: ./build/linux/Taskfile.yml
+  ios: ./build/ios/Taskfile.yml
+  android: ./build/android/Taskfile.yml
+
+tasks:
+  build:
+    summary: Build the application for the selected platform
+    cmds:
+      - task: '{{.GOOS}}:build'
+
+  package:
+    summary: Package the application for the selected platform
+    cmds:
+      - task: '{{.GOOS}}:package'
+
+  run:
+    summary: Run the application for the selected platform
+    cmds:
+      - task: '{{.GOOS}}:run'
+
+  dev:
+    summary: Run the application in development mode
+    cmds:
+      - wails3 dev -config ./build/config.yml -port {{.VITE_PORT}}
+
+  setup:docker:
+    summary: Build the cross-compilation Docker image
+    cmds:
+      - task: common:setup:docker
+
+  build:server:
+    summary: Build the application in server mode
+    cmds:
+      - task: common:build:server
+
+  run:server:
+    summary: Run the application in server mode
+    cmds:
+      - task: common:run:server
+
+  build:docker:
+    summary: Build a server-mode Docker image
+    cmds:
+      - task: common:build:docker
+
+  run:docker:
+    summary: Run the server-mode Docker image
+    cmds:
+      - task: common:run:docker

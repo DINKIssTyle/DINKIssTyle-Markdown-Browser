@@ -35,10 +35,10 @@ echo  Version      : !VERSION!
 echo ============================================================
 
 REM ── Dependency Check ─────────────────────────────────────────────
-where wails >nul 2>&1
+where wails3 >nul 2>&1
 if %ERRORLEVEL% neq 0 (
-    echo ^[ERROR^] wails is not installed.
-    echo         go install github.com/wailsapp/wails/v2/cmd/wails@latest
+    echo ^[ERROR^] wails3 is not installed.
+    echo         go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.3
     exit /b 1
 )
 where go >nul 2>&1
@@ -47,9 +47,10 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-powershell -NoProfile -Command "$content = Get-Content 'wails.json' -Raw; $content = $content -replace '\"productVersion\":\s*\"[^\"]+\"', '\"productVersion\": \"!VERSION!\"'; Set-Content 'wails.json' $content"
+powershell -NoProfile -Command "$content = Get-Content 'build/config.yml' -Raw; $content = $content -replace '(?m)^  version: \"[^\"]+\"', '  version: \"!VERSION!\"'; Set-Content 'build/config.yml' $content"
+powershell -NoProfile -Command "$content = Get-Content 'build/windows/info.json' -Raw; $content = $content -replace '\"file_version\":\s*\"[^\"]+\"', '\"file_version\": \"!VERSION!\"'; $content = $content -replace '\"ProductVersion\":\s*\"[^\"]+\"', '\"ProductVersion\": \"!VERSION!\"'; Set-Content 'build/windows/info.json' $content"
 if %ERRORLEVEL% neq 0 (
-    echo [ERROR] Failed to sync wails.json productVersion
+    echo [ERROR] Failed to sync Wails 3 build metadata
     exit /b 1
 )
 
@@ -58,13 +59,13 @@ if not exist "%OUT_DIR%" mkdir "%OUT_DIR%"
 REM ── Build Execution ──────────────────────────────────────────────
 if /I "%ARCH%"=="amd64" (
     echo [*] Starting Windows amd64 build...
-    wails build -platform windows/amd64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=!VERSION!'" -clean
+    wails3 task build GOOS=windows ARCH=amd64 VERSION="!VERSION!"
 ) else if /I "%ARCH%"=="arm64" (
     echo [*] Starting Windows arm64 build...
-    wails build -platform windows/arm64 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=!VERSION!'" -clean
+    wails3 task build GOOS=windows ARCH=arm64 VERSION="!VERSION!"
 ) else if /I "%ARCH%"=="386" (
     echo [*] Starting Windows 386 build...
-    wails build -platform windows/386 -o "%APP_NAME%.exe" -ldflags "-X '%APP_VERSION_LDFLAG%=!VERSION!'" -clean
+    wails3 task build GOOS=windows ARCH=386 VERSION="!VERSION!"
 ) else (
     echo [ERROR] Unknown architecture: %ARCH%  (amd64 ^| arm64 ^| 386^)
     exit /b 1

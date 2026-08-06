@@ -138,7 +138,7 @@ Run the executable and follow the installation link at the bottom of the start p
 ### Prerequisites
 
 - **Go**: Version 1.23 or higher
-- **Wails**: Version v2.11.0 or higher
+- **Wails**: Version v3.0.0-beta.3 (Wails 3 is currently pre-release)
 - **Node.js**: Version 18 or higher (including npm)
 - **CGO Tools**: Required for native compilation (e.g., GCC or Clang)
 

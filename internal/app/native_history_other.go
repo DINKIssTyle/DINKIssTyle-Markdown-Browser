@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin || ios
 
 /*
  * Created by DINKIssTyle on 2026.
@@ -7,6 +7,6 @@
 
 package app
 
-import "context"
+import "github.com/wailsapp/wails/v3/pkg/application"
 
-func installHistoryNavigationBridge(context.Context) {}
+func installHistoryNavigationBridge(*application.WebviewWindow) {}

@@ -18,8 +18,8 @@ import {
     showToast, beginProgressTask, updateProgress,
     finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
 } from './main-ui.js';
-import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../wailsjs/go/app/App';
-import { BrowserOpenURL, LogError, LogInfo } from '../wailsjs/runtime/runtime';
+import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { BrowserOpenURL, LogError, LogInfo } from './wails-runtime';
 import {
     createHorizontalSwipeTracker,
     horizontalGestureDisposition,

@@ -21,8 +21,8 @@ import {
     isEditingDocumentPath,
     saveCurrentDocument,
 } from './main-editor.js';
-import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath } from '../wailsjs/go/app/App';
-import { LogError } from '../wailsjs/runtime/runtime';
+import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { LogError } from './wails-runtime';
 import { copyTextToClipboard, showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 

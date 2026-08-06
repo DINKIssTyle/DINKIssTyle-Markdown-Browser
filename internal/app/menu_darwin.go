@@ -1,133 +1,73 @@
-//go:build darwin
-
-/*
- * Created by DINKIssTyle on 2026.
- * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
- */
+//go:build darwin && !ios
 
 package app
 
-import (
-	"github.com/wailsapp/wails/v2/pkg/menu"
-	"github.com/wailsapp/wails/v2/pkg/menu/keys"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-)
+import "github.com/wailsapp/wails/v3/pkg/application"
 
-// BuildAppMenu constructs the macOS native menu bar.
-// Wails v2 on macOS replaces the built-in menu with the one returned here.
-func BuildAppMenu(app *App) *menu.Menu {
-	appMenu := menu.NewMenuFromItems(menu.AppMenu())
+// BuildAppMenu constructs the native macOS menu using the Wails 3 menu API.
+//wails:ignore
+func (a *App) BuildAppMenu() *application.Menu {
+	menu := a.wailsApp.NewMenu()
+	menu.AddRole(application.AppMenu)
 
-	// ── File menu ──────────────────────────────────────────────────────
-	fileMenu := appMenu.AddSubmenu("File")
-	fileMenu.AddText("Ask AI", keys.CmdOrCtrl("/"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:ask-ai")
-	})
-	fileMenu.AddSeparator()
-	fileMenu.AddText("New Tab", keys.CmdOrCtrl("t"), func(_ *menu.CallbackData) {
-		runtime.Show(app.ctx)
-		runtime.WindowShow(app.ctx)
-		runtime.WindowUnminimise(app.ctx)
-		runtime.EventsEmit(app.ctx, "menu:new-window")
-	})
-	fileMenu.AddText("Reopen Closed Tab", keys.Combo("t", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
-		runtime.Show(app.ctx)
-		runtime.WindowShow(app.ctx)
-		runtime.WindowUnminimise(app.ctx)
-		runtime.EventsEmit(app.ctx, "menu:reopen-closed-tab")
-	})
-	fileMenu.AddText("New Document", keys.CmdOrCtrl("n"), func(_ *menu.CallbackData) {
-		runtime.Show(app.ctx)
-		runtime.WindowShow(app.ctx)
-		runtime.WindowUnminimise(app.ctx)
-		runtime.EventsEmit(app.ctx, "menu:new-document")
-	})
-	fileMenu.AddSeparator()
-	fileMenu.AddText("Open...", keys.CmdOrCtrl("o"), func(_ *menu.CallbackData) {
-		// 프론트엔드의 OpenFile 트리거 — 이벤트로 알린다
-		runtime.EventsEmit(app.ctx, "menu:open-file")
-	})
-	fileMenu.AddText("Save", keys.CmdOrCtrl("s"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:save")
-	})
-	fileMenu.AddText("Save As...", keys.Combo("s", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:save-as")
-	})
-	fileMenu.AddSeparator()
-	fileMenu.AddText("Page Setup...", keys.Combo("p", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:page-setup")
-	})
-	fileMenu.AddText("Print...", keys.CmdOrCtrl("p"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:print")
-	})
-	fileMenu.AddSeparator()
-	fileMenu.AddText("Quit", keys.CmdOrCtrl("q"), func(_ *menu.CallbackData) {
-		runtime.Quit(app.ctx)
-	})
+	file := menu.AddSubmenu("File")
+	a.addMenuEvent(file, "Ask AI", "CmdOrCtrl+/", "menu:ask-ai", false)
+	file.AddSeparator()
+	a.addMenuEvent(file, "New Tab", "CmdOrCtrl+T", "menu:new-window", true)
+	a.addMenuEvent(file, "Reopen Closed Tab", "CmdOrCtrl+Shift+T", "menu:reopen-closed-tab", true)
+	a.addMenuEvent(file, "New Document", "CmdOrCtrl+N", "menu:new-document", true)
+	file.AddSeparator()
+	a.addMenuEvent(file, "Open...", "CmdOrCtrl+O", "menu:open-file", false)
+	a.addMenuEvent(file, "Save", "CmdOrCtrl+S", "menu:save", false)
+	a.addMenuEvent(file, "Save As...", "CmdOrCtrl+Shift+S", "menu:save-as", false)
+	file.AddSeparator()
+	a.addMenuEvent(file, "Page Setup...", "CmdOrCtrl+Shift+P", "menu:page-setup", false)
+	a.addMenuEvent(file, "Print...", "CmdOrCtrl+P", "menu:print", false)
+	file.AddSeparator()
+	file.AddRole(application.Quit)
 
-	appMenu.Append(menu.EditMenu())
+	menu.AddRole(application.EditMenu)
 
-	// ── View menu ──────────────────────────────────────────────────────
-	viewMenu := appMenu.AddSubmenu("View")
-	viewMenu.AddText("Home", keys.Combo("h", keys.CmdOrCtrlKey, keys.ShiftKey), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:home")
-	})
-	viewMenu.AddSeparator()
-	viewMenu.AddText("Back", keys.CmdOrCtrl("["), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:back")
-	})
-	viewMenu.AddText("Forward", keys.CmdOrCtrl("]"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:forward")
-	})
-	viewMenu.AddSeparator()
-	viewMenu.AddText("Refresh", keys.CmdOrCtrl("r"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:refresh")
-	})
-	viewMenu.AddSeparator()
-	viewMenu.AddText("Toggle Sidebar", keys.OptionOrAlt("s"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-sidebar")
-	})
-	viewMenu.AddText("Toggle File Tree Sidebar", keys.OptionOrAlt("1"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-files-sidebar")
-	})
-	viewMenu.AddText("Toggle Outline Sidebar", keys.OptionOrAlt("2"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-outline-sidebar")
-	})
-	viewMenu.AddText("Toggle Search Sidebar", keys.OptionOrAlt("3"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-search-sidebar")
-	})
-	viewMenu.AddText("Toggle Search Panel", keys.CmdOrCtrl("f"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-search")
-	})
-	viewMenu.AddText("Toggle Editor Preview", keys.CmdOrCtrl("g"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-editor-preview")
-	})
-	viewMenu.AddSeparator()
-	viewMenu.AddText("Actual Size", keys.CmdOrCtrl("0"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:font-reset")
-	})
-	viewMenu.AddText("Zoom In", keys.CmdOrCtrl("="), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:font-up")
-	})
-	viewMenu.AddText("Zoom Out", keys.CmdOrCtrl("-"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:font-down")
-	})
-	viewMenu.AddSeparator()
-	viewMenu.AddText("Toggle Theme", keys.CmdOrCtrl("k"), func(_ *menu.CallbackData) {
-		runtime.EventsEmit(app.ctx, "menu:toggle-theme")
-	})
+	view := menu.AddSubmenu("View")
+	a.addMenuEvent(view, "Home", "CmdOrCtrl+Shift+H", "menu:home", false)
+	view.AddSeparator()
+	a.addMenuEvent(view, "Back", "CmdOrCtrl+[", "menu:back", false)
+	a.addMenuEvent(view, "Forward", "CmdOrCtrl+]", "menu:forward", false)
+	view.AddSeparator()
+	a.addMenuEvent(view, "Refresh", "CmdOrCtrl+R", "menu:refresh", false)
+	view.AddSeparator()
+	a.addMenuEvent(view, "Toggle Sidebar", "Alt+S", "menu:toggle-sidebar", false)
+	a.addMenuEvent(view, "Toggle File Tree Sidebar", "Alt+1", "menu:toggle-files-sidebar", false)
+	a.addMenuEvent(view, "Toggle Outline Sidebar", "Alt+2", "menu:toggle-outline-sidebar", false)
+	a.addMenuEvent(view, "Toggle Search Sidebar", "Alt+3", "menu:toggle-search-sidebar", false)
+	a.addMenuEvent(view, "Toggle Search Panel", "CmdOrCtrl+F", "menu:toggle-search", false)
+	a.addMenuEvent(view, "Toggle Editor Preview", "CmdOrCtrl+G", "menu:toggle-editor-preview", false)
+	view.AddSeparator()
+	a.addMenuEvent(view, "Actual Size", "CmdOrCtrl+0", "menu:font-reset", false)
+	a.addMenuEvent(view, "Zoom In", "CmdOrCtrl+=", "menu:font-up", false)
+	a.addMenuEvent(view, "Zoom Out", "CmdOrCtrl+-", "menu:font-down", false)
+	view.AddSeparator()
+	a.addMenuEvent(view, "Toggle Theme", "CmdOrCtrl+K", "menu:toggle-theme", false)
 
-	appMenu.Append(menu.WindowMenu())
-
-	// ── Help menu ──────────────────────────────────────────────────────
-	helpMenu := appMenu.AddSubmenu("Help")
-	helpMenu.AddText("DKST Markdown Browser Help", nil, func(_ *menu.CallbackData) {
-		runtime.MessageDialog(app.ctx, runtime.MessageDialogOptions{
-			Type:    runtime.InfoDialog,
-			Title:   "Help",
-			Message: "• New Document: ⌘N\n• New Tab: ⌘T\n• Open File: ⌘O or 📂 button\n• Home: ⇧⌘H or ⌂ button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘K or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
-		})
+	menu.AddRole(application.WindowMenu)
+	help := menu.AddSubmenu("Help")
+	help.Add("DKST Markdown Browser Help").OnClick(func(_ *application.Context) {
+		a.wailsApp.Dialog.Info().AttachToWindow(a.window).SetTitle("Help").SetMessage(
+			"• New Document: ⌘N\n• New Tab: ⌘T\n• Open File: ⌘O or 📂 button\n• Home: ⇧⌘H or ⌂ button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘K or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
+		).Show()
 	})
+	return menu
+}
 
-	return appMenu
+func (a *App) addMenuEvent(menu *application.Menu, label, accelerator, event string, showWindow bool) {
+	item := menu.Add(label)
+	if accelerator != "" {
+		item.SetAccelerator(accelerator)
+	}
+	item.OnClick(func(_ *application.Context) {
+		if showWindow {
+			a.showMainWindow()
+		}
+		a.emit(event)
+	})
 }

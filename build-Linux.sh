@@ -26,7 +26,7 @@ read_app_version() {
 }
 
 sync_wails_product_version() {
-    perl -0pi -e 's/"productVersion":\s*"[^"]+"/"productVersion": "'"${VERSION}"'"/' wails.json
+    perl -0pi -e 's/^  version: "[^"]+"/  version: "'"${VERSION}"'"/m' build/config.yml
 }
 
 VERSION="$(read_app_version)"
@@ -76,16 +76,16 @@ fi
 
 # --- 4. Wails Check & Path ---
 export PATH=$PATH:$(go env GOPATH)/bin
-if ! command -v wails &> /dev/null; then
-    echo "⚠️  Wails CLI not found. Installing..."
-    go install github.com/wailsapp/wails/v2/cmd/wails@latest
-    if ! command -v wails &> /dev/null; then
+if ! command -v wails3 &> /dev/null; then
+    echo "⚠️  Wails 3 CLI not found. Installing..."
+    go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.3
+    if ! command -v wails3 &> /dev/null; then
         echo "❌ Failed to install Wails."
         exit 1
     fi
 fi
 # Show Wails version without color indicators for cleaner log
-echo "Using Wails: $(wails version 2>/dev/null | grep "Wails CLI" | awk '{print $3}' || echo "installed")"
+echo "Using Wails: $(wails3 version 2>/dev/null || echo "installed")"
 
 # --- 4.5. Frontend Dependency Sync ---
 if ! command -v npm &> /dev/null; then
@@ -115,12 +115,7 @@ echo "🔨 Starting Linux ${ARCH} build..."
 
 case "${ARCH}" in
     amd64|arm64|arm)
-        wails build \
-            -platform "linux/${ARCH}" \
-            -o "${APP_NAME}" \
-            -ldflags "-X '${APP_VERSION_LDFLAG}=${VERSION}'" \
-            ${BUILD_TAGS} \
-            -clean
+        wails3 task build GOOS=linux ARCH="${ARCH}" VERSION="${VERSION}"
         ;;
     *)
         echo "❌ Unknown architecture: ${ARCH} (amd64 | arm64 | arm)"

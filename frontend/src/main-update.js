@@ -3,7 +3,7 @@ import { marked } from 'marked';
 import { state, el } from './main-state.js';
 import { openExternalURL } from './main-navigation.js';
 import { showActionToast, showToast } from './main-ui.js';
-import { CheckForUpdate, GetVersion } from '../wailsjs/go/app/App';
+import { CheckForUpdate, GetVersion } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import {
     isAutomaticUpdateCheckDue,
     isSafeGitHubReleaseURL,

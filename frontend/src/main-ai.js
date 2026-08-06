@@ -13,8 +13,8 @@ import {
     syncMainToolbarSettingsControls,
     syncScrollbarSettingsControls,
 } from './main-settings.js';
-import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../wailsjs/go/app/App';
-import { EventsOn } from '../wailsjs/runtime/runtime';
+import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { EventsOn } from './wails-runtime';
 import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
 import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, updateProgress } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';

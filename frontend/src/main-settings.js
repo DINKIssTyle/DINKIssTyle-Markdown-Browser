@@ -4,7 +4,7 @@
  */
 
 import { state, el } from './main-state.js';
-import { SaveSettings } from '../wailsjs/go/app/App';
+import { SaveSettings } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 
 const MAIN_TOOLBAR_BUTTONS = [
     ['newDocument', 'mainToolbarNewDocument', 'settingsToolbarNewDocument', ['btnNewDoc']],

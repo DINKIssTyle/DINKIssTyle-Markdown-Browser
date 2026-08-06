@@ -1,4 +1,4 @@
-//go:build !darwin
+//go:build !darwin || ios
 
 /*
  * Created by DINKIssTyle on 2026.
@@ -7,15 +7,13 @@
 
 package app
 
-import (
-	"context"
+import "github.com/wailsapp/wails/v3/pkg/application"
 
-	"github.com/wailsapp/wails/v2/pkg/runtime"
-)
-
-func showPageSetup(_ context.Context) {
+func showPageSetup(_ *application.WebviewWindow) {
 }
 
-func printCurrentWindow(ctx context.Context) {
-	runtime.WindowPrint(ctx)
+func printCurrentWindow(window *application.WebviewWindow) {
+	if window != nil {
+		_ = window.Print()
+	}
 }

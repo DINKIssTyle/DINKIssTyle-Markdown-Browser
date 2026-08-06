@@ -138,7 +138,7 @@ DKST Markdown Browser 利用本地 LLM 提供 AI 助手功能，如需设置或�
 ### 先决条件
 
 - **Go**：版本 1.23 或更高
-- **Wails**：版本 v2.11.0 或更高
+- **Wails**：版本 v3.0.0-beta.3（Wails 3 目前为预发布版）
 - **Node.js**：版本 18 或更高（包含 npm）
 - **CGO 工具**：编译原生代码所需的工具（例如 GCC 或 Clang）
 

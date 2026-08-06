@@ -1,4 +1,4 @@
-# DO NOT EDIT - Generated automatically by `wails build`
+# Legacy installer helpers retained for the Wails 3 Windows packaging script.
 
 !include "x64.nsh"
 !include "WinVer.nsh"

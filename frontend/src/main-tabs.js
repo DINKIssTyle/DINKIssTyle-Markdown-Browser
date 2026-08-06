@@ -13,8 +13,8 @@ import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, ge
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
-import { AskSaveDiscardCancel } from '../wailsjs/go/app/App';
-import { LogError } from '../wailsjs/runtime/runtime';
+import { AskSaveDiscardCancel } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { LogError } from './wails-runtime';
 
 // ── Module-level State ─────────────────────────────────────
 let dragState = null;

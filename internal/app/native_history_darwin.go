@@ -1,4 +1,4 @@
-//go:build darwin
+//go:build darwin && !ios
 
 /*
  * Created by DINKIssTyle on 2026.
@@ -13,11 +13,6 @@ package app
 #import <Foundation/Foundation.h>
 #import <Cocoa/Cocoa.h>
 #import <WebKit/WebKit.h>
-
-@interface WailsContext : NSObject
-@property (retain) NSWindow* mainWindow;
-@property (retain) WKWebView* webview;
-@end
 
 static id DKSTHistoryMouseMonitor = nil;
 static id DKSTHistorySwipeMonitor = nil;
@@ -47,10 +42,22 @@ static void DKSTDispatchHistoryGesturePhase(WKWebView *webView, NSString *phase)
     [webView evaluateJavaScript:script completionHandler:nil];
 }
 
-static void DKSTInstallHistoryNavigationBridge(void *inctx) {
+static WKWebView *DKSTFindWebView(NSView *view) {
+    if ([view isKindOfClass:[WKWebView class]]) {
+        return (WKWebView *)view;
+    }
+    for (NSView *child in view.subviews) {
+        WKWebView *result = DKSTFindWebView(child);
+        if (result != nil) return result;
+    }
+    return nil;
+}
+
+static void DKSTInstallHistoryNavigationBridge(void *nativeWindow) {
     dispatch_async(dispatch_get_main_queue(), ^{
-        WailsContext *ctx = (__bridge WailsContext*) inctx;
-        if (ctx == nil || ctx.mainWindow == nil || ctx.webview == nil) {
+        NSWindow *mainWindow = (__bridge NSWindow*) nativeWindow;
+        WKWebView *webView = mainWindow == nil ? nil : DKSTFindWebView(mainWindow.contentView);
+        if (mainWindow == nil || webView == nil) {
             return;
         }
 
@@ -66,9 +73,6 @@ static void DKSTInstallHistoryNavigationBridge(void *inctx) {
             [NSEvent removeMonitor:DKSTHistoryScrollMonitor];
             DKSTHistoryScrollMonitor = nil;
         }
-
-        NSWindow *mainWindow = ctx.mainWindow;
-        WKWebView *webView = ctx.webview;
 
         DKSTHistoryMouseMonitor = [NSEvent addLocalMonitorForEventsMatchingMask:NSEventMaskOtherMouseDown
             handler:^NSEvent *(NSEvent *event) {
@@ -116,10 +120,11 @@ static void DKSTInstallHistoryNavigationBridge(void *inctx) {
 */
 import "C"
 
-import "context"
+import "github.com/wailsapp/wails/v3/pkg/application"
 
-func installHistoryNavigationBridge(ctx context.Context) {
-	if ptr := wailsContextPointer(ctx); ptr != nil {
-		C.DKSTInstallHistoryNavigationBridge(ptr)
+//wails:ignore
+func installHistoryNavigationBridge(window *application.WebviewWindow) {
+	if window != nil && window.NativeWindow() != nil {
+		C.DKSTInstallHistoryNavigationBridge(window.NativeWindow())
 	}
 }

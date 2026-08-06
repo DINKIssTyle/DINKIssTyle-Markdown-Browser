@@ -29,8 +29,7 @@ import (
 	"sync"
 	"time"
 
-	"github.com/wailsapp/wails/v2/pkg/options"
-	"github.com/wailsapp/wails/v2/pkg/runtime"
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 var appIconPNG []byte
@@ -130,7 +129,8 @@ type AppSettings struct {
 
 // App struct
 type App struct {
-	ctx               context.Context
+	wailsApp          *application.App
+	window            *application.WebviewWindow
 	settingsPath      string
 	recentPath        string
 	mu                sync.Mutex
@@ -143,6 +143,7 @@ type App struct {
 	pendingOpenFiles  []string
 	showWhatsNew      bool
 	editorState       EditorSessionState
+	allowNextQuit     bool
 }
 
 type EditorSessionState struct {
@@ -199,8 +200,66 @@ func NewApp() *App {
 }
 
 // Startup is called when the app starts. The context is saved.
-func (a *App) Startup(ctx context.Context) {
-	a.ctx = ctx
+//
+//wails:ignore
+func (a *App) AttachRuntime(wailsApp *application.App, window *application.WebviewWindow) {
+	a.wailsApp = wailsApp
+	a.window = window
+}
+
+func (a *App) emit(name string, data ...any) {
+	if a.wailsApp != nil {
+		a.wailsApp.Event.Emit(name, data...)
+	}
+}
+
+func (a *App) showMainWindow() {
+	if a.window == nil {
+		return
+	}
+	a.window.UnMinimise()
+	a.window.Show()
+}
+
+func (a *App) showError(title, message string) {
+	if a.wailsApp == nil {
+		log.Printf("%s: %s", title, message)
+		return
+	}
+	a.wailsApp.Dialog.Error().
+		AttachToWindow(a.window).
+		SetTitle(title).
+		SetMessage(message).
+		Show()
+}
+
+func (a *App) askDialog(title, message string, labels []string, defaultLabel, cancelLabel string) string {
+	if a.wailsApp == nil {
+		return cancelLabel
+	}
+	result := make(chan string, 1)
+	dialog := a.wailsApp.Dialog.Question().AttachToWindow(a.window).SetTitle(title).SetMessage(message)
+	for _, label := range labels {
+		label := label
+		button := dialog.AddButton(label).OnClick(func() {
+			select {
+			case result <- label:
+			default:
+			}
+		})
+		if label == defaultLabel {
+			dialog.SetDefaultButton(button)
+		}
+		if label == cancelLabel {
+			dialog.SetCancelButton(button)
+		}
+	}
+	dialog.Show()
+	return <-result
+}
+
+//wails:ignore
+func (a *App) Startup() {
 
 	// Check version for "What's New"
 	settings := a.GetSettings()
@@ -216,26 +275,23 @@ func (a *App) Startup(ctx context.Context) {
 // DomReady adjusts the initial window state after the native window is ready.
 // Compact displays use the operating system's maximised work area, while larger
 // displays keep the configured 1200x800 startup size.
-func (a *App) DomReady(ctx context.Context) {
-	installHistoryNavigationBridge(ctx)
+//
+//wails:ignore
+func (a *App) DomReady() {
+	installHistoryNavigationBridge(a.window)
 
-	screens, err := runtime.ScreenGetAll(ctx)
-	if err != nil {
+	if a.wailsApp == nil {
 		return
 	}
+	screens := a.wailsApp.Screen.GetAll()
 
 	screen, ok := startupScreen(screens)
 	if ok && shouldMaximiseOnStartup(screen) {
-		runtime.WindowMaximise(ctx)
+		a.window.Maximise()
 	}
 }
 
-func startupScreen(screens []runtime.Screen) (runtime.Screen, bool) {
-	for _, screen := range screens {
-		if screen.IsCurrent {
-			return screen, true
-		}
-	}
+func startupScreen(screens []*application.Screen) (*application.Screen, bool) {
 	for _, screen := range screens {
 		if screen.IsPrimary {
 			return screen, true
@@ -244,18 +300,15 @@ func startupScreen(screens []runtime.Screen) (runtime.Screen, bool) {
 	if len(screens) > 0 {
 		return screens[0], true
 	}
-	return runtime.Screen{}, false
+	return nil, false
 }
 
-func shouldMaximiseOnStartup(screen runtime.Screen) bool {
+func shouldMaximiseOnStartup(screen *application.Screen) bool {
+	if screen == nil {
+		return false
+	}
 	width := screen.Size.Width
 	height := screen.Size.Height
-	if width <= 0 {
-		width = screen.Width
-	}
-	if height <= 0 {
-		height = screen.Height
-	}
 	if width <= 0 || height <= 0 {
 		return false
 	}
@@ -275,7 +328,8 @@ func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath strin
 	}
 }
 
-func (a *App) OnBeforeClose(ctx context.Context) bool {
+//wails:ignore
+func (a *App) OnBeforeClose() bool {
 	a.mu.Lock()
 	editorState := a.editorState
 	a.mu.Unlock()
@@ -292,21 +346,11 @@ func (a *App) OnBeforeClose(ctx context.Context) bool {
 	switch response {
 	case "Save":
 		if strings.TrimSpace(editorState.CurrentPath) == "" {
-			runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-				Type:    runtime.ErrorDialog,
-				Title:   "Save Failed",
-				Message: "This document does not have a save path yet. Save it manually before quitting.",
-				Buttons: []string{"OK"},
-			})
+			a.showError("Save Failed", "This document does not have a save path yet. Save it manually before quitting.")
 			return true
 		}
 		if err := a.SaveFile(editorState.CurrentPath, editorState.Content); err != nil {
-			runtime.MessageDialog(ctx, runtime.MessageDialogOptions{
-				Type:    runtime.ErrorDialog,
-				Title:   "Save Failed",
-				Message: fmt.Sprintf("Failed to save changes before quitting.\n\n%s", err),
-				Buttons: []string{"OK"},
-			})
+			a.showError("Save Failed", fmt.Sprintf("Failed to save changes before quitting.\n\n%s", err))
 			return true
 		}
 		return false
@@ -317,6 +361,29 @@ func (a *App) OnBeforeClose(ctx context.Context) bool {
 	}
 }
 
+//wails:ignore
+func (a *App) HandleWindowClosing() bool {
+	cancel := a.OnBeforeClose()
+	if !cancel {
+		a.mu.Lock()
+		a.allowNextQuit = true
+		a.mu.Unlock()
+	}
+	return cancel
+}
+
+//wails:ignore
+func (a *App) ShouldQuit() bool {
+	a.mu.Lock()
+	if a.allowNextQuit {
+		a.allowNextQuit = false
+		a.mu.Unlock()
+		return true
+	}
+	a.mu.Unlock()
+	return !a.OnBeforeClose()
+}
+
 // FrontendReady marks the UI as ready to receive open-file events and returns queued paths.
 func (a *App) FrontendReady() []string {
 	a.mu.Lock()
@@ -325,7 +392,7 @@ func (a *App) FrontendReady() []string {
 	a.frontendReady = true
 
 	if a.showWhatsNew {
-		runtime.EventsEmit(a.ctx, "app:show-whats-new", AppVersion)
+		a.emit("app:show-whats-new", AppVersion)
 		a.showWhatsNew = false
 	}
 
@@ -336,12 +403,13 @@ func (a *App) FrontendReady() []string {
 
 // OpenFile opens a file dialog and returns the file path and content
 func (a *App) OpenFile() (FileResult, error) {
-	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
+	selection, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
 		Title: "Open Document",
-		Filters: []runtime.FileFilter{
+		Filters: []application.FileFilter{
 			{DisplayName: "Document Files (*.md;*.markdown;*.html;*.htm)", Pattern: "*.md;*.markdown;*.html;*.htm"},
 		},
-	})
+		Window: a.window,
+	}).PromptForSingleSelection()
 	if err != nil || selection == "" {
 		return FileResult{}, err
 	}
@@ -357,25 +425,27 @@ func (a *App) OpenFile() (FileResult, error) {
 
 // SelectDocument opens a file dialog to select a document for insertion
 func (a *App) SelectDocument(basePath string) (string, error) {
-	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            "Select Document",
-		DefaultDirectory: defaultDirectoryForBasePath(basePath),
-		Filters: []runtime.FileFilter{
+	selection, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:     "Select Document",
+		Directory: defaultDirectoryForBasePath(basePath),
+		Filters: []application.FileFilter{
 			{DisplayName: "Document Files", Pattern: "*.md;*.markdown;*.html;*.htm"},
 		},
-	})
+		Window: a.window,
+	}).PromptForSingleSelection()
 	return selection, err
 }
 
 // SelectImage opens a file dialog to select an image for insertion
 func (a *App) SelectImage(basePath string) (string, error) {
-	selection, err := runtime.OpenFileDialog(a.ctx, runtime.OpenDialogOptions{
-		Title:            "Select Image",
-		DefaultDirectory: defaultDirectoryForBasePath(basePath),
-		Filters: []runtime.FileFilter{
+	selection, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:     "Select Image",
+		Directory: defaultDirectoryForBasePath(basePath),
+		Filters: []application.FileFilter{
 			{DisplayName: "Image Files", Pattern: "*.png;*.jpg;*.jpeg;*.gif;*.webp;*.svg;*.bmp;*.ico"},
 		},
-	})
+		Window: a.window,
+	}).PromptForSingleSelection()
 	return selection, err
 }
 
@@ -401,14 +471,15 @@ func defaultDirectoryForBasePath(basePath string) string {
 
 // ShowSaveFileDialog opens a dialog to save a new file
 func (a *App) ShowSaveFileDialog(defaultName string) (string, error) {
-	selection, err := runtime.SaveFileDialog(a.ctx, runtime.SaveDialogOptions{
+	selection, err := a.wailsApp.Dialog.SaveFileWithOptions(&application.SaveFileDialogOptions{
 		Title:                "Save File",
-		DefaultFilename:      defaultName,
+		Filename:             defaultName,
 		CanCreateDirectories: true,
-		Filters: []runtime.FileFilter{
+		Filters: []application.FileFilter{
 			{DisplayName: "Markdown Files", Pattern: "*.md;*.markdown"},
 		},
-	})
+		Window: a.window,
+	}).PromptForSingleSelection()
 	return selection, err
 }
 
@@ -793,9 +864,12 @@ func (a *App) GetSystemTheme() string {
 
 // OpenDirectory opens a directory dialog
 func (a *App) OpenDirectory() (string, error) {
-	selection, err := runtime.OpenDirectoryDialog(a.ctx, runtime.OpenDialogOptions{
-		Title: "Select Folder for Search",
-	})
+	selection, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{
+		Title:                "Select Folder for Search",
+		CanChooseDirectories: true,
+		CanChooseFiles:       false,
+		Window:               a.window,
+	}).PromptForSingleSelection()
 	return selection, err
 }
 
@@ -814,18 +888,7 @@ func (a *App) AskConfirm(title string, message string, okText string, cancelText
 		buttons = []string{okText, cancelText}
 	}
 
-	response, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-		Type:          runtime.QuestionDialog,
-		Title:         title,
-		Message:       message,
-		Buttons:       buttons,
-		DefaultButton: okText,
-		CancelButton:  cancelText,
-	})
-	if err != nil {
-		log.Printf("dialog: failed title=%s err=%v", title, err)
-		return false
-	}
+	response := a.askDialog(title, message, buttons, okText, cancelText)
 	return response == okText
 }
 
@@ -838,17 +901,7 @@ func (a *App) AskSaveDiscardCancel(title string, message string) string {
 		buttons = []string{"Save", "Cancel", "Discard"}
 	}
 
-	response, err := runtime.MessageDialog(a.ctx, runtime.MessageDialogOptions{
-		Type:          runtime.QuestionDialog,
-		Title:         title,
-		Message:       message,
-		Buttons:       buttons,
-		DefaultButton: "Save",
-		CancelButton:  "Cancel",
-	})
-	if err != nil {
-		return "Cancel"
-	}
+	response := a.askDialog(title, message, buttons, "Save", "Cancel")
 	return normalizeSaveDiscardCancelResponse(response)
 }
 
@@ -890,21 +943,17 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 	return FileResult{Path: path, Content: content}, nil
 }
 
+//wails:ignore
 func (a *App) HandleSystemOpenFile(path string) {
 	a.queueOpenRequests([]string{path}, "")
-	if a.ctx != nil {
-		runtime.WindowUnminimise(a.ctx)
-		runtime.Show(a.ctx)
-	}
+	a.showMainWindow()
 }
 
-func (a *App) HandleSecondInstanceLaunch(data options.SecondInstanceData) {
-	log.Printf("second-instance: cwd=%s args=%v", data.WorkingDirectory, data.Args)
-	a.queueOpenRequests(data.Args, data.WorkingDirectory)
-	if a.ctx != nil {
-		runtime.WindowUnminimise(a.ctx)
-		runtime.Show(a.ctx)
-	}
+//wails:ignore
+func (a *App) HandleSecondInstanceLaunch(data application.SecondInstanceData) {
+	log.Printf("second-instance: cwd=%s args=%v", data.WorkingDir, data.Args)
+	a.queueOpenRequests(data.Args, data.WorkingDir)
+	a.showMainWindow()
 }
 
 func (a *App) queueOpenRequests(args []string, workingDir string) {
@@ -922,8 +971,8 @@ func (a *App) queueOpenRequests(args []string, workingDir string) {
 		a.mu.Unlock()
 
 		log.Printf("system-open-file: queued path=%s ready=%v", resolvedPath, ready)
-		if ready && a.ctx != nil {
-			runtime.EventsEmit(a.ctx, "system:open-file", resolvedPath)
+		if ready {
+			a.emit("system:open-file", resolvedPath)
 		}
 	}
 }
@@ -1027,12 +1076,12 @@ func (a *App) OpenExternalPath(path string) error {
 
 // PrintCurrentWindow opens the native print dialog for the current app window.
 func (a *App) PrintCurrentWindow() {
-	printCurrentWindow(a.ctx)
+	printCurrentWindow(a.window)
 }
 
 // ShowPageSetup opens the native page setup dialog for print paper and orientation.
 func (a *App) ShowPageSetup() {
-	showPageSetup(a.ctx)
+	showPageSetup(a.window)
 }
 
 // MakeAIRequest proxies a POST request to avoid CORS issues caused by local AI servers
@@ -1096,7 +1145,7 @@ func (a *App) readOpenAICompatibleAIStream(body io.Reader) (string, error) {
 		}
 		for _, next := range extractOpenAIStreamContent(raw) {
 			fullResponse.WriteString(next)
-			runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{
+			a.emit("ai:delta", map[string]any{
 				"kind": "message",
 				"text": next,
 			})
@@ -1569,12 +1618,12 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 					} else {
 						label = "Processing Prompt"
 					}
-					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
+					a.emit("ai:progress", map[string]any{
 						"label":    label,
 						"progress": progress * 100,
 					})
 				case "message.start":
-					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
+					a.emit("ai:progress", map[string]any{
 						"label":    "Receiving processing...",
 						"progress": 100,
 						"loading":  true,
@@ -1582,20 +1631,20 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 				case "message.delta":
 					if next, ok := raw["content"].(string); ok {
 						fullResponse.WriteString(next)
-						runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{
+						a.emit("ai:delta", map[string]any{
 							"kind": "message",
 							"text": next,
 						})
 					}
 				case "reasoning.delta":
-					runtime.EventsEmit(a.ctx, "ai:delta", map[string]any{
+					a.emit("ai:delta", map[string]any{
 						"kind": "reasoning",
 					})
-					runtime.EventsEmit(a.ctx, "ai:reasoning", map[string]any{
+					a.emit("ai:reasoning", map[string]any{
 						"text": "Thinking...",
 					})
 				case "chat.end":
-					runtime.EventsEmit(a.ctx, "ai:progress", map[string]any{
+					a.emit("ai:progress", map[string]any{
 						"label":     "Completed ✨",
 						"progress":  100,
 						"loading":   false,

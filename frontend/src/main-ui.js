@@ -4,8 +4,8 @@
  */
 
 import { state, el, getScroller, escapeRegex, escapeAttr, getPathDirname } from './main-state.js';
-import { SearchMarkdown, CancelAIRequest } from '../wailsjs/go/app/App';
-import { ClipboardGetText, ClipboardSetText, LogError } from '../wailsjs/runtime/runtime';
+import { SearchMarkdown, CancelAIRequest } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { ClipboardGetText, ClipboardSetText, LogError } from './wails-runtime';
 import { createCancelledTaskError, isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
 

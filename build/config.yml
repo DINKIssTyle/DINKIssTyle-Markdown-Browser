@@ -1,0 +1,36 @@
+version: '3'
+
+info:
+  companyName: "DINKIssTyle"
+  productName: "DKST Markdown Browser"
+  productIdentifier: "com.dinkisstyle.mdbrowser"
+  description: "An elegant cross-platform viewer for Markdown and HTML files."
+  copyright: "Copyright (C) 2026 DINKI'ssTyle. All rights reserved."
+  comments: "An elegant cross-platform viewer for Markdown and HTML files."
+  version: "2.2.4"
+
+dev_mode:
+  root_path: .
+  log_level: warn
+  debounce: 1000
+  ignore:
+    dir: [.git, node_modules, frontend, build/bin, dist]
+    file: [.DS_Store, "*_test.go"]
+    watched_extension: ["*.go", "*.js", "*.ts"]
+    git_ignore: true
+  executes:
+    - cmd: wails3 build DEV=true
+      type: blocking
+    - cmd: wails3 task common:dev:frontend
+      type: background
+    - cmd: wails3 task common:wait:frontend
+      type: blocking
+    - cmd: wails3 task run
+      type: primary
+
+fileAssociations:
+  - ext: md
+    name: DKSTDocument
+    description: Markdown Document
+    iconName: markdown-doc
+    role: Viewer

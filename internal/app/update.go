@@ -82,9 +82,9 @@ type parsedVersion struct {
 // download for the current operating system and architecture. It only reports
 // an available download; installing or replacing the running app is left to the user.
 func (a *App) CheckForUpdate() (UpdateInfo, error) {
-	ctx := a.ctx
-	if ctx == nil {
-		ctx = context.Background()
+	ctx := context.Background()
+	if a.wailsApp != nil {
+		ctx = a.wailsApp.Context()
 	}
 
 	info, err := checkForUpdate(ctx, updateHTTPClient, latestReleaseAPIURL, AppVersion, runtime.GOOS, runtime.GOARCH, time.Now())

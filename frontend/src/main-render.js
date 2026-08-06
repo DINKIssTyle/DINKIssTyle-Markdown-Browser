@@ -25,8 +25,8 @@ import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText } from './main-editor.js';
 import { syncAIControls } from './main-ai.js';
 import { applyHighlight, beginProgressTask, clearHighlight, copyTextToClipboard, finishProgressTask, showToast, updateProgress } from './main-ui.js';
-import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../wailsjs/go/app/App';
-import { LogError, LogInfo } from '../wailsjs/runtime/runtime';
+import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { LogError, LogInfo } from './wails-runtime';
 import { refreshSidebarContent } from './main-sidebar.js';
 
 // ── Module-level State ─────────────────────────────────────

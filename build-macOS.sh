@@ -39,7 +39,10 @@ read_app_version() {
 }
 
 sync_wails_product_version() {
-    perl -0pi -e 's/"productVersion":\s*"[^"]+"/"productVersion": "'"${VERSION}"'"/' wails.json
+    perl -0pi -e 's/^  version: "[^"]+"/  version: "'"${VERSION}"'"/m' build/config.yml
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION}" build/darwin/Info.plist
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" build/darwin/Info.plist
+    plutil -lint build/darwin/Info.plist >/dev/null
 }
 
 VERSION="$(read_app_version)"
@@ -54,7 +57,7 @@ echo "============================================================"
 # ── Dependency Check & PATH Setup ──────────────────────────
 export PATH="$HOME/go/bin:/usr/local/go/bin:/opt/homebrew/bin:$PATH"
 
-command -v wails >/dev/null 2>&1 || { echo "❌ wails is not installed. Install it with 'go install github.com/wailsapp/wails/v2/cmd/wails@latest'."; exit 1; }
+command -v wails3 >/dev/null 2>&1 || { echo "❌ wails3 is not installed. Install it with 'go install github.com/wailsapp/wails/v3/cmd/wails3@v3.0.0-beta.3'."; exit 1; }
 command -v go    >/dev/null 2>&1 || { echo "❌ Go is not installed."; exit 1; }
 command -v npm   >/dev/null 2>&1 || { echo "❌ npm is not installed. Install Node.js and npm first."; exit 1; }
 
@@ -154,14 +157,23 @@ fi
 
 # ── Build Execution ─────────────────────────────────────────────
 echo "🔨 Starting Build for ${ARCH}..."
-wails build \
-    -platform "darwin/${ARCH}" \
-    -o "${APP_NAME}" \
-    -ldflags "-X '${APP_VERSION_LDFLAG}=${VERSION}'" \
-    -clean
+if [ "${ARCH}" = "universal" ]; then
+    wails3 task darwin:build ARCH=amd64 VERSION="${VERSION}" OUTPUT="build/bin/${APP_NAME}-amd64"
+    wails3 task darwin:build ARCH=arm64 VERSION="${VERSION}" OUTPUT="build/bin/${APP_NAME}-arm64"
+    lipo -create -output "build/bin/${APP_NAME}" "build/bin/${APP_NAME}-amd64" "build/bin/${APP_NAME}-arm64"
+    rm -f "build/bin/${APP_NAME}-amd64" "build/bin/${APP_NAME}-arm64"
+else
+    wails3 task build GOOS=darwin ARCH="${ARCH}" VERSION="${VERSION}"
+fi
+
+APP_BUNDLE="./build/bin/${APP_NAME}.app"
+rm -rf "${APP_BUNDLE}"
+mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
+cp "./build/bin/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+cp "./build/darwin/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
+cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
 
 # ── .app Bundle Processing & Signing ─────────────────────────
-APP_BUNDLE="./build/bin/${APP_NAME}.app"
 if [ -d "${APP_BUNDLE}" ]; then
     echo "📝 Processing application bundle metadata and signing..."
 

@@ -8,7 +8,7 @@ Unicode true
 ## from outside of Wails for debugging and development of the installer.
 ##
 ## For development first make a wails nsis build to populate the "wails_tools.nsh":
-## > wails build --target windows/amd64 --nsis
+## > wails3 task build GOOS=windows ARCH=amd64
 ## Then you can call makensis on this file with specifying the path to your binary:
 ## For a AMD64 only installer:
 ## > makensis -DARG_WAILS_AMD64_BINARY=..\..\bin\app.exe

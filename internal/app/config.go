@@ -7,4 +7,4 @@ package app
 
 const AppName = "DKST Markdown Browser"
 
-var AppVersion = "2.2.4"
+var AppVersion = "3.0.0"

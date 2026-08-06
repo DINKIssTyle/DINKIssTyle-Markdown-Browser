@@ -44,8 +44,8 @@ import {
     AskSaveDiscardCancel,
     PrintCurrentWindow,
     ShowPageSetup,
-} from '../wailsjs/go/app/App';
-import { EventsOn, LogError, OnFileDrop } from '../wailsjs/runtime/runtime';
+} from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { EventsOn, LogError, OnFileDrop } from './wails-runtime';
 
 // ── App Initialization ─────────────────────────────────────
 
@@ -483,34 +483,7 @@ function bindSystemInstallModal() {
 
 // ── Drag and Drop ──────────────────────────────────────────
 
-function blockNativeFileDrop(target) {
-    if (!target?.addEventListener) {
-        return;
-    }
-
-    const prevent = event => {
-        event.preventDefault();
-        event.stopPropagation();
-        if (event.dataTransfer) {
-            event.dataTransfer.dropEffect = 'copy';
-        }
-    };
-
-    target.addEventListener('dragenter', prevent, true);
-    target.addEventListener('dragover', prevent, true);
-    target.addEventListener('drop', prevent, true);
-}
-
 function setupDragAndDrop() {
-    blockNativeFileDrop(window);
-    blockNativeFileDrop(document);
-    blockNativeFileDrop(document.body);
-    blockNativeFileDrop(el.mainContainer);
-    blockNativeFileDrop(el.contentView);
-    blockNativeFileDrop(el.markdownContainer);
-    blockNativeFileDrop(el.editorView);
-    blockNativeFileDrop(el.htmlFrame);
-
     OnFileDrop(async (_x, _y, files) => {
         if (!Array.isArray(files) || files.length === 0) {
             return;
