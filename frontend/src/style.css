@@ -69,6 +69,8 @@ html {
     height: 100%;
     overflow: hidden;
     overscroll-behavior: none;
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
 }
 
 body {
@@ -80,6 +82,8 @@ body {
     height: 100%;
     position: fixed;
     inset: 0;
+    touch-action: pan-x pan-y;
+    -webkit-text-size-adjust: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -6884,23 +6888,27 @@ html.platform-mobile.mobile-keyboard-visible .edit-toolbar {
     box-shadow: 0 5px 16px rgba(0, 0, 0, 0.14);
 }
 
-html.platform-mobile :is(button, a[href], [role="button"], select) {
+html.platform-mobile :is(button, a[href], [role="button"], select, .nav-btn, .tool-btn, .tab-item, .action-btn, .sidebar-tab-btn, .recent-item, .modal-btn, .file-tree-item, .outline-item) {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease;
+    will-change: transform;
 }
 
 html.platform-mobile .is-touch-pressed {
-    filter: brightness(0.9);
-    scale: 0.97;
-    transition-duration: 60ms !important;
+    transform: scale(0.92) !important;
+    filter: brightness(0.85) !important;
+    transition: transform 60ms cubic-bezier(0.4, 0, 0.2, 1), filter 60ms ease !important;
 }
 
-html.platform-mobile .touch-hover-reset {
-    pointer-events: none !important;
+html.platform-mobile .is-touch-releasing {
+    transform: scale(1) !important;
+    filter: brightness(1) !important;
+    transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease !important;
 }
 
-html.platform-mobile :is(button, a[href], [role="button"]):not(.is-touch-pressed) {
-    transition-duration: 120ms;
+html.platform-mobile :is(.cm-editor, .cm-content, .cm-scroller, .cm-line, textarea, #markdown-container, #app, body) {
+    -webkit-touch-callout: none !important;
 }
 
 html.platform-ios .cm-gutters,
@@ -6913,6 +6921,67 @@ html.platform-ios .cm-gutterElement {
 
 html.platform-ios :is(#markdown-container, .cm-content) {
     -webkit-touch-callout: none;
+}
+
+/* Disable sticky hover effects on mobile (iOS, iPadOS, Android) touch interaction */
+@media (hover: none), (pointer: coarse) {
+    html.platform-mobile :is(
+        button,
+        a,
+        [role="button"],
+        .nav-btn,
+        .tool-btn,
+        .tab-item,
+        .action-btn,
+        .sidebar-tab-btn,
+        .recent-item,
+        .file-tree-item,
+        .outline-item,
+        .result-item,
+        .modal-btn,
+        .tab-add-btn,
+        .tab-close-btn,
+        .tab-sidebar-btn,
+        .font-btn,
+        .toolbar-popup-trigger,
+        .tool-btn-labeled,
+        .editor-ai-trigger,
+        .editor-ai-toggle-btn,
+        .edit-preview-return,
+        .edit-preview-open-tab,
+        .settings-tab,
+        .settings-close-btn,
+        .context-menu-item
+    ):hover:not(.is-touch-pressed):not(.active):not([aria-pressed="true"]) {
+        background-color: transparent !important;
+        background: transparent !important;
+        box-shadow: none !important;
+        border-color: transparent !important;
+        transform: none !important;
+        filter: none !important;
+    }
+
+    /* Preserve solid base backgrounds for action/modal buttons when idle on Mobile */
+    html.platform-mobile .action-btn.primary:hover:not(.is-touch-pressed) {
+        background-color: var(--accent-color) !important;
+        color: #ffffff !important;
+    }
+    html.platform-mobile .action-btn.secondary:hover:not(.is-touch-pressed) {
+        background-color: var(--surface-color) !important;
+        color: var(--text-color) !important;
+    }
+    html.platform-mobile .modal-btn.primary:hover:not(.is-touch-pressed) {
+        background-color: var(--accent-color) !important;
+        color: #ffffff !important;
+    }
+    html.platform-mobile .modal-btn.secondary:hover:not(.is-touch-pressed) {
+        background-color: var(--surface-color) !important;
+        color: var(--text-color) !important;
+    }
+    html.platform-mobile .modal-btn.danger:hover:not(.is-touch-pressed) {
+        background-color: #ff3b30 !important;
+        color: #ffffff !important;
+    }
 }
 
 html.platform-android .editor-ai-dock.is-visible,

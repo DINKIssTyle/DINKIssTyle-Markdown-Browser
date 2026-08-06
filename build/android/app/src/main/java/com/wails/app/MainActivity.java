@@ -113,6 +113,31 @@ public class MainActivity extends AppCompatActivity {
         settings.setAllowContentAccess(false);
         settings.setMediaPlaybackRequiresUserGesture(false);
         settings.setMixedContentMode(WebSettings.MIXED_CONTENT_NEVER_ALLOW);
+        settings.setSupportZoom(false);
+        settings.setBuiltInZoomControls(false);
+        settings.setDisplayZoomControls(false);
+
+        // Suppress Android native text selection floating toolbar so only the app custom context menu appears
+        webView.setCustomSelectionActionModeCallback(new android.view.ActionMode.Callback() {
+            @Override
+            public boolean onCreateActionMode(android.view.ActionMode mode, android.view.Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onPrepareActionMode(android.view.ActionMode mode, android.view.Menu menu) {
+                return false;
+            }
+
+            @Override
+            public boolean onActionItemClicked(android.view.ActionMode mode, android.view.MenuItem item) {
+                return false;
+            }
+
+            @Override
+            public void onDestroyActionMode(android.view.ActionMode mode) {
+            }
+        });
 
         // Enable debugging in debug builds
         if (DEBUG) {

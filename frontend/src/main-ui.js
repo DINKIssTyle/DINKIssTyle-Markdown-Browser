@@ -608,10 +608,10 @@ export function bindContextMenu() {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('click', event => {
         if (!event.target.closest('#context-menu')) {
-            const iosSelectionTarget = isIOSPlatform()
+            const mobileSelectionTarget = isMobilePlatform()
                 ? event.target.closest('#markdown-container, .cm-editor')
                 : null;
-            if (iosSelectionTarget && (state.isEditing || getIOSSelectionText())) {
+            if (mobileSelectionTarget && (state.isEditing || getIOSSelectionText())) {
                 scheduleIOSSelectionContextMenu(event);
                 return;
             }
@@ -620,7 +620,7 @@ export function bindContextMenu() {
     });
     document.addEventListener('scroll', closeContextMenu, true);
     window.addEventListener('blur', closeContextMenu);
-    if (isIOSPlatform()) {
+    if (isMobilePlatform()) {
         document.addEventListener('selectionchange', () => scheduleIOSSelectionContextMenu());
         document.addEventListener('pointerup', event => {
             if (event.pointerType !== 'mouse') scheduleIOSSelectionContextMenu(event);
@@ -804,7 +804,7 @@ function scheduleIOSSelectionContextMenu(pointerEvent = null) {
 }
 
 async function showIOSSelectionContextMenu(pointerEvent) {
-    if (!isIOSPlatform() || pointerEvent?.target?.closest?.('#context-menu')) return;
+    if (!isMobilePlatform() || pointerEvent?.target?.closest?.('#context-menu')) return;
 
     const editorTarget = pointerEvent?.target?.closest?.('.cm-editor');
     if (state.isEditing && (editorTarget || document.activeElement?.closest?.('.cm-editor'))) {

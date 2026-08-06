@@ -33,11 +33,34 @@ export const isMobileUntitledPath = path => String(path || '').startsWith('__mob
 
 let platformAdapter = null;
 
+function disablePinchZoom() {
+    // Prevent iOS WKWebView gesture zooming
+    document.addEventListener('gesturestart', e => e.preventDefault(), { passive: false });
+    document.addEventListener('gesturechange', e => e.preventDefault(), { passive: false });
+    document.addEventListener('gestureend', e => e.preventDefault(), { passive: false });
+
+    // Prevent multi-touch pinch zoom
+    document.addEventListener('touchmove', e => {
+        if (e.touches && e.touches.length > 1) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+
+    // Prevent Ctrl + Wheel zoom (trackpad pinch on laptops)
+    document.addEventListener('wheel', e => {
+        if (e.ctrlKey) {
+            e.preventDefault();
+        }
+    }, { passive: false });
+}
+
 export async function initializePlatform() {
     const root = document.documentElement;
     root.dataset.platform = platform;
     root.classList.add(`platform-${platform}`);
     root.classList.toggle('platform-mobile', isMobilePlatform());
+
+    disablePinchZoom();
 
     if (!isMobilePlatform()) return;
 
@@ -116,30 +139,29 @@ function setupVisualViewport() {
 }
 
 function setupTouchFeedback() {
-    const selector = 'button, a[href], [role="button"], .recent-item, .result-item, .file-tree-item, .outline-item';
+    const selector = 'button, a[href], [role="button"], .recent-item, .result-item, .file-tree-item, .outline-item, .nav-btn, .tool-btn, .tab-item, .action-btn, .modal-btn, .sidebar-tab-btn';
     let pressed = null;
 
     const release = () => {
         if (!pressed) return;
-        const released = pressed;
-        pressed.classList.remove('is-touch-pressed');
+        const target = pressed;
+        target.classList.remove('is-touch-pressed');
+        target.classList.add('is-touch-releasing');
         pressed = null;
+
         window.setTimeout(() => {
-            released.blur?.();
-            // Temporarily remove the released element from hit testing so
-            // WebKit/Android WebView clear their synthetic sticky :hover state.
-            released.classList.add('touch-hover-reset');
-            requestAnimationFrame(() => requestAnimationFrame(() => {
-                released.classList.remove('touch-hover-reset');
-            }));
-        }, 0);
+            target.classList.remove('is-touch-releasing');
+        }, 340);
     };
 
     document.addEventListener('pointerdown', event => {
         if (event.pointerType === 'mouse') return;
         release();
         pressed = event.target.closest(selector);
-        pressed?.classList.add('is-touch-pressed');
+        if (pressed) {
+            pressed.classList.remove('is-touch-releasing');
+            pressed.classList.add('is-touch-pressed');
+        }
     }, true);
     document.addEventListener('pointerup', release, true);
     document.addEventListener('pointercancel', release, true);
