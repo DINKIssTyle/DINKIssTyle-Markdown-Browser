@@ -149,7 +149,13 @@ tasks:
           fi
           rm -rf "$TMP_AC"
           if [ -f "$APP_BUNDLE/assetcatalog_generated_info.plist" ]; then
-            /usr/libexec/PlistBuddy -c "Merge $APP_BUNDLE/assetcatalog_generated_info.plist" "$APP_BUNDLE/Info.plist" || true
+            # PlistBuddy splits its Merge command on spaces even when the -c
+            # argument is shell-quoted. Copy the partial plist to a path with
+            # no spaces before merging it into apps whose names contain spaces.
+            PARTIAL_INFO=$(mktemp /tmp/dkst-ios-asset-info.XXXXXX.plist)
+            cp "$APP_BUNDLE/assetcatalog_generated_info.plist" "$PARTIAL_INFO"
+            /usr/libexec/PlistBuddy -c "Merge $PARTIAL_INFO" "$APP_BUNDLE/Info.plist"
+            rm -f "$PARTIAL_INFO"
           fi
         fi
       - |

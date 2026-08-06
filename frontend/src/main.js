@@ -20,9 +20,9 @@ import {
     bindHistoryMouseNavigation, bindNativeHistoryNavigation,
 } from './main-navigation.js';
 import { bindDocumentMetadataUI, renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, toggleEditorPreview } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, toggleEditorPreview, scrollEditorToLine } from './main-editor.js';
 import {
-    showToast, toggleSearch, handleSearch, handleSearchInputKeydown,
+    showToast, toggleSearch, handleSearch, handleSearchInputKeydown, applyHighlight,
     updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
     copyTextToClipboard, bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
@@ -31,6 +31,7 @@ import { bindUpdateEvents, runAutomaticUpdateCheck } from './main-update.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
 import { loadMainToolbarVisibility, loadScrollbarVisibility, persistAppSettings } from './main-settings.js';
 import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
+import { initializePlatform, isMobilePlatform, printForCurrentPlatform } from './platform-common.js';
 
 import {
     FrontendReady,
@@ -49,7 +50,10 @@ import { EventsOn, LogError, OnFileDrop } from './wails-runtime';
 
 // ── App Initialization ─────────────────────────────────────
 
+const platformReady = initializePlatform();
+
 window.addEventListener('DOMContentLoaded', async () => {
+    await platformReady;
     const splashStartedAt = performance.now();
     const runningOnLinux = isLinux();
     document.documentElement.classList.toggle('platform-linux', runningOnLinux);
@@ -72,7 +76,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         // AI Init
         window.aiState = await initAI();
         bindAIEvents();
-        bindUpdateEvents({ openSettings });
+        if (!isMobilePlatform()) {
+            bindUpdateEvents({ openSettings });
+        }
 
         // Step 2: Check for pending startup files BEFORE rendering the first tab
         const startupPaths = await FrontendReady();
@@ -100,7 +106,9 @@ window.addEventListener('DOMContentLoaded', async () => {
         }
 
         updateNavButtons();
-        void runAutomaticUpdateCheck();
+        if (!isMobilePlatform()) {
+            void runAutomaticUpdateCheck();
+        }
 
         document.addEventListener('copy', () => {
             showToast('Copied to clipboard.');
@@ -280,7 +288,7 @@ async function printRenderedMarkdown() {
     }
 
     try {
-        await PrintCurrentWindow();
+        await printForCurrentPlatform(PrintCurrentWindow);
     } catch (err) {
         console.error('Print failed:', err);
         showToast('Failed to open print dialog.');
@@ -378,6 +386,14 @@ function bindHomeScreen() {
     el.searchResults.addEventListener('click', event => {
         const item = event.target.closest('.result-item');
         if (!item) return;
+        if (isMobilePlatform()) {
+            if (state.isEditing) {
+                scrollEditorToLine(Number(item.dataset.line) || 1);
+            } else {
+                applyHighlight(item.dataset.keyword || "", Number(item.dataset.matchIndex) || 0);
+            }
+            return;
+        }
         openPath(item.dataset.path, {
             pushHistory: true,
             keyword: item.dataset.keyword || "",

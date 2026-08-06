@@ -15,6 +15,7 @@ import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
 import { AskSaveDiscardCancel } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
+import { MOBILE_UNTITLED_PATH } from './platform-common.js';
 
 // ── Module-level State ─────────────────────────────────────
 let dragState = null;
@@ -693,6 +694,30 @@ export async function createAndSwitchToNewTab(path = HOME_SCREEN_PATH, options =
     syncGlobalsFromTab(tab);
     renderTabs();
     await openPath(path, { ...options, pushHistory: false, tabId: tab.id });
+}
+
+export async function createUnsavedMarkdownTab() {
+    const currentTab = getActiveTab();
+    if (currentTab) syncTabFromGlobals(currentTab);
+    clearTransientEditorOverlays();
+    saveCurrentScroll();
+
+    const tab = createTab({ path: MOBILE_UNTITLED_PATH, title: 'Untitled' });
+    tab.currentMarkdownSource = '';
+    tab.isEditing = true;
+    tab.editorOriginalContent = '';
+    tab.editingSourcePath = MOBILE_UNTITLED_PATH;
+    tab.editingSourceFolder = '';
+    tab.editingPreviewPath = MOBILE_UNTITLED_PATH;
+    tab.editingPreviewFolder = '';
+    tab.homeTargetPath = HOME_SCREEN_PATH;
+
+    state.tabs.push(tab);
+    state.activeTabId = tab.id;
+    syncGlobalsFromTab(tab);
+    syncEditorSessionFromState();
+    renderTabs();
+    await renderActiveTab();
 }
 
 export function activateTabByShortcut(index) {

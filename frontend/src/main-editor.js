@@ -6,7 +6,7 @@
 import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES, getSlashCommands as getConfiguredSlashCommands } from './config.js';
 import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
-import { getActiveTab, renderTabs } from './main-tabs.js';
+import { createUnsavedMarkdownTab, getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip, syncDocumentMetadataUI } from './main-render.js';
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
@@ -36,6 +36,7 @@ import { oneDark } from '@codemirror/theme-one-dark';
 import { enqueueLLMTask, ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 import { showTextPrompt } from './main-dialogs.js';
 import { buildDocumentFrontMatter, formatLocalISODate, getFirstMarkdownLineTitle, parseDocumentFrontMatter } from './frontmatter.mjs';
+import { isMobilePlatform, isMobileUntitledPath, saveDocumentAsForCurrentPlatform } from './platform-common.js';
 
 // ── Module-level State ─────────────────────────────────────
 let slashMenuState = null;
@@ -3594,7 +3595,13 @@ function restoreEditorViewPosition(topLine, fallbackScrollTop = 0) {
 }
 
 export async function createNewDocument() {
-    const defaultName = "Untitiled.md";
+    if (isMobilePlatform()) {
+        await createUnsavedMarkdownTab();
+        showToast("New document created.");
+        return;
+    }
+
+    const defaultName = "Untitled.md";
     try {
         const selectedPath = await ShowSaveFileDialog(defaultName);
         if (selectedPath) {
@@ -3775,6 +3782,12 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
         if (!ok) return false;
     }
 
+    if (isMobilePlatform() && isMobileUntitledPath(targetPath)) {
+        const saved = await saveCurrentDocumentAs();
+        if (saved && exitAfterSave) await exitEditMode(true);
+        return saved;
+    }
+
     try {
         await SaveFile(targetPath, contentToSave);
         showToast("File saved successfully.", "check_circle");
@@ -3812,6 +3825,27 @@ export async function saveCurrentDocumentAs() {
     const defaultName = basename(currentPath) || "Untitled.md";
     const savingTabId = state.activeTabId;
     const savingTab = getActiveTab();
+    if (isMobilePlatform()) {
+        try {
+            const saved = await saveDocumentAsForCurrentPlatform(defaultName, contentToSave);
+            if (saved) {
+                state.currentMarkdownSource = contentToSave;
+                state.editorOriginalContent = contentToSave;
+                if (savingTab) {
+                    savingTab.currentMarkdownSource = contentToSave;
+                    savingTab.editorOriginalContent = contentToSave;
+                }
+                syncEditorStateToBackend();
+                renderTabs();
+                showToast('Document exported successfully.', 'check_circle');
+            }
+            return saved;
+        } catch (error) {
+            LogError(`Mobile Save As failed: ${error?.message || error}`);
+            showToast('Failed to export document.', 'error');
+            return false;
+        }
+    }
     const selectedPath = await ShowSaveFileDialog(defaultName);
     if (!selectedPath) return false;
 
@@ -3880,6 +3914,24 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
     if (confirm) {
         const ok = await AskConfirm("Save Changes", dialogMessage, "Save", "Cancel");
         if (!ok) return false;
+    }
+
+
+    if (isMobilePlatform() && isMobileUntitledPath(targetPath)) {
+        try {
+            const saved = await saveDocumentAsForCurrentPlatform(basename(targetPath) || 'Untitled.md', contentToSave);
+            if (saved) {
+                tab.editorOriginalContent = contentToSave;
+                tab.currentMarkdownSource = contentToSave;
+                showToast('Document exported successfully.', 'check_circle');
+                renderTabs();
+            }
+            return saved;
+        } catch (error) {
+            LogError(`Mobile tab export failed: ${error?.message || error}`);
+            showToast('Failed to export document.', 'error');
+            return false;
+        }
     }
 
     try {
@@ -5283,6 +5335,14 @@ export function scrollEditorToLine(lineNumber) {
             effects: EditorView.scrollIntoView(line.from, { y: 'start', yMargin: 20 })
         });
         requestAnimationFrame(() => {
+            const lineBlock = cmView.lineBlockAt(line.from);
+            const editorScroller = cmView.scrollDOM;
+            if (lineBlock && editorScroller) {
+                editorScroller.scrollTo({
+                    top: Math.max(0, lineBlock.top - 20),
+                    behavior: 'smooth'
+                });
+            }
             scrollPreviewToEditorLine(targetLine);
             requestAnimationFrame(() => {
                 scrollPreviewToEditorLine(targetLine);

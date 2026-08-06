@@ -20,6 +20,7 @@ import {
 } from './main-ui.js';
 import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { BrowserOpenURL, LogError, LogInfo } from './wails-runtime';
+import { openExternalURLForCurrentPlatform } from './platform-common.js';
 import {
     createHorizontalSwipeTracker,
     horizontalGestureDisposition,
@@ -301,7 +302,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
             pushTabHistory(tab, path);
         }
         tab.title = deriveTabTitle(path, content);
-        touchRecentPreviewPath(path);
+        await touchRecentPreviewPath(path);
         renderTabs();
         return;
     }
@@ -325,7 +326,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
     }
     syncEngineSelector();
 
-    touchRecentPreviewPath(path);
+    await touchRecentPreviewPath(path);
 
     if (setHome && !isBundledDocumentPath(path)) {
         state.homeTargetPath = path;
@@ -364,9 +365,9 @@ function applyHomeToTab(tab, pushHistory) {
     tab.title = 'Start';
 }
 
-function touchRecentPreviewPath(path) {
+async function touchRecentPreviewPath(path) {
     if (!isBundledDocumentPath(path) && isSupportedPreviewPath(path)) {
-        TouchRecentFile(path).catch(error => {
+        await TouchRecentFile(path).catch(error => {
             LogError(`TouchRecentFile failed path=${path}: ${error?.message || error}`);
         });
     }
@@ -548,7 +549,7 @@ export async function openExternalPath(path) {
 export async function openExternalURL(href) {
     try {
         LogInfo(`external url request href=${href}`);
-        await OpenExternalURL(href);
+        await openExternalURLForCurrentPlatform(href, () => OpenExternalURL(href));
         LogInfo(`external url success href=${href}`);
     } catch (error) {
         LogError(`external url fallback failed href=${href}: ${error?.message || error}`);

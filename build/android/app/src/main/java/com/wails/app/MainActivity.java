@@ -40,6 +40,7 @@ import java.io.FileOutputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.charset.StandardCharsets;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -54,6 +55,7 @@ public class MainActivity extends AppCompatActivity {
     private static final String WAILS_SCHEME = "https";
     private static final String WAILS_HOST = "wails.localhost";
     private static final int FILE_PICKER_REQUEST = 7001;
+    private static final int SAVE_DOCUMENT_REQUEST = 7004;
 
     private WebView webView;
     private WailsBridge bridge;
@@ -65,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
 
     // The Go-side dialog ID of the in-flight file picker (-1 when idle)
     private int pendingFilePickerCallbackID = -1;
+    private String pendingSaveDocumentContent;
     private static final int PHOTO_CAPTURE_REQUEST = 7002;
     private static final int VIDEO_CAPTURE_REQUEST = 7003;
     private static final int CAMERA_PERMISSION_REQUEST = 7010;
@@ -444,11 +447,63 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
+    /** Open Android's Storage Access Framework so Save As returns a writable URI. */
+    public void launchSaveDocument(String filename, String content) {
+        pendingSaveDocumentContent = content;
+        Intent intent = new Intent(Intent.ACTION_CREATE_DOCUMENT);
+        intent.addCategory(Intent.CATEGORY_OPENABLE);
+        intent.setType("text/markdown");
+        intent.putExtra(Intent.EXTRA_TITLE, filename == null || filename.isEmpty() ? "Untitled.md" : filename);
+        try {
+            startActivityForResult(intent, SAVE_DOCUMENT_REQUEST);
+        } catch (Exception e) {
+            pendingSaveDocumentContent = null;
+            emitSaveDocumentResult(false, "Unable to open the Android document picker.");
+        }
+    }
+
+    private void handleSaveDocumentResult(int resultCode, @Nullable Intent data) {
+        final String content = pendingSaveDocumentContent;
+        pendingSaveDocumentContent = null;
+        if (resultCode != RESULT_OK || data == null || data.getData() == null) {
+            emitSaveDocumentResult(false, null);
+            return;
+        }
+
+        final Uri uri = data.getData();
+        new Thread(() -> {
+            try (OutputStream output = getContentResolver().openOutputStream(uri, "wt")) {
+                if (output == null) throw new IllegalStateException("Document output stream is unavailable.");
+                output.write((content == null ? "" : content).getBytes(StandardCharsets.UTF_8));
+                output.flush();
+                runOnUiThread(() -> emitSaveDocumentResult(true, null));
+            } catch (Exception error) {
+                Log.e(TAG, "Failed to save document", error);
+                runOnUiThread(() -> emitSaveDocumentResult(false, "Failed to write the selected document."));
+            }
+        }).start();
+    }
+
+    private void emitSaveDocumentResult(boolean saved, @Nullable String error) {
+        try {
+            JSONObject result = new JSONObject();
+            result.put("saved", saved);
+            if (error != null) result.put("error", error);
+            bridge.emitEvent("dkst:mobile-save-result", result.toString());
+        } catch (Exception jsonError) {
+            bridge.emitEvent("dkst:mobile-save-result", "{\"saved\":false,\"error\":\"Save result failed.\"}");
+        }
+    }
+
     @Override
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
         if (requestCode == PHOTO_CAPTURE_REQUEST || requestCode == VIDEO_CAPTURE_REQUEST) {
             handleCaptureResult(resultCode, data);
+            return;
+        }
+        if (requestCode == SAVE_DOCUMENT_REQUEST) {
+            handleSaveDocumentResult(resultCode, data);
             return;
         }
         if (requestCode != FILE_PICKER_REQUEST) {
@@ -474,7 +529,7 @@ public class MainActivity extends AppCompatActivity {
         // Copy the documents off the main thread, then notify Go
         new Thread(() -> {
             for (Uri uri : uris) {
-                String path = copyUriToCache(uri);
+                String path = copyUriToPersistentDocuments(uri);
                 if (path != null) {
                     bridge.filePickerResult(callbackID, path);
                 }
@@ -521,6 +576,43 @@ public class MainActivity extends AppCompatActivity {
             Log.e(TAG, "Failed to copy picked document", e);
             return null;
         }
+    }
+
+    /** Copy a picked document into persistent app-private storage so recent
+     *  documents remain available after cache cleanup or an app restart. */
+    @Nullable
+    private String copyUriToPersistentDocuments(Uri uri) {
+        String name = getDocumentDisplayName(uri);
+        try {
+            File dir = new File(getFilesDir(), "wails-documents/" + System.nanoTime());
+            if (!dir.mkdirs()) return null;
+            File out = new File(dir, name);
+            try (InputStream in = getContentResolver().openInputStream(uri);
+                 OutputStream os = new FileOutputStream(out)) {
+                if (in == null) return null;
+                byte[] buf = new byte[64 * 1024];
+                int n;
+                while ((n = in.read(buf)) > 0) os.write(buf, 0, n);
+            }
+            return out.getAbsolutePath();
+        } catch (Exception error) {
+            Log.e(TAG, "Failed to persist picked document", error);
+            return null;
+        }
+    }
+
+    private String getDocumentDisplayName(Uri uri) {
+        String name = "document.md";
+        try (Cursor cursor = getContentResolver().query(uri, null, null, null, null)) {
+            if (cursor != null && cursor.moveToFirst()) {
+                int idx = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                if (idx >= 0 && cursor.getString(idx) != null) {
+                    name = new File(cursor.getString(idx)).getName();
+                }
+            }
+        } catch (Exception ignored) {
+        }
+        return name;
     }
 
     /**

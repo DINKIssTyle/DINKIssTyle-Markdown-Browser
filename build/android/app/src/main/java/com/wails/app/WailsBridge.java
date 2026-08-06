@@ -34,6 +34,8 @@ import android.os.Handler;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.StatFs;
+import android.print.PrintDocumentAdapter;
+import android.print.PrintManager;
 import android.os.VibrationEffect;
 import android.os.Vibrator;
 import android.provider.Settings;
@@ -161,6 +163,27 @@ public class WailsBridge {
      */
     public void setWebView(WebView webView) {
         this.webView = webView;
+    }
+
+    /** Present Android's system print UI for the current WebView. */
+    public void printDocument() {
+        mainHandler.post(() -> {
+            if (webView == null) return;
+            PrintManager manager = (PrintManager) activity.getSystemService(Context.PRINT_SERVICE);
+            if (manager == null) return;
+            String jobName = "DKST Markdown Browser";
+            PrintDocumentAdapter adapter = webView.createPrintDocumentAdapter(jobName);
+            manager.print(jobName, adapter, null);
+        });
+    }
+
+    /** Present Android's document creator for a Markdown export. */
+    public void saveDocumentAs(String filename, String content) {
+        mainHandler.post(() -> {
+            if (activity instanceof MainActivity) {
+                ((MainActivity) activity).launchSaveDocument(filename, content);
+            }
+        });
     }
 
     // Lifecycle forwarding

@@ -3,11 +3,12 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { state, el, getScroller, escapeRegex, escapeAttr, getPathDirname } from './main-state.js';
+import { state, el, getScroller, escapeRegex, escapeAttr, escapeHTML, getPathDirname, basename } from './main-state.js';
 import { SearchMarkdown, CancelAIRequest } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { ClipboardGetText, ClipboardSetText, LogError } from './wails-runtime';
 import { createCancelledTaskError, isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
+import { isIOSPlatform, isMobilePlatform } from './platform-common.js';
 
 // ── Module-level State ─────────────────────────────────────
 let hlMatches = [];
@@ -16,6 +17,7 @@ let toastTimer = null;
 let progressHideTimer = null;
 let progressDeltaHideTimer = null;
 let contextMenuState = null;
+let mobileSelectionMenuTimer = null;
 let activeProgressTaskId = 0;
 
 // ── Toast ──────────────────────────────────────────────────
@@ -26,13 +28,13 @@ export function showToast(msg, icon = null, duration = 2400) {
         const iconElement = document.createElement('span');
         iconElement.className = 'material-symbols-outlined toast-icon';
         iconElement.textContent = icon;
-        const textElement = document.createElement('span');
-        textElement.className = 'toast-text';
-        textElement.textContent = msg;
-        el.toast.append(iconElement, textElement);
-    } else {
-        el.toast.textContent = msg;
+        el.toast.append(iconElement);
     }
+    const textElement = document.createElement('span');
+    textElement.className = 'toast-text';
+    textElement.textContent = msg;
+    textElement.title = msg;
+    el.toast.append(textElement);
     el.toast.classList.add('show');
     clearTimeout(toastTimer);
     toastTimer = setTimeout(() => el.toast.classList.remove('show'), duration);
@@ -314,6 +316,10 @@ export function toggleSearch() {
 
 export async function handleSearch() {
     const query = el.searchInput.value.trim();
+    if (isMobilePlatform()) {
+        renderCurrentDocumentSearch(query);
+        return;
+    }
     const folders = getSearchFolders();
     if (!query || folders.length === 0) {
         el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword and keep a file open.</div>';
@@ -331,6 +337,46 @@ export async function handleSearch() {
             <div class="recent-file-text">
                 <span class="recent-name">${result.name}</span>
                 <span class="recent-path">${result.path}</span>
+            </div>
+        </div>
+    `).join('');
+}
+
+function renderCurrentDocumentSearch(query) {
+    const path = state.editingSourcePath || state.currentFilePath || '';
+    const source = state.currentMarkdownSource || el.markdownContainer?.textContent || '';
+
+    if (!query || !path || path === '__home__') {
+        el.searchResults.innerHTML = '<div class="search-hint">Open a document, then type to search it.</div>';
+        return;
+    }
+
+    const normalizedQuery = query.toLocaleLowerCase();
+    const matches = [];
+    let matchOffset = 0;
+    source.split(/\r?\n/).forEach((line, index) => {
+        const normalizedLine = line.toLocaleLowerCase();
+        let occurrence = normalizedLine.indexOf(normalizedQuery);
+        if (occurrence < 0) return;
+        matches.push({ line: index + 1, text: line.trim() || 'Blank line', matchIndex: matchOffset });
+        while (occurrence >= 0) {
+            matchOffset += 1;
+            occurrence = normalizedLine.indexOf(normalizedQuery, occurrence + Math.max(1, normalizedQuery.length));
+        }
+    });
+    matches.splice(250);
+
+    if (matches.length === 0) {
+        el.searchResults.innerHTML = '<div class="search-hint">No results in the current document.</div>';
+        return;
+    }
+
+    const documentName = basename(path) || 'Current document';
+    el.searchResults.innerHTML = matches.map(result => `
+        <div class="result-item recent-item" data-path="${escapeAttr(path)}" data-keyword="${escapeAttr(query)}" data-line="${result.line}" data-match-index="${result.matchIndex}" tabindex="0">
+            <div class="recent-file-text">
+                <span class="recent-name">${escapeHTML(documentName)} · Line ${result.line}</span>
+                <span class="recent-path">${escapeHTML(result.text)}</span>
             </div>
         </div>
     `).join('');
@@ -449,7 +495,7 @@ function mergeSearchResults(results) {
 
 // ── Highlight ──────────────────────────────────────────────
 
-export function applyHighlight(keyword) {
+export function applyHighlight(keyword, preferredIndex = 0) {
     if (!keyword) return;
     clearHighlight();
 
@@ -497,7 +543,7 @@ export function applyHighlight(keyword) {
         return;
     }
 
-    hlCurrent = 0;
+    hlCurrent = Math.max(0, Math.min(Number(preferredIndex) || 0, hlMatches.length - 1));
     activateHl(hlCurrent);
     updateHlCounter();
     el.highlightNav.classList.remove('hidden');
@@ -515,7 +561,17 @@ export function clearHighlight() {
 
 function activateHl(index) {
     hlMatches.forEach((mark, idx) => mark.classList.toggle('active', idx === index));
-    hlMatches[index]?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    const mark = hlMatches[index];
+    if (!mark) return;
+    const scroller = getScroller();
+    if (isMobilePlatform() && scroller?.contains(mark)) {
+        const markRect = mark.getBoundingClientRect();
+        const scrollerRect = scroller.getBoundingClientRect();
+        const targetTop = scroller.scrollTop + markRect.top - scrollerRect.top - (scroller.clientHeight / 2);
+        scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        return;
+    }
+    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function updateHlCounter() {
@@ -552,15 +608,29 @@ export function bindContextMenu() {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('click', event => {
         if (!event.target.closest('#context-menu')) {
+            const iosSelectionTarget = isIOSPlatform()
+                ? event.target.closest('#markdown-container, .cm-editor')
+                : null;
+            if (iosSelectionTarget && (state.isEditing || getIOSSelectionText())) {
+                scheduleIOSSelectionContextMenu(event);
+                return;
+            }
             closeContextMenu();
         }
     });
     document.addEventListener('scroll', closeContextMenu, true);
     window.addEventListener('blur', closeContextMenu);
+    if (isIOSPlatform()) {
+        document.addEventListener('selectionchange', () => scheduleIOSSelectionContextMenu());
+        document.addEventListener('pointerup', event => {
+            if (event.pointerType !== 'mouse') scheduleIOSSelectionContextMenu(event);
+        }, true);
+    }
 
     bindContextMenuAction(el.contextCopy, async () => {
         if (!contextMenuState?.selectionText) return;
         await copyTextToClipboard(contextMenuState.selectionText);
+        if (isIOSPlatform()) window.getSelection()?.removeAllRanges();
         closeContextMenu();
         showToast('Copied selection.', 'content_copy');
     });
@@ -651,21 +721,17 @@ function bindContextMenuAction(element, action) {
     });
 }
 
-function handleContextMenu(event) {
+async function handleContextMenu(event) {
     const cmEditor = event.target.closest('.cm-editor');
     const isEditor = !!cmEditor;
-    
+
     let selectionText = "";
     if (isEditor) {
-        import('./main-editor.js').then(mod => {
-            if (mod.cmView) {
-                const sel = mod.cmView.state.selection.main;
-                selectionText = mod.cmView.state.sliceDoc(sel.from, sel.to);
-                contextMenuState.selectionText = selectionText;
-                el.contextCut.classList.toggle('hidden', !selectionText);
-                el.contextCopy.classList.toggle('hidden', !selectionText);
-            }
-        });
+        const mod = await import('./main-editor.js');
+        if (mod.cmView) {
+            const sel = mod.cmView.state.selection.main;
+            selectionText = mod.cmView.state.sliceDoc(sel.from, sel.to);
+        }
     } else {
         selectionText = window.getSelection()?.toString() || "";
     }
@@ -690,12 +756,19 @@ function handleContextMenu(event) {
     const showLinkActions = !!linkHref;
     const showSelectionActions = !showLinkActions && !!selectionText;
     
-    contextMenuState = {
+    showContextMenuForState({
         selectionText: showSelectionActions ? selectionText : "",
         linkHref,
         isEditor,
-        targetElement: event.target
-    };
+        targetElement: event.target,
+    }, event.clientX, event.clientY);
+}
+
+function showContextMenuForState(nextState, x, y) {
+    contextMenuState = nextState;
+    const { selectionText, linkHref, isEditor } = nextState;
+    const showLinkActions = !!linkHref;
+    const showSelectionActions = !showLinkActions && !!selectionText;
 
     el.contextCut.classList.toggle('hidden', !isEditor || !selectionText);
     el.contextCopy.classList.toggle('hidden', !selectionText);
@@ -715,7 +788,63 @@ function handleContextMenu(event) {
         el.contextOpenNewTab.classList.toggle('hidden', !showLinkActions);
     }
 
-    positionContextMenu(event.clientX, event.clientY);
+    positionContextMenu(x, y);
+}
+
+function getIOSSelectionText() {
+    if (state.isEditing) return '';
+    return window.getSelection()?.toString().trim() || '';
+}
+
+function scheduleIOSSelectionContextMenu(pointerEvent = null) {
+    window.clearTimeout(mobileSelectionMenuTimer);
+    mobileSelectionMenuTimer = window.setTimeout(() => {
+        void showIOSSelectionContextMenu(pointerEvent);
+    }, 120);
+}
+
+async function showIOSSelectionContextMenu(pointerEvent) {
+    if (!isIOSPlatform() || pointerEvent?.target?.closest?.('#context-menu')) return;
+
+    const editorTarget = pointerEvent?.target?.closest?.('.cm-editor');
+    if (state.isEditing && (editorTarget || document.activeElement?.closest?.('.cm-editor'))) {
+        const mod = await import('./main-editor.js');
+        const selection = mod.cmView?.state.selection.main;
+        if (!selection || selection.empty) {
+            closeContextMenu();
+            return;
+        }
+        const selectionText = mod.cmView.state.sliceDoc(selection.from, selection.to);
+        const coords = mod.cmView.coordsAtPos(selection.head);
+        if (!selectionText || !coords) return;
+        showContextMenuForState({
+            selectionText,
+            linkHref: '',
+            isEditor: true,
+            targetElement: editorTarget || mod.cmView.dom,
+        }, coords.left, coords.bottom + 8);
+        return;
+    }
+
+    const selection = window.getSelection();
+    const selectionText = selection?.toString().trim() || '';
+    if (!selectionText || !selection.rangeCount) {
+        closeContextMenu();
+        return;
+    }
+    const range = selection.getRangeAt(0);
+    const targetNode = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
+        ? range.commonAncestorContainer
+        : range.commonAncestorContainer.parentElement;
+    const targetElement = targetNode?.closest?.('#markdown-container');
+    if (!targetElement) return;
+    const rect = range.getBoundingClientRect();
+    showContextMenuForState({
+        selectionText,
+        linkHref: '',
+        isEditor: false,
+        targetElement,
+    }, rect.left + (rect.width / 2), rect.bottom + 8);
 }
 
 function positionContextMenu(x, y) {
@@ -734,6 +863,7 @@ function positionContextMenu(x, y) {
 }
 
 export function closeContextMenu() {
+    window.clearTimeout(mobileSelectionMenuTimer);
     contextMenuState = null;
     el.contextMenu.classList.remove('show');
     el.contextMenu.classList.add('hidden');

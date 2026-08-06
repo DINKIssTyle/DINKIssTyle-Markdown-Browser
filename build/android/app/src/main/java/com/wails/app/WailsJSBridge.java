@@ -115,6 +115,16 @@ public class WailsJSBridge {
         return BuildConfig.DEBUG;
     }
 
+    @JavascriptInterface
+    public void printDocument() {
+        bridge.printDocument();
+    }
+
+    @JavascriptInterface
+    public void saveDocumentAs(String filename, String content) {
+        bridge.saveDocumentAs(filename, content);
+    }
+
     /**
      * Send a callback response to JavaScript
      */

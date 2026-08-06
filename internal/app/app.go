@@ -129,21 +129,23 @@ type AppSettings struct {
 
 // App struct
 type App struct {
-	wailsApp          *application.App
-	window            *application.WebviewWindow
-	settingsPath      string
-	recentPath        string
-	mu                sync.Mutex
-	settingsMu        sync.Mutex
-	systemFontsOnce   sync.Once
-	systemFonts       []FontInfo
-	activeAIRequestID int64
-	activeAICancel    context.CancelFunc
-	frontendReady     bool
-	pendingOpenFiles  []string
-	showWhatsNew      bool
-	editorState       EditorSessionState
-	allowNextQuit     bool
+	wailsApp           *application.App
+	window             *application.WebviewWindow
+	settingsPath       string
+	recentPath         string
+	storageMu          sync.Mutex
+	mobileStorageReady bool
+	mu                 sync.Mutex
+	settingsMu         sync.Mutex
+	systemFontsOnce    sync.Once
+	systemFonts        []FontInfo
+	activeAIRequestID  int64
+	activeAICancel     context.CancelFunc
+	frontendReady      bool
+	pendingOpenFiles   []string
+	showWhatsNew       bool
+	editorState        EditorSessionState
+	allowNextQuit      bool
 }
 
 type EditorSessionState struct {
@@ -205,6 +207,31 @@ func NewApp() *App {
 func (a *App) AttachRuntime(wailsApp *application.App, window *application.WebviewWindow) {
 	a.wailsApp = wailsApp
 	a.window = window
+}
+
+func (a *App) ensurePersistentPaths() {
+	if !application.System.IsMobile() {
+		return
+	}
+
+	a.storageMu.Lock()
+	defer a.storageMu.Unlock()
+	if a.mobileStorageReady {
+		return
+	}
+
+	storageRoot := strings.TrimSpace(application.Mobile.StoragePath())
+	if storageRoot == "" {
+		return
+	}
+	appDir := filepath.Join(storageRoot, "dkst-markdown-browser")
+	if err := os.MkdirAll(appDir, 0755); err != nil {
+		log.Printf("mobile-storage: create directory failed path=%s err=%v", appDir, err)
+		return
+	}
+	a.settingsPath = filepath.Join(appDir, "settings.json")
+	a.recentPath = filepath.Join(appDir, "recent.json")
+	a.mobileStorageReady = true
 }
 
 func (a *App) emit(name string, data ...any) {
@@ -650,6 +677,7 @@ func (a *App) SearchMarkdown(dir string, query string) ([]map[string]string, err
 
 // GetRecentFiles returns the list of recently opened files
 func (a *App) GetRecentFiles() []RecentFile {
+	a.ensurePersistentPaths()
 	var recent []RecentFile
 	data, err := os.ReadFile(a.recentPath)
 	if err != nil {
@@ -661,6 +689,7 @@ func (a *App) GetRecentFiles() []RecentFile {
 }
 
 func (a *App) saveRecentFile(path string) {
+	a.ensurePersistentPaths()
 	recent := a.GetRecentFiles()
 
 	// Check if already exists
@@ -770,6 +799,7 @@ func (a *App) ClearRecentFiles() {
 
 // GetSettings loads the application settings
 func (a *App) GetSettings() AppSettings {
+	a.ensurePersistentPaths()
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 	return a.getSettingsUnlocked()
@@ -822,6 +852,7 @@ func (a *App) getSettingsUnlocked() AppSettings {
 
 // SaveSettings saves the application settings
 func (a *App) SaveSettings(settings AppSettings) {
+	a.ensurePersistentPaths()
 	a.settingsMu.Lock()
 	defer a.settingsMu.Unlock()
 	a.saveSettingsUnlocked(settings)
@@ -1016,6 +1047,10 @@ func containsPath(paths []string, target string) bool {
 func (a *App) OpenExternalURL(url string) error {
 	log.Printf("external-url: requested url=%s os=%s", url, goruntime.GOOS)
 	switch goruntime.GOOS {
+	case "ios", "android":
+		application.Mobile.OpenURL(url)
+		log.Printf("external-url: launched native mobile url=%s", url)
+		return nil
 	case "darwin":
 		err := exec.Command("open", url).Start()
 		if err != nil {
