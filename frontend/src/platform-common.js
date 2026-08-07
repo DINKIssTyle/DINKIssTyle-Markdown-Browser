@@ -95,8 +95,16 @@ export async function openExternalURLForCurrentPlatform(url, desktopOpen) {
 }
 
 export async function shareOrDownloadDocument(filename, content) {
-    const safeName = String(filename || 'Untitled.md').replace(/[\\/:*?"<>|]+/g, '-');
-    const file = new File([content], safeName, { type: 'text/markdown;charset=utf-8' });
+    let safeName = String(filename || 'Untitled.md').replace(/[\\/:*?"<>|]+/g, '-');
+    if (!/\.(md|markdown|html|htm|txt)$/i.test(safeName)) {
+        safeName += '.md';
+    }
+
+    const mimeType = safeName.endsWith('.html') || safeName.endsWith('.htm') 
+        ? 'text/html' 
+        : 'text/plain';
+
+    const file = new File([content], safeName, { type: mimeType });
 
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
         // Omit title/text so iOS/iPadOS WebKit shares ONLY the single file object, preventing duplicate title text file creation on save.

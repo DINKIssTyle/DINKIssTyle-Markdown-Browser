@@ -2000,7 +2000,7 @@ html.dark .markdown-container .hljs-deletion {
     display: none !important;
 }
 
-/* Scrollbar */
+/* Scrollbar Base Styling */
 ::-webkit-scrollbar {
     -webkit-appearance: none;
     width: 8px;
@@ -2024,6 +2024,7 @@ html.dark .markdown-container .hljs-deletion {
     background: var(--accent-color-hover);
 }
 
+/* ── Desktop Scrollbar Visibility Preferences ("always" | "when-scrolling" | "never") ── */
 html[data-scrollbar-visibility="always"] #content-view,
 html[data-scrollbar-visibility="always"] .cm-scroller {
     overflow-y: scroll;
@@ -2051,6 +2052,42 @@ html[data-scrollbar-visibility="when-scrolling"] .cm-scroller::-webkit-scrollbar
 html[data-scrollbar-visibility="when-scrolling"] #content-view.is-scrollbar-active::-webkit-scrollbar-thumb,
 html[data-scrollbar-visibility="when-scrolling"] .cm-scroller.is-scrollbar-active::-webkit-scrollbar-thumb {
     background: var(--accent-color);
+}
+
+html[data-scrollbar-visibility="never"] #content-view::-webkit-scrollbar,
+html[data-scrollbar-visibility="never"] .cm-scroller::-webkit-scrollbar {
+    display: none !important;
+}
+
+/* ── Explicit Mobile (iOS/iPadOS) Editor & Viewer Accent Scrollbar ── */
+html.platform-mobile #content-view,
+html.platform-mobile .content-view,
+html.platform-mobile .cm-scroller,
+html.platform-mobile .markdown-container {
+    scrollbar-color: var(--accent-color) transparent;
+    scrollbar-width: thin;
+}
+
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar {
+    -webkit-appearance: none !important;
+    width: 6px !important;
+    height: 6px !important;
+}
+
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar-track {
+    -webkit-appearance: none !important;
+    background: transparent !important;
+}
+
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar-thumb {
+    -webkit-appearance: none !important;
+    background: var(--accent-color) !important;
+    border-radius: 999px !important;
+    min-height: 28px !important;
+}
+
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color-hover) !important;
 }
 
 /* ── Edit Toolbar ─────────────────────────────────────── */
