@@ -348,6 +348,10 @@ export function updateOutline() {
                     scrollEditorToLine(line);
                 }
             }
+
+            if (window.innerWidth <= 768 && document.documentElement.classList.contains('platform-mobile')) {
+                closeSidebar();
+            }
         };
     });
     bindListKeyboardNavigation(el.markdownOutline, '.outline-item');
@@ -530,6 +534,9 @@ function bindFileTreeEvents() {
             if (editingTabId && !wantsNewTab) {
                 const { switchToTab } = await import('./main-tabs.js');
                 await switchToTab(editingTabId);
+                if (window.innerWidth <= 768 && document.documentElement.classList.contains('platform-mobile')) {
+                    closeSidebar();
+                }
                 return;
             }
 
@@ -539,6 +546,9 @@ function bindFileTreeEvents() {
                 newTab: wantsNewTab || state.isEditing,
                 openInEditMode: state.isEditing && documentTypeFromPath(path) === 'markdown',
             });
+            if (window.innerWidth <= 768 && document.documentElement.classList.contains('platform-mobile')) {
+                closeSidebar();
+            }
         });
 
         item.addEventListener('contextmenu', (event) => {

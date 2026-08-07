@@ -6977,6 +6977,34 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
     font-size: var(--mobile-main-toolbar-icon-size) !important;
 }
 
+/* Mobile Phone Fullscreen Sidebar (Handheld Phone Screens Only) */
+@media (max-width: 768px) {
+    html.platform-mobile #main-container {
+        position: relative;
+        overflow: hidden;
+    }
+
+    html.platform-mobile #app-sidebar:not(.hidden) {
+        width: 100% !important;
+        max-width: 100% !important;
+        flex: 1 1 100% !important;
+        position: absolute !important;
+        inset: 0 !important;
+        z-index: 80 !important;
+        border-right: none !important;
+        transform: none !important;
+        opacity: 1 !important;
+    }
+
+    html.platform-mobile #app-sidebar:not(.hidden) ~ #main-workspace {
+        display: none !important;
+    }
+
+    html.platform-mobile #sidebar-resizer {
+        display: none !important;
+    }
+}
+
 /* 2. Mobile Sidebar & New Tab Buttons (#tab-strip .tab-sidebar-btn, .tab-add-btn) */
 html.platform-mobile #tab-strip .tab-sidebar-btn,
 html.platform-mobile #tab-strip .tab-add-btn {
