@@ -577,15 +577,17 @@ function activateHl(index) {
     hlMatches.forEach((mark, idx) => mark.classList.toggle('active', idx === index));
     const mark = hlMatches[index];
     if (!mark) return;
-    const scroller = getScroller();
-    if (isMobilePlatform() && scroller?.contains(mark)) {
-        const markRect = mark.getBoundingClientRect();
-        const scrollerRect = scroller.getBoundingClientRect();
-        const targetTop = scroller.scrollTop + markRect.top - scrollerRect.top - (scroller.clientHeight / 2);
-        scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
-        return;
+    try {
+        mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
+    } catch (_) {
+        const scroller = getScroller();
+        if (scroller && mark) {
+            const markRect = mark.getBoundingClientRect();
+            const scrollerRect = scroller.getBoundingClientRect();
+            const targetTop = scroller.scrollTop + markRect.top - scrollerRect.top - (scroller.clientHeight / 2);
+            scroller.scrollTo({ top: Math.max(0, targetTop), behavior: 'smooth' });
+        }
     }
-    mark.scrollIntoView({ behavior: 'smooth', block: 'center' });
 }
 
 function updateHlCounter() {

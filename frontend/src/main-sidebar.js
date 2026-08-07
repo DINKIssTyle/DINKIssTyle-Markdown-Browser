@@ -14,6 +14,7 @@ import { debounce } from './main-state.js';
 import { showTextPrompt } from './main-dialogs.js';
 import {
     scrollEditorToLine,
+    getCurrentEditorText,
     insertFileLink,
     focusEditor,
     applyEditedDocumentRename,
@@ -23,6 +24,135 @@ import {
 } from './main-editor.js';
 import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
+
+// ... (omitted lines)
+
+export function updateOutline() {
+    if (!el.markdownOutline) return;
+
+    if (state.currentDocumentType !== 'markdown') {
+        el.markdownOutline.innerHTML = '<div class="sidebar-hint">Open a Markdown file to view outline.</div>';
+        return;
+    }
+
+    let headings = [];
+    if (state.isEditing) {
+        const text = getCurrentEditorText();
+        const lines = (text || '').split(/\r?\n/);
+        lines.forEach((lineText, idx) => {
+            const match = lineText.match(/^(#{1,6})\s+(.+)$/);
+            if (match) {
+                headings.push({
+                    level: match[1].length,
+                    text: match[2].trim(),
+                    line: idx + 1,
+                    el: null
+                });
+            }
+        });
+    } else {
+        const container = el.markdownContainer;
+        const nodes = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'));
+        headings = nodes.map(h => ({
+            level: parseInt(h.tagName.substring(1)),
+            text: h.innerText || h.textContent,
+            line: parseInt(h.getAttribute('data-dkst-live-line-start')) || 1,
+            el: h
+        }));
+    }
+
+    if (headings.length === 0) {
+        el.markdownOutline.innerHTML = '<div class="sidebar-hint">No headings found in this document.</div>';
+        return;
+    }
+
+    el.markdownOutline.classList.toggle('is-heading-formatted', state.outlineHeadingFormatEnabled);
+    el.markdownOutline.innerHTML = headings.map((h, index) => {
+        const formatButton = index === 0 ? `
+                <button class="outline-format-btn ${state.outlineHeadingFormatEnabled ? 'active' : ''}" type="button"
+                    tabindex="-1"
+                    title="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
+                    aria-label="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
+                    aria-pressed="${state.outlineHeadingFormatEnabled}">
+                    <span class="material-symbols-outlined" aria-hidden="true">${state.outlineHeadingFormatEnabled ? 'format_paint_off' : 'format_paint'}</span>
+                </button>
+            ` : '';
+        const topButton = index === 0 ? `
+                <button class="outline-top-btn" type="button" tabindex="-1" title="Top of document" aria-label="Top of document">
+                    <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
+                </button>
+            ` : '';
+        return `
+            <div class="outline-item level-${h.level} ${index === 0 ? 'has-tools' : ''}" data-index="${index}" data-line="${h.line}" tabindex="0">
+                <span class="outline-text">${escapeHTML(h.text)}</span>
+                ${formatButton}
+                ${topButton}
+            </div>
+        `;
+    }).join('');
+
+    el.markdownOutline.querySelectorAll('.outline-format-btn').forEach(button => {
+        button.addEventListener('click', async (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            state.outlineHeadingFormatEnabled = !state.outlineHeadingFormatEnabled;
+            updateOutline();
+            await persistAppSettings();
+        });
+    });
+
+    el.markdownOutline.querySelectorAll('.outline-top-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            closeSidebar();
+            setTimeout(() => {
+                getScroller().scrollTo({ top: 0, behavior: 'smooth' });
+                if (state.isEditing) {
+                    scrollEditorToLine(1);
+                }
+            }, 80);
+        });
+    });
+
+    el.markdownOutline.querySelectorAll('.outline-item').forEach(item => {
+        item.onclick = () => {
+            const index = parseInt(item.dataset.index);
+            const headingObj = headings[index];
+
+            closeSidebar();
+
+            setTimeout(() => {
+                if (state.isEditing) {
+                    const line = headingObj?.line || parseInt(item.dataset.line) || 1;
+                    scrollEditorToLine(line);
+                } else if (headingObj?.el) {
+                    scrollPreviewHeadingToTop(headingObj.el);
+                }
+            }, 100);
+        };
+    });
+    bindListKeyboardNavigation(el.markdownOutline, '.outline-item');
+}
+
+function scrollPreviewHeadingToTop(heading) {
+    if (!heading) return;
+    try {
+        heading.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    } catch (_) {
+        const scroller = getScroller();
+        if (scroller && heading) {
+            const scrollerRect = scroller.getBoundingClientRect();
+            const headingRect = heading.getBoundingClientRect();
+            const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
+            const targetTop = scroller.scrollTop + (headingRect.top - scrollerRect.top);
+            scroller.scrollTo({
+                top: Math.min(maxScrollTop, Math.max(0, targetTop)),
+                behavior: 'smooth',
+            });
+        }
+    }
+}
 import { copyTextToClipboard, showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { isMobilePlatform } from './platform-common.js';
@@ -272,108 +402,7 @@ export function refreshSidebarContent() {
     }
 }
 
-export function updateOutline() {
-    if (!el.markdownOutline) return;
 
-    const container = el.markdownContainer;
-    if (state.currentDocumentType !== 'markdown' || container.classList.contains('hidden')) {
-        el.markdownOutline.innerHTML = '<div class="sidebar-hint">Open a Markdown file to view outline.</div>';
-        return;
-    }
-
-    const headings = Array.from(container.querySelectorAll('h1, h2, h3, h4, h5, h6'));
-    if (headings.length === 0) {
-        el.markdownOutline.innerHTML = '<div class="sidebar-hint">No headings found in this document.</div>';
-        return;
-    }
-
-    el.markdownOutline.classList.toggle('is-heading-formatted', state.outlineHeadingFormatEnabled);
-    el.markdownOutline.innerHTML = headings.map((h, index) => {
-        const level = parseInt(h.tagName.substring(1));
-        const text = h.innerText || h.textContent;
-        const formatButton = index === 0 ? `
-                <button class="outline-format-btn ${state.outlineHeadingFormatEnabled ? 'active' : ''}" type="button"
-                    tabindex="-1"
-                    title="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
-                    aria-label="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
-                    aria-pressed="${state.outlineHeadingFormatEnabled}">
-                    <span class="material-symbols-outlined" aria-hidden="true">${state.outlineHeadingFormatEnabled ? 'format_paint_off' : 'format_paint'}</span>
-                </button>
-            ` : '';
-        const topButton = index === 0 ? `
-                <button class="outline-top-btn" type="button" tabindex="-1" title="Top of document" aria-label="Top of document">
-                    <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
-                </button>
-            ` : '';
-        return `
-            <div class="outline-item level-${level} ${index === 0 ? 'has-tools' : ''}" data-index="${index}" tabindex="0">
-                <span class="outline-text">${escapeHTML(text)}</span>
-                ${formatButton}
-                ${topButton}
-            </div>
-        `;
-    }).join('');
-
-    el.markdownOutline.querySelectorAll('.outline-format-btn').forEach(button => {
-        button.addEventListener('click', async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            state.outlineHeadingFormatEnabled = !state.outlineHeadingFormatEnabled;
-            updateOutline();
-            await persistAppSettings();
-        });
-    });
-
-    el.markdownOutline.querySelectorAll('.outline-top-btn').forEach(button => {
-        button.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            getScroller().scrollTo({ top: 0, behavior: 'smooth' });
-            if (state.isEditing) {
-                scrollEditorToLine(1);
-            }
-        });
-    });
-
-    el.markdownOutline.querySelectorAll('.outline-item').forEach(item => {
-        item.onclick = () => {
-            const index = item.dataset.index;
-            const heading = headings[index];
-
-            if (window.innerWidth <= 768) {
-                closeSidebar();
-                setTimeout(() => {
-                    scrollPreviewHeadingToTop(heading);
-                    if (state.isEditing) {
-                        const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
-                        if (!isNaN(line)) scrollEditorToLine(line);
-                    }
-                }, 80);
-            } else {
-                scrollPreviewHeadingToTop(heading);
-                if (state.isEditing) {
-                    const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
-                    if (!isNaN(line)) scrollEditorToLine(line);
-                }
-            }
-        };
-    });
-    bindListKeyboardNavigation(el.markdownOutline, '.outline-item');
-}
-
-function scrollPreviewHeadingToTop(heading) {
-    const scroller = getScroller();
-    if (!heading || !scroller) return;
-
-    const scrollerRect = scroller.getBoundingClientRect();
-    const headingRect = heading.getBoundingClientRect();
-    const maxScrollTop = Math.max(0, scroller.scrollHeight - scroller.clientHeight);
-    const targetTop = scroller.scrollTop + (headingRect.top - scrollerRect.top);
-    scroller.scrollTo({
-        top: Math.min(maxScrollTop, Math.max(0, targetTop)),
-        behavior: 'smooth',
-    });
-}
 
 export async function updateFileTree(options = {}) {
     if (!el.fileTree) return;
