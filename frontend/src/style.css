@@ -7109,6 +7109,28 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
     #sidebar-resizer {
         display: none !important;
     }
+
+    /* Mobile Phone Outline Font Size 1.5x Scaling */
+    .outline-item {
+        font-size: 19.5px !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+
+    .markdown-outline.is-heading-formatted .outline-item.level-1 {
+        font-size: 21.75px !important;
+    }
+
+    .markdown-outline.is-heading-formatted .outline-item.level-2 {
+        font-size: 20.25px !important;
+    }
+
+    .markdown-outline.is-heading-formatted .outline-item.level-3,
+    .markdown-outline.is-heading-formatted .outline-item.level-4,
+    .markdown-outline.is-heading-formatted .outline-item.level-5,
+    .markdown-outline.is-heading-formatted .outline-item.level-6 {
+        font-size: 19.5px !important;
+    }
 }
 
 /* 2. Mobile Sidebar & New Tab Buttons (#tab-strip .tab-sidebar-btn, .tab-add-btn) */
