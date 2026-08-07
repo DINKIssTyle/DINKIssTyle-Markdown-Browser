@@ -349,15 +349,45 @@ function bindToolbar() {
         void translateViewerDocument();
     };
     if (el.btnMobileToolbarMore && el.mobileToolbarMenu) {
-        el.btnMobileToolbarMore.onclick = (e) => {
-            e.stopPropagation();
-            el.mobileToolbarMenu.classList.toggle('hidden');
+        const closeMobileMenu = () => {
+            el.mobileToolbarMenu.classList.add('hidden');
+            el.mobileToolbarBackdrop?.classList.add('hidden');
         };
 
+        const openMobileMenu = () => {
+            el.mobileToolbarMenu.classList.remove('hidden');
+            el.mobileToolbarBackdrop?.classList.remove('hidden');
+        };
+
+        el.btnMobileToolbarMore.addEventListener('click', (e) => {
+            e.stopPropagation();
+            e.preventDefault();
+            if (el.mobileToolbarMenu.classList.contains('hidden')) {
+                openMobileMenu();
+            } else {
+                closeMobileMenu();
+            }
+        });
+
+        if (el.mobileToolbarBackdrop) {
+            el.mobileToolbarBackdrop.addEventListener('click', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                closeMobileMenu();
+            });
+            el.mobileToolbarBackdrop.addEventListener('touchstart', (e) => {
+                e.stopPropagation();
+                e.preventDefault();
+                closeMobileMenu();
+            }, { passive: false });
+        }
+
         el.mobileToolbarMenu.addEventListener('click', (event) => {
+            event.stopPropagation();
+            event.preventDefault();
             const item = event.target.closest('.mobile-menu-item');
             if (!item) return;
-            el.mobileToolbarMenu.classList.add('hidden');
+            closeMobileMenu();
             const action = item.dataset.action;
             switch (action) {
                 case 'print':
@@ -384,14 +414,6 @@ function bindToolbar() {
                 case 'settings':
                     openSettings();
                     break;
-            }
-        });
-
-        document.addEventListener('click', (e) => {
-            if (!el.mobileToolbarMenu.classList.contains('hidden') &&
-                !el.mobileToolbarMenu.contains(e.target) &&
-                !el.btnMobileToolbarMore.contains(e.target)) {
-                el.mobileToolbarMenu.classList.add('hidden');
             }
         });
     }

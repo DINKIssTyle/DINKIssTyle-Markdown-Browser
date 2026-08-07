@@ -6997,22 +6997,36 @@ html.platform-mobile .editor-ai-dock {
         flex-shrink: 0;
     }
 
+    .mobile-toolbar-backdrop {
+        position: fixed;
+        inset: 0;
+        z-index: 99990;
+        background-color: rgba(0, 0, 0, 0.15);
+        touch-action: none;
+    }
+
+    .mobile-toolbar-backdrop.hidden {
+        display: none !important;
+    }
+
     .mobile-toolbar-menu {
-        position: absolute;
-        top: 44px;
+        position: fixed;
+        top: 50px;
         right: 12px;
         z-index: 99999;
         background-color: var(--bg-color, #ffffff);
         color: var(--text-color, #1c1c1e);
-        border-radius: 12px;
-        box-shadow: 0 8px 24px rgba(0, 0, 0, 0.18), 0 2px 8px rgba(0, 0, 0, 0.08);
-        border: 1px solid var(--border-color, rgba(0, 0, 0, 0.1));
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.22), 0 2px 8px rgba(0, 0, 0, 0.1);
+        border: 1px solid var(--border-color, rgba(0, 0, 0, 0.12));
         padding: 6px 0;
-        min-width: 190px;
+        min-width: 200px;
         display: flex;
         flex-direction: column;
         overflow: hidden;
         animation: mobileMenuFadeIn 0.15s ease-out;
+        pointer-events: auto;
+        touch-action: manipulation;
     }
 
     @keyframes mobileMenuFadeIn {

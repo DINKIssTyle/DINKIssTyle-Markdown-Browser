@@ -87,6 +87,7 @@ export const el = {
     mobileTabsList: $('mobile-tabs-list'),
     btnMobileToolbarMore: $('btn-mobile-toolbar-more'),
     mobileToolbarMenu: $('mobile-toolbar-menu'),
+    mobileToolbarBackdrop: $('mobile-toolbar-backdrop'),
     btnNewTab: $('btn-new-tab'),
     homeScreen: $('home-screen'),
     recentList: $('recent-files-list'),
