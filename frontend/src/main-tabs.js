@@ -172,8 +172,10 @@ export function renderTabs() {
                     ${shouldShowUnsavedWarning(activeTab) ? `
                         <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
                     ` : ''}
-                    <span class="mobile-tab-count-badge">${state.tabs.length}</span>
-                    <span class="material-symbols-outlined mobile-tab-dropdown-icon">expand_more</span>
+                    <div class="mobile-tab-right-group">
+                        <span class="mobile-tab-count-badge">${state.tabs.length}</span>
+                        <span class="material-symbols-outlined mobile-tab-dropdown-icon">expand_more</span>
+                    </div>
                 </div>
             </div>
         `;

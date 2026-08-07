@@ -7027,9 +7027,11 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
         display: flex;
         flex: 1;
         overflow: hidden;
+        width: 100%;
     }
 
-    .tab-item.mobile-single-tab {
+    .tab-item.mobile-single-tab,
+    html.platform-mobile .tab-item.mobile-single-tab {
         flex: 1 1 100% !important;
         width: 100% !important;
         max-width: 100% !important;
@@ -7038,14 +7040,34 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
         display: flex;
         align-items: center;
         justify-content: space-between;
-        padding-right: 8px;
+        padding-left: 12px;
+        padding-right: 10px;
+        box-sizing: border-box;
     }
 
     .tab-item.mobile-single-tab .tab-container {
         display: flex;
         align-items: center;
+        justify-content: space-between;
         width: 100%;
+        gap: 8px;
+    }
+
+    .tab-item.mobile-single-tab .tab-title {
+        flex: 1;
+        min-width: 0;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        text-align: left;
+    }
+
+    .mobile-tab-right-group {
+        display: flex;
+        align-items: center;
         gap: 6px;
+        margin-left: auto;
+        flex-shrink: 0;
     }
 
     .mobile-tab-count-badge {
@@ -7065,7 +7087,6 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
         font-size: 18px !important;
         opacity: 0.7;
         flex-shrink: 0;
-        margin-left: auto;
     }
 }
 
