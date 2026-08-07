@@ -1,7 +1,30 @@
 //go:build ios
 // Minimal bootstrap: delegate comes from Go archive (WailsAppDelegate)
 #import <UIKit/UIKit.h>
+#import <objc/runtime.h>
 #include <stdio.h>
+
+__attribute__((constructor))
+static void SuppressIOSNativeSelectionMenu(void) {
+    Class wkContentViewClass = NSClassFromString(@"WKContentView");
+    if (wkContentViewClass) {
+        Method originalMethod = class_getInstanceMethod(wkContentViewClass, @selector(canPerformAction:withSender:));
+        if (originalMethod) {
+            IMP newImp = imp_implementationWithBlock(^BOOL(id self, SEL action, id sender) {
+                return NO;
+            });
+            method_setImplementation(originalMethod, newImp);
+        }
+        
+        Method editMenuMethod = class_getInstanceMethod(wkContentViewClass, @selector(editMenuInteraction:menuForConfiguration:suggestedActions:));
+        if (editMenuMethod) {
+            IMP editMenuImp = imp_implementationWithBlock(^id(id self, id interaction, id config, id suggested) {
+                return nil;
+            });
+            method_setImplementation(editMenuMethod, editMenuImp);
+        }
+    }
+}
 
 @interface WailsAppDelegate : UIResponder <UIApplicationDelegate>
 @property (strong, nonatomic) UIWindow *window;
