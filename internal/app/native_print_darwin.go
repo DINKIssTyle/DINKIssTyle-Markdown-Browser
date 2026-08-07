@@ -49,10 +49,7 @@ static void DKSTPrintCurrentWindow(void *nativeWindow) {
                     [printPanel setOptions:options];
                 }
                 [printOp setShowsPrintPanel:YES];
-                [(NSPrintOperation*)printOp runOperationModalForWindow:window
-                                                              delegate:nil
-                                                        didEndSelector:NULL
-                                                           contextInfo:NULL];
+                [printOp runOperation];
                 return;
             }
         }
