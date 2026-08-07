@@ -291,6 +291,7 @@ tasks:
     cmds:
       - wails3 ios xcode:gen -outdir build/ios/xcode -config build/config.yml
       - sed -i '' 's/<string>wailsapp<\/string>/<string>$(EXECUTABLE_NAME)<\/string>/g' build/ios/xcode/main/Info.plist || true
+      - sed -i '' 's/CODE_SIGNING_ALLOWED = NO;/CODE_SIGNING_ALLOWED = YES;/g' build/ios/xcode/main.xcodeproj/project.pbxproj || true
 
   run:
     summary: Run the application in iOS Simulator

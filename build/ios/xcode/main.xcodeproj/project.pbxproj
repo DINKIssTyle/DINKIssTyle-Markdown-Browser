@@ -175,7 +175,7 @@
 		C0DEBEEF0000000000000090 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_ALLOWED = YES;
 				DEVELOPMENT_TEAM = QQ3GJ5KGP2;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
@@ -188,7 +188,7 @@
 		C0DEBEEF00000000000000A0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				CODE_SIGNING_ALLOWED = NO;
+				CODE_SIGNING_ALLOWED = YES;
 				DEVELOPMENT_TEAM = QQ3GJ5KGP2;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
