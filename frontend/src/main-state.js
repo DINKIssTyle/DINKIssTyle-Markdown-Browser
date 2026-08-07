@@ -85,6 +85,8 @@ export const el = {
     mobileTabsModal: $('mobile-tabs-modal'),
     btnCloseMobileTabsModal: $('btn-close-mobile-tabs-modal'),
     mobileTabsList: $('mobile-tabs-list'),
+    btnMobileToolbarMore: $('btn-mobile-toolbar-more'),
+    mobileToolbarMenu: $('mobile-toolbar-menu'),
     btnNewTab: $('btn-new-tab'),
     homeScreen: $('home-screen'),
     recentList: $('recent-files-list'),

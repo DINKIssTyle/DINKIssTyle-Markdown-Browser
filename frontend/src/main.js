@@ -348,6 +348,38 @@ function bindToolbar() {
         if (el.btnTranslate.classList.contains('ai-required-disabled')) return;
         void translateViewerDocument();
     };
+    if (el.btnMobileToolbarMore && el.mobileToolbarMenu) {
+        el.btnMobileToolbarMore.onclick = (e) => {
+            e.stopPropagation();
+            el.mobileToolbarMenu.classList.toggle('hidden');
+        };
+
+        el.mobileToolbarMenu.addEventListener('click', (event) => {
+            const item = event.target.closest('.mobile-menu-item');
+            if (!item) return;
+            el.mobileToolbarMenu.classList.add('hidden');
+            const action = item.dataset.action;
+            switch (action) {
+                case 'print': el.btnPrint?.click(); break;
+                case 'new-doc': el.btnNewDoc?.click(); break;
+                case 'edit': el.btnEdit?.click(); break;
+                case 'translate': el.btnTranslate?.click(); break;
+                case 'font-minus': el.btnFontMinus?.click(); break;
+                case 'font-plus': el.btnFontPlus?.click(); break;
+                case 'theme': el.btnThemeToggle?.click(); break;
+                case 'settings': el.btnSettings?.click(); break;
+            }
+        });
+
+        document.addEventListener('click', (e) => {
+            if (!el.mobileToolbarMenu.classList.contains('hidden') &&
+                !el.mobileToolbarMenu.contains(e.target) &&
+                !el.btnMobileToolbarMore.contains(e.target)) {
+                el.mobileToolbarMenu.classList.add('hidden');
+            }
+        });
+    }
+
     el.selectEngine.onchange = async event => {
         if (event.target.value === 'html') {
             syncEngineSelector();
