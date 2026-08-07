@@ -360,14 +360,30 @@ function bindToolbar() {
             el.mobileToolbarMenu.classList.add('hidden');
             const action = item.dataset.action;
             switch (action) {
-                case 'print': el.btnPrint?.click(); break;
-                case 'new-doc': el.btnNewDoc?.click(); break;
-                case 'edit': el.btnEdit?.click(); break;
-                case 'translate': el.btnTranslate?.click(); break;
-                case 'font-minus': el.btnFontMinus?.click(); break;
-                case 'font-plus': el.btnFontPlus?.click(); break;
-                case 'theme': el.btnThemeToggle?.click(); break;
-                case 'settings': el.btnSettings?.click(); break;
+                case 'print':
+                    printRenderedMarkdown();
+                    break;
+                case 'new-doc':
+                    createNewDocument();
+                    break;
+                case 'edit':
+                    enterEditMode();
+                    break;
+                case 'translate':
+                    void translateViewerDocument();
+                    break;
+                case 'font-minus':
+                    changeFontSize(-2);
+                    break;
+                case 'font-plus':
+                    changeFontSize(2);
+                    break;
+                case 'theme':
+                    toggleTheme();
+                    break;
+                case 'settings':
+                    openSettings();
+                    break;
             }
         });
 
