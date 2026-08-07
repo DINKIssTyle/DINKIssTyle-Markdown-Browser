@@ -763,7 +763,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 
 .outline-item.has-tools {
     display: grid;
-    grid-template-columns: minmax(0, 1fr) 26px 26px;
+    grid-template-columns: minmax(0, 1fr) 26px;
     align-items: center;
     gap: 6px;
 }
@@ -2059,34 +2059,35 @@ html[data-scrollbar-visibility="never"] .cm-scroller::-webkit-scrollbar {
     display: none !important;
 }
 
-/* ── Explicit Mobile (iOS/iPadOS) Editor & Viewer Accent Scrollbar ── */
+/* ── Explicit Mobile (iOS/iPadOS) Editor, Viewer & Sidebar Accent Scrollbar ── */
 html.platform-mobile #content-view,
 html.platform-mobile .content-view,
 html.platform-mobile .cm-scroller,
-html.platform-mobile .markdown-container {
+html.platform-mobile .markdown-container,
+html.platform-mobile .sidebar-panel {
     scrollbar-color: var(--accent-color) transparent;
     scrollbar-width: thin;
 }
 
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar {
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar {
     -webkit-appearance: none !important;
-    width: 6px !important;
-    height: 6px !important;
+    width: 8px !important;
+    height: 8px !important;
 }
 
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar-track {
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar-track {
     -webkit-appearance: none !important;
     background: transparent !important;
 }
 
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar-thumb {
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar-thumb {
     -webkit-appearance: none !important;
     background: var(--accent-color) !important;
     border-radius: 999px !important;
     min-height: 28px !important;
 }
 
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container)::-webkit-scrollbar-thumb:hover {
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar-thumb:hover {
     background: var(--accent-color-hover) !important;
 }
 

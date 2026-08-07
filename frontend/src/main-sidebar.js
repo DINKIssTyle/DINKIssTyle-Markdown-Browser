@@ -66,17 +66,8 @@ export function updateOutline() {
         return;
     }
 
-    el.markdownOutline.classList.toggle('is-heading-formatted', state.outlineHeadingFormatEnabled);
+    el.markdownOutline.classList.add('is-heading-formatted');
     el.markdownOutline.innerHTML = headings.map((h, index) => {
-        const formatButton = index === 0 ? `
-                <button class="outline-format-btn ${state.outlineHeadingFormatEnabled ? 'active' : ''}" type="button"
-                    tabindex="-1"
-                    title="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
-                    aria-label="${state.outlineHeadingFormatEnabled ? 'Use compact outline text' : 'Use formatted heading text'}"
-                    aria-pressed="${state.outlineHeadingFormatEnabled}">
-                    <span class="material-symbols-outlined" aria-hidden="true">${state.outlineHeadingFormatEnabled ? 'format_paint_off' : 'format_paint'}</span>
-                </button>
-            ` : '';
         const topButton = index === 0 ? `
                 <button class="outline-top-btn" type="button" tabindex="-1" title="Top of document" aria-label="Top of document">
                     <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
@@ -85,33 +76,24 @@ export function updateOutline() {
         return `
             <div class="outline-item level-${h.level} ${index === 0 ? 'has-tools' : ''}" data-index="${index}" data-line="${h.line}" tabindex="0">
                 <span class="outline-text">${escapeHTML(h.text)}</span>
-                ${formatButton}
                 ${topButton}
             </div>
         `;
     }).join('');
 
-    el.markdownOutline.querySelectorAll('.outline-format-btn').forEach(button => {
-        button.addEventListener('click', async (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            state.outlineHeadingFormatEnabled = !state.outlineHeadingFormatEnabled;
-            updateOutline();
-            await persistAppSettings();
-        });
-    });
-
     el.markdownOutline.querySelectorAll('.outline-top-btn').forEach(button => {
         button.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            closeSidebar();
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
             setTimeout(() => {
                 getScroller().scrollTo({ top: 0, behavior: 'smooth' });
                 if (state.isEditing) {
                     scrollEditorToLine(1);
                 }
-            }, 80);
+            }, 60);
         });
     });
 
@@ -120,7 +102,9 @@ export function updateOutline() {
             const index = parseInt(item.dataset.index);
             const headingObj = headings[index];
 
-            closeSidebar();
+            if (window.innerWidth <= 768) {
+                closeSidebar();
+            }
 
             setTimeout(() => {
                 if (state.isEditing) {

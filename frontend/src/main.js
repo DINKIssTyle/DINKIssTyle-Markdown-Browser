@@ -479,8 +479,10 @@ function bindHomeScreen() {
         const item = event.target.closest('.result-item');
         if (!item) return;
 
-        const { closeSidebar } = await import('./main-sidebar.js');
-        closeSidebar();
+        if (window.innerWidth <= 768) {
+            const { closeSidebar } = await import('./main-sidebar.js');
+            closeSidebar();
+        }
 
         const targetPath = item.dataset.path;
         const targetLine = Number(item.dataset.line) || 1;
