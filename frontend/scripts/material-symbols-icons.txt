@@ -24,6 +24,7 @@ content_copy
 content_cut
 content_paste
 contextual_token
+contrast
 dark_mode
 delete
 description
