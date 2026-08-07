@@ -7098,7 +7098,8 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
         border-right: none !important;
         transform: none !important;
         opacity: 1 !important;
-        background-color: var(--sidebar-bg, #f6f6f6) !important;
+        background-color: var(--surface-color) !important;
+        color: var(--text-color) !important;
     }
 
     #app-sidebar:not(.hidden) ~ #main-workspace {
