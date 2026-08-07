@@ -415,7 +415,7 @@ function bindHomeScreen() {
             closeSidebar();
         }
 
-        requestAnimationFrame(() => {
+        setTimeout(() => {
             if (isMobilePlatform() || isPhone) {
                 if (state.isEditing) {
                     scrollEditorToLine(Number(item.dataset.line) || 1);
@@ -429,7 +429,7 @@ function bindHomeScreen() {
                 keyword: item.dataset.keyword || "",
                 newTab: event.metaKey || event.ctrlKey || state.isEditing,
             });
-        });
+        }, isPhone ? 80 : 0);
     });
     el.searchResults.addEventListener('keydown', event => {
         const item = event.target.closest('.result-item');

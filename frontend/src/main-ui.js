@@ -316,8 +316,8 @@ export function toggleSearch() {
 
 export async function handleSearch() {
     const query = el.searchInput.value.trim();
-    if (isMobilePlatform()) {
-        renderCurrentDocumentSearch(query);
+    if (isMobilePlatform() || window.innerWidth <= 768) {
+        await renderCurrentDocumentSearch(query);
         return;
     }
     const folders = getSearchFolders();
@@ -328,23 +328,32 @@ export async function handleSearch() {
     el.searchResults.innerHTML = '<div class="search-hint">Searching...</div>';
     const resultGroups = await Promise.all(folders.map(folder => SearchMarkdown(folder, query)));
     const results = mergeSearchResults(resultGroups.flat());
-    if (!results || results.length === 0) {
-        el.searchResults.innerHTML = '<div class="search-hint">No results found</div>';
+    if (results.length === 0) {
+        el.searchResults.innerHTML = '<div class="search-hint">No matches found.</div>';
         return;
     }
     el.searchResults.innerHTML = results.map(result => `
-        <div class="result-item recent-item" data-path="${result.path}" data-keyword="${escapeAttr(query)}" tabindex="0">
+        <div class="result-item recent-item" data-path="${escapeAttr(result.path)}" data-keyword="${escapeAttr(query)}" tabindex="0">
             <div class="recent-file-text">
-                <span class="recent-name">${result.name}</span>
-                <span class="recent-path">${result.path}</span>
+                <span class="recent-name">${escapeHTML(basename(result.path))}</span>
+                <span class="recent-path">${escapeHTML(result.path)}</span>
             </div>
         </div>
     `).join('');
 }
 
-function renderCurrentDocumentSearch(query) {
+async function renderCurrentDocumentSearch(query) {
+    let source = "";
+    if (state.isEditing) {
+        const { getCurrentEditorText } = await import('./main-editor.js');
+        source = getCurrentEditorText();
+    }
+    if (!source) {
+        const { getActiveTab } = await import('./main-tabs.js');
+        const activeTab = getActiveTab();
+        source = activeTab?.currentMarkdownSource || state.currentMarkdownSource || el.markdownContainer?.innerText || el.markdownContainer?.textContent || '';
+    }
     const path = state.editingSourcePath || state.currentFilePath || state.currentPath || 'Untitled.md';
-    const source = state.currentMarkdownSource || el.markdownContainer?.textContent || '';
 
     if (!query) {
         el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword.</div>';

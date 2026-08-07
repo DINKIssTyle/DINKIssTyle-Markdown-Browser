@@ -342,13 +342,13 @@ export function updateOutline() {
 
             if (window.innerWidth <= 768) {
                 closeSidebar();
-                requestAnimationFrame(() => {
+                setTimeout(() => {
                     scrollPreviewHeadingToTop(heading);
                     if (state.isEditing) {
                         const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
                         if (!isNaN(line)) scrollEditorToLine(line);
                     }
-                });
+                }, 80);
             } else {
                 scrollPreviewHeadingToTop(heading);
                 if (state.isEditing) {
