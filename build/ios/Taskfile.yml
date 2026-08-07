@@ -290,6 +290,7 @@ tasks:
       - build/ios/xcode/project.pbxproj
     cmds:
       - wails3 ios xcode:gen -outdir build/ios/xcode -config build/config.yml
+      - sed -i '' 's/<string>wailsapp<\/string>/<string>$(EXECUTABLE_NAME)<\/string>/g' build/ios/xcode/main/Info.plist || true
 
   run:
     summary: Run the application in iOS Simulator
