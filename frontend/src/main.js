@@ -405,21 +405,30 @@ function bindHomeScreen() {
         await openRecentFile(item.dataset.path);
     });
 
-    el.searchResults.addEventListener('click', event => {
+    el.searchResults.addEventListener('click', async event => {
         const item = event.target.closest('.result-item');
         if (!item) return;
-        if (isMobilePlatform()) {
-            if (state.isEditing) {
-                scrollEditorToLine(Number(item.dataset.line) || 1);
-            } else {
-                applyHighlight(item.dataset.keyword || "", Number(item.dataset.matchIndex) || 0);
-            }
-            return;
+
+        const isPhone = window.innerWidth <= 768;
+        if (isPhone) {
+            const { closeSidebar } = await import('./main-sidebar.js');
+            closeSidebar();
         }
-        openPath(item.dataset.path, {
-            pushHistory: true,
-            keyword: item.dataset.keyword || "",
-            newTab: event.metaKey || event.ctrlKey || state.isEditing,
+
+        requestAnimationFrame(() => {
+            if (isMobilePlatform() || isPhone) {
+                if (state.isEditing) {
+                    scrollEditorToLine(Number(item.dataset.line) || 1);
+                } else {
+                    applyHighlight(item.dataset.keyword || "", Number(item.dataset.matchIndex) || 0);
+                }
+                return;
+            }
+            openPath(item.dataset.path, {
+                pushHistory: true,
+                keyword: item.dataset.keyword || "",
+                newTab: event.metaKey || event.ctrlKey || state.isEditing,
+            });
         });
     });
     el.searchResults.addEventListener('keydown', event => {

@@ -151,8 +151,43 @@ export async function switchToTab(tabID) {
 
 // ── Tab Rendering ──────────────────────────────────────────
 
+function isPhoneScreen() {
+    return window.innerWidth <= 768;
+}
+
+// ── Tab Rendering ──────────────────────────────────────────
+
 export function renderTabs() {
     ensureTabDragBindings();
+    ensureMobileTabsModalBindings();
+
+    if (isPhoneScreen()) {
+        const activeTab = getActiveTab() || state.tabs[0];
+        if (!activeTab) return;
+
+        el.tabsList.innerHTML = `
+            <div class="tab-item active mobile-single-tab ${shouldShowUnsavedWarning(activeTab) ? 'has-unsaved-changes' : ''}" data-tab-id="${activeTab.id}">
+                <div class="tab-container">
+                    <span class="tab-title">${escapeHTML(activeTab.title || 'Untitled')}</span>
+                    ${shouldShowUnsavedWarning(activeTab) ? `
+                        <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
+                    ` : ''}
+                    <span class="mobile-tab-count-badge">${state.tabs.length}</span>
+                    <span class="material-symbols-outlined mobile-tab-dropdown-icon">expand_more</span>
+                </div>
+            </div>
+        `;
+
+        const singleTabNode = el.tabsList.querySelector('.mobile-single-tab');
+        if (singleTabNode) {
+            singleTabNode.onclick = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+                openMobileTabsModal();
+            };
+        }
+        return;
+    }
 
     el.tabsList.innerHTML = state.tabs.map(tab => `
         <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''} ${closingTabIds.has(tab.id) ? 'removing-item' : ''}" data-tab-id="${tab.id}">
@@ -196,6 +231,76 @@ export function renderTabs() {
     });
 
     el.tabsList.querySelector('.tab-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
+
+let mobileTabsModalBound = false;
+
+function ensureMobileTabsModalBindings() {
+    if (mobileTabsModalBound) return;
+    if (el.btnCloseMobileTabsModal) {
+        el.btnCloseMobileTabsModal.onclick = () => closeMobileTabsModal();
+    }
+    if (el.mobileTabsModal) {
+        el.mobileTabsModal.onclick = (e) => {
+            if (e.target === el.mobileTabsModal) closeMobileTabsModal();
+        };
+    }
+    window.addEventListener('resize', () => {
+        renderTabs();
+    });
+    mobileTabsModalBound = true;
+}
+
+export function openMobileTabsModal() {
+    if (!el.mobileTabsModal || !el.mobileTabsList) return;
+    renderMobileTabsList();
+    el.mobileTabsModal.classList.remove('hidden');
+}
+
+export function closeMobileTabsModal() {
+    if (!el.mobileTabsModal) return;
+    el.mobileTabsModal.classList.add('hidden');
+}
+
+function renderMobileTabsList() {
+    if (!el.mobileTabsList) return;
+
+    el.mobileTabsList.innerHTML = state.tabs.map(tab => `
+        <div class="mobile-tab-row ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''}" data-tab-id="${tab.id}">
+            <div class="mobile-tab-info">
+                <span class="material-symbols-outlined mobile-tab-icon">${tab.id === state.activeTabId ? 'check_circle' : 'article'}</span>
+                <span class="mobile-tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
+                ${shouldShowUnsavedWarning(tab) ? `
+                    <span class="material-symbols-outlined tab-unsaved-warning" title="Unsaved changes">warning</span>
+                ` : ''}
+            </div>
+            <button class="mobile-tab-row-close" data-close-mobile-tab="${tab.id}" title="Close Tab" aria-label="Close Tab">
+                <span class="material-symbols-outlined">close</span>
+            </button>
+        </div>
+    `).join('');
+
+    el.mobileTabsList.querySelectorAll('.mobile-tab-row').forEach(row => {
+        row.addEventListener('click', async (event) => {
+            if (event.target.closest('[data-close-mobile-tab]')) return;
+            const tabId = row.dataset.tabId;
+            closeMobileTabsModal();
+            await switchToTab(tabId);
+        });
+    });
+
+    el.mobileTabsList.querySelectorAll('[data-close-mobile-tab]').forEach(btn => {
+        btn.addEventListener('click', async (event) => {
+            event.stopPropagation();
+            const tabId = btn.dataset.closeMobileTab;
+            await closeTab(tabId);
+            if (state.tabs.length === 0) {
+                closeMobileTabsModal();
+            } else {
+                renderMobileTabsList();
+            }
+        });
+    });
 }
 
 function shouldShowUnsavedWarning(tab) {

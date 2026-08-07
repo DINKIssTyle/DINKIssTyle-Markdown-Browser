@@ -339,18 +339,22 @@ export function updateOutline() {
         item.onclick = () => {
             const index = item.dataset.index;
             const heading = headings[index];
-            scrollPreviewHeadingToTop(heading);
 
-            // 에디터 상태면 에디터 스크롤도 이동
-            if (state.isEditing) {
-                const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
-                if (!isNaN(line)) {
-                    scrollEditorToLine(line);
-                }
-            }
-
-            if (window.innerWidth <= 768 && document.documentElement.classList.contains('platform-mobile')) {
+            if (window.innerWidth <= 768) {
                 closeSidebar();
+                requestAnimationFrame(() => {
+                    scrollPreviewHeadingToTop(heading);
+                    if (state.isEditing) {
+                        const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
+                        if (!isNaN(line)) scrollEditorToLine(line);
+                    }
+                });
+            } else {
+                scrollPreviewHeadingToTop(heading);
+                if (state.isEditing) {
+                    const line = parseInt(heading.getAttribute('data-dkst-live-line-start'));
+                    if (!isNaN(line)) scrollEditorToLine(line);
+                }
             }
         };
     });

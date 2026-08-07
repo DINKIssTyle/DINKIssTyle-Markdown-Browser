@@ -343,11 +343,11 @@ export async function handleSearch() {
 }
 
 function renderCurrentDocumentSearch(query) {
-    const path = state.editingSourcePath || state.currentFilePath || '';
+    const path = state.editingSourcePath || state.currentFilePath || state.currentPath || 'Untitled.md';
     const source = state.currentMarkdownSource || el.markdownContainer?.textContent || '';
 
-    if (!query || !path || path === '__home__') {
-        el.searchResults.innerHTML = '<div class="search-hint">Open a document, then type to search it.</div>';
+    if (!query) {
+        el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword.</div>';
         return;
     }
 
@@ -452,7 +452,12 @@ export async function searchForQuery(query) {
     mod.openSidebarTab('search');
     
     el.searchInput.value = trimmed;
+    updateSearchClearButton();
     await handleSearch();
+    requestAnimationFrame(() => {
+        el.searchInput?.focus();
+        el.searchInput?.select();
+    });
 }
 
 function getSearchFolders() {
