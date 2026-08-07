@@ -122,14 +122,14 @@ export function updateOutline() {
 
             closeSidebar();
 
-            requestAnimationFrame(() => {
+            setTimeout(() => {
                 if (state.isEditing) {
                     const line = headingObj?.line || parseInt(item.dataset.line) || 1;
                     scrollEditorToLine(line);
                 } else if (headingObj?.el) {
                     scrollPreviewHeadingToTop(headingObj.el);
                 }
-            });
+            }, 60);
         };
     });
     bindListKeyboardNavigation(el.markdownOutline, '.outline-item');
@@ -266,6 +266,15 @@ function bindResizer() {
         window.addEventListener('mousemove', onMouseMove);
         window.addEventListener('mouseup', onMouseUp);
     });
+}
+
+export function closeSidebar() {
+    isSidebarOpen = false;
+    updateSidebarUI();
+    el.appSidebar.classList.add('hidden');
+    el.btnSidebarToggle.classList.remove('active');
+    syncSidebarOffset();
+    focusDocumentSurface();
 }
 
 export function toggleSidebar() {
