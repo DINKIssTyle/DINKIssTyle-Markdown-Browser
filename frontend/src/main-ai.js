@@ -9,9 +9,11 @@ import {
     applyScrollbarVisibility,
     collectMainToolbarSettingsFromControls,
     collectScrollbarSettingsFromControls,
+    collectThemeSettingsFromControls,
     persistAppSettings,
     syncMainToolbarSettingsControls,
     syncScrollbarSettingsControls,
+    syncThemeSettingsControls,
 } from './main-settings.js';
 import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn } from './wails-runtime';
@@ -21,7 +23,7 @@ import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
 import { isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
-import { applyAccentColors, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
+import { applyAccentColors, applyThemeMode, normalizeThemeMode, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
 import { collectUpdateSettingsFromControls, syncUpdateSettingsControls } from './main-update.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
@@ -1111,6 +1113,7 @@ function resetSettingsPasswordVisibility() {
 }
 
 function syncSettingsProxyControls() {
+    syncSegmentedControl(el.settingsThemeModeSegmented, 'data-theme-value', el.settingsThemeMode?.value || 'auto');
     syncSegmentedControl(el.settingsMarginSegmented, 'data-margin-value', el.settingsDocumentMargin?.value || 'none');
     syncSegmentedControl(
         el.settingsScrollbarVisibilitySegmented,
@@ -1486,6 +1489,18 @@ export function bindAIEvents() {
             syncSettingsTabs(nextItem.name);
             nextItem.element.focus();
         });
+    });
+    el.settingsThemeModeSegmented?.addEventListener('click', event => {
+        const button = event.target.closest('[data-theme-value]');
+        if (!button || !el.settingsThemeMode) return;
+        el.settingsThemeMode.value = button.dataset.themeValue;
+        syncSegmentedControl(el.settingsThemeModeSegmented, 'data-theme-value', button.dataset.themeValue);
+        el.settingsThemeMode.dispatchEvent(new Event('change', { bubbles: true }));
+    });
+    el.settingsThemeMode?.addEventListener('change', () => {
+        const newMode = normalizeThemeMode(el.settingsThemeMode.value);
+        applyThemeMode(newMode);
+        void persistAppSettings();
     });
     el.settingsMarginSegmented?.addEventListener('click', event => {
         const button = event.target.closest('[data-margin-value]');

@@ -1,7 +1,30 @@
 import { LAYOUT_MARGIN_NARROW, LAYOUT_MARGIN_WIDE } from './config.js';
+import { state } from './main-state.js';
 
 export const DEFAULT_LIGHT_ACCENT_COLOR = '#0071e3';
 export const DEFAULT_DARK_ACCENT_COLOR = '#0a84ff';
+
+export const THEME_MODE_VALUES = Object.freeze(new Set(['light', 'dark', 'auto']));
+
+export function normalizeThemeMode(value) {
+    return THEME_MODE_VALUES.has(value) ? value : 'auto';
+}
+
+export function resolveEffectiveTheme(themeMode = 'auto') {
+    const mode = normalizeThemeMode(themeMode);
+    if (mode === 'light') return 'light';
+    if (mode === 'dark') return 'dark';
+    return (window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches) ? 'dark' : 'light';
+}
+
+export function applyThemeMode(themeMode) {
+    state.themeMode = normalizeThemeMode(themeMode);
+    const effectiveTheme = resolveEffectiveTheme(state.themeMode);
+    const isDark = (effectiveTheme === 'dark');
+    document.documentElement.classList.toggle('dark', isDark);
+    document.documentElement.dataset.themeMode = state.themeMode;
+    applyAccentColors(state.lightAccentColor, state.darkAccentColor);
+}
 
 export const LIGHT_ACCENT_PRESETS = Object.freeze([
     '#0071e3',

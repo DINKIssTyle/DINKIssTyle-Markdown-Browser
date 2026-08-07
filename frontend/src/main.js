@@ -29,8 +29,15 @@ import {
 import { initAI, bindAIEvents, openSettings, showAskAIPrompt } from './main-ai.js';
 import { bindUpdateEvents, runAutomaticUpdateCheck } from './main-update.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
-import { loadMainToolbarVisibility, loadScrollbarVisibility, persistAppSettings } from './main-settings.js';
-import { applyAccentColors, resolveAccentSettings, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
+import {
+    applyAccentColors, applyDocumentMarginStyle, applyViewerFontFamily, resolveAccentSettings,
+    applyThemeMode, normalizeThemeMode, resolveEffectiveTheme,
+} from './main-theme.js';
+import {
+    loadScrollbarVisibility, loadMainToolbarVisibility, loadThemeMode,
+    syncThemeSettingsControls, syncScrollbarSettingsControls, syncMainToolbarSettingsControls,
+    persistAppSettings,
+} from './main-settings.js';
 import { initializePlatform, isMobilePlatform, printForCurrentPlatform } from './platform-common.js';
 
 import {
@@ -192,11 +199,23 @@ async function loadSettings() {
     state.darkAccentColor = accentSettings.dark;
     loadScrollbarVisibility(s);
     loadMainToolbarVisibility(s);
+    loadThemeMode(s);
     state.documentMargin = s.documentMargin || "none";
     state.viewerFontFamily = s.viewerFontFamily || "";
 
-    document.documentElement.classList.toggle('dark', s.theme !== "light");
-    applyAccentColors(state.lightAccentColor, state.darkAccentColor);
+    applyThemeMode(state.themeMode);
+    setEditorTheme(resolveEffectiveTheme(state.themeMode) === 'dark');
+    syncThemeSettingsControls();
+    if (window.matchMedia && !window._themeMediaListenerBound) {
+        window._themeMediaListenerBound = true;
+        window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+            if (state.themeMode === 'auto') {
+                applyThemeMode('auto');
+                setEditorTheme(resolveEffectiveTheme('auto') === 'dark');
+                syncThemeSettingsControls();
+            }
+        });
+    }
     applyDocumentMarginStyle(state.documentMargin);
     applyViewerFontFamily(state.viewerFontFamily);
     if (el.recentLimitInput) {
@@ -275,10 +294,13 @@ function changeFontSize(delta) {
 }
 
 function toggleTheme() {
-    const isDark = document.documentElement.classList.toggle('dark');
-    applyAccentColors(state.lightAccentColor, state.darkAccentColor);
-    setEditorTheme(isDark);
-    persist();
+    const cycle = { auto: 'light', light: 'dark', dark: 'auto' };
+    const nextMode = cycle[state.themeMode] || 'auto';
+    applyThemeMode(nextMode);
+    setEditorTheme(resolveEffectiveTheme(nextMode) === 'dark');
+    syncThemeSettingsControls();
+    void persistAppSettings();
+    showToast(`Theme: ${nextMode.charAt(0).toUpperCase() + nextMode.slice(1)}`, 'contrast');
 }
 
 async function printRenderedMarkdown() {

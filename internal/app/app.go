@@ -80,6 +80,7 @@ type AIModelInfo struct {
 // AppSettings represents the application settings
 type AppSettings struct {
 	Theme                    string            `json:"theme"`
+	ThemeMode                string            `json:"themeMode"`
 	LightAccentColor         string            `json:"lightAccentColor"`
 	DarkAccentColor          string            `json:"darkAccentColor"`
 	ScrollbarVisibility      string            `json:"scrollbarVisibility"`
@@ -560,6 +561,41 @@ func (a *App) ReadImageAsDataURL(path string) (string, error) {
 	return fmt.Sprintf("data:%s;base64,%s", mimeType, encoded), nil
 }
 
+// GetDefaultStorageDirectory returns the platform standard document storage directory.
+// On iOS: ~/Documents (exposed in iOS Files app)
+// On Android: Public /storage/emulated/0/Documents or app internal Documents
+// On Desktop: User's Documents directory
+func (a *App) GetDefaultStorageDirectory() (string, error) {
+	home, err := os.UserHomeDir()
+	if err != nil {
+		home = "."
+	}
+
+	var target string
+	switch goruntime.GOOS {
+	case "ios":
+		target = filepath.Join(home, "Documents")
+	case "android":
+		pubDocs := "/storage/emulated/0/Documents"
+		if err := os.MkdirAll(pubDocs, 0755); err == nil {
+			target = pubDocs
+		} else {
+			target = filepath.Join(home, "Documents")
+		}
+	default:
+		target = filepath.Join(home, "Documents")
+		if _, err := os.Stat(target); os.IsNotExist(err) {
+			target = home
+		}
+	}
+
+	if err := os.MkdirAll(target, 0755); err != nil {
+		log.Printf("GetDefaultStorageDirectory: MkdirAll failed target=%s: %v", target, err)
+	}
+
+	return filepath.Clean(target), nil
+}
+
 func (a *App) ListFileTree(root string) (FileTreeNode, error) {
 	root = strings.TrimSpace(root)
 	if root == "" {
@@ -808,7 +844,8 @@ func (a *App) GetSettings() AppSettings {
 func (a *App) getSettingsUnlocked() AppSettings {
 	var settings AppSettings
 	// Default settings
-	settings.Theme = "light" // "dark" | "light"
+	settings.Theme = "auto"     // "auto" | "light" | "dark"
+	settings.ThemeMode = "auto" // "auto" | "light" | "dark"
 	settings.LightAccentColor = "#0071e3"
 	settings.DarkAccentColor = "#0a84ff"
 	settings.ScrollbarVisibility = "always" // "when-scrolling" | "always"

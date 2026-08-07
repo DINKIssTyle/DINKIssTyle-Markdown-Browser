@@ -21,14 +21,14 @@ import {
     isEditingDocumentPath,
     saveCurrentDocument,
 } from './main-editor.js';
-import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
 import { copyTextToClipboard, showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { isMobilePlatform } from './platform-common.js';
 
 let isSidebarOpen = false;
-let activeSidebarTab = isMobilePlatform() ? 'outline' : 'files';
+let activeSidebarTab = 'files';
 const expandedFileTreePaths = new Set();
 const loadingFileTreePaths = new Set();
 let fileTreeRootPath = "";
@@ -73,7 +73,6 @@ export function initSidebar() {
 
 function bindSidebarTabButton(button, tabId) {
     if (!button) return;
-    if (isMobilePlatform() && tabId === 'files') return;
 
     button.onclick = () => switchSidebarTab(tabId);
     button.addEventListener('keydown', (event) => {
@@ -153,7 +152,6 @@ export function toggleSidebar() {
 }
 
 export function toggleSidebarTab(tabId, options = {}) {
-    if (isMobilePlatform() && tabId === 'files') return;
     const shouldClose = isSidebarOpen && activeSidebarTab === tabId;
     activeSidebarTab = tabId;
     isSidebarOpen = !shouldClose;
@@ -175,7 +173,6 @@ export function toggleSidebarTab(tabId, options = {}) {
 }
 
 export function openSidebarTab(tabId) {
-    if (isMobilePlatform() && tabId === 'files') return;
     activeSidebarTab = tabId;
     isSidebarOpen = true;
     updateSidebarUI();
@@ -216,7 +213,6 @@ function syncSidebarOffset() {
 }
 
 export function switchSidebarTab(tabId) {
-    if (isMobilePlatform() && tabId === 'files') return;
     activeSidebarTab = tabId;
     updateSidebarUI();
     refreshSidebarContent();
@@ -375,7 +371,7 @@ export async function updateFileTree(options = {}) {
     if (!el.fileTree) return;
 
     const forceRefresh = !!options.forceRefresh;
-    const rootPath = getFileTreeRootPath();
+    const rootPath = await getFileTreeRootPath();
     if (!rootPath) {
         el.fileTree.innerHTML = renderFileTreeHint();
         return;
@@ -404,14 +400,27 @@ export async function updateFileTree(options = {}) {
     }
 }
 
-function getFileTreeRootPath() {
-    if (state.currentFilePath === HOME_SCREEN_PATH) {
-        return "";
+async function getFileTreeRootPath() {
+    if (state.currentFolder) {
+        return state.currentFolder;
+    }
+    if (state.currentFilePath && state.currentFilePath !== HOME_SCREEN_PATH && !isBundledDocumentPath(state.currentFilePath)) {
+        return getPathDirname(state.currentFilePath) || state.currentFilePath;
     }
     if (state.homeTargetPath && state.homeTargetPath !== HOME_SCREEN_PATH && !isBundledDocumentPath(state.homeTargetPath)) {
         return getPathDirname(state.homeTargetPath) || state.homeTargetPath;
     }
-    return state.currentFolder || "";
+
+    try {
+        const defaultDir = await GetDefaultStorageDirectory();
+        if (defaultDir) {
+            return defaultDir;
+        }
+    } catch (error) {
+        console.warn("GetDefaultStorageDirectory failed:", error);
+    }
+
+    return "";
 }
 
 function renderFileTreeHint() {

@@ -689,6 +689,27 @@
                                 <div class="interface-settings-grid">
                                     <div class="interface-setting-item">
                                         <span class="material-symbols-outlined interface-setting-icon"
+                                            aria-hidden="true">contrast</span>
+                                        <span class="interface-setting-copy">
+                                            <strong>Theme</strong>
+                                            <small>Choose interface theme or auto sync with system preferences.</small>
+                                        </span>
+                                        <div id="settings-theme-mode-segmented" class="settings-segmented"
+                                            role="group" aria-label="Theme">
+                                            <button type="button" data-theme-value="light">Light</button>
+                                            <button type="button" data-theme-value="dark">Dark</button>
+                                            <button type="button" data-theme-value="auto"
+                                                class="active">Auto</button>
+                                        </div>
+                                        <select id="settings-theme-mode" class="settings-native-proxy"
+                                            tabindex="-1" aria-hidden="true">
+                                            <option value="light">Light</option>
+                                            <option value="dark">Dark</option>
+                                            <option value="auto" selected>Auto</option>
+                                        </select>
+                                    </div>
+                                    <div class="interface-setting-item">
+                                        <span class="material-symbols-outlined interface-setting-icon"
                                             aria-hidden="true">unfold_more</span>
                                         <span class="interface-setting-copy">
                                             <strong>Show scroll bars</strong>

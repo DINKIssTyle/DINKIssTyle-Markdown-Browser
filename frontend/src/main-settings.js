@@ -5,6 +5,7 @@
 
 import { state, el } from './main-state.js';
 import { SaveSettings } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { normalizeThemeMode } from './main-theme.js';
 
 const MAIN_TOOLBAR_BUTTONS = [
     ['newDocument', 'mainToolbarNewDocument', 'settingsToolbarNewDocument', ['btnNewDoc']],
@@ -20,6 +21,26 @@ const SCROLLBAR_ACTIVE_CLASS = 'is-scrollbar-active';
 const SCROLLBAR_IDLE_DELAY_MS = 750;
 const scrollbarHideTimers = new Map();
 let scrollbarActivityBound = false;
+
+export function loadThemeMode(settings = {}) {
+    state.themeMode = normalizeThemeMode(settings.themeMode || settings.theme);
+}
+
+export function syncThemeSettingsControls() {
+    if (!el.settingsThemeMode) return;
+    el.settingsThemeMode.value = normalizeThemeMode(state.themeMode);
+    if (el.settingsThemeModeSegmented) {
+        el.settingsThemeModeSegmented.querySelectorAll('button[data-theme-value]').forEach(button => {
+            const isActive = button.dataset.themeValue === state.themeMode;
+            button.classList.toggle('active', isActive);
+            button.setAttribute('aria-pressed', String(isActive));
+        });
+    }
+}
+
+export function collectThemeSettingsFromControls() {
+    state.themeMode = normalizeThemeMode(el.settingsThemeMode?.value);
+}
 
 export function normalizeScrollbarVisibility(value) {
     return SCROLLBAR_VISIBILITY_VALUES.has(value) ? value : 'always';
@@ -110,7 +131,8 @@ export function applyMainToolbarVisibility() {
 
 export function buildSettingsPayload(overrides = {}) {
     return {
-        theme: document.documentElement.classList.contains('dark') ? "dark" : "light",
+        theme: state.themeMode,
+        themeMode: state.themeMode,
         lightAccentColor: state.lightAccentColor,
         darkAccentColor: state.darkAccentColor,
         scrollbarVisibility: normalizeScrollbarVisibility(state.scrollbarVisibility),
