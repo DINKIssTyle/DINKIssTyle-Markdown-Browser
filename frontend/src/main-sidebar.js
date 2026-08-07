@@ -181,7 +181,15 @@ export function initSidebar() {
         el.searchInput.addEventListener('keydown', handleSearchInputKeydown);
     }
     if (el.btnClearSearch) {
-        el.btnClearSearch.onclick = clearSearchInput;
+        const handleClearClick = (e) => {
+            if (e) {
+                e.preventDefault();
+                e.stopPropagation();
+            }
+            clearSearchInput(e);
+        };
+        el.btnClearSearch.addEventListener('pointerdown', handleClearClick);
+        el.btnClearSearch.addEventListener('click', handleClearClick);
     }
     if (el.searchOpenTabFolders) {
         el.searchOpenTabFolders.addEventListener('change', () => handleSearch());

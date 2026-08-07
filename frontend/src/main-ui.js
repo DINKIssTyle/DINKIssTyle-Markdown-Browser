@@ -322,69 +322,93 @@ export async function handleSearch() {
     }
     const folders = getSearchFolders();
     if (!query || folders.length === 0) {
-        el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword and keep a file open.</div>';
+        await renderCurrentDocumentSearch(query);
         return;
     }
     el.searchResults.innerHTML = '<div class="search-hint">Searching...</div>';
-    const resultGroups = await Promise.all(folders.map(folder => SearchMarkdown(folder, query)));
-    const results = mergeSearchResults(resultGroups.flat());
-    if (results.length === 0) {
-        el.searchResults.innerHTML = '<div class="search-hint">No matches found.</div>';
-        return;
-    }
-    el.searchResults.innerHTML = results.map(result => `
-        <div class="result-item recent-item" data-path="${escapeAttr(result.path)}" data-keyword="${escapeAttr(query)}" tabindex="0">
-            <div class="recent-file-text">
-                <span class="recent-name">${escapeHTML(basename(result.path))}</span>
-                <span class="recent-path">${escapeHTML(result.path)}</span>
+    try {
+        const resultGroups = await Promise.all(folders.map(folder => SearchMarkdown(folder, query).catch(() => [])));
+        const results = mergeSearchResults(resultGroups.flat());
+        if (results.length === 0) {
+            await renderCurrentDocumentSearch(query);
+            return;
+        }
+        el.searchResults.innerHTML = results.map(result => `
+            <div class="result-item recent-item" data-path="${escapeAttr(result.path)}" data-keyword="${escapeAttr(query)}" tabindex="0">
+                <div class="recent-file-text">
+                    <span class="recent-name">${escapeHTML(basename(result.path))}</span>
+                    <span class="recent-path">${escapeHTML(result.path)}</span>
+                </div>
             </div>
-        </div>
-    `).join('');
+        `).join('');
+    } catch (err) {
+        await renderCurrentDocumentSearch(query);
+    }
 }
 
 async function renderCurrentDocumentSearch(query) {
-    let source = "";
-    if (state.isEditing) {
-        const { getCurrentEditorText } = await import('./main-editor.js');
-        source = getCurrentEditorText();
-    }
-    if (!source) {
-        const { getActiveTab } = await import('./main-tabs.js');
-        const activeTab = getActiveTab();
-        source = activeTab?.currentMarkdownSource || state.currentMarkdownSource || el.markdownContainer?.innerText || el.markdownContainer?.textContent || '';
-    }
-    const path = state.editingSourcePath || state.currentFilePath || state.currentPath || 'Untitled.md';
-
     if (!query) {
         el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword.</div>';
         return;
     }
 
+    const { getActiveTab } = await import('./main-tabs.js');
+    const { getCurrentEditorText } = await import('./main-editor.js');
+
     const normalizedQuery = query.toLocaleLowerCase();
     const matches = [];
-    let matchOffset = 0;
-    source.split(/\r?\n/).forEach((line, index) => {
-        const normalizedLine = line.toLocaleLowerCase();
-        let occurrence = normalizedLine.indexOf(normalizedQuery);
-        if (occurrence < 0) return;
-        matches.push({ line: index + 1, text: line.trim() || 'Blank line', matchIndex: matchOffset });
-        while (occurrence >= 0) {
-            matchOffset += 1;
-            occurrence = normalizedLine.indexOf(normalizedQuery, occurrence + Math.max(1, normalizedQuery.length));
+
+    const openTabs = Array.isArray(state.tabs) && state.tabs.length > 0 ? state.tabs : [getActiveTab()].filter(Boolean);
+
+    for (const tab of openTabs) {
+        let source = "";
+        if (tab.isEditing && tab.id === getActiveTab()?.id) {
+            source = getCurrentEditorText();
         }
-    });
+        if (!source) {
+            source = tab.currentMarkdownSource || tab.editorOriginalContent || (tab.id === getActiveTab()?.id ? state.currentMarkdownSource : '');
+        }
+        if (!source && tab.id === getActiveTab()?.id && el.markdownContainer) {
+            source = el.markdownContainer.textContent || el.markdownContainer.innerText || '';
+        }
+
+        if (!source) continue;
+
+        const path = tab.editingSourcePath || tab.path || state.currentFilePath || 'Untitled.md';
+        const documentName = basename(path) || tab.title || 'Document';
+
+        let matchOffset = 0;
+        source.split(/\r?\n/).forEach((line, index) => {
+            const normalizedLine = line.toLocaleLowerCase();
+            let occurrence = normalizedLine.indexOf(normalizedQuery);
+            if (occurrence < 0) return;
+
+            matches.push({
+                path,
+                documentName,
+                line: index + 1,
+                text: line.trim() || 'Blank line',
+                matchIndex: matchOffset,
+            });
+
+            while (occurrence >= 0) {
+                matchOffset += 1;
+                occurrence = normalizedLine.indexOf(normalizedQuery, occurrence + Math.max(1, normalizedQuery.length));
+            }
+        });
+    }
+
     matches.splice(250);
 
     if (matches.length === 0) {
-        el.searchResults.innerHTML = '<div class="search-hint">No results in the current document.</div>';
+        el.searchResults.innerHTML = '<div class="search-hint">No results found in open documents.</div>';
         return;
     }
 
-    const documentName = basename(path) || 'Current document';
     el.searchResults.innerHTML = matches.map(result => `
-        <div class="result-item recent-item" data-path="${escapeAttr(path)}" data-keyword="${escapeAttr(query)}" data-line="${result.line}" data-match-index="${result.matchIndex}" tabindex="0">
+        <div class="result-item recent-item" data-path="${escapeAttr(result.path)}" data-keyword="${escapeAttr(query)}" data-line="${result.line}" data-match-index="${result.matchIndex}" tabindex="0">
             <div class="recent-file-text">
-                <span class="recent-name">${escapeHTML(documentName)} · Line ${result.line}</span>
+                <span class="recent-name">${escapeHTML(result.documentName)} · Line ${result.line}</span>
                 <span class="recent-path">${escapeHTML(result.text)}</span>
             </div>
         </div>
@@ -392,14 +416,28 @@ async function renderCurrentDocumentSearch(query) {
 }
 
 export function updateSearchClearButton() {
-    el.btnClearSearch.classList.toggle('hidden', !el.searchInput.value.trim());
+    if (!el.btnClearSearch) return;
+    const hasValue = Boolean(el.searchInput && el.searchInput.value.length > 0);
+    el.btnClearSearch.classList.toggle('hidden', !hasValue);
 }
 
-export function clearSearchInput() {
-    el.searchInput.value = "";
+export function clearSearchInput(event) {
+    if (event) {
+        if (typeof event.preventDefault === 'function') event.preventDefault();
+        if (typeof event.stopPropagation === 'function') event.stopPropagation();
+    }
+    if (el.searchInput) {
+        el.searchInput.value = "";
+        el.searchInput.dispatchEvent(new Event('input', { bubbles: true }));
+        try {
+            el.searchInput.focus();
+        } catch (_) {}
+    }
     updateSearchClearButton();
-    el.searchResults.innerHTML = '<div class="search-hint">Open a file then type to search.</div>';
-    el.searchInput.focus();
+    if (el.searchResults) {
+        el.searchResults.innerHTML = '<div class="search-hint">Type a search keyword.</div>';
+    }
+    handleSearch();
 }
 
 export async function handleSearchInputKeydown(event) {

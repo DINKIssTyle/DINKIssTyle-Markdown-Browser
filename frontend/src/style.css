@@ -66,6 +66,12 @@
     --mobile-tab-item-max-width: 220px;
     --mobile-tab-item-font-size: 13px;
     --mobile-tab-close-icon-size: 18px;
+
+    /* 5. Mobile Sidebar Panel Font Size Constants (Outline, File Tree, Search) */
+    --mobile-sidebar-outline-font-size: 15px;
+    --mobile-sidebar-filetree-font-size: 15px;
+    --mobile-sidebar-search-input-font-size: 15px;
+    --mobile-sidebar-search-result-font-size: 14px;
 }
 
 html.dark {
@@ -1027,26 +1033,40 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 
 .clear-search-btn {
     position: absolute;
-    top: 50%;
+    top: 0;
+    bottom: 0;
     right: 8px;
-    transform: translateY(-50%);
+    margin: auto 0;
     width: 24px;
     height: 24px;
     border: none;
     border-radius: 999px;
-    background: rgba(127, 127, 127, 0.12);
+    background: rgba(127, 127, 127, 0.14);
     color: var(--muted-color);
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: background 0.16s ease, color 0.16s ease;
+    transition: background 0.16s ease, color 0.16s ease, transform 0.16s ease, filter 0.16s ease;
     --wails-draggable: no-drag;
 }
 
 .clear-search-btn:hover {
-    background: rgba(127, 127, 127, 0.2);
+    background: rgba(127, 127, 127, 0.22);
     color: var(--text-color);
+}
+
+.clear-search-btn:active,
+html.platform-mobile .clear-search-btn.is-touch-pressed {
+    transform: scale(0.88) !important;
+    filter: brightness(0.85) !important;
+    transition: transform 60ms ease, filter 60ms ease !important;
+}
+
+html.platform-mobile .clear-search-btn.is-touch-releasing {
+    transform: scale(1) !important;
+    filter: brightness(1) !important;
+    transition: transform 200ms ease, filter 200ms ease !important;
 }
 
 .clear-search-btn .material-symbols-outlined {
@@ -7030,8 +7050,15 @@ html.platform-mobile .editor-ai-dock {
     }
 
     @keyframes mobileMenuFadeIn {
-        from { opacity: 0; transform: scale(0.95) translateY(-6px); }
-        to { opacity: 1; transform: scale(1) translateY(0); }
+        from {
+            opacity: 0;
+            transform: scale(0.95) translateY(-6px);
+        }
+
+        to {
+            opacity: 1;
+            transform: scale(1) translateY(0);
+        }
     }
 
     .mobile-toolbar-menu.hidden,
@@ -7102,7 +7129,7 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
         color: var(--text-color) !important;
     }
 
-    #app-sidebar:not(.hidden) ~ #main-workspace {
+    #app-sidebar:not(.hidden)~#main-workspace {
         display: none !important;
     }
 
@@ -7110,26 +7137,62 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
         display: none !important;
     }
 
-    /* Mobile Phone Outline Font Size 1.5x Scaling */
+    /* Mobile Phone Sidebar Panel Font Size Adjustments (Outline, File Tree, Search) */
+    /* 1. Outline (아웃라인 목차) */
     .outline-item {
-        font-size: 19.5px !important;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
+        font-size: var(--mobile-sidebar-outline-font-size, 15px) !important;
+        padding-top: 8px !important;
+        padding-bottom: 8px !important;
     }
 
     .markdown-outline.is-heading-formatted .outline-item.level-1 {
-        font-size: 21.75px !important;
+        font-size: calc(var(--mobile-sidebar-outline-font-size, 15px) * 1.25) !important;
     }
 
     .markdown-outline.is-heading-formatted .outline-item.level-2 {
-        font-size: 20.25px !important;
+        font-size: calc(var(--mobile-sidebar-outline-font-size, 15px) * 1.1) !important;
     }
 
     .markdown-outline.is-heading-formatted .outline-item.level-3,
     .markdown-outline.is-heading-formatted .outline-item.level-4,
     .markdown-outline.is-heading-formatted .outline-item.level-5,
     .markdown-outline.is-heading-formatted .outline-item.level-6 {
-        font-size: 19.5px !important;
+        font-size: var(--mobile-sidebar-outline-font-size, 15px) !important;
+    }
+
+    /* 2. File Tree (파일 트리) */
+    .file-tree-item {
+        font-size: var(--mobile-sidebar-filetree-font-size, 15px) !important;
+        min-height: 38px !important;
+        padding-top: 6px !important;
+        padding-bottom: 6px !important;
+    }
+
+    .file-tree-name {
+        font-size: var(--mobile-sidebar-filetree-font-size, 15px) !important;
+    }
+
+    .file-tree-toggle,
+    .file-tree-icon {
+        font-size: calc(var(--mobile-sidebar-filetree-font-size, 15px) * 1.25) !important;
+    }
+
+    /* 3. Search Box & Input (검색창) */
+    #search-input {
+        font-size: var(--mobile-sidebar-search-input-font-size, 15px) !important;
+        padding-top: 10px !important;
+        padding-bottom: 10px !important;
+    }
+
+    /* 4. Search Results (검색 결과 목록) */
+    .search-results .result-item,
+    .search-results .recent-name {
+        font-size: var(--mobile-sidebar-search-result-font-size, 15px) !important;
+    }
+
+    .search-results .recent-path,
+    .search-results .search-hint {
+        font-size: calc(var(--mobile-sidebar-search-result-font-size, 14px) * 0.88) !important;
     }
 }
 
@@ -7244,7 +7307,7 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
     justify-content: space-between;
     padding: 12px 16px;
     min-height: 48px;
-    border-bottom: 1px solid var(--border-color, rgba(0,0,0,0.08));
+    border-bottom: 1px solid var(--border-color, rgba(0, 0, 0, 0.08));
     cursor: pointer;
     transition: background-color 0.15s ease;
 }

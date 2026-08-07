@@ -482,18 +482,31 @@ function bindHomeScreen() {
         const { closeSidebar } = await import('./main-sidebar.js');
         closeSidebar();
 
-        setTimeout(() => {
+        const targetPath = item.dataset.path;
+        const targetLine = Number(item.dataset.line) || 1;
+        const targetKeyword = item.dataset.keyword || "";
+        const targetMatchIndex = Number(item.dataset.matchIndex) || 0;
+
+        setTimeout(async () => {
             if (isMobilePlatform() || window.innerWidth <= 768) {
+                if (targetPath) {
+                    const { switchToTabByPath, getActiveTab } = await import('./main-tabs.js');
+                    const activeTab = getActiveTab();
+                    if (activeTab && activeTab.path !== targetPath) {
+                        await switchToTabByPath(targetPath);
+                    }
+                }
                 if (state.isEditing) {
-                    scrollEditorToLine(Number(item.dataset.line) || 1);
+                    scrollEditorToLine(targetLine);
                 } else {
-                    applyHighlight(item.dataset.keyword || "", Number(item.dataset.matchIndex) || 0);
+                    applyHighlight(targetKeyword, targetMatchIndex);
+                    scrollPreviewHeadingToTop(targetLine);
                 }
                 return;
             }
-            openPath(item.dataset.path, {
+            openPath(targetPath, {
                 pushHistory: true,
-                keyword: item.dataset.keyword || "",
+                keyword: targetKeyword,
                 newTab: event.metaKey || event.ctrlKey || state.isEditing,
             });
         }, 60);
