@@ -180,6 +180,7 @@
 				DEVELOPMENT_TEAM = QQ3GJ5KGP2;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "-all_load";
 				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = "DKST Markdown Browser";
 				SDKROOT = iphoneos;
@@ -194,6 +195,7 @@
 				DEVELOPMENT_TEAM = QQ3GJ5KGP2;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
+				OTHER_LDFLAGS = "-all_load";
 				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = "DKST Markdown Browser";
 				SDKROOT = iphoneos;
