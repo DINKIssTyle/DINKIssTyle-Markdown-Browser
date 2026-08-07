@@ -121,11 +121,28 @@ export function collectMainToolbarSettingsFromControls() {
     });
 }
 
+const MOBILE_MENU_ACTION_MAP = {
+    newDocument: ['new-doc'],
+    edit: ['edit'],
+    translate: ['translate'],
+    fontSize: ['font-minus', 'font-plus'],
+    theme: ['theme'],
+};
+
 export function applyMainToolbarVisibility() {
     MAIN_TOOLBAR_BUTTONS.forEach(([stateKey, , , elementKeys]) => {
+        const isVisible = state.mainToolbarButtons[stateKey] !== false;
         elementKeys.forEach(elementKey => {
-            el[elementKey]?.classList.toggle('hidden', state.mainToolbarButtons[stateKey] === false);
+            el[elementKey]?.classList.toggle('hidden', !isVisible);
         });
+
+        const mobileActions = MOBILE_MENU_ACTION_MAP[stateKey];
+        if (mobileActions) {
+            mobileActions.forEach(action => {
+                const item = document.querySelector(`.mobile-menu-item[data-action="${action}"]`);
+                item?.classList.toggle('hidden', !isVisible);
+            });
+        }
     });
 }
 
