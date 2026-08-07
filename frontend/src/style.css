@@ -6985,19 +6985,16 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
     }
 
     #app-sidebar:not(.hidden) {
-        width: 100% !important;
-        max-width: 100% !important;
-        flex: 1 1 100% !important;
-        position: absolute !important;
-        inset: 0 !important;
-        z-index: 80 !important;
+        position: fixed !important;
+        top: 0 !important;
+        left: 0 !important;
+        width: 100vw !important;
+        height: 100vh !important;
+        height: 100dvh !important;
+        z-index: 9999 !important;
         border-right: none !important;
-        transform: none !important;
-        opacity: 1 !important;
-    }
-
-    #app-sidebar:not(.hidden) ~ #main-workspace {
-        display: none !important;
+        background-color: var(--sidebar-bg, #f6f6f6) !important;
+        box-sizing: border-box !important;
     }
 
     #sidebar-resizer {

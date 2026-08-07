@@ -122,14 +122,14 @@ export function updateOutline() {
 
             closeSidebar();
 
-            setTimeout(() => {
+            requestAnimationFrame(() => {
                 if (state.isEditing) {
                     const line = headingObj?.line || parseInt(item.dataset.line) || 1;
                     scrollEditorToLine(line);
                 } else if (headingObj?.el) {
                     scrollPreviewHeadingToTop(headingObj.el);
                 }
-            }, 100);
+            });
         };
     });
     bindListKeyboardNavigation(el.markdownOutline, '.outline-item');

@@ -412,7 +412,7 @@ function bindHomeScreen() {
         const { closeSidebar } = await import('./main-sidebar.js');
         closeSidebar();
 
-        setTimeout(() => {
+        requestAnimationFrame(() => {
             if (isMobilePlatform() || window.innerWidth <= 768) {
                 if (state.isEditing) {
                     scrollEditorToLine(Number(item.dataset.line) || 1);
@@ -426,7 +426,7 @@ function bindHomeScreen() {
                 keyword: item.dataset.keyword || "",
                 newTab: event.metaKey || event.ctrlKey || state.isEditing,
             });
-        }, 100);
+        });
     });
     el.searchResults.addEventListener('keydown', event => {
         const item = event.target.closest('.result-item');
