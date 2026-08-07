@@ -6979,12 +6979,12 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
 
 /* Mobile Phone Fullscreen Sidebar (Handheld Phone Screens Only) */
 @media (max-width: 768px) {
-    html.platform-mobile #main-container {
+    #main-container {
         position: relative;
         overflow: hidden;
     }
 
-    html.platform-mobile #app-sidebar:not(.hidden) {
+    #app-sidebar:not(.hidden) {
         width: 100% !important;
         max-width: 100% !important;
         flex: 1 1 100% !important;
@@ -6996,11 +6996,11 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
         opacity: 1 !important;
     }
 
-    html.platform-mobile #app-sidebar:not(.hidden) ~ #main-workspace {
+    #app-sidebar:not(.hidden) ~ #main-workspace {
         display: none !important;
     }
 
-    html.platform-mobile #sidebar-resizer {
+    #sidebar-resizer {
         display: none !important;
     }
 }

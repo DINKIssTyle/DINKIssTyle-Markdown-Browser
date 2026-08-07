@@ -1,8 +1,9 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
-	objectVersion = 56;
+	classes = {
+	};
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -25,9 +26,26 @@
 		C0DEBEEF0000000000000103 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000104 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000105 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		C0DEBEEF0000000000000106 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.text-based-dylib-definition; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
+		C0DEBEEF0000000000000106 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "DKST Markdown Browser.a"; path = "../../../bin/DKST Markdown Browser.a"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C0DEBEEF0000000000000056 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */,
+				C0DEBEEF00000000000000F1 /* UIKit.framework in Frameworks */,
+				C0DEBEEF00000000000000F2 /* Foundation.framework in Frameworks */,
+				C0DEBEEF00000000000000F3 /* WebKit.framework in Frameworks */,
+				C0DEBEEF00000000000000F4 /* Security.framework in Frameworks */,
+				C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */,
+				C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		C0DEBEEF0000000000000010 = {
@@ -97,7 +115,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1500;
-				ORGANIZATIONNAME = "DINKIssTyle";
+				ORGANIZATIONNAME = DINKIssTyle;
 				TargetAttributes = {
 					C0DEBEEF0000000000000040 = {
 						CreatedOnToolsVersion = 15.0;
@@ -120,23 +138,6 @@
 			);
 		};
 /* End PBXProject section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		C0DEBEEF0000000000000056 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */,
-				C0DEBEEF00000000000000F1 /* UIKit.framework in Frameworks */,
-				C0DEBEEF00000000000000F2 /* Foundation.framework in Frameworks */,
-				C0DEBEEF00000000000000F3 /* WebKit.framework in Frameworks */,
-				C0DEBEEF00000000000000F4 /* Security.framework in Frameworks */,
-				C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */,
-				C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		C0DEBEEF0000000000000055 /* Prebuild: Wails Go Archive */ = {
@@ -174,13 +175,14 @@
 		C0DEBEEF0000000000000090 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = QQ3GJ5KGP2;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "-all_load";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dinkisstyle.mdbrowser";
+				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = "DKST Markdown Browser";
-				CODE_SIGN_STYLE = Automatic;
-				CODE_SIGNING_ALLOWED = YES;
 				SDKROOT = iphoneos;
 			};
 			name = Debug;
@@ -188,13 +190,14 @@
 		C0DEBEEF00000000000000A0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				CODE_SIGNING_ALLOWED = YES;
+				CODE_SIGN_STYLE = Automatic;
+				DEVELOPMENT_TEAM = QQ3GJ5KGP2;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				OTHER_LDFLAGS = "-all_load";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dinkisstyle.mdbrowser";
+				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = "DKST Markdown Browser";
-				CODE_SIGN_STYLE = Automatic;
-				CODE_SIGNING_ALLOWED = YES;
 				SDKROOT = iphoneos;
 			};
 			name = Release;
