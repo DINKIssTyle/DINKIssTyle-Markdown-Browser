@@ -7194,6 +7194,15 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
     .search-results .search-hint {
         font-size: calc(var(--mobile-sidebar-search-result-font-size, 14px) * 0.88) !important;
     }
+
+    /* 5. Mobile Phone Start Page (Home Screen) Top Spacing Adjustments */
+    .home-screen {
+        margin: 10px auto 20px !important;
+    }
+
+    .home-subtitle {
+        margin-bottom: 16px !important;
+    }
 }
 
 /* 2. Mobile Sidebar & New Tab Buttons (#tab-strip .tab-sidebar-btn, .tab-add-btn) */

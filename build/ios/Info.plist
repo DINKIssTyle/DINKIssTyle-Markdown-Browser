@@ -8,6 +8,8 @@
 		<string>DKST Markdown Browser</string>
 		<key>CFBundleGetInfoString</key>
 		<string>An elegant cross-platform viewer for Markdown and HTML files.</string>
+		<key>CFBundleIconName</key>
+		<string>AppIcon</string>
 		<key>CFBundleIdentifier</key>
 		<string>com.dinkisstyle.mdbrowser</string>
 		<key>CFBundleName</key>

@@ -99,7 +99,8 @@ export async function shareOrDownloadDocument(filename, content) {
     const file = new File([content], safeName, { type: 'text/markdown;charset=utf-8' });
 
     if (navigator.share && (!navigator.canShare || navigator.canShare({ files: [file] }))) {
-        await navigator.share({ files: [file], title: safeName });
+        // Omit title/text so iOS/iPadOS WebKit shares ONLY the single file object, preventing duplicate title text file creation on save.
+        await navigator.share({ files: [file] });
         return true;
     }
 
