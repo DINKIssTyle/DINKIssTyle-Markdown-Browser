@@ -75,6 +75,7 @@ manage_search
 markdown
 mood
 more_horiz
+more_vert
 new_releases
 open_in_new
 preview

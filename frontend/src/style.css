@@ -6964,6 +6964,10 @@ html.platform-mobile .editor-ai-dock {
 }
 
 /* Mobile Main Toolbar Overflow Menu & Button Display */
+#btn-mobile-toolbar-more {
+    display: none;
+}
+
 @media (max-width: 768px) {
     #toolbar {
         position: relative;
