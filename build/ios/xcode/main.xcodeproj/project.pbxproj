@@ -200,6 +200,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = "DKST Markdown Browser";
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
@@ -216,6 +219,9 @@
 				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = "DKST Markdown Browser";
 				SDKROOT = iphoneos;
+				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SUPPORTS_MACCATALYST = NO;
+				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
