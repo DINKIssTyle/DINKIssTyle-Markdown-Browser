@@ -294,6 +294,14 @@ tasks:
       - cp -f build/ios/Info.plist build/ios/xcode/main/Info.plist
       - cp -f build/ios/project.pbxproj build/ios/xcode/main.xcodeproj/project.pbxproj
       - sed -i '' 's/<string>wailsapp<\/string>/<string>$(EXECUTABLE_NAME)<\/string>/g' build/ios/xcode/main/Info.plist || true
+      - |
+        for f in build/ios/xcode/main/Assets.xcassets/AppIcon.appiconset/*.png; do
+          if [ -f "$f" ]; then
+            sips -s format jpeg -s formatOptions 100 "$f" --out /tmp/temp_icon.jpg >/dev/null 2>&1
+            sips -s format png /tmp/temp_icon.jpg --out "$f" >/dev/null 2>&1
+          fi
+        done
+        rm -f /tmp/temp_icon.jpg
 
   run:
     summary: Run the application in iOS Simulator
