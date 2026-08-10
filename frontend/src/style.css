@@ -6984,15 +6984,17 @@ html.platform-mobile :is(button, a[href], [role="button"], select, .nav-btn, .to
 }
 
 html.platform-mobile .is-touch-pressed {
-    transform: scale(0.92) !important;
-    filter: brightness(0.85) !important;
-    transition: transform 60ms cubic-bezier(0.4, 0, 0.2, 1), filter 60ms ease !important;
+    transform: scale(0.96) !important;
+    filter: none !important;
+    opacity: 1 !important;
+    transition: transform 60ms cubic-bezier(0.4, 0, 0.2, 1) !important;
 }
 
 html.platform-mobile .is-touch-releasing {
     transform: scale(1) !important;
-    filter: brightness(1) !important;
-    transition: transform 340ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease !important;
+    filter: none !important;
+    opacity: 1 !important;
+    transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1) !important;
 }
 
 /* ── Mobile Toolbar Button Dimensions (Using :root Constants) ────────── */
@@ -7507,106 +7509,198 @@ html.platform-ios :is(#markdown-container, .cm-content) {
     -webkit-touch-callout: none;
 }
 
-/* Disable sticky hover effects on mobile & touch interaction while preserving base backgrounds & borders */
+/* Disable sticky hover effects & color fading on mobile & touch interaction while preserving base backgrounds & borders */
 @media (hover: none),
 (pointer: coarse) {
 
+    /* Reset opacity & filter for all interactive elements in touch environments */
+    html.platform-mobile button,
+    html.platform-mobile a,
+    html.platform-mobile [role="button"],
+    html.platform-mobile .action-btn,
+    html.platform-mobile .settings-tab,
+    html.platform-mobile .settings-segmented button,
+    html.platform-mobile .settings-close-btn,
+    html.platform-mobile .modal-btn,
+    html.platform-mobile .nav-btn,
+    html.platform-mobile .recent-item,
+    html.platform-mobile .editor-token-preset-btn,
+    button,
+    .action-btn,
+    .settings-tab,
+    .settings-segmented button,
+    .settings-close-btn,
+    .modal-btn,
+    .nav-btn {
+        opacity: 1 !important;
+        filter: none !important;
+    }
+
     /* 1. Start Page Action Buttons */
-    html.platform-mobile .action-btn.primary:hover:not(.is-touch-pressed),
-    .action-btn.primary:hover:not(.is-touch-pressed) {
+    html.platform-mobile .action-btn.primary,
+    html.platform-mobile .action-btn.primary:hover,
+    html.platform-mobile .action-btn.primary:focus,
+    html.platform-mobile .action-btn.primary:active,
+    .action-btn.primary,
+    .action-btn.primary:hover,
+    .action-btn.primary:focus {
         background-color: var(--accent-color) !important;
         color: #ffffff !important;
         border-color: transparent !important;
         box-shadow: none !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .action-btn.secondary:hover:not(.is-touch-pressed),
-    .action-btn.secondary:hover:not(.is-touch-pressed) {
+    html.platform-mobile .action-btn.secondary,
+    html.platform-mobile .action-btn.secondary:hover,
+    html.platform-mobile .action-btn.secondary:focus,
+    html.platform-mobile .action-btn.secondary:active,
+    .action-btn.secondary,
+    .action-btn.secondary:hover,
+    .action-btn.secondary:focus {
         background-color: var(--surface-color) !important;
         border-color: var(--border-color) !important;
         color: var(--text-color) !important;
         box-shadow: none !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
     /* 2. Settings Modal Controls & Tabs */
-    html.platform-mobile .settings-tab.active:hover:not(.is-touch-pressed),
-    .settings-tab.active:hover:not(.is-touch-pressed) {
+    html.platform-mobile .settings-tab.active,
+    html.platform-mobile .settings-tab.active:hover,
+    html.platform-mobile .settings-tab.active:focus,
+    .settings-tab.active:hover,
+    .settings-tab.active:focus {
         background-color: color-mix(in srgb, var(--accent-color) 11%, var(--surface-elevated)) !important;
         border-color: color-mix(in srgb, var(--accent-color) 32%, transparent) !important;
         color: var(--accent-color) !important;
         box-shadow: 0 10px 24px rgba(var(--accent-color-rgb), 0.10) !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .settings-tab:not(.active):hover:not(.is-touch-pressed),
-    .settings-tab:not(.active):hover:not(.is-touch-pressed) {
+    html.platform-mobile .settings-tab:not(.active),
+    html.platform-mobile .settings-tab:not(.active):hover,
+    html.platform-mobile .settings-tab:not(.active):focus,
+    .settings-tab:not(.active):hover,
+    .settings-tab:not(.active):focus {
         background-color: transparent !important;
         border-color: transparent !important;
         color: var(--text-muted) !important;
         box-shadow: none !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .settings-segmented button.active:hover:not(.is-touch-pressed),
-    .settings-segmented button.active:hover:not(.is-touch-pressed) {
+    html.platform-mobile .settings-segmented button.active,
+    html.platform-mobile .settings-segmented button.active:hover,
+    html.platform-mobile .settings-segmented button.active:focus,
+    .settings-segmented button.active:hover,
+    .settings-segmented button.active:focus {
         background-color: var(--surface-elevated) !important;
         border-color: var(--border-color) !important;
         color: var(--text-color) !important;
         box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .settings-segmented button:not(.active):hover:not(.is-touch-pressed),
-    .settings-segmented button:not(.active):hover:not(.is-touch-pressed) {
+    html.platform-mobile .settings-segmented button:not(.active),
+    html.platform-mobile .settings-segmented button:not(.active):hover,
+    html.platform-mobile .settings-segmented button:not(.active):focus,
+    .settings-segmented button:not(.active):hover,
+    .settings-segmented button:not(.active):focus {
         background-color: transparent !important;
         border-color: transparent !important;
         color: var(--text-muted) !important;
         box-shadow: none !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .settings-close-btn:hover:not(.is-touch-pressed),
-    .settings-close-btn:hover:not(.is-touch-pressed) {
+    html.platform-mobile .settings-close-btn,
+    html.platform-mobile .settings-close-btn:hover,
+    html.platform-mobile .settings-close-btn:focus,
+    .settings-close-btn:hover,
+    .settings-close-btn:focus {
         background-color: transparent !important;
         color: var(--text-muted) !important;
         border-color: transparent !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .editor-token-preset-btn:hover:not(.is-touch-pressed),
-    .editor-token-preset-btn:hover:not(.is-touch-pressed) {
+    html.platform-mobile .editor-token-preset-btn,
+    html.platform-mobile .editor-token-preset-btn:hover,
+    html.platform-mobile .editor-token-preset-btn:focus,
+    .editor-token-preset-btn:hover,
+    .editor-token-preset-btn:focus {
         background-color: color-mix(in srgb, var(--surface-elevated) 78%, transparent) !important;
         border-color: color-mix(in srgb, var(--border-color) 86%, transparent) !important;
         color: var(--text-color) !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
     /* 3. Dialog & Modal Action Buttons */
-    html.platform-mobile .modal-btn.primary:hover:not(.is-touch-pressed),
-    .modal-btn.primary:hover:not(.is-touch-pressed) {
+    html.platform-mobile .modal-btn.primary,
+    html.platform-mobile .modal-btn.primary:hover,
+    html.platform-mobile .modal-btn.primary:focus,
+    .modal-btn.primary:hover,
+    .modal-btn.primary:focus {
         background-color: var(--accent-color) !important;
         color: #ffffff !important;
         border-color: transparent !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .modal-btn.secondary:hover:not(.is-touch-pressed),
-    .modal-btn.secondary:hover:not(.is-touch-pressed) {
+    html.platform-mobile .modal-btn.secondary,
+    html.platform-mobile .modal-btn.secondary:hover,
+    html.platform-mobile .modal-btn.secondary:focus,
+    .modal-btn.secondary:hover,
+    .modal-btn.secondary:focus {
         background-color: var(--surface-color) !important;
         border-color: var(--border-color) !important;
         color: var(--text-color) !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .modal-btn.danger:hover:not(.is-touch-pressed),
-    .modal-btn.danger:hover:not(.is-touch-pressed) {
+    html.platform-mobile .modal-btn.danger,
+    html.platform-mobile .modal-btn.danger:hover,
+    html.platform-mobile .modal-btn.danger:focus,
+    .modal-btn.danger:hover,
+    .modal-btn.danger:focus {
         background-color: #ff3b30 !important;
         color: #ffffff !important;
         border-color: transparent !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
     /* 4. Toolbar & Sidebar Navigation Items */
-    html.platform-mobile .nav-btn:not(.active):hover:not(.is-touch-pressed),
-    .nav-btn:not(.active):hover:not(.is-touch-pressed) {
+    html.platform-mobile .nav-btn:not(.active),
+    html.platform-mobile .nav-btn:not(.active):hover,
+    html.platform-mobile .nav-btn:not(.active):focus,
+    .nav-btn:not(.active):hover,
+    .nav-btn:not(.active):focus {
         background-color: transparent !important;
         border-color: transparent !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 
-    html.platform-mobile .recent-item:hover:not(.is-touch-pressed),
-    .recent-item:hover:not(.is-touch-pressed) {
+    html.platform-mobile .recent-item,
+    html.platform-mobile .recent-item:hover,
+    html.platform-mobile .recent-item:focus,
+    .recent-item:hover,
+    .recent-item:focus {
         background-color: transparent !important;
+        opacity: 1 !important;
+        filter: none !important;
     }
 }
 
