@@ -173,7 +173,43 @@ Finder에서 연 Xcode는 로그인 셸의 PATH를 그대로 받지 않습니다
 
 `overlay.json`에는 절대 경로가 들어가므로 커밋하지 않습니다. 생성 실패를 `|| true`로 숨기지 않아야 이후 오류가 정확한 원인에서 멈춥니다.
 
-### 6. Taskfile에 생성→복원 순서를 고정합니다
+### 6. 파일 공유와 문서 연결을 유지 원본에 둡니다
+
+iOS의 앱 샌드박스는 기본적으로 Finder와 파일 앱에 표시되지 않습니다. 앱의 `Documents` 폴더를 공개하고 Markdown 문서를 앱으로 전달하려면 유지 `Info.plist`에 다음 설정이 필요합니다.
+
+```xml
+<key>UIFileSharingEnabled</key>
+<true/>
+<key>LSSupportsOpeningDocumentsInPlace</key>
+<true/>
+<key>CFBundleDocumentTypes</key>
+<array>
+    <dict>
+        <key>CFBundleTypeName</key>
+        <string>Markdown Document</string>
+        <key>CFBundleTypeRole</key>
+        <string>Editor</string>
+        <key>LSHandlerRank</key>
+        <string>Alternate</string>
+        <key>LSItemContentTypes</key>
+        <array>
+            <string>net.daringfireball.markdown</string>
+        </array>
+    </dict>
+</array>
+```
+
+plist 선언만으로 파일이 애플리케이션 코드에 전달되지는 않습니다. UIScene 기반 앱은 유지 `main.m`에서 실행 중 전달되는 `scene:openURLContexts:`와 종료 상태에서 전달되는 `connectionOptions.URLContexts`를 모두 처리해야 합니다. 파일 제공자 URL에는 `startAccessingSecurityScopedResource`를 호출하고, 읽기와 저장이 끝날 때까지 접근 권한을 유지하거나 앱의 `Documents`로 복사합니다.
+
+이 저장소는 Objective-C에서 Go c-archive의 `WailsIOSOpenFile`을 호출하고, Go 쪽에서 앱 초기화 전 요청을 보관한 뒤 기존 시스템 파일 열기 큐로 전달합니다. 다른 프로젝트에 옮길 때는 다음 파일을 한 세트로 적용합니다.
+
+- `build/ios/xcode-support/main.m`의 URL 처리와 보안 범위 유지 코드
+- iOS 빌드 전용 `//export WailsIOSOpenFile` Go 브리지
+- 다른 플랫폼용 빈 등록 함수
+- 앱 서비스 생성 직후의 파일 열기 핸들러 등록
+- plist 세 항목을 재생성 때 복원하는 `patch_xcode_project.go` 코드
+
+### 7. Taskfile에 생성→복원 순서를 고정합니다
 
 앱별 iOS Task는 반드시 다음 순서를 한 작업으로 묶습니다.
 
@@ -224,7 +260,10 @@ xcodebuild -project build/ios/xcode/main.xcodeproj -scheme "앱 이름" -showBui
 - Debug와 Release 모두 자동 서명과 `-all_load`를 사용하는가
 - Resources 단계에 Asset Catalog와 Launch Screen이 있는가
 - `Info.plist`에 `UIApplicationSceneManifest`가 있는가
+- `Info.plist`에 `UIFileSharingEnabled`, `LSSupportsOpeningDocumentsInPlace`, Markdown `CFBundleDocumentTypes`가 있는가
 - `main.m`에 `WailsSceneDelegate`가 구현되어 있는가
+- 앱 종료 상태와 실행 상태에서 파일 앱의 Markdown 문서가 모두 열리는가
+- Finder의 연결된 기기 `파일` 목록과 iOS의 `나의 iPhone/iPad`에 앱의 `Documents`가 표시되는가
 - 새 클론에서 `frontend/dist`, overlay, `bin/*.a`가 Xcode 빌드 중 생성되는가
 - 시뮬레이터와 `generic/platform=iOS` 양쪽에서 빌드되는가
 

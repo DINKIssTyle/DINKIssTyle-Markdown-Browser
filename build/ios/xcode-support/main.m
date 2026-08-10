@@ -3,6 +3,44 @@
 #import <UIKit/UIKit.h>
 #include <stdio.h>
 
+// Exported by ios_open_file_ios.go in the Go c-archive.
+extern void WailsIOSOpenFile(char *path);
+
+// Keep security-scoped URLs active for the process lifetime. The editor may
+// read linked resources or save the file well after the initial UIKit callback.
+static NSMutableDictionary<NSString *, NSURL *> *WailsSecurityScopedURLs(void) {
+    static NSMutableDictionary<NSString *, NSURL *> *urls = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        urls = [[NSMutableDictionary alloc] init];
+    });
+    return urls;
+}
+
+static void WailsOpenDocumentURL(NSURL *url) {
+    if (url == nil || !url.isFileURL) {
+        return;
+    }
+
+    NSString *path = url.path;
+    if (path.length == 0) {
+        return;
+    }
+
+    NSMutableDictionary<NSString *, NSURL *> *scopedURLs = WailsSecurityScopedURLs();
+    if ([scopedURLs objectForKey:path] == nil && [url startAccessingSecurityScopedResource]) {
+        [scopedURLs setObject:url forKey:path];
+    }
+
+    WailsIOSOpenFile((char *)path.fileSystemRepresentation);
+}
+
+static void WailsOpenURLContexts(NSSet<UIOpenURLContext *> *URLContexts) {
+    for (UIOpenURLContext *context in URLContexts) {
+        WailsOpenDocumentURL(context.URL);
+    }
+}
+
 // Referencing the class directly prevents the static linker from stripping the
 // Wails app delegate out of the Go c-archive.
 @interface WailsAppDelegate : UIResponder <UIApplicationDelegate>
@@ -47,6 +85,14 @@ extern WailsAppDelegate *appDelegate;
 
     self.window = sceneWindow;
     appDelegate.window = sceneWindow;
+
+    // Cold launch: the document URL is supplied with the scene connection.
+    WailsOpenURLContexts(connectionOptions.URLContexts);
+}
+
+// Warm launch: Files or another app sends a document to an existing scene.
+- (void)scene:(UIScene *)scene openURLContexts:(NSSet<UIOpenURLContext *> *)URLContexts {
+    WailsOpenURLContexts(URLContexts);
 }
 
 - (void)sceneDidBecomeActive:(UIScene *)scene {

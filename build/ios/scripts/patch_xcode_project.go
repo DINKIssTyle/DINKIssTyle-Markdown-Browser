@@ -19,6 +19,7 @@ const (
 	supportProjectPath   = "build/ios/xcode-support/project.pbxproj"
 	generatedProjectPath = "build/ios/xcode/main.xcodeproj/project.pbxproj"
 	sourceInfoPath       = "build/ios/Info.plist"
+	sourceDevInfoPath    = "build/ios/Info.dev.plist"
 	supportInfoPath      = "build/ios/xcode-support/Info.plist"
 	supportMainPath      = "build/ios/xcode-support/main.m"
 	supportLaunchPath    = "build/ios/xcode-support/LaunchScreen.storyboard"
@@ -48,6 +49,28 @@ var (
             </array>
         </dict>
     </dict>
+`)
+	documentTypeEntry = []byte(`		<key>CFBundleDocumentTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeName</key>
+				<string>Markdown Document</string>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+				<key>LSHandlerRank</key>
+				<string>Alternate</string>
+				<key>LSItemContentTypes</key>
+				<array>
+					<string>net.daringfireball.markdown</string>
+				</array>
+			</dict>
+		</array>
+`)
+	fileSharingEntry = []byte(`		<key>UIFileSharingEnabled</key>
+		<true/>
+`)
+	openInPlaceEntry = []byte(`		<key>LSSupportsOpeningDocumentsInPlace</key>
+		<true/>
 `)
 )
 
@@ -84,6 +107,8 @@ func main() {
 	for _, required := range [][]byte{
 		[]byte("WailsAppDelegate"),
 		[]byte("WailsSceneDelegate"),
+		[]byte("WailsIOSOpenFile"),
+		[]byte("openURLContexts"),
 		[]byte("UIApplicationMain"),
 	} {
 		if !bytes.Contains(mainSource, required) {
@@ -97,18 +122,19 @@ func main() {
 	// build/ios/Info.plist is refreshed from build/config.yml by Wails. Keep
 	// the Xcode-owned copy in sync, while retaining the executable and scene
 	// values required by the portable project.
-	plist := mustRead(path(sourceInfoPath))
+	plist := addDocumentIntegration(mustRead(path(sourceInfoPath)))
+	// The command-line package task uses this file directly, so keep the
+	// portable source plist augmented as well as the Xcode-owned copy.
+	mustWrite(path(sourceInfoPath), plist)
+	if isFile(path(sourceDevInfoPath)) {
+		mustWrite(path(sourceDevInfoPath), addDocumentIntegration(mustRead(path(sourceDevInfoPath))))
+	}
 	patched := executableEntry.ReplaceAll(plist, []byte(`${1}$(EXECUTABLE_NAME)${2}`))
 	if bytes.Equal(plist, patched) && !bytes.Contains(plist, []byte("$(EXECUTABLE_NAME)")) {
 		fail("patch Xcode Info.plist", fmt.Errorf("CFBundleExecutable entry not found"))
 	}
 	if !bytes.Contains(patched, []byte("<key>UIApplicationSceneManifest</key>")) {
-		closingRoot := []byte("</dict>\n</plist>")
-		index := bytes.LastIndex(patched, closingRoot)
-		if index < 0 {
-			fail("patch Xcode Info.plist", fmt.Errorf("root dictionary closing tag not found"))
-		}
-		patched = bytes.Join([][]byte{patched[:index], sceneManifest, patched[index:]}, nil)
+		patched = insertBeforeRootClosing(patched, sceneManifest)
 	}
 	patched = trailingWhitespace.ReplaceAll(patched, []byte("\n"))
 	patched = append(bytes.TrimRight(patched, "\n"), '\n')
@@ -123,6 +149,34 @@ func main() {
 	if info, err := os.Stat(path(supportAssetsPath)); err != nil || !info.IsDir() {
 		fail("validate maintained asset catalog", fmt.Errorf("%s is missing", supportAssetsPath))
 	}
+}
+
+func addDocumentIntegration(plist []byte) []byte {
+	for _, entry := range []struct {
+		key string
+		xml []byte
+	}{
+		{key: "CFBundleDocumentTypes", xml: documentTypeEntry},
+		{key: "UIFileSharingEnabled", xml: fileSharingEntry},
+		{key: "LSSupportsOpeningDocumentsInPlace", xml: openInPlaceEntry},
+	} {
+		marker := []byte("<key>" + entry.key + "</key>")
+		if bytes.Contains(plist, marker) {
+			continue
+		}
+		plist = insertBeforeRootClosing(plist, entry.xml)
+	}
+	return plist
+}
+
+func insertBeforeRootClosing(plist []byte, entry []byte) []byte {
+	closingRoot := []byte("</dict>\n</plist>")
+	index := bytes.LastIndex(plist, closingRoot)
+	if index < 0 {
+		fail("patch iOS plist", fmt.Errorf("root dictionary closing tag not found"))
+	}
+	lineStart := bytes.LastIndex(plist[:index], []byte("\n")) + 1
+	return bytes.Join([][]byte{plist[:lineStart], entry, plist[lineStart:]}, nil)
 }
 
 func findProjectRoot() string {
