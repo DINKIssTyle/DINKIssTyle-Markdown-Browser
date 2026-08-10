@@ -1323,6 +1323,8 @@ export function syncDocumentMetadataUI(content = state.currentMarkdownSource) {
     const frontMatter = isMarkdown ? parseDocumentFrontMatter(content) : { hasFrontMatter: false };
     el.documentMetaButton?.classList.toggle('hidden', !frontMatter.hasFrontMatter);
     el.documentMetaButton?.classList.toggle('has-error', frontMatter.hasFrontMatter && !frontMatter.valid);
+    el.btnMobileDocumentMeta?.classList.toggle('hidden', !frontMatter.hasFrontMatter);
+    el.btnMobileDocumentMeta?.classList.toggle('has-error', frontMatter.hasFrontMatter && !frontMatter.valid);
 
     if (!frontMatter.hasFrontMatter) {
         el.documentMetaModal?.classList.add('hidden');
@@ -1333,20 +1335,28 @@ export function syncDocumentMetadataUI(content = state.currentMarkdownSource) {
 }
 
 export function bindDocumentMetadataUI() {
-    if (!el.documentMetaButton || bindDocumentMetadataUI.bound) return;
+    if ((!el.documentMetaButton && !el.btnMobileDocumentMeta) || bindDocumentMetadataUI.bound) return;
     bindDocumentMetadataUI.bound = true;
 
     const close = ({ restoreFocus = true } = {}) => {
         el.documentMetaModal?.classList.add('hidden');
-        if (restoreFocus) el.documentMetaButton?.focus();
+        if (restoreFocus) {
+            if (window.innerWidth <= 768 || document.documentElement.classList.contains('platform-mobile')) {
+                el.btnMobileDocumentMeta?.focus();
+            } else {
+                el.documentMetaButton?.focus();
+            }
+        }
     };
-    el.documentMetaButton.addEventListener('click', () => {
+    const handleMetaClick = () => {
         const frontMatter = syncDocumentMetadataUI();
         if (!frontMatter.hasFrontMatter) return;
         renderDocumentMetadataModal(frontMatter);
-        el.documentMetaModal.classList.remove('hidden');
+        el.documentMetaModal?.classList.remove('hidden');
         requestAnimationFrame(() => el.documentMetaClose?.focus());
-    });
+    };
+    el.documentMetaButton?.addEventListener('click', handleMetaClick);
+    el.btnMobileDocumentMeta?.addEventListener('click', handleMetaClick);
     el.documentMetaClose?.addEventListener('click', () => close());
     el.documentMetaModal?.addEventListener('click', event => {
         if (event.target === el.documentMetaModal) close();

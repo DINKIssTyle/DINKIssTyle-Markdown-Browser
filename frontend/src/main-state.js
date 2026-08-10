@@ -78,6 +78,7 @@ export const el = {
     startupSplash: $('startup-splash'),
     currentPath: $('current-path'),
     documentMetaButton: $('document-meta-button'),
+    btnMobileDocumentMeta: $('btn-mobile-document-meta'),
     documentMetaModal: $('document-meta-modal'),
     documentMetaClose: $('document-meta-close'),
     documentMetaBody: $('document-meta-body'),

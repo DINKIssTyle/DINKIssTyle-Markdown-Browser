@@ -7022,8 +7022,18 @@ html.platform-mobile .editor-ai-dock {
 }
 
 /* Mobile Main Toolbar Overflow Menu & Button Display */
-#btn-mobile-toolbar-more {
-    display: none;
+#btn-mobile-toolbar-more,
+#btn-mobile-document-meta {
+    display: none !important;
+}
+
+#btn-mobile-document-meta {
+    color: var(--accent-color);
+}
+
+#btn-mobile-document-meta.has-error {
+    background: color-mix(in srgb, #ff453a 12%, transparent) !important;
+    color: #d93025 !important;
 }
 
 @media (max-width: 768px) {
@@ -7054,6 +7064,10 @@ html.platform-mobile .editor-ai-dock {
         display: flex !important;
         margin-left: auto;
         flex-shrink: 0;
+    }
+
+    #btn-mobile-document-meta:not(.hidden) {
+        display: flex !important;
     }
 
     .mobile-toolbar-backdrop {
@@ -7145,6 +7159,10 @@ html.platform-mobile #toolbar :is(.nav-group, .action-group) {
 
 html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
     font-size: var(--mobile-main-toolbar-icon-size) !important;
+}
+
+html.platform-mobile #btn-mobile-document-meta:not(.hidden) {
+    display: flex !important;
 }
 
 /* Mobile Phone Fullscreen Sidebar (Handheld Phone Screens Only) */
