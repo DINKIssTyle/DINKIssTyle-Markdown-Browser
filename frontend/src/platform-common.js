@@ -158,6 +158,10 @@ function setupTouchFeedback() {
         target.classList.add('is-touch-releasing');
         pressed = null;
 
+        if (document.activeElement === target && typeof target.blur === 'function' && target.tagName !== 'INPUT' && target.tagName !== 'TEXTAREA') {
+            target.blur();
+        }
+
         window.setTimeout(() => {
             target.classList.remove('is-touch-releasing');
         }, 340);

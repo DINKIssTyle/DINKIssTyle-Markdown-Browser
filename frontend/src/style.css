@@ -7507,68 +7507,106 @@ html.platform-ios :is(#markdown-container, .cm-content) {
     -webkit-touch-callout: none;
 }
 
-/* Disable sticky hover effects on mobile (iOS, iPadOS, Android) touch interaction */
+/* Disable sticky hover effects on mobile & touch interaction while preserving base backgrounds & borders */
 @media (hover: none),
 (pointer: coarse) {
 
-    html.platform-mobile :is(button,
-        a,
-        [role="button"],
-        .nav-btn,
-        .tool-btn,
-        .tab-item,
-        .action-btn,
-        .sidebar-tab-btn,
-        .recent-item,
-        .file-tree-item,
-        .outline-item,
-        .result-item,
-        .modal-btn,
-        .tab-add-btn,
-        .tab-close-btn,
-        .tab-sidebar-btn,
-        .font-btn,
-        .toolbar-popup-trigger,
-        .tool-btn-labeled,
-        .editor-ai-trigger,
-        .editor-ai-toggle-btn,
-        .edit-preview-return,
-        .edit-preview-open-tab,
-        .settings-tab,
-        .settings-close-btn,
-        .context-menu-item):hover:not(.is-touch-pressed):not(.active):not([aria-pressed="true"]) {
-        background-color: transparent !important;
-        background: transparent !important;
-        box-shadow: none !important;
+    /* 1. Start Page Action Buttons */
+    html.platform-mobile .action-btn.primary:hover:not(.is-touch-pressed),
+    .action-btn.primary:hover:not(.is-touch-pressed) {
+        background-color: var(--accent-color) !important;
+        color: #ffffff !important;
         border-color: transparent !important;
-        transform: none !important;
-        filter: none !important;
+        box-shadow: none !important;
     }
 
-    /* Preserve solid base backgrounds for action/modal buttons when idle on Mobile */
-    html.platform-mobile .action-btn.primary:hover:not(.is-touch-pressed) {
-        background-color: var(--accent-color) !important;
-        color: #ffffff !important;
-    }
-
-    html.platform-mobile .action-btn.secondary:hover:not(.is-touch-pressed) {
+    html.platform-mobile .action-btn.secondary:hover:not(.is-touch-pressed),
+    .action-btn.secondary:hover:not(.is-touch-pressed) {
         background-color: var(--surface-color) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-color) !important;
+        box-shadow: none !important;
+    }
+
+    /* 2. Settings Modal Controls & Tabs */
+    html.platform-mobile .settings-tab.active:hover:not(.is-touch-pressed),
+    .settings-tab.active:hover:not(.is-touch-pressed) {
+        background-color: color-mix(in srgb, var(--accent-color) 11%, var(--surface-elevated)) !important;
+        border-color: color-mix(in srgb, var(--accent-color) 32%, transparent) !important;
+        color: var(--accent-color) !important;
+        box-shadow: 0 10px 24px rgba(var(--accent-color-rgb), 0.10) !important;
+    }
+
+    html.platform-mobile .settings-tab:not(.active):hover:not(.is-touch-pressed),
+    .settings-tab:not(.active):hover:not(.is-touch-pressed) {
+        background-color: transparent !important;
+        border-color: transparent !important;
+        color: var(--text-muted) !important;
+        box-shadow: none !important;
+    }
+
+    html.platform-mobile .settings-segmented button.active:hover:not(.is-touch-pressed),
+    .settings-segmented button.active:hover:not(.is-touch-pressed) {
+        background-color: var(--surface-elevated) !important;
+        border-color: var(--border-color) !important;
+        color: var(--text-color) !important;
+        box-shadow: 0 1px 3px rgba(0, 0, 0, 0.08) !important;
+    }
+
+    html.platform-mobile .settings-segmented button:not(.active):hover:not(.is-touch-pressed),
+    .settings-segmented button:not(.active):hover:not(.is-touch-pressed) {
+        background-color: transparent !important;
+        border-color: transparent !important;
+        color: var(--text-muted) !important;
+        box-shadow: none !important;
+    }
+
+    html.platform-mobile .settings-close-btn:hover:not(.is-touch-pressed),
+    .settings-close-btn:hover:not(.is-touch-pressed) {
+        background-color: transparent !important;
+        color: var(--text-muted) !important;
+        border-color: transparent !important;
+    }
+
+    html.platform-mobile .editor-token-preset-btn:hover:not(.is-touch-pressed),
+    .editor-token-preset-btn:hover:not(.is-touch-pressed) {
+        background-color: color-mix(in srgb, var(--surface-elevated) 78%, transparent) !important;
+        border-color: color-mix(in srgb, var(--border-color) 86%, transparent) !important;
         color: var(--text-color) !important;
     }
 
-    html.platform-mobile .modal-btn.primary:hover:not(.is-touch-pressed) {
+    /* 3. Dialog & Modal Action Buttons */
+    html.platform-mobile .modal-btn.primary:hover:not(.is-touch-pressed),
+    .modal-btn.primary:hover:not(.is-touch-pressed) {
         background-color: var(--accent-color) !important;
         color: #ffffff !important;
+        border-color: transparent !important;
     }
 
-    html.platform-mobile .modal-btn.secondary:hover:not(.is-touch-pressed) {
+    html.platform-mobile .modal-btn.secondary:hover:not(.is-touch-pressed),
+    .modal-btn.secondary:hover:not(.is-touch-pressed) {
         background-color: var(--surface-color) !important;
+        border-color: var(--border-color) !important;
         color: var(--text-color) !important;
     }
 
-    html.platform-mobile .modal-btn.danger:hover:not(.is-touch-pressed) {
+    html.platform-mobile .modal-btn.danger:hover:not(.is-touch-pressed),
+    .modal-btn.danger:hover:not(.is-touch-pressed) {
         background-color: #ff3b30 !important;
         color: #ffffff !important;
+        border-color: transparent !important;
+    }
+
+    /* 4. Toolbar & Sidebar Navigation Items */
+    html.platform-mobile .nav-btn:not(.active):hover:not(.is-touch-pressed),
+    .nav-btn:not(.active):hover:not(.is-touch-pressed) {
+        background-color: transparent !important;
+        border-color: transparent !important;
+    }
+
+    html.platform-mobile .recent-item:hover:not(.is-touch-pressed),
+    .recent-item:hover:not(.is-touch-pressed) {
+        background-color: transparent !important;
     }
 }
 
