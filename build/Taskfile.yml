@@ -191,17 +191,32 @@ tasks:
       - wails3 generate bindings -f '{{.BUILD_FLAGS}}' -clean=true{{if eq .OBFUSCATED "true"}} -obfuscated{{end}} -ts -i
 
   generate:icons:
-    summary: Generates Windows `.ico` and Mac `.icns` from an image; on macOS, `-iconcomposerinput appicon.icon -macassetdir darwin` also produces `Assets.car` from a `.icon` file (skipped on other platforms).
+    summary: Generates the platform-specific macOS and Windows application icons
     run: once
+    deps:
+      - task: generate:darwin:icons
+      - task: generate:windows:icons
+
+  generate:darwin:icons:
+    summary: Generates the macOS icon from `appicon.png` and `appicon.icon`
     dir: build
     sources:
       - "appicon.png"
       - "appicon.icon"
     generates:
       - "darwin/icons.icns"
+    cmds:
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename= -iconcomposerinput appicon.icon -macassetdir darwin
+
+  generate:windows:icons:
+    summary: Generates the Windows icon from `appicon_winlin.png`
+    dir: build
+    sources:
+      - "appicon_winlin.png"
+    generates:
       - "windows/icon.ico"
     cmds:
-      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin
+      - wails3 generate icons -input appicon_winlin.png -macfilename= -windowsfilename windows/icon.ico
 
   generate:file-association-icons:
     summary: Generates the Markdown document icons for macOS and Windows

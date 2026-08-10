@@ -14,14 +14,12 @@
 		C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000105 /* CoreFoundation.framework */; };
 		C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000106 /* libresolv.tbd */; };
 		C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */; };
-		C0DEBEEF00000000000000F8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000108 /* Assets.xcassets */; };
-		C0DEBEEF00000000000000F9 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000109 /* LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
 		C0DEBEEF0000000000000002 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = main.m; sourceTree = "<group>"; };
 		C0DEBEEF0000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
-		C0DEBEEF0000000000000004 /* DKSTMarkdownBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DKSTMarkdownBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		C0DEBEEF0000000000000004 /* DKST Markdown Browser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "DKST Markdown Browser.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0DEBEEF0000000000000101 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000102 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000103 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
@@ -29,8 +27,6 @@
 		C0DEBEEF0000000000000105 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000106 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.text-based-dylib-definition; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "DKST Markdown Browser.a"; path = "../../../bin/DKST Markdown Browser.a"; sourceTree = SOURCE_ROOT; };
-		C0DEBEEF0000000000000108 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
-		C0DEBEEF0000000000000109 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = LaunchScreen.storyboard; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXGroup section */
@@ -46,7 +42,7 @@
 		C0DEBEEF0000000000000020 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C0DEBEEF0000000000000004 /* DKSTMarkdownBrowser.app */,
+				C0DEBEEF0000000000000004 /* DKST Markdown Browser.app */,
 			);
 			name = Products;
 			sourceTree = "<group>";
@@ -56,8 +52,6 @@
 			children = (
 				C0DEBEEF0000000000000002 /* main.m */,
 				C0DEBEEF0000000000000003 /* Info.plist */,
-				C0DEBEEF0000000000000108 /* Assets.xcassets */,
-				C0DEBEEF0000000000000109 /* LaunchScreen.storyboard */,
 			);
 			path = main;
 			sourceTree = SOURCE_ROOT;
@@ -86,15 +80,14 @@
 				C0DEBEEF0000000000000055 /* Prebuild: Wails Go Archive */,
 				C0DEBEEF0000000000000050 /* Sources */,
 				C0DEBEEF0000000000000056 /* Frameworks */,
-				C0DEBEEF0000000000000057 /* Resources */,
 			);
 			buildRules = (
 			);
 			dependencies = (
 			);
 			name = "DKST Markdown Browser";
-			productName = DKSTMarkdownBrowser;
-			productReference = C0DEBEEF0000000000000004 /* DKSTMarkdownBrowser.app */;
+			productName = "DKST Markdown Browser";
+			productReference = C0DEBEEF0000000000000004 /* DKST Markdown Browser.app */;
 			productType = "com.apple.product-type.application";
 		};
 /* End PBXNativeTarget section */
@@ -128,18 +121,6 @@
 		};
 /* End PBXProject section */
 
-/* Begin PBXResourcesBuildPhase section */
-		C0DEBEEF0000000000000057 /* Resources */ = {
-			isa = PBXResourcesBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C0DEBEEF00000000000000F8 /* Assets.xcassets in Resources */,
-				C0DEBEEF00000000000000F9 /* LaunchScreen.storyboard in Resources */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXResourcesBuildPhase section */
-
 /* Begin PBXFrameworksBuildPhase section */
 		C0DEBEEF0000000000000056 /* Frameworks */ = {
 			isa = PBXFrameworksBuildPhase;
@@ -160,7 +141,6 @@
 /* Begin PBXShellScriptBuildPhase section */
 		C0DEBEEF0000000000000055 /* Prebuild: Wails Go Archive */ = {
 			isa = PBXShellScriptBuildPhase;
-			alwaysOutOfDate = 1;
 			buildActionMask = 2147483647;
 			files = (
 			);
@@ -175,7 +155,7 @@
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 			shellPath = /bin/sh;
-			shellScript = "/bin/sh \"${PROJECT_DIR}/../scripts/xcode_prebuild.sh\"\n";
+			shellScript = "set -e\nAPP_ROOT=\"${PROJECT_DIR}/../../..\"\nPLATFORM=${PLATFORM_NAME:-iphonesimulator}\nSDK_PATH=${SDKROOT:-$(xcrun --sdk ${PLATFORM} --show-sdk-path)}\nif [ ${PLATFORM} = iphonesimulator ]; then GO_TARGET=arm64-apple-ios15.0-simulator; MIN_FLAG=-mios-simulator-version-min=15.0; else GO_TARGET=arm64-apple-ios15.0; MIN_FLAG=-miphoneos-version-min=15.0; fi\nexport GOOS=ios\nexport GOARCH=arm64\nexport CGO_ENABLED=1\nexport CGO_CFLAGS=\"-isysroot ${SDK_PATH} -target ${GO_TARGET} ${MIN_FLAG}\"\nexport CGO_LDFLAGS=\"-isysroot ${SDK_PATH} -target ${GO_TARGET}\"\ncd \"${APP_ROOT}\"\n# Ensure overlay exists\nif [ ! -f build/ios/xcode/overlay.json ]; then\n  wails3 ios overlay:gen -out build/ios/xcode/overlay.json -config build/config.yml || true\nfi\n# Always rebuild the Go c-archive; Go's build cache keeps this fast\n# and avoids stale binaries when .go sources change.\necho \"Building Go c-archive...\"\ngo build -buildmode=c-archive -overlay build/ios/xcode/overlay.json -o \"bin/DKST Markdown Browser.a\"\n";
 		};
 /* End PBXShellScriptBuildPhase section */
 
@@ -194,40 +174,24 @@
 		C0DEBEEF0000000000000090 /* Debug */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_STYLE = Automatic;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = "-all_load";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.dinkisstyle.mdbrowser";
-				PRODUCT_NAME = DKSTMarkdownBrowser;
+				PRODUCT_NAME = "DKST Markdown Browser";
+				CODE_SIGNING_ALLOWED = NO;
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
 		};
 		C0DEBEEF00000000000000A0 /* Release */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
-				ALWAYS_SEARCH_USER_PATHS = NO;
-				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
-				CODE_SIGNING_ALLOWED = YES;
-				CODE_SIGN_STYLE = Automatic;
-				ENABLE_USER_SCRIPT_SANDBOXING = NO;
 				INFOPLIST_FILE = main/Info.plist;
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
-				ONLY_ACTIVE_ARCH = YES;
-				OTHER_LDFLAGS = "-all_load";
 				PRODUCT_BUNDLE_IDENTIFIER = "com.dinkisstyle.mdbrowser";
-				PRODUCT_NAME = DKSTMarkdownBrowser;
+				PRODUCT_NAME = "DKST Markdown Browser";
+				CODE_SIGNING_ALLOWED = NO;
 				SDKROOT = iphoneos;
-				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;
 		};
