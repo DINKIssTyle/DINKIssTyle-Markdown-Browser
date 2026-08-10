@@ -190,6 +190,10 @@ chmod +x build-Linux.sh
 ./build-Linux.sh [amd64 | arm64 | arm]
 ```
 
+#### iOS / Xcode
+
+컴퓨터와 저장소 위치에 관계없이 Xcode 빌드가 가능하도록 구성한 방법은 [Wails3 iOS/Xcode 휴대형 스캐폴딩 지침](doc/wails3-ios-xcode-scaffolding.md)을 참조하십시오.
+
 ## 라이선스
 
 **DINKIssTyle** 제작.

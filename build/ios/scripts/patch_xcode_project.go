@@ -1,27 +1,35 @@
-// Command patch_xcode_project restores the maintained Xcode project and
-// runtime-critical files after `wails3 ios xcode:gen` regenerates them.
+// Command patch_xcode_project restores the maintained Xcode project after
+// `wails3 ios xcode:gen` or `wails3 update build-assets` regenerates Wails files.
+//
+// The generated Xcode project only points at files under xcode-support. This is
+// deliberate: Xcode validates Info.plist and resources before it runs build
+// phases, so none of those inputs may depend on the prebuild script.
 package main
 
 import (
 	"bytes"
 	"fmt"
+	"io/fs"
 	"os"
 	"path/filepath"
 	"regexp"
 )
 
 const (
-	templatePath       = "build/ios/project.pbxproj"
-	projectPath        = "build/ios/xcode/main.xcodeproj/project.pbxproj"
-	infoPlistPath      = "build/ios/xcode/main/Info.plist"
-	maintainedMainPath = "build/ios/main.m"
-	generatedMainPath  = "build/ios/xcode/main/main.m"
-	maintainedLaunch   = "build/ios/LaunchScreen.storyboard"
-	generatedLaunch    = "build/ios/xcode/main/LaunchScreen.storyboard"
+	supportProjectPath   = "build/ios/xcode-support/project.pbxproj"
+	generatedProjectPath = "build/ios/xcode/main.xcodeproj/project.pbxproj"
+	sourceInfoPath       = "build/ios/Info.plist"
+	supportInfoPath      = "build/ios/xcode-support/Info.plist"
+	supportMainPath      = "build/ios/xcode-support/main.m"
+	supportLaunchPath    = "build/ios/xcode-support/LaunchScreen.storyboard"
+	generatedAssetsPath  = "build/ios/xcode/main/Assets.xcassets"
+	supportAssetsPath    = "build/ios/xcode-support/Assets.xcassets"
 )
 
 var (
 	executableEntry    = regexp.MustCompile(`(?s)(<key>CFBundleExecutable</key>\s*<string>)[^<]*(</string>)`)
+	developmentTeam    = regexp.MustCompile(`(?m)^\s*DEVELOPMENT_TEAM = ([A-Za-z0-9]+);\s*$`)
+	codeSignStyleEntry = regexp.MustCompile(`(?m)^([ \t]*CODE_SIGN_STYLE = Automatic;)[ \t]*$`)
 	trailingWhitespace = regexp.MustCompile(`[ \t]+\n`)
 	sceneManifest      = []byte(`    <key>UIApplicationSceneManifest</key>
     <dict>
@@ -44,37 +52,119 @@ var (
 )
 
 func main() {
-	template := mustRead(templatePath)
+	root := findProjectRoot()
+	path := func(relative string) string { return filepath.Join(root, filepath.FromSlash(relative)) }
+
+	project := mustRead(path(supportProjectPath))
 	for _, required := range [][]byte{
 		[]byte("Prebuild: Wails Go Archive"),
 		[]byte("PBXResourcesBuildPhase"),
 		[]byte("CODE_SIGNING_ALLOWED = YES"),
 		[]byte(`CODE_SIGN_STYLE = Automatic`),
 		[]byte(`OTHER_LDFLAGS = "-all_load"`),
+		[]byte(`INFOPLIST_FILE = "../xcode-support/Info.plist"`),
+		[]byte(`path = "../xcode-support/main.m"`),
+		[]byte(`path = "../xcode-support/Assets.xcassets"`),
 	} {
-		if !bytes.Contains(template, required) {
+		if !bytes.Contains(project, required) {
 			fail("validate maintained Xcode project", fmt.Errorf("missing %q", required))
 		}
 	}
+	// Xcode writes the selected development team into the generated project.
+	// Preserve that machine-local choice while restoring every portable setting.
+	if existing, err := os.ReadFile(path(generatedProjectPath)); err == nil {
+		if match := developmentTeam.FindSubmatch(existing); len(match) == 2 {
+			teamLine := []byte("\n\t\t\t\tDEVELOPMENT_TEAM = " + string(match[1]) + ";")
+			project = codeSignStyleEntry.ReplaceAll(project, append([]byte("${1}"), teamLine...))
+		}
+	}
+	mustWrite(path(generatedProjectPath), project)
 
-	mustWrite(projectPath, template)
-	mustWrite(generatedMainPath, mustRead(maintainedMainPath))
-	mustWrite(generatedLaunch, mustRead(maintainedLaunch))
+	mainSource := mustRead(path(supportMainPath))
+	for _, required := range [][]byte{
+		[]byte("WailsAppDelegate"),
+		[]byte("WailsSceneDelegate"),
+		[]byte("UIApplicationMain"),
+	} {
+		if !bytes.Contains(mainSource, required) {
+			fail("validate maintained iOS entry point", fmt.Errorf("missing %q", required))
+		}
+	}
+	if !bytes.Contains(mustRead(path(supportLaunchPath)), []byte("<document type=\"com.apple.InterfaceBuilder3.CocoaTouch.Storyboard.XIB\"")) {
+		fail("validate maintained launch screen", fmt.Errorf("storyboard document is invalid"))
+	}
 
-	plist := mustRead(infoPlistPath)
+	// build/ios/Info.plist is refreshed from build/config.yml by Wails. Keep
+	// the Xcode-owned copy in sync, while retaining the executable and scene
+	// values required by the portable project.
+	plist := mustRead(path(sourceInfoPath))
 	patched := executableEntry.ReplaceAll(plist, []byte(`${1}$(EXECUTABLE_NAME)${2}`))
 	if bytes.Equal(plist, patched) && !bytes.Contains(plist, []byte("$(EXECUTABLE_NAME)")) {
-		fail("patch generated Info.plist", fmt.Errorf("CFBundleExecutable entry not found"))
+		fail("patch Xcode Info.plist", fmt.Errorf("CFBundleExecutable entry not found"))
 	}
 	if !bytes.Contains(patched, []byte("<key>UIApplicationSceneManifest</key>")) {
 		closingRoot := []byte("</dict>\n</plist>")
 		index := bytes.LastIndex(patched, closingRoot)
 		if index < 0 {
-			fail("patch generated Info.plist", fmt.Errorf("root dictionary closing tag not found"))
+			fail("patch Xcode Info.plist", fmt.Errorf("root dictionary closing tag not found"))
 		}
 		patched = bytes.Join([][]byte{patched[:index], sceneManifest, patched[index:]}, nil)
 	}
-	mustWrite(infoPlistPath, trailingWhitespace.ReplaceAll(patched, []byte("\n")))
+	patched = trailingWhitespace.ReplaceAll(patched, []byte("\n"))
+	patched = append(bytes.TrimRight(patched, "\n"), '\n')
+	mustWrite(path(supportInfoPath), patched)
+
+	// xcode:gen creates all icon renditions from build/appicon.png. Copy those
+	// generated renditions into the committed support directory so direct Xcode
+	// builds also work immediately after a fresh clone.
+	if info, err := os.Stat(path(generatedAssetsPath)); err == nil && info.IsDir() {
+		mustCopyTree(path(generatedAssetsPath), path(supportAssetsPath))
+	}
+	if info, err := os.Stat(path(supportAssetsPath)); err != nil || !info.IsDir() {
+		fail("validate maintained asset catalog", fmt.Errorf("%s is missing", supportAssetsPath))
+	}
+}
+
+func findProjectRoot() string {
+	dir, err := os.Getwd()
+	if err != nil {
+		fail("get working directory", err)
+	}
+	for {
+		if isFile(filepath.Join(dir, "go.mod")) && isFile(filepath.Join(dir, "build", "config.yml")) {
+			return dir
+		}
+		parent := filepath.Dir(dir)
+		if parent == dir {
+			fail("find project root", fmt.Errorf("go.mod and build/config.yml not found above working directory"))
+		}
+		dir = parent
+	}
+}
+
+func isFile(path string) bool {
+	info, err := os.Stat(path)
+	return err == nil && !info.IsDir()
+}
+
+func mustCopyTree(source, destination string) {
+	err := filepath.WalkDir(source, func(path string, entry fs.DirEntry, walkErr error) error {
+		if walkErr != nil {
+			return walkErr
+		}
+		relative, err := filepath.Rel(source, path)
+		if err != nil {
+			return err
+		}
+		target := filepath.Join(destination, relative)
+		if entry.IsDir() {
+			return os.MkdirAll(target, 0o755)
+		}
+		return writeFileIfChanged(target, mustRead(path), entry.Type().Perm())
+	})
+	if err != nil {
+		fail("copy generated asset catalog", err)
+	}
 }
 
 func mustRead(path string) []byte {
@@ -86,19 +176,26 @@ func mustRead(path string) []byte {
 }
 
 func mustWrite(path string, data []byte) {
-	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
-		fail("create parent directory for "+path, err)
-	}
 	mode := os.FileMode(0o644)
 	if info, err := os.Stat(path); err == nil {
 		mode = info.Mode()
 	}
-	if current, err := os.ReadFile(path); err == nil && bytes.Equal(current, data) {
-		return
-	}
-	if err := os.WriteFile(path, data, mode); err != nil {
+	if err := writeFileIfChanged(path, data, mode); err != nil {
 		fail("write "+path, err)
 	}
+}
+
+func writeFileIfChanged(path string, data []byte, mode os.FileMode) error {
+	if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+		return err
+	}
+	if current, err := os.ReadFile(path); err == nil && bytes.Equal(current, data) {
+		return nil
+	}
+	if mode.Perm() == 0 {
+		mode = 0o644
+	}
+	return os.WriteFile(path, data, mode.Perm())
 }
 
 func fail(action string, err error) {

@@ -258,10 +258,11 @@ tasks:
       - bun run dev --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
 
   update:build-assets:
-    summary: Updates the build assets
+    summary: Updates Wails build assets and restores maintained iOS Xcode inputs
     dir: build
     cmds:
       - wails3 update build-assets -name "{{.APP_NAME}}" -binaryname "{{.APP_NAME}}" -config config.yml -dir .
+      - go run ios/scripts/patch_xcode_project.go
 
   build:server:
     summary: Builds the application in server mode (no GUI, HTTP server only)

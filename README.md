@@ -164,6 +164,10 @@ chmod +x build-Linux.sh
 ./build-Linux.sh [amd64 | arm64 | arm]
 ```
 
+#### iOS / Xcode
+
+See the [Wails3 portable iOS/Xcode scaffolding guide](doc/wails3-ios-xcode-scaffolding.md) for the repository-independent Xcode build structure.
+
 ## License
 
 **Made by DINKIssTyle.**

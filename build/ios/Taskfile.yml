@@ -98,10 +98,7 @@ tasks:
         sh: xcrun --sdk {{.IOS_SDK}} --show-sdk-path
     cmds:
       - |
-        MAIN_M=build/ios/xcode/main/main.m
-        if [ ! -f "$MAIN_M" ]; then
-          MAIN_M=build/ios/main.m
-        fi
+        MAIN_M=build/ios/xcode-support/main.m
         xcrun -sdk {{.IOS_SDK}} clang \
           -target {{.IOS_TARGET}} \
           -isysroot {{.SDK_PATH}} \
@@ -130,7 +127,7 @@ tasks:
       - |
         # Compile asset catalog and embed icons in the app bundle
         APP_BUNDLE="{{.BIN_DIR}}/{{.APP_NAME}}.app"
-        AC_IN="build/ios/xcode/main/Assets.xcassets"
+        AC_IN="build/ios/xcode-support/Assets.xcassets"
         if [ -d "$AC_IN" ]; then
           TMP_AC=$(mktemp -d)
           xcrun actool \
@@ -298,26 +295,30 @@ tasks:
 
   generate:ios:xcode:
     internal: true
-    summary: Generate iOS Xcode project structure and assets
+    summary: Generate iOS artifacts and restore the maintained portable Xcode project
     deps:
       - task: generate:ios:overlay
     sources:
       - build/config.yml
       - build/appicon.png
-      - build/ios/project.pbxproj
-      - build/ios/main.m
-      - build/ios/LaunchScreen.storyboard
+      - build/ios/Info.plist
+      - build/ios/xcode-support/project.pbxproj
+      - build/ios/xcode-support/main.m
+      - build/ios/xcode-support/LaunchScreen.storyboard
       - build/ios/scripts/patch_xcode_project.go
       - build/ios/scripts/xcode_prebuild.sh
     generates:
-      - build/ios/xcode/main/main.m
-      - build/ios/xcode/main/Info.plist
-      - build/ios/xcode/main/LaunchScreen.storyboard
-      - build/ios/xcode/main/Assets.xcassets/**/*
+      - build/ios/xcode-support/Info.plist
+      - build/ios/xcode-support/Assets.xcassets/**/*
       - build/ios/xcode/main.xcodeproj/project.pbxproj
     cmds:
       - wails3 ios xcode:gen -outdir build/ios/xcode -config build/config.yml
       - go run build/ios/scripts/patch_xcode_project.go
+
+  sync:xcode:
+    summary: Regenerate iOS assets and restore the portable Xcode project
+    cmds:
+      - task: generate:ios:xcode
 
   run:
     summary: Run the application in iOS Simulator
@@ -332,7 +333,7 @@ tasks:
       - |
         # Compile asset catalog and embed icons for dev bundle
         APP_BUNDLE="{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
-        AC_IN="build/ios/xcode/main/Assets.xcassets"
+        AC_IN="build/ios/xcode-support/Assets.xcassets"
         if [ -d "$AC_IN" ]; then
           TMP_AC=$(mktemp -d)
           xcrun actool \
