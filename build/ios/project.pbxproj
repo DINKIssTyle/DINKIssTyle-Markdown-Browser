@@ -97,7 +97,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1500;
-				ORGANIZATIONNAME = "DINKI'ssTyle";
+				ORGANIZATIONNAME = "DINKIssTyle";
 				TargetAttributes = {
 					C0DEBEEF0000000000000040 = {
 						CreatedOnToolsVersion = 15.0;

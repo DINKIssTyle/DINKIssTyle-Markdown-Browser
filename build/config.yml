@@ -5,7 +5,7 @@ version: '3'
 
 # This information is used to generate the build assets.
 info:
-  companyName: "DINKI'ssTyle" # The name of the company
+  companyName: "DINKIssTyle" # The name of the company
   productName: "DKST Markdown Browser" # The name of the application
   productIdentifier: "com.dinkisstyle.mdbrowser" # The unique product identifier
   description: "A lightweight and elegant cross-platform. Markdown viewer and editor" # The application description

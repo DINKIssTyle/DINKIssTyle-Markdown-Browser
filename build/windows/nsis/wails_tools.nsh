@@ -8,7 +8,7 @@
     !define INFO_PROJECTNAME "DKST Markdown Browser"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "DINKI'ssTyle"
+    !define INFO_COMPANYNAME "DINKIssTyle"
 !endif
 !ifndef INFO_PRODUCTNAME
     !define INFO_PRODUCTNAME "DKST Markdown Browser"

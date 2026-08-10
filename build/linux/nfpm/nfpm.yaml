@@ -11,7 +11,7 @@ section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
 description: "A lightweight and elegant cross-platform. Markdown viewer and editor"
-vendor: "DINKI'ssTyle"
+vendor: "DINKIssTyle"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"
