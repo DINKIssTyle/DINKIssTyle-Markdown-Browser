@@ -8,27 +8,27 @@
         AllowPromptForPassword="false">
     </Settings>
     <Installer
-        Path="probe"
+        Path="dkst_markdown_browser"
         Arguments=""
-        InstallLocation="C:\Program Files\My Company\My Product">
+        InstallLocation="C:\Program Files\DINKIssTyle\DKST Markdown Browser">
     </Installer>
     <PackageInformation
-        PackageName="My Product"
-        PackageDisplayName="My Product"
-        PublisherName="CN=My Company"
-        PublisherDisplayName="My Company"
-        Version="0.1.0.0"
-        PackageDescription="A Probe application">
+        PackageName="DKST Markdown Browser"
+        PackageDisplayName="DKST Markdown Browser"
+        PublisherName="CN=DINKIssTyle"
+        PublisherDisplayName="DINKIssTyle"
+        Version="2.2.4.0"
+        PackageDescription="An elegant cross-platform viewer for Markdown and HTML files.">
         <Capabilities>
             <Capability Name="runFullTrust" />
             
         </Capabilities>
         <Applications>
             <Application
-                Id="com.example.probe"
-                Description="A Probe application"
-                DisplayName="My Product"
-                ExecutableName="probe"
+                Id="com.dinkisstyle.mdbrowser"
+                Description="An elegant cross-platform viewer for Markdown and HTML files."
+                DisplayName="DKST Markdown Browser"
+                ExecutableName="dkst_markdown_browser"
                 EntryPoint="Windows.FullTrustApplication">
                 
             </Application>
@@ -41,13 +41,13 @@
         </Dependencies>
         <Properties>
             <Framework>false</Framework>
-            <DisplayName>My Product</DisplayName>
-            <PublisherDisplayName>My Company</PublisherDisplayName>
-            <Description>A Probe application</Description>
+            <DisplayName>DKST Markdown Browser</DisplayName>
+            <PublisherDisplayName>DINKIssTyle</PublisherDisplayName>
+            <Description>An elegant cross-platform viewer for Markdown and HTML files.</Description>
             <Logo>Assets\AppIcon.png</Logo>
         </Properties>
     </PackageInformation>
-    <SaveLocation PackagePath="probe.msix" />
+    <SaveLocation PackagePath="dkst_markdown_browser.msix" />
     <PackageIntegrity>
         <CertificatePath></CertificatePath>
     </PackageIntegrity>

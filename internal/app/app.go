@@ -33,8 +33,7 @@ import (
 )
 
 var appIconPNG []byte
-
-var linuxIconPNGBySize map[int][]byte
+var documentIconPNG []byte
 
 const (
 	defaultRecentFileDisplayLimit = 8
@@ -43,9 +42,9 @@ const (
 	compactScreenMaxHeight        = 768
 )
 
-func SetIntegrationIcons(appIcon []byte, linuxIcons map[int][]byte) {
+func SetIntegrationIcons(appIcon []byte, documentIcon []byte) {
 	appIconPNG = appIcon
-	linuxIconPNGBySize = linuxIcons
+	documentIconPNG = documentIcon
 }
 
 // RecentFile represents a recently opened file
@@ -1778,13 +1777,13 @@ func (a *App) InstallSystemIntegration() (string, error) {
 		return "", err
 	}
 
-	if err := installIconSet(home, "apps", "dkst-markdown-browser"); err != nil {
+	if err := installIconSet(home, "apps", "dkst-markdown-browser", appIconPNG); err != nil {
 		return "", err
 	}
-	if err := installIconSet(home, "mimetypes", "text-markdown"); err != nil {
+	if err := installIconSet(home, "mimetypes", "text-markdown", documentIconPNG); err != nil {
 		return "", err
 	}
-	if err := installIconSet(home, "mimetypes", "text-x-markdown"); err != nil {
+	if err := installIconSet(home, "mimetypes", "text-x-markdown", documentIconPNG); err != nil {
 		return "", err
 	}
 	if err := os.MkdirAll(filepath.Dir(pixmapPath), 0755); err != nil {
@@ -1905,13 +1904,13 @@ func iconSetPaths(home string, context string, name string) []string {
 	return paths
 }
 
-func installIconSet(home string, context string, name string) error {
+func installIconSet(home string, context string, name string, source []byte) error {
 	for index, path := range iconSetPaths(home, context, name) {
 		if err := os.MkdirAll(filepath.Dir(path), 0755); err != nil {
 			return err
 		}
 		size := iconSizes()[index]
-		icon, err := linuxIconPNG(size)
+		icon, err := resizedIconPNG(source, size)
 		if err != nil {
 			return err
 		}
@@ -1922,20 +1921,14 @@ func installIconSet(home string, context string, name string) error {
 	return nil
 }
 
-func linuxIconPNG(size int) ([]byte, error) {
-	if icon, ok := linuxIconPNGBySize[size]; ok && len(icon) > 0 {
-		return icon, nil
+func resizedIconPNG(source []byte, size int) ([]byte, error) {
+	if len(source) == 0 {
+		return nil, fmt.Errorf("icon is not configured")
 	}
 	if size == 1024 {
-		if len(appIconPNG) == 0 {
-			return nil, fmt.Errorf("app icon is not configured")
-		}
-		return appIconPNG, nil
+		return source, nil
 	}
-	if len(appIconPNG) == 0 {
-		return nil, fmt.Errorf("app icon is not configured")
-	}
-	return resizePNG(appIconPNG, size)
+	return resizePNG(source, size)
 }
 
 func resizePNG(source []byte, size int) ([]byte, error) {

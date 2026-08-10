@@ -7,7 +7,6 @@ package main
 
 import (
 	"embed"
-	"fmt"
 	"log"
 	"runtime"
 
@@ -23,11 +22,11 @@ var assets embed.FS
 //go:embed build/appicon.png
 var appIconPNG []byte
 
-//go:embed build/linux/icon/*.png
-var linuxIconFS embed.FS
+//go:embed build/markdown-doc.png
+var documentIconPNG []byte
 
 func main() {
-	appcore.SetIntegrationIcons(appIconPNG, loadLinuxIcons())
+	appcore.SetIntegrationIcons(appIconPNG, documentIconPNG)
 	service := appcore.NewApp()
 
 	wailsApp := application.New(application.Options{
@@ -109,15 +108,4 @@ func platformApplicationIcon(icon []byte) []byte {
 		return nil
 	}
 	return icon
-}
-
-func loadLinuxIcons() map[int][]byte {
-	icons := map[int][]byte{}
-	for _, size := range []int{16, 24, 32, 48, 64, 128, 256, 512, 1024} {
-		icon, err := linuxIconFS.ReadFile(fmt.Sprintf("build/linux/icon/%d.png", size))
-		if err == nil {
-			icons[size] = icon
-		}
-	}
-	return icons
 }

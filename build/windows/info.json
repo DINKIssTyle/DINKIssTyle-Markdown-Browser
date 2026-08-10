@@ -1,15 +1,15 @@
 {
 	"fixed": {
-		"file_version": "2.2.4"
+		"file_version": "3.0.0"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "2.2.4",
-			"CompanyName": "DINKIssTyle",
-			"FileDescription": "DKST Markdown Browser",
-			"LegalCopyright": "Copyright (C) 2026 DINKI'ssTyle. All rights reserved.",
+			"ProductVersion": "3.0.0",
+			"CompanyName": "DINKI'ssTyle",
+			"FileDescription": "A lightweight and elegant cross-platform. Markdown viewer and editor",
+			"LegalCopyright": "(c) 2026, DINKI'ssTyle",
 			"ProductName": "DKST Markdown Browser",
-			"Comments": "An elegant cross-platform viewer for Markdown and HTML files."
+			"Comments": "DKST Markdown Browser"
 		}
 	}
 }

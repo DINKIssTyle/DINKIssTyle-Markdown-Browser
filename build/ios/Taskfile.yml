@@ -41,7 +41,6 @@ tasks:
   build:
     summary: Creates a build of the application for iOS
     deps:
-      - task: generate:ios:overlay
       - task: generate:ios:xcode
       - task: common:go:mod:tidy
       - task: common:build:frontend
@@ -99,9 +98,9 @@ tasks:
         sh: xcrun --sdk {{.IOS_SDK}} --show-sdk-path
     cmds:
       - |
-        MAIN_M=build/ios/main.m
+        MAIN_M=build/ios/xcode/main/main.m
         if [ ! -f "$MAIN_M" ]; then
-          MAIN_M=build/ios/xcode/main/main.m
+          MAIN_M=build/ios/main.m
         fi
         xcrun -sdk {{.IOS_SDK}} clang \
           -target {{.IOS_TARGET}} \
@@ -113,7 +112,7 @@ tasks:
           -framework AVFoundation \
           -framework CoreLocation -framework CoreMotion -framework SystemConfiguration \
           -lresolv \
-          -o "{{.BIN_DIR}}/{{.APP_NAME}}" \
+          -o "{{.BIN_DIR}}/{{.APP_NAME | lower}}" \
           "$MAIN_M" -Wl,-force_load,"{{.BIN_DIR}}/{{.APP_NAME}}.a"
 
   create:app:bundle:
@@ -121,7 +120,7 @@ tasks:
     cmds:
       - rm -rf "{{.BIN_DIR}}/{{.APP_NAME}}.app"
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.app"
-      - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/{{.APP_NAME}}"
+      - cp "{{.BIN_DIR}}/{{.APP_NAME | lower}}" "{{.BIN_DIR}}/{{.APP_NAME}}.app/{{.APP_NAME}}"
       - cp build/ios/Info.plist "{{.BIN_DIR}}/{{.APP_NAME}}.app/"
       - |
         # Embed the provisioning profile for device builds when provided
@@ -149,9 +148,6 @@ tasks:
           fi
           rm -rf "$TMP_AC"
           if [ -f "$APP_BUNDLE/assetcatalog_generated_info.plist" ]; then
-            # PlistBuddy splits its Merge command on spaces even when the -c
-            # argument is shell-quoted. Copy the partial plist to a path with
-            # no spaces before merging it into apps whose names contain spaces.
             PARTIAL_INFO=$(mktemp /tmp/dkst-ios-asset-info.XXXXXX.plist)
             cp "$APP_BUNDLE/assetcatalog_generated_info.plist" "$PARTIAL_INFO"
             /usr/libexec/PlistBuddy -c "Merge $PARTIAL_INFO" "$APP_BUNDLE/Info.plist"
@@ -267,6 +263,28 @@ tasks:
       - sh: command -v xcrun
         msg: "xcrun not found. Please run 'wails3 task ios:install:deps' to install iOS development dependencies"
 
+  run:device:
+    summary: Build, sign, install, and launch the app on a physical iPhone
+    desc: |
+      Uses Xcode automatic signing and the maintained generated-project patch.
+      Pass DEVICE_ID from `wails3 task ios:device:list`; TEAM_ID may be omitted
+      when Xcode already has a signing team for this bundle identifier.
+
+      Example:
+        wails3 task ios:run:device DEVICE_ID=<UDID> TEAM_ID=<APPLE_TEAM_ID>
+    deps:
+      - task: generate:ios:xcode
+    cmds:
+      - task: common:ios:run:device
+        vars:
+          PROJECT: build/ios/xcode/main.xcodeproj
+          SCHEME: "{{.APP_NAME}}"
+          CONFIG: '{{.CONFIG | default "Debug"}}'
+          DERIVED: '{{.DERIVED | default "build/ios/DerivedData"}}'
+          UDID: '{{.DEVICE_ID | default .UDID}}'
+          BUNDLE_ID: "{{.BUNDLE_ID}}"
+          TEAM_ID: "{{.TEAM_ID}}"
+
   generate:ios:overlay:
     internal: true
     summary: Generate Go build overlay and iOS shim
@@ -281,27 +299,25 @@ tasks:
   generate:ios:xcode:
     internal: true
     summary: Generate iOS Xcode project structure and assets
+    deps:
+      - task: generate:ios:overlay
     sources:
       - build/config.yml
       - build/appicon.png
+      - build/ios/project.pbxproj
+      - build/ios/main.m
+      - build/ios/LaunchScreen.storyboard
+      - build/ios/scripts/patch_xcode_project.go
+      - build/ios/scripts/xcode_prebuild.sh
     generates:
       - build/ios/xcode/main/main.m
+      - build/ios/xcode/main/Info.plist
+      - build/ios/xcode/main/LaunchScreen.storyboard
       - build/ios/xcode/main/Assets.xcassets/**/*
-      - build/ios/xcode/project.pbxproj
+      - build/ios/xcode/main.xcodeproj/project.pbxproj
     cmds:
       - wails3 ios xcode:gen -outdir build/ios/xcode -config build/config.yml
-      - cp -f build/ios/main.m build/ios/xcode/main/main.m
-      - cp -f build/ios/Info.plist build/ios/xcode/main/Info.plist
-      - cp -f build/ios/project.pbxproj build/ios/xcode/main.xcodeproj/project.pbxproj
-      - sed -i '' 's/<string>wailsapp<\/string>/<string>$(EXECUTABLE_NAME)<\/string>/g' build/ios/xcode/main/Info.plist || true
-      - |
-        for f in build/ios/xcode/main/Assets.xcassets/AppIcon.appiconset/*.png; do
-          if [ -f "$f" ]; then
-            sips -s format jpeg -s formatOptions 100 "$f" --out /tmp/temp_icon.jpg >/dev/null 2>&1
-            sips -s format png /tmp/temp_icon.jpg --out "$f" >/dev/null 2>&1
-          fi
-        done
-        rm -f /tmp/temp_icon.jpg
+      - go run build/ios/scripts/patch_xcode_project.go
 
   run:
     summary: Run the application in iOS Simulator
@@ -311,7 +327,7 @@ tasks:
     cmds:
       - rm -rf "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
-      - cp "{{.BIN_DIR}}/{{.APP_NAME}}" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/{{.APP_NAME}}"
+      - cp "{{.BIN_DIR}}/{{.APP_NAME | lower}}" "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/{{.APP_NAME}}"
       - cp build/ios/Info.dev.plist "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Info.plist"
       - |
         # Compile asset catalog and embed icons for dev bundle
@@ -334,7 +350,10 @@ tasks:
           fi
           rm -rf "$TMP_AC"
           if [ -f "$APP_BUNDLE/assetcatalog_generated_info.plist" ]; then
-            /usr/libexec/PlistBuddy -c "Merge $APP_BUNDLE/assetcatalog_generated_info.plist" "$APP_BUNDLE/Info.plist" || true
+            PARTIAL_INFO=$(mktemp /tmp/dkst-ios-dev-asset-info.XXXXXX.plist)
+            cp "$APP_BUNDLE/assetcatalog_generated_info.plist" "$PARTIAL_INFO"
+            /usr/libexec/PlistBuddy -c "Merge $PARTIAL_INFO" "$APP_BUNDLE/Info.plist"
+            rm -f "$PARTIAL_INFO"
           fi
         fi
       - codesign --force --sign - "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
@@ -344,12 +363,10 @@ tasks:
         # assuming a com.wails.* prefix.
         DEV_APP="{{.BIN_DIR}}/{{.APP_NAME}}.dev.app"
         BUNDLE_ID=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleIdentifier' "$DEV_APP/Info.plist")
-        TARGET_DEVICE="{{.SIMULATOR_UDID | default "booted"}}"
-        xcrun simctl boot "$TARGET_DEVICE" 2>/dev/null || true
-        xcrun simctl terminate "$TARGET_DEVICE" "$BUNDLE_ID" 2>/dev/null || true
-        xcrun simctl uninstall "$TARGET_DEVICE" "$BUNDLE_ID" 2>/dev/null || true
-        xcrun simctl install "$TARGET_DEVICE" "$DEV_APP"
-        xcrun simctl launch "$TARGET_DEVICE" "$BUNDLE_ID"
+        xcrun simctl terminate booted "$BUNDLE_ID" 2>/dev/null || true
+        xcrun simctl uninstall booted "$BUNDLE_ID" 2>/dev/null || true
+        xcrun simctl install booted "$DEV_APP"
+        xcrun simctl launch booted "$BUNDLE_ID"
 
   xcode:
     summary: Open the generated Xcode project for this app

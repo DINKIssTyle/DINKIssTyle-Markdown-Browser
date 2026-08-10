@@ -1,69 +1,50 @@
+<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-    <dict>
-        <key>CFBundlePackageType</key>
-        <string>APPL</string>
-        <key>CFBundleName</key>
-        <string>DKST Markdown Browser</string>
-        <key>CFBundleExecutable</key>
-        <string>DKST Markdown Browser</string>
-        <key>CFBundleIdentifier</key>
-        <string>com.dinkisstyle.mdbrowser</string>
-        <key>CFBundleVersion</key>
-        <string>2.2.4</string>
-        <key>CFBundleGetInfoString</key>
-        <string>An elegant cross-platform viewer for Markdown and HTML files.</string>
-        <key>CFBundleShortVersionString</key>
-        <string>2.2.4</string>
-        <key>CFBundleIconFile</key>
-        <string>iconfile</string>
-        <key>LSMinimumSystemVersion</key>
-        <string>10.13.0</string>
-        <key>NSHighResolutionCapable</key>
-        <string>true</string>
-        <key>NSHumanReadableCopyright</key>
-        <string>Copyright (C) 2026 DINKI'ssTyle. All rights reserved.</string>
-
-        <key>CFBundleDocumentTypes</key>
-        <array>
-            <dict>
-                <key>CFBundleTypeExtensions</key>
-                <array>
-                    <string>md</string>
-                    <string>markdown</string>
-                </array>
-                <key>CFBundleTypeName</key>
-                <string>Markdown Document</string>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>CFBundleTypeIconFile</key>
-                <string>iconfile</string>
-            </dict>
-            <dict>
-                <key>CFBundleTypeExtensions</key>
-                <array>
-                    <string>html</string>
-                    <string>htm</string>
-                </array>
-                <key>CFBundleTypeName</key>
-                <string>HTML Document</string>
-                <key>CFBundleTypeRole</key>
-                <string>Viewer</string>
-                <key>CFBundleTypeIconFile</key>
-                <string>iconfile</string>
-            </dict>
-        </array>
-
-        <!-- 사용자 선택 파일/폴더 접근 권한 (macOS 10.15+) -->
-        <key>com.apple.security.files.user-selected.read-only</key>
-        <true/>
-
-        <!-- 로컬 네트워크 (wails localhost dev server) 허용 -->
-        <key>NSAppTransportSecurity</key>
-        <dict>
-            <key>NSAllowsLocalNetworking</key>
-            <true/>
-        </dict>
-
-    </dict>
+	<dict>
+		<key>CFBundleDocumentTypes</key>
+		<array>
+			<dict>
+				<key>CFBundleTypeExtensions</key>
+				<array>
+					<string>md</string>
+				</array>
+				<key>CFBundleTypeIconFile</key>
+				<string>markdown-doc</string>
+				<key>CFBundleTypeName</key>
+				<string>DKSTDocument</string>
+				<key>CFBundleTypeRole</key>
+				<string>Editor</string>
+			</dict>
+		</array>
+		<key>CFBundleExecutable</key>
+		<string>DKST Markdown Browser</string>
+		<key>CFBundleGetInfoString</key>
+		<string>DKST Markdown Browser</string>
+		<key>CFBundleIconFile</key>
+		<string>icons</string>
+		<key>CFBundleIconName</key>
+		<string>appicon</string>
+		<key>CFBundleIdentifier</key>
+		<string>com.dinkisstyle.mdbrowser</string>
+		<key>CFBundleName</key>
+		<string>DKST Markdown Browser</string>
+		<key>CFBundlePackageType</key>
+		<string>APPL</string>
+		<key>CFBundleShortVersionString</key>
+		<string>3.0.0</string>
+		<key>CFBundleVersion</key>
+		<string>3.0.0</string>
+		<key>LSMinimumSystemVersion</key>
+		<string>12.0.0</string>
+		<key>NSAppTransportSecurity</key>
+		<dict>
+			<key>NSAllowsLocalNetworking</key>
+			<true/>
+		</dict>
+		<key>NSHighResolutionCapable</key>
+		<string>true</string>
+		<key>NSHumanReadableCopyright</key>
+		<string>(c) 2026, DINKI&#39;ssTyle</string>
+	</dict>
 </plist>

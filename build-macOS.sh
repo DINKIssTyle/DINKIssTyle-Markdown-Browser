@@ -158,18 +158,18 @@ fi
 # ── Build Execution ─────────────────────────────────────────────
 echo "🔨 Starting Build for ${ARCH}..."
 if [ "${ARCH}" = "universal" ]; then
-    wails3 task darwin:build ARCH=amd64 VERSION="${VERSION}" OUTPUT="build/bin/${APP_NAME}-amd64"
-    wails3 task darwin:build ARCH=arm64 VERSION="${VERSION}" OUTPUT="build/bin/${APP_NAME}-arm64"
-    lipo -create -output "build/bin/${APP_NAME}" "build/bin/${APP_NAME}-amd64" "build/bin/${APP_NAME}-arm64"
-    rm -f "build/bin/${APP_NAME}-amd64" "build/bin/${APP_NAME}-arm64"
+    wails3 task darwin:build ARCH=amd64 VERSION="${VERSION}" OUTPUT="bin/${APP_NAME}-amd64"
+    wails3 task darwin:build ARCH=arm64 VERSION="${VERSION}" OUTPUT="bin/${APP_NAME}-arm64"
+    lipo -create -output "bin/${APP_NAME}" "bin/${APP_NAME}-amd64" "bin/${APP_NAME}-arm64"
+    rm -f "bin/${APP_NAME}-amd64" "bin/${APP_NAME}-arm64"
 else
     wails3 task build GOOS=darwin ARCH="${ARCH}" VERSION="${VERSION}"
 fi
 
-APP_BUNDLE="./build/bin/${APP_NAME}.app"
+APP_BUNDLE="./bin/${APP_NAME}.app"
 rm -rf "${APP_BUNDLE}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
-cp "./build/bin/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
+cp "./bin/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "./build/darwin/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
 cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
 

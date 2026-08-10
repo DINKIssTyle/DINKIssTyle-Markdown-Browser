@@ -117,6 +117,7 @@ tasks:
     dir: build/windows/nsis
     deps:
       - task: build
+      - task: common:generate:file-association-icons
     preconditions:
       - sh: '[ "{{.INSTALL_SCOPE}}" = "user" ] || [ "{{.INSTALL_SCOPE}}" = "machine" ]'
         msg: "INSTALL_SCOPE must be 'user' or 'machine', got '{{.INSTALL_SCOPE}}'"

@@ -6,12 +6,12 @@
 name: "DKST Markdown Browser"
 arch: ${GOARCH}
 platform: "linux"
-version: "2.2.4"
+version: "3.0.0"
 section: "default"
 priority: "extra"
 maintainer: ${GIT_COMMITTER_NAME} <${GIT_COMMITTER_EMAIL}>
-description: "An elegant cross-platform viewer for Markdown and HTML files."
-vendor: "DINKIssTyle"
+description: "A lightweight and elegant cross-platform. Markdown viewer and editor"
+vendor: "DINKI'ssTyle"
 homepage: "https://wails.io"
 license: "MIT"
 release: "1"

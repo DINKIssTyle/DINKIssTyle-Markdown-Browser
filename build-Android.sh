@@ -210,7 +210,7 @@ else
     wails3 task "${TASK}" "ARCH=${ARCH}"
 fi
 
-SOURCE_ARTIFACT="./build/bin/${APP_NAME}.${EXTENSION}"
+SOURCE_ARTIFACT="./bin/${APP_NAME}.${EXTENSION}"
 OUTPUT_ARTIFACT="${OUT_DIR}/${APP_NAME}-${VERSION}-android-${ARCH}.${EXTENSION}"
 if [ ! -f "${SOURCE_ARTIFACT}" ]; then
     echo "❌ Build artifact not found: ${SOURCE_ARTIFACT}" >&2

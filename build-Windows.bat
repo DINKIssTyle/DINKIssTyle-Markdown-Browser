@@ -72,7 +72,7 @@ if /I "%ARCH%"=="amd64" (
 )
 
 REM ── Result Copy ────────────────────────────────────────────
-set EXE_PATH=build\bin\%APP_NAME%.exe
+set EXE_PATH=bin\%APP_NAME%.exe
 if exist "%EXE_PATH%" (
     copy /Y "%EXE_PATH%" "%OUT_DIR%\%APP_NAME%-!VERSION!-windows-%ARCH%.exe"
     echo.

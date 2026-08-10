@@ -196,11 +196,24 @@ tasks:
     dir: build
     sources:
       - "appicon.png"
+      - "appicon.icon"
     generates:
-      - "darwin/iconfile.icns"
+      - "darwin/icons.icns"
       - "windows/icon.ico"
     cmds:
-      - wails3 generate icons -input appicon.png -macfilename darwin/iconfile.icns -windowsfilename windows/icon.ico
+      - wails3 generate icons -input appicon.png -macfilename darwin/icons.icns -windowsfilename windows/icon.ico -iconcomposerinput appicon.icon -macassetdir darwin
+
+  generate:file-association-icons:
+    summary: Generates the Markdown document icons for macOS and Windows
+    run: once
+    dir: build
+    sources:
+      - "markdown-doc.png"
+    generates:
+      - "darwin/markdown-doc.icns"
+      - "windows/markdown-doc.ico"
+    cmds:
+      - wails3 generate icons -input markdown-doc.png -macfilename darwin/markdown-doc.icns -windowsfilename windows/markdown-doc.ico
 
   dev:frontend:
     summary: Runs the frontend in development mode
@@ -214,25 +227,20 @@ tasks:
     cmds:
       - npm run dev -- --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
 
-  wait:frontend:
-    summary: Wait for the frontend development server
-    cmds:
-      - node scripts/wait-for-dev-server.mjs http://127.0.0.1:{{.VITE_PORT}}
-
   frontend:dev:yarn:
     dir: frontend
     cmds:
-      - yarn dev --port {{.VITE_PORT}} --strictPort
+      - yarn dev --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
 
   frontend:dev:pnpm:
     dir: frontend
     cmds:
-      - pnpm dev --port {{.VITE_PORT}} --strictPort
+      - pnpm dev --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
 
   frontend:dev:bun:
     dir: frontend
     cmds:
-      - bun run dev --port {{.VITE_PORT}} --strictPort
+      - bun run dev --host 127.0.0.1 --port {{.VITE_PORT}} --strictPort
 
   update:build-assets:
     summary: Updates the build assets
@@ -385,13 +393,19 @@ tasks:
         # Optionally inject signing identifiers if provided
         if [ -n '{{.TEAM_ID}}' ]; then XCB_ARGS+=(DEVELOPMENT_TEAM={{.TEAM_ID}}); fi
         if [ -n '{{.BUNDLE_ID}}' ]; then XCB_ARGS+=(PRODUCT_BUNDLE_IDENTIFIER={{.BUNDLE_ID}}); fi
-        xcodebuild "${XCB_ARGS[@]}" build | xcpretty || true
-        # If xcpretty isn't installed, run without it
-        if [ "${PIPESTATUS[0]}" -ne 0 ]; then
+        if command -v xcpretty >/dev/null 2>&1; then
+          xcodebuild "${XCB_ARGS[@]}" build | xcpretty
+        else
           xcodebuild "${XCB_ARGS[@]}" build
         fi
         # Find built .app
-        APP_PATH=$(find "{{.DERIVED}}/Build/Products" -type d -name "*.app" -maxdepth 3 | head -n 1)
+        APP_PATH=""
+        for CANDIDATE in "{{.DERIVED}}/Build/Products/{{.CONFIG}}-iphoneos"/*.app; do
+          if [ -d "$CANDIDATE" ]; then
+            APP_PATH="$CANDIDATE"
+            break
+          fi
+        done
         if [ -z "$APP_PATH" ]; then
           echo "Could not locate built .app under {{.DERIVED}}/Build/Products" >&2
           exit 1

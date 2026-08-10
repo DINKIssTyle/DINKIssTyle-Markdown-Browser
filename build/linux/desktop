@@ -1,0 +1,13 @@
+[Desktop Entry]
+Version=1.0
+Name=DKST Markdown Browser
+Comment=A lightweight and elegant cross-platform. Markdown viewer and editor
+# The Exec line includes %u to pass the URL to the application
+Exec=/usr/local/bin/DKST Markdown Browser %u
+Terminal=false
+Type=Application
+Icon=DKST Markdown Browser
+Categories=Utility;
+StartupWMClass=DKST Markdown Browser
+
+ 

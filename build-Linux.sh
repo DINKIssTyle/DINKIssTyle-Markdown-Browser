@@ -124,7 +124,7 @@ case "${ARCH}" in
 esac
 
 # --- 7. Result Copy ---
-BIN_PATH="./build/bin/${APP_NAME}"
+BIN_PATH="./bin/${APP_NAME}"
 if [ -f "${BIN_PATH}" ]; then
     OUT_BIN="${OUT_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}"
     cp "${BIN_PATH}" "${OUT_BIN}"

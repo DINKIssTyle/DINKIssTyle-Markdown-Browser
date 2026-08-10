@@ -3,7 +3,7 @@ module dinkisstyle-markdown-browser
 go 1.25.0
 
 require (
-	github.com/wailsapp/wails/v3 v3.0.0-beta.3
+	github.com/wailsapp/wails/v3 v3.0.0-beta.6
 	golang.org/x/image v0.44.0
 )
 

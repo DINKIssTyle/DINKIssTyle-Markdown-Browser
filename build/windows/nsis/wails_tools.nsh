@@ -8,16 +8,16 @@
     !define INFO_PROJECTNAME "DKST Markdown Browser"
 !endif
 !ifndef INFO_COMPANYNAME
-    !define INFO_COMPANYNAME "DINKIssTyle"
+    !define INFO_COMPANYNAME "DINKI'ssTyle"
 !endif
 !ifndef INFO_PRODUCTNAME
     !define INFO_PRODUCTNAME "DKST Markdown Browser"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "2.2.4"
+    !define INFO_PRODUCTVERSION "3.0.0"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "Copyright (C) 2026 DINKI'ssTyle. All rights reserved."
+    !define INFO_COPYRIGHT "(c) 2026, DINKI'ssTyle"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

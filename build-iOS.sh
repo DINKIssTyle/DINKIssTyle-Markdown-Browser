@@ -140,7 +140,7 @@ if [ "${MODE}" = "simulator" ]; then
     echo "🔨 Building Simulator application..."
     wails3 task ios:package "${TASK_ARGS[@]}"
 
-    SOURCE_APP="./build/bin/${APP_NAME}.app"
+    SOURCE_APP="./bin/${APP_NAME}.app"
     OUTPUT_APP="${OUT_DIR}/${APP_NAME}-${VERSION}-ios-simulator.app"
     rm -rf "${OUTPUT_APP}"
     cp -R "${SOURCE_APP}" "${OUTPUT_APP}"
@@ -176,14 +176,14 @@ fi
 if [ "${MODE}" = "ipa" ]; then
     echo "🔨 Building signed IPA..."
     wails3 task ios:package:ipa "${TASK_ARGS[@]}"
-    SOURCE_IPA="./build/bin/${APP_NAME}.ipa"
+    SOURCE_IPA="./bin/${APP_NAME}.ipa"
     OUTPUT_IPA="${OUT_DIR}/${APP_NAME}-${VERSION}-ios.ipa"
     cp -f "${SOURCE_IPA}" "${OUTPUT_IPA}"
     echo "✅ Build completed: ${OUTPUT_IPA}"
 else
     echo "🔨 Building signed device application..."
     wails3 task ios:package "${TASK_ARGS[@]}"
-    SOURCE_APP="./build/bin/${APP_NAME}.app"
+    SOURCE_APP="./bin/${APP_NAME}.app"
     OUTPUT_APP="${OUT_DIR}/${APP_NAME}-${VERSION}-ios-device.app"
     rm -rf "${OUTPUT_APP}"
     cp -R "${SOURCE_APP}" "${OUTPUT_APP}"

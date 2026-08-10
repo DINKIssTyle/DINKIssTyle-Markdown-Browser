@@ -1,4 +1,3 @@
-build/bin
 .task/
 frontend/dist
 frontend/node_modules
@@ -18,4 +17,9 @@ bin/
 build/android/.gradle/
 build/android/app/build/
 build/android/app/src/main/jniLibs/
+build/ios/DerivedData/
+build/ios/xcode/overlay.json
+build/ios/xcode/gen/
 build/ios/xcode/main.xcodeproj/project.xcworkspace/xcuserdata/dinki.xcuserdatad/UserInterfaceState.xcuserstate
+
+build/backup/

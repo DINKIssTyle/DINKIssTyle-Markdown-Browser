@@ -7038,7 +7038,8 @@ html.platform-mobile .editor-ai-dock {
 
     #toolbar .address-bar,
     #toolbar .action-group,
-    #toolbar #btn-print {
+    #toolbar #btn-print,
+    #toolbar #btn-refresh {
         display: none !important;
     }
 
