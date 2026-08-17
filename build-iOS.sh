@@ -65,12 +65,16 @@ sync_product_version() {
     APP_BUILD_VERSION="${VERSION}" perl -0pi -e \
         's/^  version: "[^"]+"/  version: "$ENV{APP_BUILD_VERSION}"/m' \
         build/config.yml
-    APP_BUILD_VERSION="${VERSION}" APP_BUILD_BUNDLE_ID="${BUNDLE_ID}" perl -0pi -e '
-        s{(<key>CFBundleVersion</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_VERSION}$2};
-        s{(<key>CFBundleShortVersionString</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_VERSION}$2};
-        s{(<key>CFBundleIdentifier</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_BUNDLE_ID}$2};
-    ' "${IOS_INFO_PLIST}"
-    plutil -lint "${IOS_INFO_PLIST}" >/dev/null
+    for plist_file in "${IOS_INFO_PLIST}" "build/ios/xcode-support/Info.plist" "build/ios/Info.dev.plist"; do
+        if [ -f "${plist_file}" ]; then
+            APP_BUILD_VERSION="${VERSION}" APP_BUILD_BUNDLE_ID="${BUNDLE_ID}" perl -0pi -e '
+                s{(<key>CFBundleVersion</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_VERSION}$2};
+                s{(<key>CFBundleShortVersionString</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_VERSION}$2};
+                s{(<key>CFBundleIdentifier</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_BUNDLE_ID}$2};
+            ' "${plist_file}"
+            plutil -lint "${plist_file}" >/dev/null
+        fi
+    done
 }
 
 resolve_codesign_identity() {

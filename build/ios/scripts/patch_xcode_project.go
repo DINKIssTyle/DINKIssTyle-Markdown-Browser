@@ -72,11 +72,24 @@ var (
 	openInPlaceEntry = []byte(`		<key>LSSupportsOpeningDocumentsInPlace</key>
 		<true/>
 `)
+	exportComplianceEntry = []byte(`		<key>ITSAppUsesNonExemptEncryption</key>
+		<false/>
+`)
+	cfVersionPattern         = regexp.MustCompile(`(?s)(<key>CFBundleVersion</key>\s*<string>)[^<]*(</string>)`)
+	cfShortVersionPattern    = regexp.MustCompile(`(?s)(<key>CFBundleShortVersionString</key>\s*<string>)[^<]*(</string>)`)
+	configYamlVersionPattern = regexp.MustCompile(`(?m)^(\s*version:\s*")[^"]+(")`)
+	appVersionPattern        = regexp.MustCompile(`(?m)^\s*(?:var\s+)?AppVersion\s*=\s*"([^"]+)"`)
 )
 
 func main() {
 	root := findProjectRoot()
 	path := func(relative string) string { return filepath.Join(root, filepath.FromSlash(relative)) }
+
+	// Read app version from internal/app/config.go
+	appVersion := readAppVersion(path("internal/app/config.go"))
+	if appVersion != "" {
+		syncConfigYamlVersion(path("build/config.yml"), appVersion)
+	}
 
 	project := mustRead(path(supportProjectPath))
 	for _, required := range [][]byte{
@@ -123,11 +136,18 @@ func main() {
 	// the Xcode-owned copy in sync, while retaining the executable and scene
 	// values required by the portable project.
 	plist := addDocumentIntegration(mustRead(path(sourceInfoPath)))
+	if appVersion != "" {
+		plist = syncVersion(plist, appVersion, appVersion)
+	}
 	// The command-line package task uses this file directly, so keep the
 	// portable source plist augmented as well as the Xcode-owned copy.
 	mustWrite(path(sourceInfoPath), plist)
 	if isFile(path(sourceDevInfoPath)) {
-		mustWrite(path(sourceDevInfoPath), addDocumentIntegration(mustRead(path(sourceDevInfoPath))))
+		devPlist := addDocumentIntegration(mustRead(path(sourceDevInfoPath)))
+		if appVersion != "" {
+			devPlist = syncVersion(devPlist, appVersion+"-dev", appVersion)
+		}
+		mustWrite(path(sourceDevInfoPath), devPlist)
 	}
 	patched := executableEntry.ReplaceAll(plist, []byte(`${1}$(EXECUTABLE_NAME)${2}`))
 	if bytes.Equal(plist, patched) && !bytes.Contains(plist, []byte("$(EXECUTABLE_NAME)")) {
@@ -151,6 +171,33 @@ func main() {
 	}
 }
 
+func readAppVersion(configPath string) string {
+	if !isFile(configPath) {
+		return ""
+	}
+	content := mustRead(configPath)
+	m := appVersionPattern.FindSubmatch(content)
+	if len(m) < 2 {
+		return ""
+	}
+	return string(m[1])
+}
+
+func syncConfigYamlVersion(configYamlPath string, version string) {
+	if !isFile(configYamlPath) || version == "" {
+		return
+	}
+	content := mustRead(configYamlPath)
+	updated := configYamlVersionPattern.ReplaceAll(content, []byte("${1}"+version+"${2}"))
+	mustWrite(configYamlPath, updated)
+}
+
+func syncVersion(plist []byte, shortVersion string, bundleVersion string) []byte {
+	plist = cfShortVersionPattern.ReplaceAll(plist, []byte("${1}"+shortVersion+"${2}"))
+	plist = cfVersionPattern.ReplaceAll(plist, []byte("${1}"+bundleVersion+"${2}"))
+	return plist
+}
+
 func addDocumentIntegration(plist []byte) []byte {
 	for _, entry := range []struct {
 		key string
@@ -159,6 +206,7 @@ func addDocumentIntegration(plist []byte) []byte {
 		{key: "CFBundleDocumentTypes", xml: documentTypeEntry},
 		{key: "UIFileSharingEnabled", xml: fileSharingEntry},
 		{key: "LSSupportsOpeningDocumentsInPlace", xml: openInPlaceEntry},
+		{key: "ITSAppUsesNonExemptEncryption", xml: exportComplianceEntry},
 	} {
 		marker := []byte("<key>" + entry.key + "</key>")
 		if bytes.Contains(plist, marker) {

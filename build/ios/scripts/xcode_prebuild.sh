@@ -59,6 +59,27 @@ if [ ! -f frontend/dist/index.html ]; then
   exit 1
 fi
 
+CONFIG_GO="internal/app/config.go"
+if [ -f "${CONFIG_GO}" ]; then
+  APP_VERSION=$(sed -n \
+    -e 's/^[[:space:]]*var[[:space:]]*AppVersion[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' \
+    -e 's/^[[:space:]]*AppVersion[[:space:]]*=[[:space:]]*"\(.*\)"/\1/p' \
+    "${CONFIG_GO}" | head -n 1)
+  if [ -n "${APP_VERSION}" ]; then
+    APP_BUILD_VERSION="${APP_VERSION}" perl -0pi -e \
+      's/^  version: "[^"]+"/  version: "$ENV{APP_BUILD_VERSION}"/m' \
+      build/config.yml 2>/dev/null || true
+    for plist_file in build/ios/Info.plist build/ios/xcode-support/Info.plist build/ios/Info.dev.plist; do
+      if [ -f "${plist_file}" ]; then
+        APP_BUILD_VERSION="${APP_VERSION}" perl -0pi -e '
+          s{(<key>CFBundleVersion</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_VERSION}$2};
+          s{(<key>CFBundleShortVersionString</key>\s*<string>)[^<]*(</string>)}{$1$ENV{APP_BUILD_VERSION}$2};
+        ' "${plist_file}"
+      fi
+    done
+  fi
+fi
+
 mkdir -p build/ios/xcode bin
 echo "Generating the machine-local iOS overlay..."
 wails3 ios overlay:gen -out build/ios/xcode/overlay.json -config build/config.yml
