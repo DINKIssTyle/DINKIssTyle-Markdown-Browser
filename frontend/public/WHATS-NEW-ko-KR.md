@@ -26,7 +26,7 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 * **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다
 
 ### 버그 수정 (Bug Fixes)
-* **details, summary 랜더링**: 내용 요약 접기 랜더링 버그를 수정했습니다.
+* **details, summary 태그 랜더링**: 내용 요약/접기 랜더링 버그를 수정했습니다.
 
 
 
