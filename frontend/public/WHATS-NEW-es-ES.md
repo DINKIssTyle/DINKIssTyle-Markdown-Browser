@@ -9,8 +9,7 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
 
 
-# 3.0 Nuevas Funcionalidades
-### Descubre DKST Markdown Browser optimizado para entornos móviles. Disponible en iPhone, teléfono Android, iPad y tableta Android.
+# Nuevas Funcionalidades
 
 ### Mejoras (Improvements)
 * **UI de iOS y Android**: Los tamaños de fuente de todos los elementos de la interfaz de usuario en entornos móviles (smartphones) y tabletas (iPad / tabletas Android) se han optimizado para cumplir con los estándares de Apple Human Interface Guidelines (iOS/iPadOS Typography).

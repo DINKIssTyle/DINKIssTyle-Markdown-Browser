@@ -19,8 +19,7 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
 
-# 3.0 새로운 기능
-### 모바일 환경에 최적화된 DKST Markdown Browser를 만나보세요. iPhone, Android Phone, iPad, Android Tablet에서 사용 가능합니다.
+# 새로운 기능
 
 ### 개선 사항 (Improvements)
 * **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다

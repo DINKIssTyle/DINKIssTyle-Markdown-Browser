@@ -9,8 +9,7 @@
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
 
 
-# 3.0 新功能
-### 体验为移动环境精心优化的 DKST Markdown Browser。现已支持 iPhone、Android 手机、iPad 和 Android 平板电脑。
+# 新功能
 
 ### 改进事项 (Improvements)
 * **iOS、Android UI**: 移动端（智能手机）与平板端（iPad / Android 平板）环境下，所有 UI 元素的字体大小均经过优化，以严格契合 Apple Human Interface Guidelines (iOS/iPadOS Typography) 标准规范。
