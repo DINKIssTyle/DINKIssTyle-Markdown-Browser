@@ -83,6 +83,9 @@ fi
 mkdir -p build/ios/xcode bin
 echo "Generating the machine-local iOS overlay..."
 wails3 ios overlay:gen -out build/ios/xcode/overlay.json -config build/config.yml
+go run build/ios/scripts/strip_wails_location.go \
+  -modfile build/ios/xcode/gen/wails-no-location.mod \
+  -module-out build/ios/xcode/gen/wails-no-location-module
 
 PLATFORM=${PLATFORM_NAME:-iphonesimulator}
 MIN_IOS_VERSION=${IPHONEOS_DEPLOYMENT_TARGET:-15.0}
@@ -132,6 +135,7 @@ export CGO_LDFLAGS="-isysroot ${SDK_PATH} -target ${GO_TARGET} ${MIN_FLAG}"
 echo "Building Go c-archive for ${PLATFORM} (${GO_TARGET})..."
 go build \
   -buildmode=c-archive \
+  -modfile=build/ios/xcode/gen/wails-no-location.mod \
   -overlay build/ios/xcode/overlay.json \
   -tags ios \
   -buildvcs=false \
