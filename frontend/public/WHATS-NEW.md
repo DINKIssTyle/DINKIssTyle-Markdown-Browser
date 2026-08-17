@@ -3,10 +3,15 @@
 If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It helps with document creation using snippet shortcuts. With AI support, OCR, floating screenshots, and various other features, it enhances your workflow efficiency. [Learn More](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
 
 
+
 # 3.0 Expansion to All Platforms
+
+[한국어](WHATS-NEW-ko-KR.md) | [Español](WHATS-NEW-es-ES.md) | [中文](WHATS-NEW-zh-CN.md) | [日本語](WHATS-NEW-ja-JP.md) 
+
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
+
 
 
 # 3.0 New Features
