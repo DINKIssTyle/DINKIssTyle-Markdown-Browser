@@ -515,8 +515,8 @@ func (a *App) ShowSaveFileDialog(defaultName string) (string, error) {
 	return selection, err
 }
 
-// RelPath calculates relative path from base to target
-func (a *App) RelPath(basePath, targetPath string) (string, error) {
+// GetRelativePath calculates relative path from base to target
+func (a *App) GetRelativePath(basePath, targetPath string) (string, error) {
 	if basePath == "" || targetPath == "" {
 		return targetPath, nil
 	}
