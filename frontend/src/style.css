@@ -64,14 +64,14 @@
     --mobile-tab-item-height: 34px;
     --mobile-tab-item-min-width: 90px;
     --mobile-tab-item-max-width: 220px;
-    --mobile-tab-item-font-size: 13px;
+    --mobile-tab-item-font-size: 15px;
     --mobile-tab-close-icon-size: 18px;
 
     /* 5. Mobile Sidebar Panel Font Size Constants (Outline, File Tree, Search) */
-    --mobile-sidebar-outline-font-size: 15px;
-    --mobile-sidebar-filetree-font-size: 15px;
-    --mobile-sidebar-search-input-font-size: 15px;
-    --mobile-sidebar-search-result-font-size: 14px;
+    --mobile-sidebar-outline-font-size: 17px;
+    --mobile-sidebar-filetree-font-size: 17px;
+    --mobile-sidebar-search-input-font-size: 17px;
+    --mobile-sidebar-search-result-font-size: 17px;
 }
 
 html.dark {
@@ -6795,25 +6795,44 @@ html.dark .settings-switch input+span::after {
     .settings-tabs {
         min-width: 0;
         flex: 0 0 auto;
-        padding: 8px 10px;
+        padding: 8px 14px;
+        display: flex;
         flex-direction: row;
-        gap: 4px;
+        gap: 8px;
         border-right: 0;
         border-bottom: 1px solid var(--border-color);
-        overflow-x: auto;
+        overflow-x: hidden;
+        width: 100%;
+        box-sizing: border-box;
     }
 
     .settings-tab {
-        min-width: 116px;
-        min-height: 40px;
-        padding: 6px 9px;
+        flex: 1 1 0;
+        min-width: 0;
+        min-height: 46px;
+        height: 46px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: 12px;
+        transition: background-color 0.18s ease, color 0.18s ease, transform 0.14s ease;
+    }
+
+    .settings-tab-copy {
+        display: none !important;
     }
 
     .settings-tab>.material-symbols-outlined {
-        width: 24px;
-        height: 24px;
-        flex-basis: 24px;
-        font-size: 16px;
+        font-size: 24px !important;
+        width: auto !important;
+        height: auto !important;
+        flex: 0 0 auto !important;
+    }
+
+    .settings-tab.active {
+        background-color: color-mix(in srgb, var(--accent-color) 16%, var(--surface-elevated)) !important;
+        color: var(--accent-color) !important;
     }
 
     .settings-update-check-row {
@@ -6871,11 +6890,38 @@ html.dark .settings-switch input+span::after {
     }
 
     .interface-setting-item {
-        grid-template-columns: 30px minmax(0, 1fr);
+        display: grid !important;
+        grid-template-columns: 36px minmax(0, 1fr) !important;
+        grid-template-rows: auto auto !important;
+        column-gap: 12px !important;
+        row-gap: 12px !important;
+        align-items: start !important;
+        padding: 14px !important;
+    }
+
+    .interface-setting-icon {
+        grid-column: 1 !important;
+        grid-row: 1 !important;
+        width: 36px !important;
+        height: 36px !important;
+        align-self: flex-start !important;
+        margin-top: 2px !important;
+    }
+
+    .interface-setting-copy {
+        grid-column: 2 !important;
+        grid-row: 1 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        justify-content: center !important;
+        min-height: 36px !important;
+        gap: 3px !important;
     }
 
     .interface-setting-item .settings-segmented {
-        grid-column: 2;
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        width: 100% !important;
     }
 }
 
@@ -7131,7 +7177,7 @@ html.platform-mobile .editor-ai-dock {
         border: none;
         background: transparent;
         color: var(--text-color, inherit);
-        font-size: 14px;
+        font-size: 17px;
         font-weight: 500;
         text-align: left;
         cursor: pointer;
@@ -7143,7 +7189,7 @@ html.platform-mobile .editor-ai-dock {
     }
 
     .mobile-menu-item .material-symbols-outlined {
-        font-size: 20px !important;
+        font-size: 22px !important;
         color: var(--accent-color, #007aff);
         flex-shrink: 0;
     }
@@ -7165,6 +7211,101 @@ html.platform-mobile #toolbar .nav-btn .material-symbols-outlined {
 
 html.platform-mobile #btn-mobile-document-meta:not(.hidden) {
     display: flex !important;
+}
+
+html.platform-mobile .address-bar {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .render-toggle select {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .font-adjust-label {
+    font-size: 11px !important;
+}
+
+/* ── Mobile & Tablet UI Typography (iOS Standard Font Scales) ────────── */
+/* 1. Sidebar Panels (Outline, File Tree, Search) on Mobile & Tablet */
+html.platform-mobile .sidebar-header .sidebar-tab-btn .material-symbols-outlined {
+    font-size: 22px !important;
+}
+
+html.platform-mobile .file-tree-header {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .file-tree-item {
+    font-size: var(--mobile-sidebar-filetree-font-size, 17px) !important;
+    min-height: 38px !important;
+    padding-top: 6px !important;
+    padding-bottom: 6px !important;
+}
+
+html.platform-mobile .file-tree-name {
+    font-size: var(--mobile-sidebar-filetree-font-size, 17px) !important;
+}
+
+html.platform-mobile .file-tree-toggle,
+html.platform-mobile .file-tree-icon {
+    font-size: 20px !important;
+}
+
+html.platform-mobile .file-tree-refresh-btn .material-symbols-outlined,
+html.platform-mobile .file-tree-filter-btn .material-symbols-outlined {
+    font-size: 20px !important;
+}
+
+html.platform-mobile .outline-item {
+    font-size: var(--mobile-sidebar-outline-font-size, 17px) !important;
+    padding-top: 8px !important;
+    padding-bottom: 8px !important;
+}
+
+html.platform-mobile :is(.outline-format-btn, .outline-top-btn) {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+html.platform-mobile :is(.outline-format-btn, .outline-top-btn) .material-symbols-outlined {
+    font-size: 20px !important;
+}
+
+html.platform-mobile .markdown-outline.is-heading-formatted .outline-item.level-1 {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile .markdown-outline.is-heading-formatted .outline-item.level-2 {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .markdown-outline.is-heading-formatted .outline-item:is(.level-3, .level-4, .level-5, .level-6) {
+    font-size: 15px !important;
+    font-weight: 500 !important;
+}
+
+html.platform-mobile #search-input {
+    font-size: var(--mobile-sidebar-search-input-font-size, 17px) !important;
+    padding-top: 10px !important;
+    padding-bottom: 10px !important;
+}
+
+html.platform-mobile .search-scope-option {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .search-results .result-item,
+html.platform-mobile .search-results .recent-name {
+    font-size: var(--mobile-sidebar-search-result-font-size, 17px) !important;
+}
+
+html.platform-mobile .search-results .recent-path,
+html.platform-mobile .search-results .search-hint,
+html.platform-mobile .sidebar-hint {
+    font-size: 13px !important;
 }
 
 /* Mobile Phone Fullscreen Sidebar (Handheld Phone Screens Only) */
@@ -7196,65 +7337,7 @@ html.platform-mobile #btn-mobile-document-meta:not(.hidden) {
         display: none !important;
     }
 
-    /* Mobile Phone Sidebar Panel Font Size Adjustments (Outline, File Tree, Search) */
-    /* 1. Outline (아웃라인 목차) */
-    .outline-item {
-        font-size: var(--mobile-sidebar-outline-font-size, 15px) !important;
-        padding-top: 8px !important;
-        padding-bottom: 8px !important;
-    }
-
-    .markdown-outline.is-heading-formatted .outline-item.level-1 {
-        font-size: calc(var(--mobile-sidebar-outline-font-size, 15px) * 1.25) !important;
-    }
-
-    .markdown-outline.is-heading-formatted .outline-item.level-2 {
-        font-size: calc(var(--mobile-sidebar-outline-font-size, 15px) * 1.1) !important;
-    }
-
-    .markdown-outline.is-heading-formatted .outline-item.level-3,
-    .markdown-outline.is-heading-formatted .outline-item.level-4,
-    .markdown-outline.is-heading-formatted .outline-item.level-5,
-    .markdown-outline.is-heading-formatted .outline-item.level-6 {
-        font-size: var(--mobile-sidebar-outline-font-size, 15px) !important;
-    }
-
-    /* 2. File Tree (파일 트리) */
-    .file-tree-item {
-        font-size: var(--mobile-sidebar-filetree-font-size, 15px) !important;
-        min-height: 38px !important;
-        padding-top: 6px !important;
-        padding-bottom: 6px !important;
-    }
-
-    .file-tree-name {
-        font-size: var(--mobile-sidebar-filetree-font-size, 15px) !important;
-    }
-
-    .file-tree-toggle,
-    .file-tree-icon {
-        font-size: calc(var(--mobile-sidebar-filetree-font-size, 15px) * 1.25) !important;
-    }
-
-    /* 3. Search Box & Input (검색창) */
-    #search-input {
-        font-size: var(--mobile-sidebar-search-input-font-size, 15px) !important;
-        padding-top: 10px !important;
-        padding-bottom: 10px !important;
-    }
-
-    /* 4. Search Results (검색 결과 목록) */
-    .search-results .result-item,
-    .search-results .recent-name {
-        font-size: var(--mobile-sidebar-search-result-font-size, 15px) !important;
-    }
-
-    .search-results .recent-path,
-    .search-results .search-hint {
-        font-size: calc(var(--mobile-sidebar-search-result-font-size, 14px) * 0.88) !important;
-    }
-
-    /* 5. Mobile Phone Start Page (Home Screen) Top Spacing Adjustments */
+    /* Mobile Phone Start Page (Home Screen) Top Spacing Adjustments */
     .home-screen {
         margin: 10px auto 20px !important;
     }
@@ -7319,6 +7402,8 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
         overflow: hidden;
         text-overflow: ellipsis;
         text-align: left;
+        font-size: 17px !important;
+        font-weight: 600 !important;
     }
 
     .mobile-tab-right-group {
@@ -7332,7 +7417,7 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
     .mobile-tab-count-badge {
         background: var(--accent-color, #007aff);
         color: #ffffff;
-        font-size: 11px;
+        font-size: 12px;
         font-weight: 700;
         border-radius: 10px;
         padding: 1px 7px;
@@ -7398,7 +7483,7 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
 }
 
 .mobile-tab-icon {
-    font-size: 20px !important;
+    font-size: 22px !important;
     color: var(--accent-color, #007aff);
     flex-shrink: 0;
 }
@@ -7409,7 +7494,7 @@ html.platform-mobile #tab-strip .tab-add-btn .material-symbols-outlined {
 }
 
 .mobile-tab-title {
-    font-size: 14px;
+    font-size: 17px;
     font-weight: 500;
     white-space: nowrap;
     overflow: hidden;
@@ -7456,7 +7541,7 @@ html.platform-mobile .tab-item {
 }
 
 html.platform-mobile .tab-title {
-    font-size: var(--mobile-tab-item-font-size) !important;
+    font-size: var(--mobile-tab-item-font-size, 15px) !important;
 }
 
 html.platform-mobile .tab-close-btn .material-symbols-outlined {
@@ -7467,6 +7552,7 @@ html.platform-mobile .tab-close-btn .material-symbols-outlined {
 html.platform-mobile #edit-toolbar .tool-btn {
     min-width: var(--mobile-editor-toolbar-btn-min-width) !important;
     height: var(--mobile-editor-toolbar-btn-height) !important;
+    font-size: 15px !important;
 }
 
 html.platform-mobile .edit-toolbar-row {
@@ -7475,6 +7561,25 @@ html.platform-mobile .edit-toolbar-row {
 
 html.platform-mobile #edit-toolbar .tool-btn .material-symbols-outlined {
     font-size: var(--mobile-editor-toolbar-icon-size) !important;
+}
+
+html.platform-mobile .edit-select,
+html.platform-mobile .edit-inline-label {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .editor-find-input {
+    font-size: 17px !important;
+}
+
+html.platform-mobile .editor-find-count {
+    font-size: 13px !important;
+}
+
+html.platform-mobile .editor-find-replace-toggle,
+html.platform-mobile .editor-find-done-btn,
+html.platform-mobile .editor-find-action-btn {
+    font-size: 15px !important;
 }
 
 /* 4. Mobile AI Toolbar Buttons (#editor-ai-dock .tool-btn, .editor-ai-trigger, .editor-ai-toggle-btn) */
@@ -7491,6 +7596,238 @@ html.platform-mobile #editor-ai-dock .editor-ai-anchor {
 
 html.platform-mobile #editor-ai-dock :is(.tool-btn, .editor-ai-trigger, .editor-ai-toggle-btn) .material-symbols-outlined {
     font-size: var(--mobile-ai-toolbar-icon-size) !important;
+}
+
+html.platform-mobile #editor-ai-dock :is(.tool-btn-text, .editor-ai-trigger-text) {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .ed-temp-value {
+    font-size: 13px !important;
+}
+
+html.platform-mobile .ai-prompt-box textarea {
+    font-size: 17px !important;
+}
+
+html.platform-mobile .ai-prompt-stream-text {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .ai-prompt-stream-kind {
+    font-size: 11px !important;
+}
+
+/* 5. Modals & Settings on Mobile & Tablet (iOS HIG Typography Standard) */
+html.platform-mobile :is(.settings-modal-heading h3, .modal-content h3, .document-meta-header h3, #system-install-title) {
+    font-size: 20px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile .settings-panel-header h2 {
+    font-size: 22px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile :is(.settings-modal-heading p, .modal-content p, .system-install-copy, .document-meta-kicker, .settings-panel-header p) {
+    font-size: 15px !important;
+}
+
+/* Settings Card Headers & Descriptions */
+html.platform-mobile :is(.ai-settings-content .settings-card-heading h4, .settings-card-heading h4) {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile .settings-card-heading p {
+    font-size: 14px !important;
+    line-height: 1.45 !important;
+}
+
+/* Settings Item Labels (Toolbar Visibility, Interface Settings, Control Rows, Disclosures) */
+html.platform-mobile :is(.ai-settings-content .settings-control-copy strong, .settings-control-copy strong, .interface-setting-copy strong, .toolbar-visibility-copy strong, .settings-disclosure strong, .setting-label, .viewer-translation-label, .accent-setting-title) {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+}
+
+/* Settings Item Descriptions & Hints */
+html.platform-mobile :is(.settings-control-copy small, .interface-setting-copy small, .toolbar-visibility-copy small, .settings-disclosure small, .settings-control-copy span, .form-hint, .viewer-translation-checkbox-label, .modal-table-info, .accent-custom-field > span:first-child, .settings-preset-row > span) {
+    font-size: 13px !important;
+    line-height: 1.4 !important;
+}
+
+/* Settings Segmented Buttons & Switch */
+html.platform-mobile .settings-segmented {
+    padding: 4px !important;
+    gap: 3px !important;
+}
+
+html.platform-mobile .settings-segmented button {
+    height: 36px !important;
+    min-height: 36px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    padding: 0 12px !important;
+}
+
+html.platform-mobile .settings-switch-label {
+    font-size: 13px !important;
+    font-weight: 600 !important;
+}
+
+/* Touch targets & Icons for Settings Items */
+html.platform-mobile .interface-setting-item {
+    min-height: auto !important;
+    padding: 14px !important;
+}
+
+html.platform-mobile .toolbar-visibility-item {
+    min-height: 66px !important;
+    padding: 12px 14px !important;
+}
+
+html.platform-mobile :is(.interface-setting-icon, .toolbar-visibility-icon) {
+    width: 36px !important;
+    height: 36px !important;
+    flex: 0 0 36px !important;
+    font-size: 20px !important;
+}
+
+html.platform-mobile .settings-tab {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .settings-tab-copy strong {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .settings-tab-copy small {
+    font-size: 12px !important;
+}
+
+html.platform-mobile .settings-badge {
+    font-size: 11px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile :is(.settings-dirty-status, .settings-update-last-checked, .settings-color-value) {
+    font-size: 13px !important;
+}
+
+html.platform-mobile .editor-token-preset-btn {
+    height: 32px !important;
+    padding: 0 12px !important;
+    font-size: 14px !important;
+}
+
+html.platform-mobile .settings-update-status-heading h4 {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .settings-update-status-heading p {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .settings-update-versions > div span {
+    font-size: 12px !important;
+}
+
+html.platform-mobile .settings-update-versions > div strong {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile .settings-update-release-notes {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .settings-update-release-notes :is(h1, h2, h3, h4) {
+    font-size: 17px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile :is(.modal-input-group input, .modal-input-group select, .settings-password-field input, .viewer-translation-select, .ai-setting-group input, .ai-setting-group select) {
+    font-size: 17px !important;
+}
+
+html.platform-mobile :is(.modal-btn, .settings-footer .modal-btn, .action-btn, .settings-update-button, .settings-update-download) {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    min-height: 44px !important;
+}
+
+/* 6. Context Menu & Selection Popups on Mobile & Tablet */
+html.platform-mobile :is(.context-menu-item, .file-tree-context-menu .context-menu-item, .mobile-menu-item) {
+    font-size: 17px !important;
+    min-height: 44px !important;
+    padding: 10px 16px !important;
+}
+
+/* 7. Start Page (Home Screen) on Mobile & Tablet */
+html.platform-mobile .home-screen h1 {
+    font-size: 34px !important;
+    font-weight: 700 !important;
+}
+
+html.platform-mobile .home-subtitle {
+    font-size: 17px !important;
+}
+
+html.platform-mobile .empty-state-title {
+    font-size: 20px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .empty-state-copy {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .recent-item-title,
+html.platform-mobile .recent-name {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .recent-item-path,
+html.platform-mobile .recent-path {
+    font-size: 13px !important;
+}
+
+html.platform-mobile .recent-limit-control {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .recent-limit-input {
+    font-size: 15px !important;
+}
+
+html.platform-mobile .home-footer {
+    font-size: 13px !important;
+}
+
+html.platform-mobile :is(.home-footer span, .home-footer a) {
+    font-size: 13px !important;
+}
+
+/* 8. Status Bar, Toast & Progress Widget on Mobile & Tablet */
+html.platform-mobile :is(.status-bar, .status-item, .doc-info) {
+    font-size: 13px !important;
+}
+
+html.platform-mobile .toast {
+    font-size: 16px !important;
+    font-weight: 500 !important;
+}
+
+html.platform-mobile .progress-title {
+    font-size: 15px !important;
+    font-weight: 600 !important;
+}
+
+html.platform-mobile .progress-value {
+    font-size: 13px !important;
 }
 
 html.platform-mobile :is(.cm-editor, .cm-content, .cm-scroller, .cm-line, textarea, #markdown-container, #app, body) {
