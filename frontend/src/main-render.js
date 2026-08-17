@@ -985,6 +985,7 @@ function splitMarkdownIntoBlocks(content) {
     let blockLines = [];
     let blockStartLine = 1;
     let activeFence = null;
+    let detailsDepth = 0;
 
     const getFence = line => {
         const match = line.match(/^(\s*)(`{3,}|~{3,})/);
@@ -1031,7 +1032,13 @@ function splitMarkdownIntoBlocks(content) {
             return;
         }
 
-        if (!line.trim()) {
+        const openDetails = (line.match(/<\s*details\b[^>]*>/gi) || []).length;
+        const closeDetails = (line.match(/<\s*\/\s*details\s*>/gi) || []).length;
+        if (openDetails > 0 || closeDetails > 0) {
+            detailsDepth = Math.max(0, detailsDepth + openDetails - closeDetails);
+        }
+
+        if (!line.trim() && detailsDepth === 0) {
             pushBlock(blockLines.join('\n'), blockStartLine);
             blockLines = [];
         }

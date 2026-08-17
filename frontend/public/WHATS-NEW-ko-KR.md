@@ -19,14 +19,24 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
 
-# 새로운 기능
+# 3.0 새로운 기능
 ### 모바일 환경에 최적화된 DKST Markdown Browser를 만나보세요. iPhone, Android Phone, iPad, Android Tablet에서 사용 가능합니다.
 
+### 개선 사항 (Improvements)
+* **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다
+
+### 버그 수정 (Bug Fixes)
+* **details, summary 랜더링**: 내용 요약 접기 랜더링 버그를 수정했습니다.
 
 
+
+
+
+## 이전 체인지로그
 
 <details>
-<summary>### 버젼 2.2 기간 변경 사항</summary>
+<summary><b>버젼 2.2 기간 변경 사항</b></summary>
+  
 ### 주요 변경 사항 (Highlights)
 * **프런트 매터(Front Matter) 완벽 지원**
   * **인식 및 표시:** 프런트 매터가 포함된 문서를 열면 주소창에 느낌표 버튼이 나타나며, 문서 탭에는 메타데이터에 정의된 제목이 표시됩니다.
@@ -55,7 +65,8 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 
 <details>
-<summary>### 버젼 2.1 기간 변경 사항</summary>
+<summary><b>버젼 2.1 기간 변경 사항</b></summary>
+  
 ### 주요 변경 사항 (Highlights)
 - **통합 사이드바 도입**: 파일 트리, 개요(Outline), 검색 기능이 통합된 사이드바 추가 (CTRL+ALT+S / macOS: CMD+OPT+S)
 - **마크다운 구문 강조(Syntax Highlight)**: Python, Bash 등 코드 블록 렌더링 시 구문 강조 추가
