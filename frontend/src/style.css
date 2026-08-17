@@ -2103,13 +2103,33 @@ html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-c
     gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) transparent;
     z-index: 90;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-overflow-scrolling: touch;
 }
 
 .edit-toolbar::-webkit-scrollbar {
+    -webkit-appearance: none;
     height: 3px;
+    width: 3px;
+}
+
+.edit-toolbar::-webkit-scrollbar-track {
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+.edit-toolbar::-webkit-scrollbar-thumb {
+    -webkit-appearance: none;
+    background: var(--accent-color);
+    border-radius: 999px;
+}
+
+.edit-toolbar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color-hover);
 }
 
 .edit-toolbar-row {
@@ -2720,7 +2740,24 @@ html.dark .ed-temp-value {
 }
 
 .editor-ai-dock::-webkit-scrollbar {
+    -webkit-appearance: none;
     height: 3px;
+    width: 3px;
+}
+
+.editor-ai-dock::-webkit-scrollbar-track {
+    -webkit-appearance: none;
+    background: transparent;
+}
+
+.editor-ai-dock::-webkit-scrollbar-thumb {
+    -webkit-appearance: none;
+    background: var(--accent-color);
+    border-radius: 999px;
+}
+
+.editor-ai-dock::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color-hover);
 }
 
 /* AI 활성화 버튼 텍스트 */
@@ -3264,8 +3301,8 @@ html.dark .search-highlight.active {
 
 /* ── Floating highlight navigator ──────────────────────── */
 .highlight-nav {
-    position: fixed;
-    bottom: 28px;
+    position: absolute;
+    bottom: calc(var(--editor-ai-dock-height, 42px) + 16px);
     left: 50%;
     transform: translateX(-50%);
     background: var(--toolbar-bg);
@@ -3311,8 +3348,8 @@ html.dark .search-highlight.active {
 
 /* ── Toast ─────────────────────────────────────────────── */
 .toast {
-    position: fixed;
-    bottom: 80px;
+    position: absolute;
+    bottom: calc(var(--editor-ai-dock-height, 42px) + 24px);
     left: 50%;
     transform: translateX(-50%) translateY(8px);
     background: rgba(30, 30, 30, 0.88);
@@ -3321,7 +3358,7 @@ html.dark .search-highlight.active {
     border-radius: 10px;
     font-size: 13px;
     opacity: 0;
-    transition: opacity 0.25s, transform 0.25s;
+    transition: opacity 0.25s, transform 0.25s, bottom 0.2s ease;
     pointer-events: none;
     z-index: 600;
     white-space: nowrap;
@@ -3400,9 +3437,9 @@ html:not(.dark) .toast {
 }
 
 .progress-widget {
-    position: fixed;
+    position: absolute;
     right: 24px;
-    bottom: 24px;
+    bottom: calc(var(--editor-ai-dock-height, 42px) + 16px);
     width: min(380px, calc(100vw - 24px));
     padding: 12px 14px;
     border-radius: 14px;
@@ -7014,8 +7051,33 @@ html.platform-mobile .edit-toolbar {
     position: relative;
     z-index: 120;
     flex: 0 0 auto;
+    overflow-x: auto;
+    overflow-y: hidden;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+    scrollbar-color: var(--accent-color) transparent;
+}
+
+html.platform-mobile .edit-toolbar::-webkit-scrollbar {
+    -webkit-appearance: none !important;
+    height: 3px !important;
+    display: block !important;
+}
+
+html.platform-mobile .edit-toolbar::-webkit-scrollbar-track {
+    -webkit-appearance: none !important;
+    background: transparent !important;
+}
+
+html.platform-mobile .edit-toolbar::-webkit-scrollbar-thumb {
+    -webkit-appearance: none !important;
+    background: var(--accent-color) !important;
+    border-radius: 999px !important;
+}
+
+html.platform-mobile .edit-toolbar::-webkit-scrollbar-thumb:hover {
+    background: var(--accent-color-hover) !important;
 }
 
 html.platform-mobile.mobile-keyboard-visible .edit-toolbar {
