@@ -147,6 +147,8 @@ export const el = {
     contextOpenNewTab: $('context-open-new-tab'),
     mainContainer: $('main-container'),
     documentArea: $('document-area'),
+    contentViewScrollbar: $('content-view-scrollbar'),
+    editorViewScrollbar: $('editor-view-scrollbar'),
     btnEdit: $('btn-edit'),
     btnTranslate: $('btn-translate'),
     editToolbar: $('edit-toolbar'),

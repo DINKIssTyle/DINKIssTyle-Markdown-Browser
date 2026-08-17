@@ -71,16 +71,118 @@ function showScrollbarWhileScrolling(target) {
     }, SCROLLBAR_IDLE_DELAY_MS));
 }
 
+const customScrollbarTimers = new WeakMap();
+
+function triggerScrollbarActive(scrollbarEl) {
+    if (!scrollbarEl) return;
+    const existing = customScrollbarTimers.get(scrollbarEl);
+    if (existing) clearTimeout(existing);
+    scrollbarEl.classList.add('is-active');
+    customScrollbarTimers.set(scrollbarEl, setTimeout(() => {
+        scrollbarEl.classList.remove('is-active');
+        customScrollbarTimers.delete(scrollbarEl);
+    }, SCROLLBAR_IDLE_DELAY_MS));
+}
+
+export function updateCustomVerticalScrollbars(activeTarget = null) {
+    if (!document.documentElement.classList.contains('platform-mobile')) return;
+    if (!el.documentArea) return;
+
+    const docRect = el.documentArea.getBoundingClientRect();
+    if (docRect.width <= 0 || docRect.height <= 0) return;
+
+    // 1. Content View (Viewer)
+    if (el.contentView && el.contentViewScrollbar && !el.contentView.classList.contains('hidden') && el.contentView.offsetParent !== null) {
+        const rect = el.contentView.getBoundingClientRect();
+        const clientHeight = el.contentView.clientHeight;
+        const scrollHeight = el.contentView.scrollHeight;
+        const maxScroll = scrollHeight - clientHeight;
+
+        if (maxScroll > 4 && clientHeight > 0) {
+            el.contentViewScrollbar.style.left = `${rect.right - docRect.left - 5}px`;
+            el.contentViewScrollbar.style.top = `${rect.top - docRect.top + 2}px`;
+            el.contentViewScrollbar.style.height = `${rect.height - 4}px`;
+
+            const thumb = el.contentViewScrollbar.firstElementChild;
+            if (thumb) {
+                const thumbRatio = Math.max(0.06, Math.min(1, clientHeight / scrollHeight));
+                const thumbHeightPx = Math.max(28, (rect.height - 4) * thumbRatio);
+                const scrollTop = Math.max(0, Math.min(maxScroll, el.contentView.scrollTop));
+                const progress = maxScroll > 0 ? scrollTop / maxScroll : 0;
+                const maxTranslate = (rect.height - 4) - thumbHeightPx;
+                const translateY = progress * maxTranslate;
+
+                thumb.style.height = `${thumbHeightPx}px`;
+                thumb.style.transform = `translateY(${translateY}px)`;
+            }
+            el.contentViewScrollbar.classList.add('is-overflowing');
+            if (activeTarget === el.contentView && state.scrollbarVisibility === 'when-scrolling') {
+                triggerScrollbarActive(el.contentViewScrollbar);
+            }
+        } else {
+            el.contentViewScrollbar.classList.remove('is-overflowing', 'is-active');
+        }
+    } else if (el.contentViewScrollbar) {
+        el.contentViewScrollbar.classList.remove('is-overflowing', 'is-active');
+    }
+
+    // 2. Editor View (CodeMirror Scroller)
+    const cmScroller = el.editorView?.querySelector('.cm-scroller');
+    if (el.editorView && el.editorViewScrollbar && !el.editorView.classList.contains('hidden') && el.editorView.offsetParent !== null && cmScroller) {
+        const rect = el.editorView.getBoundingClientRect();
+        const clientHeight = cmScroller.clientHeight;
+        const scrollHeight = cmScroller.scrollHeight;
+        const maxScroll = scrollHeight - clientHeight;
+
+        if (maxScroll > 4 && clientHeight > 0) {
+            el.editorViewScrollbar.style.left = `${rect.right - docRect.left - 5}px`;
+            el.editorViewScrollbar.style.top = `${rect.top - docRect.top + 2}px`;
+            el.editorViewScrollbar.style.height = `${rect.height - 4}px`;
+
+            const thumb = el.editorViewScrollbar.firstElementChild;
+            if (thumb) {
+                const thumbRatio = Math.max(0.06, Math.min(1, clientHeight / scrollHeight));
+                const thumbHeightPx = Math.max(28, (rect.height - 4) * thumbRatio);
+                const scrollTop = Math.max(0, Math.min(maxScroll, cmScroller.scrollTop));
+                const progress = maxScroll > 0 ? scrollTop / maxScroll : 0;
+                const maxTranslate = (rect.height - 4) - thumbHeightPx;
+                const translateY = progress * maxTranslate;
+
+                thumb.style.height = `${thumbHeightPx}px`;
+                thumb.style.transform = `translateY(${translateY}px)`;
+            }
+            el.editorViewScrollbar.classList.add('is-overflowing');
+            if (activeTarget === cmScroller && state.scrollbarVisibility === 'when-scrolling') {
+                triggerScrollbarActive(el.editorViewScrollbar);
+            }
+        } else {
+            el.editorViewScrollbar.classList.remove('is-overflowing', 'is-active');
+        }
+    } else if (el.editorViewScrollbar) {
+        el.editorViewScrollbar.classList.remove('is-overflowing', 'is-active');
+    }
+}
+
 function bindScrollbarActivity() {
     if (scrollbarActivityBound) return;
     scrollbarActivityBound = true;
-    document.addEventListener('scroll', event => showScrollbarWhileScrolling(event.target), true);
+    document.addEventListener('scroll', event => {
+        showScrollbarWhileScrolling(event.target);
+        updateCustomVerticalScrollbars(event.target);
+    }, true);
+    window.addEventListener('resize', () => updateCustomVerticalScrollbars(), { passive: true });
+    window.addEventListener('app:viewport-change', () => updateCustomVerticalScrollbars(), { passive: true });
+    if (typeof ResizeObserver !== 'undefined' && el.documentArea) {
+        const areaObserver = new ResizeObserver(() => updateCustomVerticalScrollbars());
+        areaObserver.observe(el.documentArea);
+    }
 }
 
 export function applyScrollbarVisibility() {
     state.scrollbarVisibility = normalizeScrollbarVisibility(state.scrollbarVisibility);
     document.documentElement.dataset.scrollbarVisibility = state.scrollbarVisibility;
     document.querySelectorAll(SCROLLBAR_TARGET_SELECTOR).forEach(clearScrollbarActivity);
+    updateCustomVerticalScrollbars();
 }
 
 export function loadScrollbarVisibility(settings = {}) {

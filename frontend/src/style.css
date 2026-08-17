@@ -2091,6 +2091,41 @@ html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-c
     background: var(--accent-color-hover) !important;
 }
 
+/* ── Custom Vertical Scrollbars for Mobile / Touch (Supports Always & When-scrolling) ── */
+.custom-v-scrollbar {
+    position: absolute;
+    width: 4px;
+    background: transparent;
+    pointer-events: none;
+    z-index: 55;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    display: none;
+}
+
+html.platform-mobile .custom-v-scrollbar {
+    display: block;
+}
+
+html[data-scrollbar-visibility="always"] .custom-v-scrollbar.is-overflowing {
+    opacity: 1;
+}
+
+html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflowing.is-active {
+    opacity: 1;
+}
+
+.custom-v-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 4px;
+    background: var(--accent-color);
+    border-radius: 999px;
+    transform: translateY(0);
+    transition: transform 0.03s ease-out, height 0.08s ease, background-color 0.2s ease;
+}
+
 /* ── Edit Toolbar ─────────────────────────────────────── */
 .edit-toolbar {
     min-height: 40px;
