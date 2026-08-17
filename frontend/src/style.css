@@ -2059,42 +2059,25 @@ html[data-scrollbar-visibility="never"] .cm-scroller::-webkit-scrollbar {
     display: none !important;
 }
 
-/* ── Explicit Mobile (iOS/iPadOS) Editor, Viewer & Sidebar Accent Scrollbar ── */
+/* ── Hide Native Scrollbars on Mobile (Prevents Duplicate Overlapping) ── */
 html.platform-mobile #content-view,
 html.platform-mobile .content-view,
-html.platform-mobile .cm-scroller,
-html.platform-mobile .markdown-container,
-html.platform-mobile .sidebar-panel {
-    scrollbar-color: var(--accent-color) transparent;
-    scrollbar-width: thin;
+html.platform-mobile .cm-scroller {
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
 }
 
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar {
+html.platform-mobile :is(#content-view, .content-view, .cm-scroller)::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
     -webkit-appearance: none !important;
-    width: 8px !important;
-    height: 8px !important;
-}
-
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar-track {
-    -webkit-appearance: none !important;
-    background: transparent !important;
-}
-
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar-thumb {
-    -webkit-appearance: none !important;
-    background: var(--accent-color) !important;
-    border-radius: 999px !important;
-    min-height: 28px !important;
-}
-
-html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-container, .sidebar-panel, #file-tree, #markdown-outline, #search-results)::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-color-hover) !important;
 }
 
 /* ── Custom Vertical Scrollbars for Mobile / Touch (Supports Always & When-scrolling) ── */
 .custom-v-scrollbar {
     position: absolute;
-    width: 4px;
+    width: 5px;
     background: transparent;
     pointer-events: none;
     z-index: 55;
@@ -2119,11 +2102,11 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
     position: absolute;
     top: 0;
     right: 0;
-    width: 4px;
+    width: 5px;
     background: var(--accent-color);
     border-radius: 999px;
     transform: translateY(0);
-    transition: transform 0.03s ease-out, height 0.08s ease, background-color 0.2s ease;
+    transition: height 0.08s ease, background-color 0.2s ease;
 }
 
 /* ── Edit Toolbar ─────────────────────────────────────── */
