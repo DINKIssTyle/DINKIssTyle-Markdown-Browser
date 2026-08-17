@@ -150,6 +150,8 @@ export const el = {
     btnEdit: $('btn-edit'),
     btnTranslate: $('btn-translate'),
     editToolbar: $('edit-toolbar'),
+    editToolbarScrollbar: $('edit-toolbar-scrollbar'),
+    editToolbarScrollbarThumb: $('edit-toolbar-scrollbar-thumb'),
     editorPaneSplitter: $('editor-pane-splitter'),
     editorView: $('editor-view'),
     markdownEditor: $('markdown-editor'),

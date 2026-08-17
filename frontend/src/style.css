@@ -2132,6 +2132,39 @@ html.platform-mobile :is(#content-view, .content-view, .cm-scroller, .markdown-c
     background: var(--accent-color-hover);
 }
 
+/* ── Custom Visible Toolbar Scrollbar (Reliable on iOS/iPadOS/Android/Desktop) ── */
+.edit-toolbar-scrollbar {
+    position: sticky;
+    left: 0;
+    bottom: -6px;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    margin-top: 3px;
+    margin-bottom: -3px;
+    flex-shrink: 0;
+}
+
+.edit-toolbar-scrollbar.is-visible {
+    opacity: 1;
+}
+
+.edit-toolbar-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 20%;
+    background: var(--accent-color);
+    border-radius: 999px;
+    transform: translateX(0);
+    transition: width 0.08s ease, transform 0.04s ease-out, background-color 0.2s ease;
+}
+
 .edit-toolbar-row {
     display: flex;
     align-items: center;

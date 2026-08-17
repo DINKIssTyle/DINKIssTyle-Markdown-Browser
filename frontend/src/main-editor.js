@@ -756,6 +756,35 @@ function syncToolbarGroupVisibility() {
             && !nextGroup.classList.contains('hidden');
         separator.classList.toggle('hidden', !shouldShow);
     });
+    updateEditToolbarScrollbar();
+}
+
+export function updateEditToolbarScrollbar() {
+    if (!el.editToolbar || !el.editToolbarScrollbar || !el.editToolbarScrollbarThumb) return;
+    if (el.editToolbar.classList.contains('hidden') || el.editToolbar.offsetParent === null) {
+        el.editToolbarScrollbar.classList.remove('is-visible');
+        return;
+    }
+
+    const clientWidth = el.editToolbar.clientWidth;
+    const scrollWidth = el.editToolbar.scrollWidth;
+    const maxScroll = scrollWidth - clientWidth;
+
+    if (maxScroll <= 2) {
+        el.editToolbarScrollbar.classList.remove('is-visible');
+        return;
+    }
+
+    el.editToolbarScrollbar.classList.add('is-visible');
+    const thumbRatio = Math.max(0.08, Math.min(1, clientWidth / scrollWidth));
+    const thumbWidthPx = Math.max(18, clientWidth * thumbRatio);
+    const scrollLeft = Math.max(0, Math.min(maxScroll, el.editToolbar.scrollLeft));
+    const progress = maxScroll > 0 ? scrollLeft / maxScroll : 0;
+    const maxTranslate = clientWidth - thumbWidthPx;
+    const translateX = progress * maxTranslate;
+
+    el.editToolbarScrollbarThumb.style.width = `${thumbWidthPx}px`;
+    el.editToolbarScrollbarThumb.style.transform = `translateX(${translateX}px)`;
 }
 
 function syncRenderModeIcon() {
@@ -3675,6 +3704,7 @@ export function enterEditMode() {
     updateNavButtons(); // 에디터 진입 시 버튼 아이콘/상태 전환을 위해 호출
     syncEditorStateToBackend();
     renderTabs();
+    requestAnimationFrame(() => updateEditToolbarScrollbar());
 }
 
 export async function exitEditMode(didSave = false) {
@@ -4998,6 +5028,19 @@ export function bindEditorEvents() {
         void saveCurrentDocumentAs();
     };
     el.edSave.onclick = handleSave;
+
+    if (el.editToolbar) {
+        el.editToolbar.addEventListener('scroll', updateEditToolbarScrollbar, { passive: true });
+        if (typeof ResizeObserver !== 'undefined') {
+            const toolbarObserver = new ResizeObserver(() => {
+                updateEditToolbarScrollbar();
+            });
+            toolbarObserver.observe(el.editToolbar);
+        }
+    }
+    window.addEventListener('resize', updateEditToolbarScrollbar, { passive: true });
+    window.addEventListener('app:viewport-change', updateEditToolbarScrollbar, { passive: true });
+    window.visualViewport?.addEventListener('resize', updateEditToolbarScrollbar, { passive: true });
 }
 
 function insertPageInfoFrontMatter() {
