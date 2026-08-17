@@ -210,6 +210,7 @@ func (a *App) AttachRuntime(wailsApp *application.App, window *application.Webvi
 }
 
 func (a *App) ensurePersistentPaths() {
+	ensurePublicDocumentsDirectory()
 	if !application.System.IsMobile() {
 		return
 	}
@@ -441,6 +442,7 @@ func (a *App) OpenFile() (FileResult, error) {
 		return FileResult{}, err
 	}
 
+	selection = persistIncomingDocument(selection)
 	content, err := a.ReadFile(selection)
 	if err != nil {
 		return FileResult{}, err
@@ -460,6 +462,9 @@ func (a *App) SelectDocument(basePath string) (string, error) {
 		},
 		Window: a.window,
 	}).PromptForSingleSelection()
+	if err == nil && selection != "" {
+		selection = persistIncomingDocument(selection)
+	}
 	return selection, err
 }
 
@@ -510,29 +515,30 @@ func (a *App) ShowSaveFileDialog(defaultName string) (string, error) {
 	return selection, err
 }
 
-// GetRelativePath calculates the relative path from base to target
-func (a *App) GetRelativePath(basePath string, targetPath string) (string, error) {
-	if basePath == "" {
-		return targetPath, nil // No base path defined (unsaved file), use absolute
+// RelPath calculates relative path from base to target
+func (a *App) RelPath(basePath, targetPath string) (string, error) {
+	if basePath == "" || targetPath == "" {
+		return targetPath, nil
 	}
 
+	baseDir := basePath
 	info, err := os.Stat(basePath)
 	if err == nil && !info.IsDir() {
-		basePath = filepath.Dir(basePath)
-	} else if err != nil {
-		basePath = filepath.Dir(basePath)
+		baseDir = filepath.Dir(basePath)
 	}
 
-	rel, err := filepath.Rel(basePath, targetPath)
+	rel, err := filepath.Rel(baseDir, targetPath)
 	if err != nil {
-		return "", err
+		return targetPath, err
 	}
+
 	return filepath.ToSlash(rel), nil
 }
 
 // ReadFile reads the content of a file
 func (a *App) ReadFile(path string) (string, error) {
-	content, err := os.ReadFile(path)
+	resolved := resolvePersistedDocumentPath(path)
+	content, err := os.ReadFile(resolved)
 	if err != nil {
 		return "", err
 	}
@@ -541,7 +547,8 @@ func (a *App) ReadFile(path string) (string, error) {
 
 // SaveFile saves the content to a file
 func (a *App) SaveFile(path string, content string) error {
-	return os.WriteFile(path, []byte(content), 0644)
+	resolved := resolvePersistedDocumentPath(path)
+	return os.WriteFile(resolved, []byte(content), 0644)
 }
 
 // ReadImageAsDataURL reads a local image file and returns a data URL for stable rendering.
@@ -720,25 +727,40 @@ func (a *App) GetRecentFiles() []RecentFile {
 	}
 
 	json.Unmarshal(data, &recent)
-	return orderRecentFiles(recent)
+	changed := false
+	for i := range recent {
+		resolved := resolvePersistedDocumentPath(recent[i].Path)
+		if resolved != recent[i].Path {
+			recent[i].Path = resolved
+			recent[i].Name = filepath.Base(resolved)
+			changed = true
+		}
+	}
+	ordered := orderRecentFiles(recent)
+	if changed {
+		data, _ = json.Marshal(ordered)
+		_ = os.WriteFile(a.recentPath, data, 0644)
+	}
+	return ordered
 }
 
 func (a *App) saveRecentFile(path string) {
 	a.ensurePersistentPaths()
+	persistedPath := persistIncomingDocument(path)
 	recent := a.GetRecentFiles()
 
 	// Check if already exists
 	pinned := false
 	for _, rf := range recent {
-		if rf.Path == path {
+		if rf.Path == persistedPath {
 			pinned = rf.Pinned
 			break
 		}
 	}
 
-	newRecent := []RecentFile{{Path: path, Name: filepath.Base(path), Pinned: pinned}}
+	newRecent := []RecentFile{{Path: persistedPath, Name: filepath.Base(persistedPath), Pinned: pinned}}
 	for _, rf := range recent {
-		if rf.Path != path {
+		if rf.Path != persistedPath {
 			newRecent = append(newRecent, rf)
 		}
 	}
@@ -787,6 +809,7 @@ func (a *App) ToggleRecentFilePinned(path string) []RecentFile {
 	if cleanPath == "" {
 		return a.GetRecentFiles()
 	}
+	cleanPath = resolvePersistedDocumentPath(cleanPath)
 
 	recent := a.GetRecentFiles()
 	for i, rf := range recent {
@@ -815,6 +838,7 @@ func (a *App) TouchRecentFile(path string) {
 	if cleanPath == "" {
 		return
 	}
+	cleanPath = resolvePersistedDocumentPath(cleanPath)
 	a.saveRecentFile(cleanPath)
 }
 
@@ -1001,18 +1025,20 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 		return FileResult{}, fmt.Errorf("not a supported document file")
 	}
 
-	content, err := a.ReadFile(path)
+	persisted := persistIncomingDocument(path)
+	content, err := a.ReadFile(persisted)
 	if err != nil {
 		return FileResult{}, err
 	}
 
-	a.saveRecentFile(path)
-	return FileResult{Path: path, Content: content}, nil
+	a.saveRecentFile(persisted)
+	return FileResult{Path: persisted, Content: content}, nil
 }
 
 //wails:ignore
 func (a *App) HandleSystemOpenFile(path string) {
-	a.queueOpenRequests([]string{path}, "")
+	persisted := persistIncomingDocument(path)
+	a.queueOpenRequests([]string{persisted}, "")
 	a.showMainWindow()
 }
 
