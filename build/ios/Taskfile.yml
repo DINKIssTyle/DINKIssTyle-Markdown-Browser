@@ -105,9 +105,6 @@ tasks:
           -framework Foundation -framework UIKit -framework WebKit \
           -framework Security -framework CoreFoundation \
           -framework UniformTypeIdentifiers \
-          -framework LocalAuthentication -framework UserNotifications \
-          -framework AVFoundation \
-          -framework CoreLocation -framework CoreMotion -framework SystemConfiguration \
           -lresolv \
           -o "{{.BIN_DIR}}/{{.APP_NAME | lower}}" \
           "$MAIN_M" -Wl,-force_load,"{{.BIN_DIR}}/{{.APP_NAME}}.a"
