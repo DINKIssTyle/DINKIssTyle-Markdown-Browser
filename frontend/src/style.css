@@ -8072,9 +8072,9 @@ html.platform-android .editor-ai-dock.is-visible {
 
 /* ── AI Prompt ────────────────────────────────────── */
 .ai-prompt-box {
-    position: fixed;
+    position: absolute;
     left: 50%;
-    bottom: 132px;
+    bottom: calc(var(--editor-ai-dock-height, 42px) + 16px);
     transform: translateX(-57%);
     display: inline-flex;
     align-items: center;

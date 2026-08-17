@@ -955,9 +955,16 @@ function isPromptBoxVisible() {
 }
 
 function positionPromptBox() {
+    if (!el.aiPromptBox) return;
     el.aiPromptBox.style.left = '50%';
-    el.aiPromptBox.style.bottom = '132px';
     el.aiPromptBox.style.top = 'auto';
+
+    let dockBottomOffset = 58;
+    if (el.editorAiDock && !el.editorAiDock.classList.contains('hidden')) {
+        const dockHeight = el.editorAiDock.offsetHeight || 42;
+        dockBottomOffset = dockHeight + 16;
+    }
+    el.aiPromptBox.style.bottom = `${dockBottomOffset}px`;
 }
 
 function showPromptBox({ focusInput = false, preserveInput = true, allowEmptySelection = false } = {}) {
@@ -1853,9 +1860,18 @@ export function bindAIEvents() {
 
     // Detect selection for prompt and typing for FIM
     document.addEventListener('selectionchange', handleSelectionChange);
+    const handleViewportUpdate = () => {
+        if (isPromptBoxVisible()) {
+            positionPromptBox();
+        }
+    };
     window.addEventListener('resize', () => {
+        handleViewportUpdate();
         refreshPromptForSelection({ preserveInput: true });
     }, { passive: true });
+    window.addEventListener('app:viewport-change', handleViewportUpdate, { passive: true });
+    window.visualViewport?.addEventListener('resize', handleViewportUpdate, { passive: true });
+    window.visualViewport?.addEventListener('scroll', handleViewportUpdate, { passive: true });
 
     el.editorView.addEventListener('keydown', handleEditorKeydown, true);
     el.editorView.addEventListener('input', handleEditorInput, true);

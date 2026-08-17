@@ -139,6 +139,7 @@ function setupVisualViewport() {
         root.style.setProperty('--mobile-viewport-top', `${offsetTop}px`);
         root.style.setProperty('--mobile-keyboard-height', `${keyboardHeight}px`);
         root.classList.toggle('mobile-keyboard-visible', keyboardHeight > 100);
+        window.dispatchEvent(new CustomEvent('app:viewport-change', { detail: { height, offsetTop, keyboardHeight } }));
     };
 
     update();
