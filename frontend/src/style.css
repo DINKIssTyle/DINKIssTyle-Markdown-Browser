@@ -7713,6 +7713,22 @@ html.platform-mobile .ai-prompt-stream-kind {
     font-size: 11px !important;
 }
 
+/* Phone Portrait Mode: Hide AI Prompt Left Badge/Icon and Center Prompt Box */
+@media (max-width: 768px) and (orientation: portrait), (max-width: 500px) {
+    .ai-prompt-box {
+        transform: translateX(-50%) !important;
+        gap: 0 !important;
+    }
+
+    .ai-prompt-box .ai-prompt-badge {
+        display: none !important;
+    }
+
+    .ai-prompt-shell {
+        max-width: min(480px, calc(100vw - 28px)) !important;
+    }
+}
+
 /* 5. Modals & Settings on Mobile & Tablet (iOS HIG Typography Standard) */
 html.platform-mobile :is(.settings-modal-heading h3, .modal-content h3, .document-meta-header h3, #system-install-title) {
     font-size: 20px !important;
