@@ -1,45 +1,45 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
-	<dict>
-		<key>CFBundleDocumentTypes</key>
-		<array>
-			<dict>
-				<key>CFBundleTypeExtensions</key>
-				<array>
-					<string>md</string>
-				</array>
-				<key>CFBundleTypeIconFile</key>
-				<string>markdown-doc</string>
-				<key>CFBundleTypeName</key>
-				<string>DKSTDocument</string>
-				<key>CFBundleTypeRole</key>
-				<string>Editor</string>
-			</dict>
-		</array>
-		<key>CFBundleExecutable</key>
-		<string>DKST Markdown Browser</string>
-		<key>CFBundleGetInfoString</key>
-		<string>DKST Markdown Browser</string>
-		<key>CFBundleIconFile</key>
-		<string>icons</string>
-		<key>CFBundleIconName</key>
-		<string>appicon</string>
-		<key>CFBundleIdentifier</key>
-		<string>com.dinkisstyle.mdbrowser</string>
-		<key>CFBundleName</key>
-		<string>DKST Markdown Browser</string>
-		<key>CFBundlePackageType</key>
-		<string>APPL</string>
-		<key>CFBundleShortVersionString</key>
-		<string>3.0.0</string>
-		<key>CFBundleVersion</key>
-		<string>3.0.0</string>
-		<key>LSMinimumSystemVersion</key>
-		<string>12.0.0</string>
-		<key>NSHighResolutionCapable</key>
-		<string>true</string>
-		<key>NSHumanReadableCopyright</key>
-		<string>(c) 2026, DINKI&#39;ssTyle</string>
-	</dict>
+<dict>
+	<key>CFBundleDocumentTypes</key>
+	<array>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>md</string>
+			</array>
+			<key>CFBundleTypeIconFile</key>
+			<string>markdown-doc</string>
+			<key>CFBundleTypeName</key>
+			<string>DKSTDocument</string>
+			<key>CFBundleTypeRole</key>
+			<string>Editor</string>
+		</dict>
+	</array>
+	<key>CFBundleExecutable</key>
+	<string>DKST Markdown Browser</string>
+	<key>CFBundleGetInfoString</key>
+	<string>DKST Markdown Browser</string>
+	<key>CFBundleIconFile</key>
+	<string>icons</string>
+	<key>CFBundleIconName</key>
+	<string>appicon</string>
+	<key>CFBundleIdentifier</key>
+	<string>com.dinkisstyle.mdbrowser</string>
+	<key>CFBundleName</key>
+	<string>DKST Markdown Browser</string>
+	<key>CFBundlePackageType</key>
+	<string>APPL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>3.0.1</string>
+	<key>CFBundleVersion</key>
+	<string>3.0.1</string>
+	<key>LSMinimumSystemVersion</key>
+	<string>12.0.0</string>
+	<key>NSHighResolutionCapable</key>
+	<string>true</string>
+	<key>NSHumanReadableCopyright</key>
+	<string>(c) 2026, DINKI'ssTyle</string>
+</dict>
 </plist>

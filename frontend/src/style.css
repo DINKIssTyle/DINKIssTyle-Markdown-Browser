@@ -4,7 +4,7 @@
     font-family: "Material Symbols Outlined";
     font-style: normal;
     font-weight: 400;
-    src: url("./assets/fonts/material-symbols-outlined.woff2?v=110") format("woff2");
+    src: url("./assets/fonts/material-symbols-outlined.woff2?v=112") format("woff2");
 }
 
 :root {
@@ -750,22 +750,22 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .outline-item {
-    padding: 6px 16px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 6px 14px 6px 16px;
     cursor: pointer;
     font-size: 13px;
-    transition: background 0.2s;
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
+    transition: background 0.15s ease, opacity 0.15s ease;
     color: var(--text-color);
-    opacity: 0.8;
+    opacity: 0.82;
+    position: relative;
+    user-select: none;
+    -webkit-user-select: none;
 }
 
-.outline-item.has-tools {
-    display: grid;
-    grid-template-columns: minmax(0, 1fr) 26px;
-    align-items: center;
-    gap: 6px;
+.outline-item.is-outline-hidden {
+    display: none !important;
 }
 
 .outline-item:hover {
@@ -782,14 +782,49 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .outline-text {
+    flex: 1;
     min-width: 0;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
 
+.outline-text strong,
+.outline-text b {
+    font-weight: 700 !important;
+    color: inherit;
+}
+
+.outline-text em,
+.outline-text i {
+    font-style: italic;
+}
+
+.outline-text code {
+    font-family: var(--font-mono, monospace);
+    font-size: 0.88em;
+    background: rgba(128, 128, 128, 0.14);
+    padding: 1px 4px;
+    border-radius: 4px;
+}
+
+.outline-text del,
+.outline-text s {
+    text-decoration: line-through;
+    opacity: 0.65;
+}
+
+.outline-item-actions {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-left: 8px;
+    flex-shrink: 0;
+}
+
 .outline-format-btn,
-.outline-top-btn {
+.outline-top-btn,
+.outline-collapse-btn {
     width: 24px;
     height: 24px;
     border: none;
@@ -805,7 +840,8 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .outline-format-btn:hover,
-.outline-top-btn:hover {
+.outline-top-btn:hover,
+.outline-collapse-btn:hover {
     background: rgba(128, 128, 128, 0.14);
     color: var(--accent-color);
     opacity: 1;
@@ -817,18 +853,55 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .outline-format-btn:active,
-.outline-top-btn:active {
+.outline-top-btn:active,
+.outline-collapse-btn:active {
     transform: translateY(-1px) scale(0.96);
 }
 
 .outline-format-btn .material-symbols-outlined,
-.outline-top-btn .material-symbols-outlined {
+.outline-top-btn .material-symbols-outlined,
+.outline-collapse-btn .material-symbols-outlined {
     font-size: 18px;
     line-height: 1;
 }
 
+/* 펼쳐져 있을 때 (Default): 아무 표시 없음, 호버 시에만 접기 버튼 은은하게 노출 */
+.outline-collapse-btn:not(.is-collapsed-indicator) {
+    opacity: 0;
+    pointer-events: none;
+}
+
+.outline-item.has-children:hover .outline-collapse-btn:not(.is-collapsed-indicator),
+.outline-item.has-children:focus-within .outline-collapse-btn:not(.is-collapsed-indicator) {
+    opacity: 0.72;
+    pointer-events: auto;
+}
+
+.outline-item.has-children:hover .outline-collapse-btn:not(.is-collapsed-indicator):hover {
+    opacity: 1;
+    color: var(--accent-color);
+    background: rgba(128, 128, 128, 0.14);
+}
+
+/* 접혔을 때 (Collapsed): 레이블 우측에 접힘 표시 상시 노출 */
+.outline-collapse-btn.is-collapsed-indicator {
+    opacity: 0.95;
+    pointer-events: auto;
+    color: var(--accent-color);
+    background: rgba(var(--accent-color-rgb), 0.12);
+}
+
+.outline-collapse-btn.is-collapsed-indicator:hover {
+    opacity: 1;
+    background: rgba(var(--accent-color-rgb), 0.22);
+}
+
 .markdown-outline.is-heading-formatted .outline-item {
     opacity: 0.86;
+}
+
+.markdown-outline.is-heading-formatted .outline-item.is-collapsed {
+    opacity: 0.95;
 }
 
 .markdown-outline.is-heading-formatted .outline-text {
@@ -2109,6 +2182,69 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
     transition: height 0.08s ease, background-color 0.2s ease;
 }
 
+/* ── Edit Toolbar Wrapper & Scroll Navigation Buttons ───────── */
+.edit-toolbar-wrapper {
+    position: relative;
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.edit-toolbar-nav-btn {
+    position: absolute;
+    top: 22px;
+    transform: translateY(-50%);
+    z-index: 105;
+    width: 32px;
+    height: 32px;
+    border: none;
+    border-radius: 50%;
+    background: var(--surface-elevated, #ffffff);
+    color: var(--accent-color);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.18), 0 0 0 1px rgba(128, 128, 128, 0.15);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    opacity: 0.94;
+    transition: opacity 0.15s ease, transform 0.15s ease, background-color 0.15s ease, box-shadow 0.15s ease;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+}
+
+.edit-toolbar-nav-btn.hidden {
+    display: none !important;
+}
+
+.edit-toolbar-nav-btn:hover {
+    opacity: 1;
+    transform: translateY(-50%) scale(1.06);
+    background: var(--surface-color);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.24), 0 0 0 1px var(--accent-color);
+}
+
+.edit-toolbar-nav-btn:active {
+    transform: translateY(-50%) scale(0.94);
+}
+
+.edit-toolbar-nav-btn .material-symbols-outlined {
+    font-size: 22px;
+    line-height: 1;
+}
+
+.edit-toolbar-nav-left {
+    left: 6px;
+}
+
+.edit-toolbar-nav-right {
+    right: 6px;
+}
+
+[data-theme="dark"] .edit-toolbar-nav-btn {
+    background: rgba(45, 45, 48, 0.92);
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.45), 0 0 0 1px rgba(255, 255, 255, 0.12);
+}
+
 /* ── Edit Toolbar ─────────────────────────────────────── */
 .edit-toolbar {
     min-height: 40px;
@@ -2121,8 +2257,8 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
     gap: 6px;
     overflow-x: auto;
     overflow-y: hidden;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent-color) transparent;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
     z-index: 90;
     user-select: none;
     -webkit-user-select: none;
@@ -2130,57 +2266,15 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
 }
 
 .edit-toolbar::-webkit-scrollbar {
-    -webkit-appearance: none;
-    height: 3px;
-    width: 3px;
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
+    -webkit-appearance: none !important;
 }
 
-.edit-toolbar::-webkit-scrollbar-track {
-    -webkit-appearance: none;
-    background: transparent;
-}
-
-.edit-toolbar::-webkit-scrollbar-thumb {
-    -webkit-appearance: none;
-    background: var(--accent-color);
-    border-radius: 999px;
-}
-
-.edit-toolbar::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-color-hover);
-}
-
-/* ── Custom Visible Toolbar Scrollbar (Reliable on iOS/iPadOS/Android/Desktop) ── */
+/* ── Custom Visible Toolbar Scrollbar (Mobile/Tablet Only) ── */
 .edit-toolbar-scrollbar {
-    position: sticky;
-    left: 0;
-    bottom: -6px;
-    width: 100%;
-    height: 3px;
-    background: transparent;
-    pointer-events: none;
-    z-index: 10;
-    opacity: 0;
-    transition: opacity 0.2s ease;
-    margin-top: 3px;
-    margin-bottom: -3px;
-    flex-shrink: 0;
-}
-
-.edit-toolbar-scrollbar.is-visible {
-    opacity: 1;
-}
-
-.edit-toolbar-scrollbar-thumb {
-    position: absolute;
-    top: 0;
-    left: 0;
-    height: 100%;
-    width: 20%;
-    background: var(--accent-color);
-    border-radius: 999px;
-    transform: translateX(0);
-    transition: width 0.08s ease, transform 0.04s ease-out, background-color 0.2s ease;
+    display: none !important;
 }
 
 .edit-toolbar-row {
@@ -7106,29 +7200,15 @@ html.platform-mobile .edit-toolbar {
     overflow-y: hidden;
     overscroll-behavior-x: contain;
     -webkit-overflow-scrolling: touch;
-    scrollbar-width: thin;
-    scrollbar-color: var(--accent-color) transparent;
+    scrollbar-width: none !important;
+    -ms-overflow-style: none !important;
 }
 
 html.platform-mobile .edit-toolbar::-webkit-scrollbar {
+    display: none !important;
+    width: 0 !important;
+    height: 0 !important;
     -webkit-appearance: none !important;
-    height: 3px !important;
-    display: block !important;
-}
-
-html.platform-mobile .edit-toolbar::-webkit-scrollbar-track {
-    -webkit-appearance: none !important;
-    background: transparent !important;
-}
-
-html.platform-mobile .edit-toolbar::-webkit-scrollbar-thumb {
-    -webkit-appearance: none !important;
-    background: var(--accent-color) !important;
-    border-radius: 999px !important;
-}
-
-html.platform-mobile .edit-toolbar::-webkit-scrollbar-thumb:hover {
-    background: var(--accent-color-hover) !important;
 }
 
 html.platform-mobile.mobile-keyboard-visible .edit-toolbar {
@@ -7376,12 +7456,12 @@ html.platform-mobile .outline-item {
     padding-bottom: 8px !important;
 }
 
-html.platform-mobile :is(.outline-format-btn, .outline-top-btn) {
+html.platform-mobile :is(.outline-format-btn, .outline-top-btn, .outline-collapse-btn) {
     width: 32px !important;
     height: 32px !important;
 }
 
-html.platform-mobile :is(.outline-format-btn, .outline-top-btn) .material-symbols-outlined {
+html.platform-mobile :is(.outline-format-btn, .outline-top-btn, .outline-collapse-btn) .material-symbols-outlined {
     font-size: 20px !important;
 }
 
@@ -7674,6 +7754,43 @@ html.platform-mobile .edit-toolbar-row {
 
 html.platform-mobile #edit-toolbar .tool-btn .material-symbols-outlined {
     font-size: var(--mobile-editor-toolbar-icon-size) !important;
+}
+
+html.platform-mobile .edit-toolbar-nav-btn {
+    display: none !important;
+}
+
+html.platform-mobile .edit-toolbar-scrollbar {
+    display: block !important;
+    position: sticky;
+    left: 0;
+    bottom: -6px;
+    width: 100%;
+    height: 3px;
+    background: transparent;
+    pointer-events: none;
+    z-index: 10;
+    opacity: 0;
+    transition: opacity 0.2s ease;
+    margin-top: 3px;
+    margin-bottom: -3px;
+    flex-shrink: 0;
+}
+
+html.platform-mobile .edit-toolbar-scrollbar.is-visible {
+    opacity: 1 !important;
+}
+
+html.platform-mobile .edit-toolbar-scrollbar-thumb {
+    position: absolute;
+    top: 0;
+    left: 0;
+    height: 100%;
+    width: 20%;
+    background: var(--accent-color);
+    border-radius: 999px;
+    transform: translateX(0);
+    transition: width 0.08s ease, transform 0.04s ease-out, background-color 0.2s ease;
 }
 
 html.platform-mobile .edit-select,

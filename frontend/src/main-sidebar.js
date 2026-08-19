@@ -27,12 +27,32 @@ import { LogError } from './wails-runtime';
 
 // ... (omitted lines)
 
+import { marked } from 'marked';
+
+let currentOutlineDocPath = '';
+const outlineCollapsedKeys = new Set();
+
+function formatOutlineText(text) {
+    if (!text) return '';
+    try {
+        if (typeof marked !== 'undefined' && marked.parseInline) {
+            return marked.parseInline(text.trim());
+        }
+    } catch (_) {}
+    return escapeHTML(text);
+}
+
 export function updateOutline() {
     if (!el.markdownOutline) return;
 
     if (state.currentDocumentType !== 'markdown') {
         el.markdownOutline.innerHTML = '<div class="sidebar-hint">Open a Markdown file to view outline.</div>';
         return;
+    }
+
+    if (state.currentDocumentPath !== currentOutlineDocPath) {
+        currentOutlineDocPath = state.currentDocumentPath;
+        outlineCollapsedKeys.clear();
     }
 
     let headings = [];
@@ -66,20 +86,103 @@ export function updateOutline() {
         return;
     }
 
+    // Calculate hierarchy and children
+    const headingMeta = headings.map((h, index) => {
+        let childCount = 0;
+        const childrenIndices = [];
+        for (let j = index + 1; j < headings.length; j++) {
+            if (headings[j].level > h.level) {
+                childCount++;
+                childrenIndices.push(j);
+            } else {
+                break;
+            }
+        }
+        const hasChildren = childCount > 0;
+        const key = `${h.level}:${h.text}:${index}`;
+        const isCollapsed = outlineCollapsedKeys.has(key);
+        return {
+            hasChildren,
+            childCount,
+            childrenIndices,
+            key,
+            isCollapsed
+        };
+    });
+
+    // Determine which items should be hidden because an ancestor is collapsed
+    const hiddenIndices = new Set();
+    headingMeta.forEach((meta) => {
+        if (meta.isCollapsed && meta.hasChildren) {
+            meta.childrenIndices.forEach(childIdx => hiddenIndices.add(childIdx));
+        }
+    });
+
     el.markdownOutline.classList.add('is-heading-formatted');
     el.markdownOutline.innerHTML = headings.map((h, index) => {
+        const meta = headingMeta[index];
+        const isHidden = hiddenIndices.has(index);
         const topButton = index === 0 ? `
                 <button class="outline-top-btn" type="button" tabindex="-1" title="Top of document" aria-label="Top of document">
                     <span class="material-symbols-outlined" aria-hidden="true">vertical_align_top</span>
                 </button>
             ` : '';
+
+        let collapseBtn = '';
+        if (meta.hasChildren) {
+            if (meta.isCollapsed) {
+                // Collapsed: always display collapse indicator on the right of the label
+                collapseBtn = `
+                    <button class="outline-collapse-btn is-collapsed-indicator" type="button" tabindex="-1" title="Expand section (${meta.childCount} hidden ${meta.childCount === 1 ? 'item' : 'items'})" aria-label="Expand section" data-key="${escapeAttr(meta.key)}">
+                        <span class="material-symbols-outlined" aria-hidden="true">chevron_right</span>
+                    </button>
+                `;
+            } else {
+                // Expanded: no indicator by default, visible on hover
+                collapseBtn = `
+                    <button class="outline-collapse-btn" type="button" tabindex="-1" title="Collapse section" aria-label="Collapse section" data-key="${escapeAttr(meta.key)}">
+                        <span class="material-symbols-outlined" aria-hidden="true">expand_less</span>
+                    </button>
+                `;
+            }
+        }
+
+        const formattedText = formatOutlineText(h.text);
+        const itemClasses = [
+            'outline-item',
+            `level-${h.level}`,
+            meta.hasChildren ? 'has-children' : '',
+            meta.isCollapsed ? 'is-collapsed' : '',
+            isHidden ? 'is-outline-hidden' : '',
+            (topButton || collapseBtn) ? 'has-actions' : ''
+        ].filter(Boolean).join(' ');
+
         return `
-            <div class="outline-item level-${h.level} ${index === 0 ? 'has-tools' : ''}" data-index="${index}" data-line="${h.line}" tabindex="0">
-                <span class="outline-text">${escapeHTML(h.text)}</span>
-                ${topButton}
+            <div class="${itemClasses}" data-index="${index}" data-line="${h.line}" data-key="${escapeAttr(meta.key)}" tabindex="${isHidden ? -1 : 0}">
+                <span class="outline-text">${formattedText}</span>
+                <div class="outline-item-actions">
+                    ${collapseBtn}
+                    ${topButton}
+                </div>
             </div>
         `;
     }).join('');
+
+    el.markdownOutline.querySelectorAll('.outline-collapse-btn').forEach(button => {
+        button.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const key = button.getAttribute('data-key');
+            if (key) {
+                if (outlineCollapsedKeys.has(key)) {
+                    outlineCollapsedKeys.delete(key);
+                } else {
+                    outlineCollapsedKeys.add(key);
+                }
+                updateOutline();
+            }
+        });
+    });
 
     el.markdownOutline.querySelectorAll('.outline-top-btn').forEach(button => {
         button.addEventListener('click', (event) => {
@@ -98,8 +201,15 @@ export function updateOutline() {
     });
 
     el.markdownOutline.querySelectorAll('.outline-item').forEach(item => {
-        item.onclick = () => {
-            const index = parseInt(item.dataset.index);
+        const index = parseInt(item.dataset.index);
+        const meta = headingMeta[index];
+
+        item.onclick = (event) => {
+            // Ignore if clicked on an action button inside
+            if (event.target.closest('.outline-collapse-btn, .outline-top-btn')) {
+                return;
+            }
+
             const headingObj = headings[index];
 
             if (window.innerWidth <= 768) {
@@ -115,8 +225,27 @@ export function updateOutline() {
                 }
             }, 60);
         };
+
+        item.addEventListener('keydown', (event) => {
+            if (!meta) return;
+            if (event.key === 'ArrowLeft' && meta.hasChildren && !meta.isCollapsed) {
+                event.preventDefault();
+                event.stopPropagation();
+                outlineCollapsedKeys.add(meta.key);
+                updateOutline();
+                const newItem = el.markdownOutline.querySelector(`.outline-item[data-index="${index}"]`);
+                if (newItem) newItem.focus();
+            } else if (event.key === 'ArrowRight' && meta.hasChildren && meta.isCollapsed) {
+                event.preventDefault();
+                event.stopPropagation();
+                outlineCollapsedKeys.delete(meta.key);
+                updateOutline();
+                const newItem = el.markdownOutline.querySelector(`.outline-item[data-index="${index}"]`);
+                if (newItem) newItem.focus();
+            }
+        });
     });
-    bindListKeyboardNavigation(el.markdownOutline, '.outline-item');
+    bindListKeyboardNavigation(el.markdownOutline, '.outline-item:not(.is-outline-hidden)');
 }
 
 function scrollPreviewHeadingToTop(heading) {

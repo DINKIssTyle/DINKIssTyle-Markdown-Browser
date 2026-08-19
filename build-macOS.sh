@@ -12,7 +12,7 @@ ARCH="${1:-universal}"   # arm64 | amd64 | universal (default)
 OUT_DIR="./dist/macos"
 ENTITLEMENTS="build/darwin/entitlements.plist"
 DOC_ICON_SRC="./build/darwin/markdown-doc.icns"
-ICON_COMPOSER_SRC="./build/darwin/appicon.icon"
+ICON_COMPOSER_SRC="./build/appicon.icon"
 ICON_COMPOSER_NAME="appicon"
 CONFIG_FILE="internal/app/config.go"
 APP_VERSION_LDFLAG="dinkisstyle-markdown-browser/internal/app.AppVersion"
@@ -106,11 +106,11 @@ else
     echo "✅ Using signing identity: $SIGN_IDENTITY"
 fi
 
-# ── Icon Conversion (appicon.png → iconfile.icns) ─────────────
-ICNS_PATH="./build/darwin/iconfile.icns"
+# ── Icon Conversion (appicon.png → icons.icns) ────────────────
+ICNS_PATH="./build/darwin/icons.icns"
 ICON_SRC="./build/appicon.png"
 if [ ! -s "${ICNS_PATH}" ] && [ -f "${ICON_SRC}" ]; then
-    echo "🖼  Converting appicon.png to iconfile.icns..."
+    echo "🖼  Converting appicon.png to icons.icns..."
     ICONSET_DIR="/tmp/AppIcon.iconset"
     rm -rf "${ICONSET_DIR}"
     mkdir -p "${ICONSET_DIR}"
@@ -120,12 +120,10 @@ if [ ! -s "${ICNS_PATH}" ] && [ -f "${ICON_SRC}" ]; then
     done
     iconutil -c icns "${ICONSET_DIR}" -o "${ICNS_PATH}"
     rm -rf "${ICONSET_DIR}"
-    echo "   ✅ iconfile.icns created successfully."
+    echo "   ✅ icons.icns created successfully."
 fi
 
 # ── Modern macOS Icon Asset (Icon Composer → Assets.car) ─────
-# macOS 26+ applies an automatic glass treatment to legacy ICNS files. Compile
-# the Icon Composer document so the app can explicitly control those effects.
 if [ -d "${ICON_COMPOSER_SRC}" ] && command -v xcrun >/dev/null 2>&1; then
     ACTOOL_PATH="$(xcrun --find actool 2>/dev/null || true)"
     if [ -n "${ACTOOL_PATH}" ]; then
@@ -171,25 +169,30 @@ rm -rf "${APP_BUNDLE}"
 mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
 cp "./bin/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "./build/darwin/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
-cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
 
 # ── .app Bundle Processing & Signing ─────────────────────────
 if [ -d "${APP_BUNDLE}" ]; then
     echo "📝 Processing application bundle metadata and signing..."
 
-    # Wails regenerates iconfile.icns from appicon.png while packaging, which
-    # reduces the quality of the smaller icon sizes. Restore the prepared ICNS
-    # before signing so the final app bundle keeps the supplied icon unchanged.
-    if [ ! -s "${ICNS_PATH}" ]; then
-        echo "❌ App icon not found or empty: ${ICNS_PATH}" >&2
-        exit 1
+    # Ensure application icon is present
+    if [ -s "${ICNS_PATH}" ]; then
+        echo "🖼  Installing application icon..."
+        cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/icons.icns"
+        cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
+    elif [ -s "./build/darwin/iconfile.icns" ]; then
+        cp "./build/darwin/iconfile.icns" "${APP_BUNDLE}/Contents/Resources/icons.icns"
+        cp "./build/darwin/iconfile.icns" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
     fi
-    echo "🖼  Restoring the prepared application icon..."
-    cp "${ICNS_PATH}" "${APP_BUNDLE}/Contents/Resources/iconfile.icns"
 
     if [ -n "${ICON_ASSET_DIR}" ] && [ -s "${ICON_ASSET_DIR}/Assets.car" ]; then
-        echo "🎨 Installing modern macOS icon assets..."
+        echo "🎨 Installing compiled macOS icon assets..."
         cp "${ICON_ASSET_DIR}/Assets.car" "${APP_BUNDLE}/Contents/Resources/Assets.car"
+        if ! /usr/libexec/PlistBuddy -c "Set :CFBundleIconName ${ICON_COMPOSER_NAME}" "${APP_BUNDLE}/Contents/Info.plist" 2>/dev/null; then
+            /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string ${ICON_COMPOSER_NAME}" "${APP_BUNDLE}/Contents/Info.plist"
+        fi
+    elif [ -s "./build/darwin/Assets.car" ]; then
+        echo "🎨 Installing prebuilt macOS icon assets..."
+        cp "./build/darwin/Assets.car" "${APP_BUNDLE}/Contents/Resources/Assets.car"
         if ! /usr/libexec/PlistBuddy -c "Set :CFBundleIconName ${ICON_COMPOSER_NAME}" "${APP_BUNDLE}/Contents/Info.plist" 2>/dev/null; then
             /usr/libexec/PlistBuddy -c "Add :CFBundleIconName string ${ICON_COMPOSER_NAME}" "${APP_BUNDLE}/Contents/Info.plist"
         fi
@@ -207,10 +210,14 @@ if [ -d "${APP_BUNDLE}" ]; then
     
     # Re-sign binaries to fix "Code Signature Invalid" crash and Hardened Runtime
     echo "🔐 Signing binaries..."
+    ENTITLEMENTS_FLAG=()
+    if [ -f "$ENTITLEMENTS" ]; then
+        ENTITLEMENTS_FLAG=(--entitlements "$ENTITLEMENTS")
+    fi
     # Sign main executable
-    codesign --force --sign "$SIGN_IDENTITY" --timestamp=none --identifier "$BUNDLE_ID" --options runtime --entitlements "$ENTITLEMENTS" "$EXE_PATH"
+    codesign --force --sign "$SIGN_IDENTITY" --timestamp=none --identifier "$BUNDLE_ID" --options runtime "${ENTITLEMENTS_FLAG[@]}" "$EXE_PATH"
     # Deep sign the app bundle
-    codesign --force --sign "$SIGN_IDENTITY" --timestamp=none --identifier "$BUNDLE_ID" --options runtime --entitlements "$ENTITLEMENTS" --deep "$APP_BUNDLE"
+    codesign --force --sign "$SIGN_IDENTITY" --timestamp=none --identifier "$BUNDLE_ID" --options runtime "${ENTITLEMENTS_FLAG[@]}" --deep "$APP_BUNDLE"
 
     # Copy to dist folder
     cp -r "${APP_BUNDLE}" "${OUT_DIR}/"

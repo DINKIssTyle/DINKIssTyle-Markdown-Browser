@@ -3,6 +3,7 @@ add_diamond
 add_notes
 arrow_back
 arrow_back_ios_new
+arrow_circle_left
 arrow_circle_right
 arrow_forward
 article
@@ -37,6 +38,7 @@ drive_file_rename_outline
 edit_note
 error
 expand_circle_right
+expand_less
 expand_more
 filter_list
 filter_list_off

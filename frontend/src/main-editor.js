@@ -763,6 +763,8 @@ export function updateEditToolbarScrollbar() {
     if (!el.editToolbar || !el.editToolbarScrollbar || !el.editToolbarScrollbarThumb) return;
     if (el.editToolbar.classList.contains('hidden') || el.editToolbar.offsetParent === null) {
         el.editToolbarScrollbar.classList.remove('is-visible');
+        if (el.editToolbarScrollLeft) el.editToolbarScrollLeft.classList.add('hidden');
+        if (el.editToolbarScrollRight) el.editToolbarScrollRight.classList.add('hidden');
         return;
     }
 
@@ -772,6 +774,8 @@ export function updateEditToolbarScrollbar() {
 
     if (maxScroll <= 2) {
         el.editToolbarScrollbar.classList.remove('is-visible');
+        if (el.editToolbarScrollLeft) el.editToolbarScrollLeft.classList.add('hidden');
+        if (el.editToolbarScrollRight) el.editToolbarScrollRight.classList.add('hidden');
         return;
     }
 
@@ -785,6 +789,13 @@ export function updateEditToolbarScrollbar() {
 
     el.editToolbarScrollbarThumb.style.width = `${thumbWidthPx}px`;
     el.editToolbarScrollbarThumb.style.transform = `translateX(${translateX}px)`;
+
+    if (el.editToolbarScrollLeft) {
+        el.editToolbarScrollLeft.classList.toggle('hidden', scrollLeft <= 2);
+    }
+    if (el.editToolbarScrollRight) {
+        el.editToolbarScrollRight.classList.toggle('hidden', scrollLeft >= maxScroll - 2);
+    }
 }
 
 function syncRenderModeIcon() {
@@ -3721,6 +3732,8 @@ export async function exitEditMode(didSave = false) {
     state.editingPreviewPath = "";
     state.editingPreviewFolder = "";
     el.editToolbar.classList.add('hidden');
+    if (el.editToolbarScrollLeft) el.editToolbarScrollLeft.classList.add('hidden');
+    if (el.editToolbarScrollRight) el.editToolbarScrollRight.classList.add('hidden');
     el.editorView.classList.add('hidden');
     el.mainContainer.classList.remove('is-editing');
     el.btnEdit.classList.remove('active');
@@ -5037,6 +5050,22 @@ export function bindEditorEvents() {
             });
             toolbarObserver.observe(el.editToolbar);
         }
+    }
+    if (el.editToolbarScrollLeft) {
+        el.editToolbarScrollLeft.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const step = Math.max(360, Math.floor((el.editToolbar?.clientWidth || 400) * 0.75));
+            el.editToolbar?.scrollBy({ left: -step, behavior: 'smooth' });
+        });
+    }
+    if (el.editToolbarScrollRight) {
+        el.editToolbarScrollRight.addEventListener('click', (e) => {
+            e.preventDefault();
+            e.stopPropagation();
+            const step = Math.max(360, Math.floor((el.editToolbar?.clientWidth || 400) * 0.75));
+            el.editToolbar?.scrollBy({ left: step, behavior: 'smooth' });
+        });
     }
     window.addEventListener('resize', updateEditToolbarScrollbar, { passive: true });
     window.addEventListener('app:viewport-change', updateEditToolbarScrollbar, { passive: true });

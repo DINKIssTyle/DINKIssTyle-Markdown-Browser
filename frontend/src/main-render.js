@@ -22,7 +22,7 @@ import {
     decodeLocalMarkdownPath, basename, isImagePath, escapeHTML, escapeAttr,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
-import { exitEditMode, getCurrentEditorText } from './main-editor.js';
+import { exitEditMode, getCurrentEditorText, updateEditToolbarScrollbar } from './main-editor.js';
 import { syncAIControls } from './main-ai.js';
 import { applyHighlight, beginProgressTask, clearHighlight, copyTextToClipboard, finishProgressTask, showToast, updateProgress } from './main-ui.js';
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
@@ -1465,6 +1465,7 @@ export async function renderActiveTab() {
         el.contentView.classList.remove('hidden');
         el.selectEngine.disabled = true;
         syncAIControls();
+        requestAnimationFrame(() => updateEditToolbarScrollbar());
     } else {
         el.editToolbar.classList.add('hidden');
         el.editorView.classList.add('hidden');
@@ -1472,6 +1473,8 @@ export async function renderActiveTab() {
         el.btnEdit.classList.remove('active');
         el.selectEngine.disabled = state.currentDocumentType !== 'markdown';
         syncAIControls();
+        if (el.editToolbarScrollLeft) el.editToolbarScrollLeft.classList.add('hidden');
+        if (el.editToolbarScrollRight) el.editToolbarScrollRight.classList.add('hidden');
     }
 
     getScroller().classList.toggle('html-mode', state.currentDocumentType === 'html');
