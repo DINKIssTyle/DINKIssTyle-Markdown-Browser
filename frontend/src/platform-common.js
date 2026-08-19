@@ -64,10 +64,27 @@ export async function initializePlatform() {
 
     if (!isMobilePlatform()) return;
 
-    // Suppress default mobile context menu
-    window.addEventListener('contextmenu', e => {
-        e.preventDefault();
-    }, { capture: true });
+    // Global search bridge for native OS context menus (iOS / Android)
+    window.searchInDocument = async function(text) {
+        const query = String(text || '').trim();
+        if (!query) return;
+
+        const { state } = await import('./main-state.js');
+        if (state.isEditing) {
+            const { openFindBar } = await import('./main-editor.js');
+            openFindBar(false, query);
+        } else {
+            const { highlightText } = await import('./main-ui.js');
+            highlightText(query);
+        }
+    };
+
+    window.addEventListener('app:search-text', (event) => {
+        const query = event.detail?.query || '';
+        if (query) {
+            window.searchInDocument(query);
+        }
+    });
 
     setupVisualViewport();
     setupTouchFeedback();

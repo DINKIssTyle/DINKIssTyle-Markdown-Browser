@@ -318,7 +318,16 @@ export function initSidebar() {
     }
 
     // Bind global click to close context menu
-    document.addEventListener('click', () => closeFileTreeContextMenu());
+    document.addEventListener('click', (e) => {
+        if (!e.target.closest('.file-tree-context-menu, .file-tree-more-btn')) {
+            closeFileTreeContextMenu();
+        }
+    });
+    document.addEventListener('pointerdown', (e) => {
+        if (!e.target.closest('.file-tree-context-menu, .file-tree-more-btn')) {
+            closeFileTreeContextMenu();
+        }
+    });
     window.addEventListener('blur', () => closeFileTreeContextMenu());
 }
 
@@ -622,6 +631,12 @@ function renderFileTree(node, depth, isRoot = false) {
             </button>
         ` : '';
 
+    const moreButton = !isRoot ? `
+            <button class="file-tree-more-btn" type="button" title="More options" aria-label="More options">
+                <span class="material-symbols-outlined" aria-hidden="true">more_vert</span>
+            </button>
+        ` : '';
+
     const row = `
         <div class="file-tree-item ${isDir ? 'is-dir' : 'is-file'} ${isRoot ? 'is-root has-refresh' : ''} ${current ? 'active' : ''}"
             data-path="${escapeAttr(node.path)}"
@@ -634,6 +649,7 @@ function renderFileTree(node, depth, isRoot = false) {
             <span class="file-tree-name">${escapeHTML(node.name || basename(node.path))}</span>
             ${filterButton}
             ${refreshButton}
+            ${moreButton}
         </div>
     `;
 
@@ -675,8 +691,79 @@ function bindFileTreeEvents() {
     });
 
     el.fileTree.querySelectorAll('.file-tree-item').forEach(item => {
+        let longPressTimer = null;
+        let touchStartX = 0;
+        let touchStartY = 0;
+        let isLongPressTriggered = false;
+
+        const clearLongPress = () => {
+            if (longPressTimer) {
+                clearTimeout(longPressTimer);
+                longPressTimer = null;
+            }
+        };
+
+        const moreBtn = item.querySelector('.file-tree-more-btn');
+        if (moreBtn) {
+            moreBtn.addEventListener('click', (event) => {
+                event.preventDefault();
+                event.stopPropagation();
+                const path = item.dataset.path;
+                const kind = item.dataset.kind;
+                if (!path) return;
+                showFileTreeContextMenu(event, path, kind === 'dir');
+            });
+        }
+
+        item.addEventListener('touchstart', (event) => {
+            if (event.target.closest('.file-tree-more-btn, .file-tree-refresh-btn, .file-tree-filter-btn')) return;
+            const touch = event.touches?.[0];
+            if (!touch) return;
+            touchStartX = touch.clientX;
+            touchStartY = touch.clientY;
+            isLongPressTriggered = false;
+
+            clearLongPress();
+            longPressTimer = setTimeout(() => {
+                isLongPressTriggered = true;
+                if (navigator.vibrate) {
+                    try { navigator.vibrate(30); } catch (_) {}
+                }
+                const path = item.dataset.path;
+                const kind = item.dataset.kind;
+                if (path) {
+                    showFileTreeContextMenu(touch, path, kind === 'dir');
+                }
+            }, 450);
+        }, { passive: true });
+
+        item.addEventListener('touchmove', (event) => {
+            const touch = event.touches?.[0];
+            if (!touch) return;
+            const moveDist = Math.hypot(touch.clientX - touchStartX, touch.clientY - touchStartY);
+            if (moveDist > 10) {
+                clearLongPress();
+            }
+        }, { passive: true });
+
+        item.addEventListener('touchend', (event) => {
+            clearLongPress();
+            if (isLongPressTriggered) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+        });
+
+        item.addEventListener('touchcancel', () => {
+            clearLongPress();
+        });
+
         item.addEventListener('click', async (event) => {
-            if (event.target.closest('.file-tree-refresh-btn')) return;
+            if (isLongPressTriggered) {
+                isLongPressTriggered = false;
+                return;
+            }
+            if (event.target.closest('.file-tree-refresh-btn, .file-tree-filter-btn, .file-tree-more-btn')) return;
             const path = item.dataset.path;
             if (!path) return;
 
@@ -934,13 +1021,28 @@ function showFileTreeContextMenu(event, path, isDir) {
     fileTreeContextMenu.classList.remove('hidden');
     fileTreeContextMenu.setAttribute('aria-hidden', 'false');
     
-    // Position menu
-    const menuRect = fileTreeContextMenu.getBoundingClientRect();
-    const x = Math.min(event.clientX, window.innerWidth - menuRect.width - 10);
-    const y = Math.min(event.clientY, window.innerHeight - menuRect.height - 10);
+    // Position menu at event coordinates
+    const menuW = fileTreeContextMenu.offsetWidth || fileTreeContextMenu.getBoundingClientRect().width || 168;
+    const menuH = fileTreeContextMenu.offsetHeight || fileTreeContextMenu.getBoundingClientRect().height || 160;
+
+    let clientX = event?.clientX;
+    let clientY = event?.clientY;
+
+    if ((clientX === undefined || clientY === undefined) && event?.target) {
+        const rect = event.target.getBoundingClientRect?.();
+        if (rect) {
+            clientX = rect.left;
+            clientY = rect.bottom;
+        }
+    }
+
+    const rawX = clientX !== undefined ? clientX : (window.innerWidth / 2 - menuW / 2);
+    const rawY = clientY !== undefined ? clientY : (window.innerHeight / 2 - menuH / 2);
+    const x = Math.max(10, Math.min(rawX, window.innerWidth - menuW - 10));
+    const y = Math.max(10, Math.min(rawY, window.innerHeight - menuH - 10));
     
-    fileTreeContextMenu.style.left = `${x}px`;
-    fileTreeContextMenu.style.top = `${y}px`;
+    fileTreeContextMenu.style.left = `${Math.round(x)}px`;
+    fileTreeContextMenu.style.top = `${Math.round(y)}px`;
     requestAnimationFrame(() => fileTreeContextMenu?.classList.add('show'));
 }
 

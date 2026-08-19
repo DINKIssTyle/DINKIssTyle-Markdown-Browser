@@ -1115,12 +1115,14 @@ export function triggerImmediateScrollSync() {
 }
 
 
-// ── Search Logic ──────────────────────────────────────────
-function openFindBar(withReplace = false) {
+export function openFindBar(withReplace = false, initialQuery = '') {
     if (!state.isEditing || !el.editorFindBar) return;
 
     isFindBarOpen = true;
     el.editorFindBar.classList.remove('hidden');
+    if (initialQuery) {
+        el.editorFindInput.value = initialQuery;
+    }
     el.editorFindInput.focus();
     el.editorFindInput.select();
 

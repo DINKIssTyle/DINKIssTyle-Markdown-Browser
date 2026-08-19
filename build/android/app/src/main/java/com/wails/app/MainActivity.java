@@ -101,45 +101,40 @@ public class MainActivity extends AppCompatActivity {
         webView = findViewById(R.id.webview);
         bridge.setWebView(webView);
 
-        // Suppress native long-click context menus and text selection action mode
-        webView.setOnLongClickListener(v -> true);
-        webView.setLongClickable(false);
+        // Configure custom text selection action mode with "Search in Doc"
         webView.setCustomSelectionActionModeCallback(new android.view.ActionMode.Callback() {
+            private static final int MENU_SEARCH_IN_DOC = 9999;
+
             @Override
             public boolean onCreateActionMode(android.view.ActionMode mode, android.view.Menu menu) {
-                return false;
+                menu.add(0, MENU_SEARCH_IN_DOC, 0, "Search in Doc")
+                    .setIcon(android.R.drawable.ic_menu_search)
+                    .setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS);
+                return true;
             }
+
             @Override
             public boolean onPrepareActionMode(android.view.ActionMode mode, android.view.Menu menu) {
                 return false;
             }
+
             @Override
             public boolean onActionItemClicked(android.view.ActionMode mode, android.view.MenuItem item) {
+                if (item.getItemId() == MENU_SEARCH_IN_DOC) {
+                    webView.evaluateJavascript(
+                        "(function(){ const t = window.getSelection() ? window.getSelection().toString() : ''; if (window.searchInDocument) { window.searchInDocument(t); } else { window.dispatchEvent(new CustomEvent('app:search-text', { detail: { query: t } })); } return t; })();",
+                        null
+                    );
+                    mode.finish();
+                    return true;
+                }
                 return false;
             }
+
             @Override
             public void onDestroyActionMode(android.view.ActionMode mode) {
             }
         });
-        if (android.os.Build.VERSION.SDK_INT >= android.os.Build.VERSION_CODES.M) {
-            webView.setCustomInsertionActionModeCallback(new android.view.ActionMode.Callback2() {
-                @Override
-                public boolean onCreateActionMode(android.view.ActionMode mode, android.view.Menu menu) {
-                    return false;
-                }
-                @Override
-                public boolean onPrepareActionMode(android.view.ActionMode mode, android.view.Menu menu) {
-                    return false;
-                }
-                @Override
-                public boolean onActionItemClicked(android.view.ActionMode mode, android.view.MenuItem item) {
-                    return false;
-                }
-                @Override
-                public void onDestroyActionMode(android.view.ActionMode mode) {
-                }
-            });
-        }
 
         // Configure WebView settings
         WebSettings settings = webView.getSettings();

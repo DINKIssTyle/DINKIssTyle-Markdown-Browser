@@ -662,24 +662,11 @@ export function bindContextMenu() {
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('click', event => {
         if (!event.target.closest('#context-menu')) {
-            const mobileSelectionTarget = isMobilePlatform()
-                ? event.target.closest('#markdown-container, .cm-editor')
-                : null;
-            if (mobileSelectionTarget && (state.isEditing || getIOSSelectionText())) {
-                scheduleIOSSelectionContextMenu(event);
-                return;
-            }
             closeContextMenu();
         }
     });
     document.addEventListener('scroll', closeContextMenu, true);
     window.addEventListener('blur', closeContextMenu);
-    if (isMobilePlatform()) {
-        document.addEventListener('selectionchange', () => scheduleIOSSelectionContextMenu());
-        document.addEventListener('pointerup', event => {
-            if (event.pointerType !== 'mouse') scheduleIOSSelectionContextMenu(event);
-        }, true);
-    }
 
     bindContextMenuAction(el.contextCopy, async () => {
         if (!contextMenuState?.selectionText) return;
@@ -776,6 +763,11 @@ function bindContextMenuAction(element, action) {
 }
 
 async function handleContextMenu(event) {
+    if (isMobilePlatform()) {
+        closeContextMenu();
+        return;
+    }
+
     const cmEditor = event.target.closest('.cm-editor');
     const isEditor = !!cmEditor;
 

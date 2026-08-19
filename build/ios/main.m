@@ -5,39 +5,55 @@
 #import <objc/runtime.h>
 #include <stdio.h>
 
-// Disable system editing actions / popups across WKWebView and its private subviews
-static BOOL Swizzled_canPerformAction(id self, SEL _cmd, SEL action, id sender) {
-    return NO;
-}
+@interface UIViewController (DKSTCustomEditMenu)
+- (void)triggerDKSTSearchInDocInView:(UIView *)view;
+@end
 
-static void SwizzleCanPerformActionForClass(Class targetClass) {
-    if (!targetClass) return;
-    Method method = class_getInstanceMethod(targetClass, @selector(canPerformAction:withSender:));
-    if (method) {
-        method_setImplementation(method, (IMP)Swizzled_canPerformAction);
-    } else {
-        class_addMethod(targetClass, @selector(canPerformAction:withSender:), (IMP)Swizzled_canPerformAction, "B@::@");
-    }
-}
-
-__attribute__((constructor))
-static void DisableSystemEditMenus(void) {
-    SwizzleCanPerformActionForClass([WKWebView class]);
-    Class contentViewClass = NSClassFromString(@"WKContentView");
-    if (contentViewClass) {
-        SwizzleCanPerformActionForClass(contentViewClass);
-    }
-}
-
-@implementation UIViewController (DisableEditMenu)
+@implementation UIViewController (DKSTCustomEditMenu)
 - (void)buildMenuWithBuilder:(id<UIMenuBuilder>)builder {
     [super buildMenuWithBuilder:builder];
     if (@available(iOS 16.0, *)) {
-        [builder removeMenuForIdentifier:UIMenuStandardEdit];
+        // Strip heavy/unnecessary lookup and sharing menus
         [builder removeMenuForIdentifier:UIMenuLookup];
         [builder removeMenuForIdentifier:UIMenuShare];
         [builder removeMenuForIdentifier:UIMenuLearn];
         [builder removeMenuForIdentifier:UIMenuFormat];
+
+        // Add custom "Search in Doc" action
+        __weak typeof(self) weakSelf = self;
+        UIAction *searchAction = [UIAction actionWithTitle:@"Search in Doc"
+                                                     image:[UIImage systemImageNamed:@"magnifyingglass"]
+                                                identifier:@"com.dinkisstyle.searchInDoc"
+                                                   handler:^(__kindof UIAction * _Nonnull action) {
+            UIWindow *keyWindow = nil;
+            for (UIScene *scene in [UIApplication sharedApplication].connectedScenes) {
+                if ([scene isKindOfClass:[UIWindowScene class]] && scene.activationState == UISceneActivationStateForegroundActive) {
+                    keyWindow = ((UIWindowScene *)scene).windows.firstObject;
+                    break;
+                }
+            }
+            if (keyWindow && weakSelf) {
+                [weakSelf triggerDKSTSearchInDocInView:keyWindow];
+            }
+        }];
+
+        UIMenu *customMenu = [UIMenu menuWithTitle:@""
+                                             image:nil
+                                        identifier:@"com.dinkisstyle.customEditMenu"
+                                           options:UIMenuOptionsDisplayInline
+                                          children:@[searchAction]];
+        [builder insertSiblingMenu:customMenu afterMenuForIdentifier:UIMenuStandardEdit];
+    }
+}
+
+- (void)triggerDKSTSearchInDocInView:(UIView *)view {
+    if ([view isKindOfClass:[WKWebView class]]) {
+        WKWebView *webView = (WKWebView *)view;
+        [webView evaluateJavaScript:@"(function(){ const t = window.getSelection() ? window.getSelection().toString() : ''; if (window.searchInDocument) { window.searchInDocument(t); } else { window.dispatchEvent(new CustomEvent('app:search-text', { detail: { query: t } })); } return t; })();" completionHandler:nil];
+        return;
+    }
+    for (UIView *subview in view.subviews) {
+        [self triggerDKSTSearchInDocInView:subview];
     }
 }
 @end
@@ -83,11 +99,6 @@ extern WailsAppDelegate *appDelegate;
     }
     sceneWindow.rootViewController = rootViewController;
     [sceneWindow makeKeyAndVisible];
-
-    Class contentViewClass = NSClassFromString(@"WKContentView");
-    if (contentViewClass) {
-        SwizzleCanPerformActionForClass(contentViewClass);
-    }
 
     self.window = sceneWindow;
     appDelegate.window = sceneWindow;
