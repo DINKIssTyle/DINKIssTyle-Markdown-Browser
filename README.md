@@ -8,6 +8,9 @@
   <strong>A lightweight and elegant cross-platform<br>Markdown viewer and editor!</strong>
 </p>
 
+
+<div align="center"><b>iOS/iPadOS</b><br><a href="https://apps.apple.com/kr/app/dkst-markdown-browser/id6799445013" target="blank"><img src="doc/appstore2.png" alt="" width="120"></a><br><br></div>
+
 <div align="center">
 <a href="README-ko-KR.md">한국어</a> | <a href="README-es-ES.md">Español</a> | <a href="README-zh-CN.md">汉语</a> | <a href="README-ja-JP.md">日本語</a>
 </div>

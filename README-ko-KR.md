@@ -8,11 +8,7 @@
   <strong>가볍고 우아한 크로스 플랫폼<br>마크다운 뷰어 및 에디터!</strong>
 </p>
 
-<div align="center">
-  
-
-
-</div>
+<div align="center"><b>iOS/iPadOS</b><br><a href="https://apps.apple.com/kr/app/dkst-markdown-browser/id6799445013" target="blank"><img src="doc/appstore2.png" alt="" width="120"></a><br><br></div>
 
 
 ## NEWS

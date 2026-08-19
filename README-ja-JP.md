@@ -8,9 +8,7 @@
   <strong>軽量でエレガントなクロスプラットフォームの<br>Markdownビューア＆エディタ！</strong></strong>
 </p>
 
-<div align="center">
-
-</div>
+<div align="center"><b>iOS/iPadOS</b><br><a href="https://apps.apple.com/kr/app/dkst-markdown-browser/id6799445013" target="blank"><img src="doc/appstore2.png" alt="" width="120"></a><br><br></div>
 
 ## NEWS
 
