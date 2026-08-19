@@ -982,7 +982,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 .file-tree-item {
     --tree-depth: 0;
     display: grid;
-    grid-template-columns: 18px 20px minmax(0, 1fr) auto;
+    grid-template-columns: 18px 20px minmax(0, 1fr) 26px;
     align-items: center;
     gap: 6px;
     min-height: 30px;
@@ -991,19 +991,25 @@ body.sidebar-is-resizing #app-sidebar.hidden {
     cursor: pointer;
     font-size: 13px;
     line-height: 1.25;
+    transform: none !important;
+    transition: background 0.12s ease, color 0.12s ease;
 }
 
 .file-tree-item.has-refresh {
     grid-template-columns: 18px 20px minmax(0, 1fr) 26px 26px;
 }
 
-.file-tree-item:hover {
+.file-tree-item:hover,
+.file-tree-item:active,
+.file-tree-item:focus {
     background: rgba(128, 128, 128, 0.1);
+    transform: none !important;
 }
 
 .file-tree-item.active {
     background: rgba(var(--accent-color-rgb), 0.12);
     color: var(--accent-color);
+    transform: none !important;
 }
 
 .file-tree-toggle,
@@ -3795,7 +3801,7 @@ html.platform-mobile .file-tree-context-menu .context-menu-item {
 }
 
 .file-tree-more-btn {
-    display: none;
+    display: inline-flex;
     align-items: center;
     justify-content: center;
     width: 26px;
@@ -3807,13 +3813,18 @@ html.platform-mobile .file-tree-context-menu .context-menu-item {
     background: transparent;
     color: var(--text-secondary);
     cursor: pointer;
-    opacity: 0.65;
-    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    opacity: 0;
+    visibility: hidden;
+    pointer-events: none;
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, visibility 0.15s ease;
     flex-shrink: 0;
 }
 
-.file-tree-item:hover .file-tree-more-btn {
-    display: inline-flex;
+.file-tree-item:hover .file-tree-more-btn,
+.file-tree-more-btn:focus-visible {
+    opacity: 0.65;
+    visibility: visible;
+    pointer-events: auto;
 }
 
 .file-tree-more-btn:hover {
@@ -3827,17 +3838,23 @@ html.platform-mobile .file-tree-context-menu .context-menu-item {
     line-height: 1;
 }
 
+html.platform-mobile .file-tree-item {
+    grid-template-columns: 18px 20px minmax(0, 1fr) 32px !important;
+}
+
 html.platform-mobile .file-tree-more-btn {
     display: inline-flex !important;
+    opacity: 0.75 !important;
+    visibility: visible !important;
+    pointer-events: auto !important;
     width: 32px !important;
     height: 32px !important;
     margin-right: 4px !important;
-    opacity: 0.75;
 }
 
 html.platform-mobile .file-tree-more-btn:active {
-    opacity: 1;
-    background: rgba(var(--accent-color-rgb), 0.18);
+    opacity: 1 !important;
+    background: rgba(var(--accent-color-rgb), 0.15) !important;
 }
 
 html.platform-mobile .file-tree-more-btn .material-symbols-outlined {
@@ -7291,11 +7308,21 @@ html.platform-mobile.mobile-keyboard-visible .edit-toolbar {
     box-shadow: 0 5px 16px rgba(0, 0, 0, 0.14);
 }
 
-html.platform-mobile :is(button, a[href], [role="button"], select, .nav-btn, .tool-btn, .tab-item, .action-btn, .sidebar-tab-btn, .recent-item, .modal-btn, .file-tree-item, .outline-item) {
+html.platform-mobile :is(button, a[href], [role="button"], select, .nav-btn, .tool-btn, .tab-item, .action-btn, .sidebar-tab-btn, .recent-item, .modal-btn, .outline-item) {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
     transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease;
     will-change: transform;
+}
+
+html.platform-mobile .file-tree-item,
+html.platform-mobile .file-tree-item:hover,
+html.platform-mobile .file-tree-item:active,
+html.platform-mobile .file-tree-item.is-touch-pressed,
+html.platform-mobile .file-tree-item.is-touch-releasing {
+    transform: none !important;
+    will-change: auto !important;
+    transition: background 0.12s ease, color 0.12s ease !important;
 }
 
 html.platform-mobile .is-touch-pressed {
