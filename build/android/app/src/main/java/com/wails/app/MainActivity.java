@@ -31,6 +31,9 @@ import android.webkit.WebViewClient;
 import androidx.annotation.Nullable;
 import androidx.appcompat.app.AppCompatActivity;
 import androidx.core.content.FileProvider;
+import androidx.core.view.ViewCompat;
+import androidx.core.view.WindowCompat;
+import androidx.core.view.WindowInsetsCompat;
 import androidx.webkit.WebViewAssetLoader;
 
 import org.json.JSONObject;
@@ -83,7 +86,22 @@ public class MainActivity extends AppCompatActivity {
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
+        
+        // Ensure web content respects system window insets (status bar, display cutout, nav bar)
+        WindowCompat.setDecorFitsSystemWindows(getWindow(), true);
+        
         setContentView(R.layout.activity_main);
+
+        android.view.View mainContainer = findViewById(R.id.main_container);
+        if (mainContainer != null) {
+            ViewCompat.setOnApplyWindowInsetsListener(mainContainer, (v, insets) -> {
+                androidx.core.graphics.Insets systemBars = insets.getInsets(
+                    WindowInsetsCompat.Type.systemBars() | WindowInsetsCompat.Type.displayCutout()
+                );
+                v.setPadding(systemBars.left, systemBars.top, systemBars.right, systemBars.bottom);
+                return insets;
+            });
+        }
 
         // Initialize the native Go library
         bridge = new WailsBridge(this);
@@ -100,41 +118,6 @@ public class MainActivity extends AppCompatActivity {
     private void setupWebView() {
         webView = findViewById(R.id.webview);
         bridge.setWebView(webView);
-
-        // Configure custom text selection action mode with "Search in Doc"
-        webView.setCustomSelectionActionModeCallback(new android.view.ActionMode.Callback() {
-            private static final int MENU_SEARCH_IN_DOC = 9999;
-
-            @Override
-            public boolean onCreateActionMode(android.view.ActionMode mode, android.view.Menu menu) {
-                menu.add(0, MENU_SEARCH_IN_DOC, 0, "Search in Doc")
-                    .setIcon(android.R.drawable.ic_menu_search)
-                    .setShowAsAction(android.view.MenuItem.SHOW_AS_ACTION_ALWAYS);
-                return true;
-            }
-
-            @Override
-            public boolean onPrepareActionMode(android.view.ActionMode mode, android.view.Menu menu) {
-                return false;
-            }
-
-            @Override
-            public boolean onActionItemClicked(android.view.ActionMode mode, android.view.MenuItem item) {
-                if (item.getItemId() == MENU_SEARCH_IN_DOC) {
-                    webView.evaluateJavascript(
-                        "(function(){ const t = window.getSelection() ? window.getSelection().toString() : ''; if (window.searchInDocument) { window.searchInDocument(t); } else { window.dispatchEvent(new CustomEvent('app:search-text', { detail: { query: t } })); } return t; })();",
-                        null
-                    );
-                    mode.finish();
-                    return true;
-                }
-                return false;
-            }
-
-            @Override
-            public void onDestroyActionMode(android.view.ActionMode mode) {
-            }
-        });
 
         // Configure WebView settings
         WebSettings settings = webView.getSettings();

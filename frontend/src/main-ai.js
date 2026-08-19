@@ -1719,6 +1719,13 @@ export function bindAIEvents() {
         showToast("Settings saved.");
     };
 
+    el.settingsViewerFont?.addEventListener('pointerdown', () => {
+        void populateSystemFonts();
+    });
+    el.settingsViewerFont?.addEventListener('focus', () => {
+        void populateSystemFonts();
+    });
+
     // AI Progress Events from Go
     EventsOn('ai:progress', (data) => {
         if (!aiRequestInFlight) {

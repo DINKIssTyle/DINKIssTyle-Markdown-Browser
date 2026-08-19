@@ -41,6 +41,24 @@ func scanSystemFonts() []FontInfo {
 			"/Library/Fonts",
 			filepath.Join(os.Getenv("HOME"), "Library/Fonts"),
 		}
+	case "ios":
+		fontDirs = []string{
+			"/System/Library/Fonts",
+			"/System/Library/Fonts/Core",
+			"/System/Library/Fonts/CoreAddition",
+			"/System/Library/Fonts/LanguageSupport",
+			"/System/Library/Fonts/Watch",
+			"/System/Library/Fonts/AppFonts",
+		}
+	case "android":
+		fontDirs = []string{
+			"/system/fonts",
+			"/system/font",
+			"/product/fonts",
+			"/system/product/fonts",
+			"/apex/com.android.runtime/fonts",
+			"/data/fonts",
+		}
 	case "windows":
 		windir := os.Getenv("WINDIR")
 		if windir == "" {
@@ -127,6 +145,53 @@ func scanSystemFonts() []FontInfo {
 			}
 			return nil
 		})
+	}
+
+	// Ensure essential mobile platform default font families are available
+	var standardFallbacks []string
+	switch runtime.GOOS {
+	case "ios":
+		standardFallbacks = []string{
+			"Apple SD Gothic Neo",
+			"Arial",
+			"Courier New",
+			"Georgia",
+			"Helvetica",
+			"Helvetica Neue",
+			"Hiragino Sans",
+			"Menlo",
+			"PingFang SC",
+			"PingFang TC",
+			"PingFang HK",
+			"San Francisco",
+			"Times New Roman",
+			"Trebuchet MS",
+			"Verdana",
+		}
+	case "android":
+		standardFallbacks = []string{
+			"Roboto",
+			"Noto Sans",
+			"Noto Sans CJK KR",
+			"Noto Serif",
+			"Droid Sans",
+			"Droid Serif",
+			"Droid Sans Mono",
+			"Sans-Serif",
+			"Serif",
+			"Monospace",
+		}
+	}
+
+	for _, fam := range standardFallbacks {
+		key := strings.ToLower(fam)
+		if !seenFamilies[key] {
+			fonts = append(fonts, FontInfo{
+				Family: fam,
+				Path:   "",
+			})
+			seenFamilies[key] = true
+		}
 	}
 
 	sort.Slice(fonts, func(i, j int) bool {
