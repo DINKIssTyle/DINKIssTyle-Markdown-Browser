@@ -7172,6 +7172,12 @@ html.platform-mobile body {
     min-height: 0;
 }
 
+html.platform-mobile,
+html.platform-mobile body,
+html.platform-mobile * {
+    -webkit-touch-callout: none !important;
+}
+
 html.platform-mobile #app {
     height: var(--mobile-viewport-height, 100dvh);
     min-height: 0;

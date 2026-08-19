@@ -1,7 +1,46 @@
 //go:build ios
 // Minimal bootstrap: delegate comes from Go archive (WailsAppDelegate)
 #import <UIKit/UIKit.h>
+#import <WebKit/WebKit.h>
+#import <objc/runtime.h>
 #include <stdio.h>
+
+// Disable system editing actions / popups across WKWebView and its private subviews
+static BOOL Swizzled_canPerformAction(id self, SEL _cmd, SEL action, id sender) {
+    return NO;
+}
+
+static void SwizzleCanPerformActionForClass(Class targetClass) {
+    if (!targetClass) return;
+    Method method = class_getInstanceMethod(targetClass, @selector(canPerformAction:withSender:));
+    if (method) {
+        method_setImplementation(method, (IMP)Swizzled_canPerformAction);
+    } else {
+        class_addMethod(targetClass, @selector(canPerformAction:withSender:), (IMP)Swizzled_canPerformAction, "B@::@");
+    }
+}
+
+__attribute__((constructor))
+static void DisableSystemEditMenus(void) {
+    SwizzleCanPerformActionForClass([WKWebView class]);
+    Class contentViewClass = NSClassFromString(@"WKContentView");
+    if (contentViewClass) {
+        SwizzleCanPerformActionForClass(contentViewClass);
+    }
+}
+
+@implementation UIViewController (DisableEditMenu)
+- (void)buildMenuWithBuilder:(id<UIMenuBuilder>)builder {
+    [super buildMenuWithBuilder:builder];
+    if (@available(iOS 16.0, *)) {
+        [builder removeMenuForIdentifier:UIMenuStandardEdit];
+        [builder removeMenuForIdentifier:UIMenuLookup];
+        [builder removeMenuForIdentifier:UIMenuShare];
+        [builder removeMenuForIdentifier:UIMenuLearn];
+        [builder removeMenuForIdentifier:UIMenuFormat];
+    }
+}
+@end
 
 // Referencing the class directly prevents the static linker from stripping the
 // Wails app delegate out of the Go c-archive.
@@ -44,6 +83,11 @@ extern WailsAppDelegate *appDelegate;
     }
     sceneWindow.rootViewController = rootViewController;
     [sceneWindow makeKeyAndVisible];
+
+    Class contentViewClass = NSClassFromString(@"WKContentView");
+    if (contentViewClass) {
+        SwizzleCanPerformActionForClass(contentViewClass);
+    }
 
     self.window = sceneWindow;
     appDelegate.window = sceneWindow;

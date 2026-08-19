@@ -64,6 +64,11 @@ export async function initializePlatform() {
 
     if (!isMobilePlatform()) return;
 
+    // Suppress default mobile context menu
+    window.addEventListener('contextmenu', e => {
+        e.preventDefault();
+    }, { capture: true });
+
     setupVisualViewport();
     setupTouchFeedback();
 
