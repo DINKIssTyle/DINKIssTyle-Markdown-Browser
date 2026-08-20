@@ -658,7 +658,30 @@ export function bindHighlightNav() {
 
 // ── Context Menu ───────────────────────────────────────────
 
+export function bindInputPasteSanitization() {
+    document.addEventListener('paste', event => {
+        const target = event.target;
+        if (!target || !(target instanceof HTMLInputElement || target instanceof HTMLTextAreaElement)) return;
+        if (target.closest('.cm-editor')) return;
+        if (target.readOnly || target.disabled) return;
+        if (target.type === 'file' || target.type === 'checkbox' || target.type === 'radio' || target.type === 'range') return;
+
+        const rawText = event.clipboardData?.getData('text/plain');
+        if (typeof rawText === 'string' && rawText.length > 0) {
+            event.preventDefault();
+            const start = target.selectionStart ?? target.value.length;
+            const end = target.selectionEnd ?? target.value.length;
+            const val = target.value;
+            target.value = val.slice(0, start) + rawText + val.slice(end);
+            target.selectionStart = target.selectionEnd = start + rawText.length;
+            target.dispatchEvent(new Event('input', { bubbles: true }));
+            target.dispatchEvent(new Event('change', { bubbles: true }));
+        }
+    }, true);
+}
+
 export function bindContextMenu() {
+    bindInputPasteSanitization();
     document.addEventListener('contextmenu', handleContextMenu);
     document.addEventListener('click', event => {
         if (!event.target.closest('#context-menu')) {

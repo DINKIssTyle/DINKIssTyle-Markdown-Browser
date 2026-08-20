@@ -3289,8 +3289,12 @@ body.editor-split-is-resizing-vertical * {
 @media screen {
 
     #main-container.is-editing .document-area.editor-preview-hidden .content-view,
+    #main-container.is-editing .document-area.editor-preview-hidden #content-view-scrollbar,
     #main-container.is-editing .document-area.editor-preview-hidden .editor-pane-splitter {
         display: none !important;
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
     }
 
     #main-container.is-editing .document-area.editor-preview-hidden .editor-view {

@@ -5283,7 +5283,15 @@ function bindEditorPaneSplitter() {
             el.edPreviewToggle.setAttribute('aria-label', previewAction);
             el.edPreviewToggle.setAttribute('aria-pressed', String(isPreviewVisible));
         }
-        requestAnimationFrame(() => cmView?.requestMeasure());
+        if (!isPreviewVisible && el.contentViewScrollbar) {
+            el.contentViewScrollbar.classList.remove('is-overflowing', 'is-active');
+        }
+        requestAnimationFrame(() => {
+            cmView?.requestMeasure();
+            import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
+                updateCustomVerticalScrollbars();
+            }).catch(() => {});
+        });
     };
 
     updateSplitControls();

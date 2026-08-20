@@ -98,7 +98,14 @@ export function updateCustomVerticalScrollbars(activeTarget = null) {
     if (docRect.width <= 0 || docRect.height <= 0) return;
 
     // 1. Content View (Viewer)
-    if (el.contentView && el.contentViewScrollbar && !el.contentView.classList.contains('hidden') && el.contentView.offsetParent !== null) {
+    const isContentVisible = el.contentView &&
+        el.contentViewScrollbar &&
+        !el.contentView.classList.contains('hidden') &&
+        !el.documentArea?.classList.contains('editor-preview-hidden') &&
+        el.contentView.offsetParent !== null &&
+        el.contentView.clientHeight > 0;
+
+    if (isContentVisible) {
         const rect = el.contentView.getBoundingClientRect();
         const clientHeight = el.contentView.clientHeight;
         const scrollHeight = el.contentView.scrollHeight;
@@ -134,7 +141,14 @@ export function updateCustomVerticalScrollbars(activeTarget = null) {
 
     // 2. Editor View (CodeMirror Scroller)
     const cmScroller = el.editorView?.querySelector('.cm-scroller');
-    if (el.editorView && el.editorViewScrollbar && !el.editorView.classList.contains('hidden') && el.editorView.offsetParent !== null && cmScroller) {
+    const isEditorVisible = el.editorView &&
+        el.editorViewScrollbar &&
+        !el.editorView.classList.contains('hidden') &&
+        el.editorView.offsetParent !== null &&
+        el.editorView.clientHeight > 0 &&
+        cmScroller;
+
+    if (isEditorVisible) {
         const rect = el.editorView.getBoundingClientRect();
         const clientHeight = cmScroller.clientHeight;
         const scrollHeight = cmScroller.scrollHeight;
@@ -178,9 +192,11 @@ function bindScrollbarActivity() {
     }, true);
     window.addEventListener('resize', () => updateCustomVerticalScrollbars(), { passive: true });
     window.addEventListener('app:viewport-change', () => updateCustomVerticalScrollbars(), { passive: true });
-    if (typeof ResizeObserver !== 'undefined' && el.documentArea) {
+    if (typeof ResizeObserver !== 'undefined') {
         const areaObserver = new ResizeObserver(() => updateCustomVerticalScrollbars());
-        areaObserver.observe(el.documentArea);
+        if (el.documentArea) areaObserver.observe(el.documentArea);
+        if (el.contentView) areaObserver.observe(el.contentView);
+        if (el.editorView) areaObserver.observe(el.editorView);
     }
 }
 
