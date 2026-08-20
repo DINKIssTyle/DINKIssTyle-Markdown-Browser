@@ -492,11 +492,11 @@ function getPreferredLocalizedBundledPath(key, fallbackPath) {
     return document.defaultPath || fallbackPath;
 }
 
-const bundledMarkdownModules = import.meta.glob('../public/*.md', { as: 'raw', eager: true });
+const bundledMarkdownModules = import.meta.glob('./docs/*.md', { as: 'raw', eager: true });
 
 async function loadBundledMarkdown(path) {
     const cleanName = path.replace(/^\/+/, '');
-    const globKey = `../public/${cleanName}`;
+    const globKey = `./docs/${cleanName}`;
     if (typeof bundledMarkdownModules[globKey] === 'string') {
         return bundledMarkdownModules[globKey];
     }

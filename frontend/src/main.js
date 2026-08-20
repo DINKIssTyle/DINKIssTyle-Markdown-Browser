@@ -557,37 +557,6 @@ function bindHomeScreen() {
             await openAbout(true);
         }
     });
-
-    if (el.footerWhatsNew) {
-        el.footerWhatsNew.onclick = async (e) => {
-            e.preventDefault();
-            await openWhatsNew(true);
-        };
-    }
-    if (el.footerFeatures) {
-        el.footerFeatures.onclick = async (e) => {
-            e.preventDefault();
-            await openFeatures(true);
-        };
-    }
-    if (el.footerShortcuts) {
-        el.footerShortcuts.onclick = async (e) => {
-            e.preventDefault();
-            await openShortcuts(true);
-        };
-    }
-    if (el.footerThirdPartyNotices) {
-        el.footerThirdPartyNotices.onclick = async (e) => {
-            e.preventDefault();
-            await openThirdPartyNotices(true);
-        };
-    }
-    if (el.footerCopyright) {
-        el.footerCopyright.onclick = async (e) => {
-            e.preventDefault();
-            await openAbout(true);
-        };
-    }
 }
 
 async function openRecentFile(path) {

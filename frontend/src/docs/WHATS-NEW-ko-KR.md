@@ -19,13 +19,29 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
 
-# 새로운 기능
+## 3.0.2
 
-### 개선 사항 (Improvements)
-* **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다
+### 🎛️ 공통
 
-### 버그 수정 (Bug Fixes)
+* **아웃라인 패널**: 목록에 표시되던 마크다운 문법을 제거하고, 상위 계층에서 접을 수 있도록 개선했습니다.
+
+### 🖥️ Windows, macOS, Linux
+* **편집 모드 툴바 탐색 기능 추가**: 좁은 폭에서 가려져 마우스로 가로 스크롤해야 했던 툴바에 스크롤 버튼을 추가했습니다.
+
+### 📱 iOS/iPadOS 및 Android
+* **파일 트리 패널 개선**: 태블릿과 모바일에서 파일 트리 목록의 컨텍스트 메뉴를 길게 누르거나 컨텍스트 메뉴 버튼을 사용하여 호출할 수 있습니다.
+* **새 문서 생성**: 이제 올바른 위치에 파일을 생성하고 저장할 수 있습니다.
+* **컨텍스트 메뉴**: 데스크톱에서 사용되는 사용자화 된 컨텍스트 메뉴가 각 OS의 기본 컨텍스트 메뉴와 충돌하여 사용자화 된 컨텍스트 메뉴를 제거합니다.
+
+
+
+## 3.0.1
+
+### 🖥️ 공통
 * **details, summary 태그 랜더링**: 내용 요약/접기 랜더링 버그를 수정했습니다.
+
+### 📱 iOS/iPadOS 및 Android
+* **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다
 
 
 
