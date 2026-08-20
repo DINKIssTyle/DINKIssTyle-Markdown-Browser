@@ -9,13 +9,29 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
 
 
-# Nuevas Funcionalidades
+## 3.0.2
 
-### Mejoras (Improvements)
-* **UI de iOS y Android**: Los tamaños de fuente de todos los elementos de la interfaz de usuario en entornos móviles (smartphones) y tabletas (iPad / tabletas Android) se han optimizado para cumplir con los estándares de Apple Human Interface Guidelines (iOS/iPadOS Typography).
+### 🎛️ Común
 
-### Correcciones de Errores (Bug Fixes)
+* **Panel de esquema (Outline)**: Se eliminó la sintaxis Markdown en la visualización de la lista y se mejoró para permitir el plegado en niveles superiores.
+
+### 🖥️ Windows, macOS, Linux
+* **Navegación en la barra de herramientas del modo de edición**: Se añadieron botones de desplazamiento a la barra de herramientas del modo de edición para facilitar la navegación cuando queda oculta en anchos reducidos.
+
+### 📱 iOS/iPadOS y Android
+* **Mejoras en el panel del árbol de archivos**: El menú contextual de la lista del árbol de archivos en tabletas y móviles ahora se puede abrir manteniendo presionado o usando el botón de menú contextual.
+* **Creación de nuevos documentos**: Ahora es posible crear y guardar archivos en la ubicación correcta.
+* **Menú contextual**: Se eliminó el menú contextual personalizado de escritorio en móviles y tabletas para evitar conflictos con el menú nativo de cada sistema operativo.
+
+
+
+## 3.0.1
+
+### 🖥️ Común
 * **Renderizado de etiquetas details y summary**: Se corrigió un error de renderizado en el resumen/despliegue de contenido.
+
+### 📱 iOS/iPadOS y Android
+* **UI de iOS y Android**: Los tamaños de fuente de todos los elementos de la interfaz de usuario en entornos móviles (smartphones) y tabletas (iPad / tabletas Android) se han optimizado para cumplir con los estándares de Apple Human Interface Guidelines (iOS/iPadOS Typography).
 
 
 

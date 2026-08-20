@@ -9,13 +9,29 @@ DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow*
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 軽快でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！<br><br>Windows、macOS、Linux、iOS、iPadOS、およびAndroidで利用可能になりました。<br><br></div>
 
 
-# 新機能
+## 3.0.2
 
-### 改善点 (Improvements)
-* **iOS、Android UI**: モバイル（スマートフォン）およびタブレット（iPad / Android Tablet）環境において、すべてのUI要素のフォントサイズがApple Human Interface Guidelines（iOS/iPadOS Typography）の標準仕様に適合するよう最適化しました。
+### 🎛️ 共通
 
-### バグ修正 (Bug Fixes)
+* **アウトラインパネル**: リストに表示されていたMarkdown構文を取り除き、上位階層で折りたためるように改善しました。
+
+### 🖥️ Windows, macOS, Linux
+* **編集モードツールバーのナビゲーション機能追加**: 幅が狭い場合に隠れてしまいマウスで水平スクロールが必要だったツールバーに、スクロールボタンを追加しました。
+
+### 📱 iOS/iPadOS および Android
+* **ファイルツリーパネルの改善**: タブレットやモバイルでファイルツリーリストのコンテキストメニューを長押し、またはコンテキストメニューボタンから呼び出せるようになりました。
+* **新規ドキュメント作成**: 正しい場所にファイルを作成・保存できるようになりました。
+* **コンテキストメニュー**: デスクトップで使用されるカスタムコンテキストメニューが各OSの標準コンテキストメニューと競合していたため、カスタムコンテキストメニューを削除しました。
+
+
+
+## 3.0.1
+
+### 🖥️ 共通
 * **details, summary タグのレンダリング**: コンテンツの要約/折りたたみレンダリングのバグを修正しました。
+
+### 📱 iOS/iPadOS および Android
+* **iOS、Android UI**: モバイル（スマートフォン）およびタブレット（iPad / Android Tablet）環境において、すべてのUI要素のフォントサイズがApple Human Interface Guidelines（iOS/iPadOS Typography）の標準仕様に適合するよう最適化しました。
 
 
 

@@ -9,13 +9,29 @@
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
 
 
-# 新功能
+## 3.0.2
 
-### 改进事项 (Improvements)
-* **iOS、Android UI**: 移动端（智能手机）与平板端（iPad / Android 平板）环境下，所有 UI 元素的字体大小均经过优化，以严格契合 Apple Human Interface Guidelines (iOS/iPadOS Typography) 标准规范。
+### 🎛️ 通用
 
-### 错误修复 (Bug Fixes)
+* **大纲面板**: 移除了列表中显示的 Markdown 语法标记，并支持在更高层级进行折叠。
+
+### 🖥️ Windows, macOS, Linux
+* **新增编辑模式工具栏导航功能**: 在窄窗口宽度下工具栏被遮挡时，新增了滚动按钮，无需再用鼠标横向滚动。
+
+### 📱 iOS/iPadOS 及 Android
+* **文件树面板改进**: 在平板和手机端，可通过长按文件列表项或点击右键菜单按钮呼出上下文菜单。
+* **新建文档**: 现可在正确的位置创建并保存文件。
+* **上下文菜单**: 移除了在移动设备上与系统原生菜单冲突的桌面端自定义右键菜单。
+
+
+
+## 3.0.1
+
+### 🖥️ 通用
 * **details, summary 标签渲染**: 修复了内容摘要/折叠渲染的错误。
+
+### 📱 iOS/iPadOS 及 Android
+* **iOS、Android UI**: 移动端（智能手机）与平板端（iPad / Android 平板）环境下，所有 UI 元素的字体大小均经过优化，以严格契合 Apple Human Interface Guidelines (iOS/iPadOS Typography) 标准规范。
 
 
 

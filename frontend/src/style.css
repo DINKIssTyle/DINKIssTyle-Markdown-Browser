@@ -5987,11 +5987,11 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
 .interface-setting-item {
     min-width: 0;
     min-height: 68px;
-    padding: 12px;
+    padding: 12px 14px;
     display: grid;
-    grid-template-columns: 30px minmax(0, 1fr) auto;
+    grid-template-columns: auto minmax(0, 1fr) auto;
     align-items: center;
-    gap: 10px;
+    gap: 12px;
     border: 1px solid var(--border-color);
     border-radius: 11px;
     background: color-mix(in srgb, var(--surface-color) 68%, transparent);
@@ -6000,12 +6000,15 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
 .interface-setting-icon {
     width: 30px;
     height: 30px;
-    display: grid;
-    place-items: center;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
     border-radius: 8px;
     color: var(--text-muted);
     background: color-mix(in srgb, var(--text-color) 6%, transparent);
     font-size: 18px;
+    line-height: 1;
 }
 
 .interface-setting-copy {
@@ -7177,7 +7180,7 @@ html.dark .settings-switch input+span::after {
 
     .interface-setting-item {
         display: grid !important;
-        grid-template-columns: 36px minmax(0, 1fr) !important;
+        grid-template-columns: auto minmax(0, 1fr) !important;
         grid-template-rows: auto auto !important;
         column-gap: 12px !important;
         row-gap: 12px !important;

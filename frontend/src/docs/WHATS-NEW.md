@@ -14,14 +14,29 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 
 
-# 3.0 New Features
-### Experience DKST Markdown Browser optimized for mobile environments. Available on iPhone, Android Phone, iPad, and Android Tablet.
+## 3.0.2
 
-### Improvements
-* **iOS, Android UI**: Font sizes for all UI elements in mobile (smartphone) and tablet (iPad/Android Tablet) environments are optimized to comply with Apple Human Interface Guidelines (iOS/iPadOS Typography) standard specifications.
+### 🎛️ Common
 
-### Bug Fixes
+* **Outline Panel**: Removed raw Markdown syntax from the list display and improved it to allow collapsing at higher heading levels.
+
+### 🖥️ Windows, macOS, Linux
+* **Toolbar Navigation in Edit Mode**: Added scroll buttons to the edit mode toolbar to easily navigate when it is obscured in narrow window widths.
+
+### 📱 iOS/iPadOS & Android
+* **File Tree Panel Improvements**: Context menus for file tree items on tablet and mobile can now be opened via long-press or using the dedicated context menu button.
+* **New Document Creation**: Files can now be created and saved in the correct location.
+* **Context Menu**: Removed the custom desktop context menu on mobile and tablet platforms as it conflicted with native OS context menus.
+
+
+
+## 3.0.1
+
+### 🖥️ Common
 * **details, summary Tag Rendering**: Fixed a rendering bug with content summary/collapse.
+
+### 📱 iOS/iPadOS & Android
+* **iOS, Android UI**: Font sizes for all UI elements in mobile (smartphone) and tablet (iPad/Android Tablet) environments are optimized to comply with Apple Human Interface Guidelines (iOS/iPadOS Typography) standard specifications.
 
 
 
