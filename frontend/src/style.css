@@ -8013,7 +8013,7 @@ html.platform-mobile .modal-overlay {
     -webkit-overflow-scrolling: touch;
 }
 
-html.platform-mobile .modal-content {
+html.platform-mobile #modal-content {
     border-radius: 18px !important;
     padding: 22px !important;
     width: min(440px, calc(100vw - 32px)) !important;
@@ -8024,7 +8024,7 @@ html.platform-mobile .modal-content {
     box-sizing: border-box !important;
 }
 
-html.platform-mobile .modal-content.language-picker-modal {
+html.platform-mobile #modal-content.language-picker-modal {
     width: min(440px, calc(100vw - 32px)) !important;
     max-width: 440px !important;
     padding: 22px 22px 18px !important;
