@@ -25,6 +25,7 @@ import {
 import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
 import { isMobilePlatform } from './platform-common.js';
+import { triggerHaptic } from './main-haptic.js';
 
 // ... (omitted lines)
 
@@ -737,9 +738,7 @@ function bindFileTreeEvents() {
             clearLongPress();
             longPressTimer = setTimeout(() => {
                 isLongPressTriggered = true;
-                if (navigator.vibrate) {
-                    try { navigator.vibrate(30); } catch (_) {}
-                }
+                triggerHaptic('medium');
                 const path = item.dataset.path;
                 const kind = item.dataset.kind;
                 if (path) {

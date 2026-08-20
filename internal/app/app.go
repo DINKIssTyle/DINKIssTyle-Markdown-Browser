@@ -2088,3 +2088,9 @@ func setDefaultMarkdownApp() {
 		_ = exec.Command("xdg-mime", "default", desktopID, mimeType).Run()
 	}
 }
+
+// Haptic triggers tactile haptic feedback on supported mobile devices.
+func (a *App) Haptic(style string) {
+	platformHaptic(style)
+}
+
