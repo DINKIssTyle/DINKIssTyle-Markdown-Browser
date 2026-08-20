@@ -484,33 +484,40 @@ function bindHomeScreen() {
             closeSidebar();
         }
 
+        const targetTabId = item.dataset.tabId;
         const targetPath = item.dataset.path;
         const targetLine = Number(item.dataset.line) || 1;
         const targetKeyword = item.dataset.keyword || "";
         const targetMatchIndex = Number(item.dataset.matchIndex) || 0;
 
         setTimeout(async () => {
-            if (isMobilePlatform() || window.innerWidth <= 768) {
-                if (targetPath) {
-                    const { switchToTabByPath, getActiveTab } = await import('./main-tabs.js');
-                    const activeTab = getActiveTab();
-                    if (activeTab && activeTab.path !== targetPath) {
-                        await switchToTabByPath(targetPath);
-                    }
+            const normalizedTargetPath = targetPath ? normalizeFileURLPath(targetPath) : "";
+            const matchedTab = state.tabs.find(tab => {
+                if (targetTabId && tab.id === targetTabId) return true;
+                if (!normalizedTargetPath) return false;
+                const tabPath = normalizeFileURLPath(tab.editingSourcePath || tab.path || "");
+                return tabPath === normalizedTargetPath;
+            });
+
+            if (matchedTab) {
+                if (matchedTab.id !== state.activeTabId) {
+                    await switchToTab(matchedTab.id);
                 }
                 if (state.isEditing) {
                     scrollEditorToLine(targetLine);
-                } else {
+                } else if (targetKeyword) {
                     applyHighlight(targetKeyword, targetMatchIndex);
-                    scrollPreviewHeadingToTop(targetLine);
                 }
                 return;
             }
-            openPath(targetPath, {
-                pushHistory: true,
-                keyword: targetKeyword,
-                newTab: event.metaKey || event.ctrlKey || state.isEditing,
-            });
+
+            if (targetPath) {
+                await openPath(targetPath, {
+                    pushHistory: true,
+                    keyword: targetKeyword,
+                    newTab: event.metaKey || event.ctrlKey || state.isEditing,
+                });
+            }
         }, 60);
     });
     el.searchResults.addEventListener('keydown', event => {

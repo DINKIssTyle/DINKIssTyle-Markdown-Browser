@@ -384,6 +384,7 @@ async function renderCurrentDocumentSearch(query) {
             if (occurrence < 0) return;
 
             matches.push({
+                tabId: tab.id,
                 path,
                 documentName,
                 line: index + 1,
@@ -406,7 +407,7 @@ async function renderCurrentDocumentSearch(query) {
     }
 
     el.searchResults.innerHTML = matches.map(result => `
-        <div class="result-item recent-item" data-path="${escapeAttr(result.path)}" data-keyword="${escapeAttr(query)}" data-line="${result.line}" data-match-index="${result.matchIndex}" tabindex="0">
+        <div class="result-item recent-item" data-tab-id="${escapeAttr(result.tabId || '')}" data-path="${escapeAttr(result.path)}" data-keyword="${escapeAttr(query)}" data-line="${result.line}" data-match-index="${result.matchIndex}" tabindex="0">
             <div class="recent-file-text">
                 <span class="recent-name">${escapeHTML(result.documentName)} · Line ${result.line}</span>
                 <span class="recent-path">${escapeHTML(result.text)}</span>

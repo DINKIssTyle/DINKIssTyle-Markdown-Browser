@@ -149,6 +149,20 @@ export async function switchToTab(tabID) {
     await renderActiveTab();
 }
 
+export async function switchToTabByPath(path) {
+    if (!path) return false;
+    const normalized = normalizeFileURLPath(path);
+    const targetTab = state.tabs.find(tab => {
+        const tabPath = normalizeFileURLPath(tab.editingSourcePath || tab.path || "");
+        return tabPath === normalized;
+    });
+    if (targetTab) {
+        await switchToTab(targetTab.id);
+        return true;
+    }
+    return false;
+}
+
 // ── Tab Rendering ──────────────────────────────────────────
 
 function isPhoneScreen() {
