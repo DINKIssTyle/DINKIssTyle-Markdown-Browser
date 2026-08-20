@@ -14,6 +14,8 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 ### 🎛️ Común
 
 * **Panel de esquema (Outline)**: Se eliminó la sintaxis Markdown en la visualización de la lista y se mejoró para permitir el plegado en niveles superiores.
+* **Panel del Árbol de Archivos**: Puedes renombrar archivos a través del menú contextual.
+
 
 ### 🖥️ Windows, macOS, Linux
 * **Navegación en la barra de herramientas del modo de edición**: Se añadieron botones de desplazamiento a la barra de herramientas del modo de edición para facilitar la navegación cuando queda oculta en anchos reducidos.

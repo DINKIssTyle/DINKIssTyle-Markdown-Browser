@@ -891,9 +891,9 @@ function showFileTreeContextMenu(event, path, isDir) {
     fileTreeContextMenu.innerHTML = `
         ${!isDir ? `<button class="context-menu-item" id="ft-ctx-open-new-tab">Open In New Tab</button>` : ''}
         ${state.isEditing && !isDir ? `<button class="context-menu-item" id="ft-ctx-insert">Insert</button>` : ''}
-        ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-rename">Rename</button>` : ''}
-        ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-duplicate">Duplicate</button>` : ''}
-        ${state.isEditing ? `<button class="context-menu-item" id="ft-ctx-delete">Delete</button>` : ''}
+        <button class="context-menu-item" id="ft-ctx-rename">Rename</button>
+        <button class="context-menu-item" id="ft-ctx-duplicate">Duplicate</button>
+        <button class="context-menu-item" id="ft-ctx-delete">Delete</button>
         <button class="context-menu-item" id="ft-ctx-copy-path">Copy Path</button>
     `;
 
@@ -970,7 +970,7 @@ function showFileTreeContextMenu(event, path, isDir) {
                 }
 
                 const renamedPath = await RenameFileTreePath(path, trimmedName);
-                if (isCurrentEditedFile) {
+                if (!isDir) {
                     applyEditedDocumentRename(path, renamedPath);
                 }
                 await updateFileTree({ forceRefresh: true });

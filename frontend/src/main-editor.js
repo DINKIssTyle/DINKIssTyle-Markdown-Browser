@@ -3652,8 +3652,37 @@ export async function createNewDocument() {
                         break;
                     }
                 }
-                await SaveFile(candidatePath, "");
-                await openPath(candidatePath, { pushHistory: true, setHome: true, newTab: true, openInEditMode: true });
+
+                const inputName = await showTextPrompt("New Document", "Enter a name for the new file:", candidateName, { select: true });
+                if (inputName === null) {
+                    return;
+                }
+                let fileName = inputName.trim();
+                if (!fileName) {
+                    fileName = candidateName;
+                }
+                if (!/\.(md|markdown)$/i.test(fileName)) {
+                    fileName += '.md';
+                }
+
+                const targetPath = `${defaultDir}/${fileName}`;
+                try {
+                    await ReadFile(targetPath);
+                    const overwrite = await AskConfirm(
+                        "File Already Exists",
+                        `"${fileName}" already exists. Do you want to replace it?`,
+                        "Replace",
+                        "Cancel"
+                    );
+                    if (!overwrite) return;
+                } catch {
+                    // File doesn't exist, proceed
+                }
+
+                await SaveFile(targetPath, "");
+                const { updateFileTree } = await import('./main-sidebar.js');
+                await updateFileTree({ forceRefresh: true });
+                await openPath(targetPath, { pushHistory: true, setHome: true, newTab: true, openInEditMode: true });
                 showToast("New document created.");
                 return;
             }
@@ -3661,6 +3690,8 @@ export async function createNewDocument() {
             console.warn("Mobile createNewDocument storage dir fallback:", err);
         }
         await createUnsavedMarkdownTab();
+        const { updateFileTree } = await import('./main-sidebar.js');
+        await updateFileTree({ forceRefresh: true });
         showToast("New document created.");
         return;
     }
@@ -3670,6 +3701,8 @@ export async function createNewDocument() {
         const selectedPath = await ShowSaveFileDialog(defaultName);
         if (selectedPath) {
             await SaveFile(selectedPath, "");
+            const { updateFileTree } = await import('./main-sidebar.js');
+            await updateFileTree({ forceRefresh: true });
             await openPath(selectedPath, { pushHistory: true, setHome: true, newTab: true, openInEditMode: true });
             showToast("New document created.");
         }

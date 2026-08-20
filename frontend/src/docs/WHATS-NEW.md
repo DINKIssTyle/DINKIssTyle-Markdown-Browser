@@ -19,6 +19,7 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 ### 🎛️ Common
 
 * **Outline Panel**: Removed raw Markdown syntax from the list display and improved it to allow collapsing at higher heading levels.
+* **File Tree Panel**: You can rename files through the context menu.
 
 ### 🖥️ Windows, macOS, Linux
 * **Toolbar Navigation in Edit Mode**: Added scroll buttons to the edit mode toolbar to easily navigate when it is obscured in narrow window widths.

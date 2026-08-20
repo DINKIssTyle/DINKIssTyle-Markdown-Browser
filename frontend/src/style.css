@@ -7994,9 +7994,46 @@ html.platform-mobile .ai-prompt-stream-kind {
 }
 
 /* 5. Modals & Settings on Mobile & Tablet (iOS HIG Typography Standard) */
-html.platform-mobile :is(.settings-modal-heading h3, .modal-content h3, .document-meta-header h3, #system-install-title) {
+html.platform-mobile .modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: auto;
+    width: 100%;
+    height: var(--mobile-viewport-height, 100dvh);
+    max-height: var(--mobile-viewport-height, 100dvh);
+    padding: 16px;
+    padding-bottom: max(16px, env(safe-area-inset-bottom, 0px));
+    box-sizing: border-box;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
+}
+
+html.platform-mobile .modal-content {
+    border-radius: 18px !important;
+    padding: 22px !important;
+    width: min(440px, calc(100vw - 32px)) !important;
+    max-width: 440px !important;
+    max-height: calc(var(--mobile-viewport-height, 100dvh) - 32px) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch !important;
+    box-sizing: border-box !important;
+}
+
+html.platform-mobile .modal-content.language-picker-modal {
+    width: min(440px, calc(100vw - 32px)) !important;
+    max-width: 440px !important;
+    padding: 22px 22px 18px !important;
+}
+
+html.platform-mobile :is(#modal-title, .modal-content h3, .settings-modal-heading h3, .document-meta-header h3, #system-install-title) {
     font-size: 20px !important;
     font-weight: 700 !important;
+    line-height: 1.3 !important;
 }
 
 html.platform-mobile .settings-panel-header h2 {
@@ -8004,8 +8041,70 @@ html.platform-mobile .settings-panel-header h2 {
     font-weight: 700 !important;
 }
 
-html.platform-mobile :is(.settings-modal-heading p, .modal-content p, .system-install-copy, .document-meta-kicker, .settings-panel-header p) {
+html.platform-mobile :is(#modal-message, .modal-content p, .settings-modal-heading p, .system-install-copy, .document-meta-kicker, .settings-panel-header p) {
     font-size: 15px !important;
+    line-height: 1.45 !important;
+}
+
+html.platform-mobile :is(.modal-input-group input, .modal-input-group select, .language-filter-input, .settings-password-field input, .viewer-translation-select, .ai-setting-group input, .ai-setting-group select) {
+    font-size: 17px !important;
+    height: 44px !important;
+    min-height: 44px !important;
+    padding: 10px 14px !important;
+    border-radius: 10px !important;
+    box-sizing: border-box !important;
+}
+
+html.platform-mobile :is(.language-list, .spellcheck-language-list) {
+    max-height: min(280px, calc(var(--mobile-viewport-height, 100dvh) - 210px)) !important;
+    gap: 4px !important;
+}
+
+html.platform-mobile :is(.language-option, .spellcheck-language-option) {
+    padding: 10px 12px !important;
+    min-height: 44px !important;
+    border-radius: 10px !important;
+    gap: 12px !important;
+}
+
+html.platform-mobile :is(.language-option input, .spellcheck-language-option input) {
+    width: 22px !important;
+    height: 22px !important;
+    min-width: 22px !important;
+    min-height: 22px !important;
+    margin: 0 !important;
+}
+
+html.platform-mobile .language-option-name {
+    font-size: 17px !important;
+    font-weight: 500 !important;
+    line-height: 1.35 !important;
+}
+
+html.platform-mobile .language-option-code {
+    font-size: 14px !important;
+    margin-left: 6px !important;
+}
+
+html.platform-mobile .language-empty {
+    font-size: 15px !important;
+    padding: 20px 8px !important;
+}
+
+html.platform-mobile :is(.modal-actions, .language-picker-modal .modal-actions) {
+    display: flex !important;
+    gap: 10px !important;
+    margin-top: 18px !important;
+    padding-top: 4px !important;
+}
+
+html.platform-mobile :is(.modal-btn, .settings-footer .modal-btn, .action-btn, .settings-update-button, .settings-update-download) {
+    font-size: 17px !important;
+    font-weight: 600 !important;
+    min-height: 44px !important;
+    height: 44px !important;
+    padding: 0 20px !important;
+    border-radius: 10px !important;
 }
 
 /* Settings Card Headers & Descriptions */
