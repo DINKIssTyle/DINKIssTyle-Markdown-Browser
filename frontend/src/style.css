@@ -3353,36 +3353,77 @@ body.editor-split-is-resizing-vertical * {
 .edit-preview-open-tab {
     position: absolute;
     bottom: 28px;
-    transform: translateX(-50%);
-    z-index: 8;
-    width: 38px;
-    height: 38px;
-    border: 1px solid rgba(217, 45, 32, 0.16);
-    border-radius: 999px;
-    background: rgba(254, 243, 242, 0.96);
-    color: #d92d20;
-    box-shadow: 0 10px 24px rgba(217, 45, 32, 0.12);
+    translate: -50% 0;
+    z-index: 10;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
     display: inline-flex;
     align-items: center;
     justify-content: center;
     cursor: pointer;
-    transition: transform 0.16s ease, box-shadow 0.16s ease, background 0.16s ease, border-color 0.16s ease;
+    background-image: linear-gradient(135deg, var(--accent-gradient-end) 0%, var(--accent-color) 100%);
+    background-color: var(--accent-color);
+    color: #ffffff;
+    border: 1px solid rgba(255, 255, 255, 0.28);
+    box-shadow: 0 10px 24px var(--accent-color-shadow), 0 2px 6px rgba(0, 0, 0, 0.12);
+    transition: transform 0.12s cubic-bezier(0.4, 0, 0.2, 1), box-shadow 0.16s ease, filter 0.16s ease;
 }
 
+/* Default / Horizontal Split: Editor Left, Preview Right */
 .edit-preview-return {
-    left: 75%;
-    border-color: rgba(217, 45, 32, 0.16);
-    background: rgba(254, 243, 242, 0.96);
-    color: #d92d20;
-    box-shadow: 0 10px 24px rgba(217, 45, 32, 0.12);
+    left: calc(var(--editor-split-position, 50%) + (100% - var(--editor-split-position, 50%)) / 2);
 }
 
 .edit-preview-open-tab {
-    left: calc(75% + 50px);
-    border-color: rgba(18, 183, 106, 0.18);
-    background: rgba(236, 253, 243, 0.96);
-    color: #039855;
-    box-shadow: 0 10px 24px rgba(18, 183, 106, 0.12);
+    left: calc(var(--editor-split-position, 50%) + (100% - var(--editor-split-position, 50%)) / 2 + 26px);
+}
+
+.document-area:not(.editor-split-vertical):not(.editor-preview-first) .edit-preview-return:not(.hidden):has(~ .edit-preview-open-tab:not(.hidden)) {
+    left: calc(var(--editor-split-position, 50%) + (100% - var(--editor-split-position, 50%)) / 2 - 26px);
+}
+
+/* Horizontal Split: Preview Left, Editor Right (editor-preview-first) */
+.document-area.editor-split-horizontal.editor-preview-first .edit-preview-return {
+    left: calc(var(--editor-split-position, 50%) / 2);
+}
+
+.document-area.editor-split-horizontal.editor-preview-first .edit-preview-return:not(.hidden):has(~ .edit-preview-open-tab:not(.hidden)) {
+    left: calc(var(--editor-split-position, 50%) / 2 - 26px);
+}
+
+.document-area.editor-split-horizontal.editor-preview-first .edit-preview-open-tab {
+    left: calc(var(--editor-split-position, 50%) / 2 + 26px);
+}
+
+/* Vertical Split: Editor Top, Preview Bottom (not preview-first) */
+.document-area.editor-split-vertical:not(.editor-preview-first) .edit-preview-return {
+    left: 50%;
+    bottom: 28px;
+}
+
+.document-area.editor-split-vertical:not(.editor-preview-first) .edit-preview-return:not(.hidden):has(~ .edit-preview-open-tab:not(.hidden)) {
+    left: calc(50% - 26px);
+}
+
+.document-area.editor-split-vertical:not(.editor-preview-first) .edit-preview-open-tab {
+    left: calc(50% + 26px);
+    bottom: 28px;
+}
+
+/* Vertical Split: Preview Top, Editor Bottom (editor-preview-first) */
+.document-area.editor-split-vertical.editor-preview-first .edit-preview-return {
+    left: 50%;
+    bottom: calc(100% - var(--editor-split-position, 50%) + 28px);
+}
+
+.document-area.editor-split-vertical.editor-preview-first .edit-preview-return:not(.hidden):has(~ .edit-preview-open-tab:not(.hidden)) {
+    left: calc(50% - 26px);
+}
+
+.document-area.editor-split-vertical.editor-preview-first .edit-preview-open-tab {
+    left: calc(50% + 26px);
+    bottom: calc(100% - var(--editor-split-position, 50%) + 28px);
 }
 
 #main-container:not(.is-editing) .edit-preview-return,
@@ -3392,38 +3433,34 @@ body.editor-split-is-resizing-vertical * {
 
 .edit-preview-return:hover,
 .edit-preview-open-tab:hover {
-    transform: translateX(-50%) translateY(-1px);
+    transform: scale(1.06);
+    filter: brightness(1.06);
+    box-shadow: 0 14px 28px var(--accent-color-shadow), 0 4px 10px rgba(0, 0, 0, 0.16);
 }
 
-.edit-preview-return:hover {
-    box-shadow: 0 14px 28px rgba(217, 45, 32, 0.18);
-    background: rgba(254, 228, 226, 0.98);
-    border-color: rgba(217, 45, 32, 0.24);
+.edit-preview-return:active,
+.edit-preview-open-tab:active,
+.edit-preview-return.is-touch-pressed,
+.edit-preview-open-tab.is-touch-pressed {
+    transform: scale(0.92) !important;
+    box-shadow: 0 4px 12px var(--accent-color-shadow) !important;
 }
 
-.edit-preview-open-tab:hover {
-    box-shadow: 0 14px 28px rgba(18, 183, 106, 0.18);
-    background: rgba(209, 250, 229, 0.98);
-    border-color: rgba(18, 183, 106, 0.26);
+.edit-preview-return.is-touch-releasing,
+.edit-preview-open-tab.is-touch-releasing {
+    transform: scale(1) !important;
 }
 
 .edit-preview-return .material-symbols-outlined,
 .edit-preview-open-tab .material-symbols-outlined {
-    font-size: 21px;
+    font-size: 20px;
+    color: #ffffff;
 }
 
-html.dark .edit-preview-return {
-    border-color: rgba(253, 162, 155, 0.24);
-    background: rgba(69, 10, 10, 0.42);
-    color: #fda29b;
-    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.34);
-}
-
+html.dark .edit-preview-return,
 html.dark .edit-preview-open-tab {
-    border-color: rgba(50, 213, 131, 0.28);
-    background: rgba(5, 46, 22, 0.42);
-    color: #32d583;
-    box-shadow: 0 12px 26px rgba(2, 6, 23, 0.34);
+    border-color: rgba(255, 255, 255, 0.22);
+    box-shadow: 0 10px 26px var(--accent-color-shadow), 0 4px 12px rgba(0, 0, 0, 0.35);
 }
 
 #main-container.is-editing .markdown-container {

@@ -1617,9 +1617,19 @@ export async function restoreEditingPreview() {
     if (!state.isEditing) return;
     state.editingPreviewPath = state.editingSourcePath || state.currentFilePath;
     state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
+    cleanupHTMLFrame({ resetSource: true });
+    el.htmlFrame?.classList.add('hidden');
+    el.markdownContainer?.classList.remove('hidden');
+    getScroller().classList.remove('html-mode', 'image-mode');
     await renderMarkdown(getCurrentEditorText());
     if (state.activeTabId !== tabId || !state.isEditing) {
         return;
+    }
+    syncEditingPreviewReturnButton();
+    if (state.editorPreviewScrollSyncEnabled) {
+        const { getTopVisibleLineNumber } = await import('./main-editor.js');
+        const targetLine = state.editorTopLine || getTopVisibleLineNumber();
+        scrollPreviewToEditorLine(targetLine);
     }
 }
 

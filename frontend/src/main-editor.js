@@ -1055,7 +1055,7 @@ function normalizeEditorSelectionSnapshot(snapshot, docLength) {
     };
 }
 
-function getTopVisibleLineNumber(view = cmView) {
+export function getTopVisibleLineNumber(view = cmView) {
     return getVisibleLineNumbers(view, { maxLines: 1 })[0] || 1;
 }
 
@@ -5258,6 +5258,16 @@ function bindEditorPaneSplitter() {
         }
 
         applySplitPercent(splitPercent[splitMode]);
+
+        if (cmView) {
+            requestAnimationFrame(() => {
+                cmView.requestMeasure();
+                schedulePreviewScrollSync(cmView);
+                import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
+                    updateCustomVerticalScrollbars();
+                }).catch(() => {});
+            });
+        }
     };
 
     const updatePreviewToggle = () => {
@@ -5346,6 +5356,15 @@ function bindEditorPaneSplitter() {
         splitter.classList.remove('is-resizing');
         splitter.blur();
         persistEditorSplitPercent(splitMode, splitPercent[splitMode]);
+        requestAnimationFrame(() => {
+            cmView?.requestMeasure();
+            if (cmView) {
+                schedulePreviewScrollSync(cmView);
+            }
+            import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
+                updateCustomVerticalScrollbars();
+            }).catch(() => {});
+        });
     };
 
     splitter.addEventListener('pointerdown', event => {
@@ -5381,6 +5400,15 @@ function bindEditorPaneSplitter() {
     splitter.addEventListener('dblclick', () => {
         applySplitPercent(DEFAULT_EDITOR_PANE_PERCENT);
         persistEditorSplitPercent(splitMode, DEFAULT_EDITOR_PANE_PERCENT);
+        requestAnimationFrame(() => {
+            cmView?.requestMeasure();
+            if (cmView) {
+                schedulePreviewScrollSync(cmView);
+            }
+            import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
+                updateCustomVerticalScrollbars();
+            }).catch(() => {});
+        });
     });
 
     splitter.addEventListener('keydown', event => {
