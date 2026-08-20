@@ -2666,25 +2666,18 @@ function syncAISettingsSections() {
 function handleGeneralProviderChange() {
     closeGeneralModelPopover();
     syncGeneralModelControl();
-    if (el.aiGeneralProvider.value === 'lmstudio') {
-        refreshLMStudioModels({ keepOpen: false });
-    }
+    refreshLMStudioModels({ keepOpen: false });
 }
 
 function handleGeneralEndpointChange() {
-    if (el.aiGeneralProvider.value === 'lmstudio') {
-        refreshLMStudioModels({ keepOpen: isGeneralModelPopoverOpen() });
-    }
+    refreshLMStudioModels({ keepOpen: isGeneralModelPopoverOpen() });
 }
 
 function syncGeneralModelControl() {
-    const usePicker = el.aiGeneralProvider.value === 'lmstudio';
+    const usePicker = true;
     el.aiGeneralModel.classList.toggle('hidden', usePicker);
     el.aiGeneralModelPicker.classList.toggle('hidden', !usePicker);
     updateGeneralModelTrigger();
-    if (!usePicker) {
-        closeGeneralModelPopover();
-    }
 }
 
 async function refreshLMStudioModels({ keepOpen = false } = {}) {
@@ -2704,7 +2697,7 @@ async function refreshLMStudioModels({ keepOpen = false } = {}) {
     try {
         lmStudioModels = await fetchModelCatalogWithFallback(endpointValue, getGeneralAIHeaders());
     } catch (err) {
-        console.error("LM Studio model list error", err);
+        console.error("AI model list error", err);
         lmStudioModels = [];
         lmStudioModelsError = err?.message || "Failed to load models.";
     } finally {
@@ -2733,7 +2726,7 @@ function renderLMStudioModelPicker() {
         return;
     }
     if (!lmStudioModels.length) {
-        el.aiGeneralModelStatus.textContent = "No LM Studio models found.";
+        el.aiGeneralModelStatus.textContent = "No models found.";
         el.aiGeneralModelStatus.classList.remove('hidden');
         el.aiGeneralModelList.innerHTML = "";
         return;
@@ -2824,14 +2817,27 @@ function handleGeneralModelTriggerClick(event) {
 }
 
 function openGeneralModelPopover() {
-    if (el.aiGeneralProvider.value !== 'lmstudio') return;
     el.aiGeneralModelPopover.classList.remove('hidden');
     el.aiGeneralModelTrigger.setAttribute('aria-expanded', 'true');
+    const field = el.aiGeneralModelPicker?.closest('.ai-setting-field');
+    if (field) field.style.zIndex = '500';
+    const card = el.aiGeneralModelPicker?.closest('.settings-card');
+    if (card) {
+        card.classList.add('has-active-popover');
+        card.style.zIndex = '500';
+    }
 }
 
 function closeGeneralModelPopover() {
     el.aiGeneralModelPopover.classList.add('hidden');
     el.aiGeneralModelTrigger.setAttribute('aria-expanded', 'false');
+    const field = el.aiGeneralModelPicker?.closest('.ai-setting-field');
+    if (field) field.style.zIndex = '';
+    const card = el.aiGeneralModelPicker?.closest('.settings-card');
+    if (card) {
+        card.classList.remove('has-active-popover');
+        card.style.zIndex = '';
+    }
 }
 
 function isGeneralModelPopoverOpen() {
