@@ -538,6 +538,25 @@ function bindHomeScreen() {
             item.click();
         }
     });
+ 
+    el.homeScreen?.addEventListener('click', async (event) => {
+        const target = event.target.closest('.footer-link');
+        if (!target) return;
+        event.preventDefault();
+        event.stopPropagation();
+        const id = target.id;
+        if (id === 'footer-whats-new') {
+            await openWhatsNew(true);
+        } else if (id === 'footer-features') {
+            await openFeatures(true);
+        } else if (id === 'footer-shortcuts') {
+            await openShortcuts(true);
+        } else if (id === 'footer-third-party-notices') {
+            await openThirdPartyNotices(true);
+        } else if (id === 'footer-copyright') {
+            await openAbout(true);
+        }
+    });
 
     if (el.footerWhatsNew) {
         el.footerWhatsNew.onclick = async (e) => {

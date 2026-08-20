@@ -996,7 +996,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .file-tree-item.has-refresh {
-    grid-template-columns: 18px 20px minmax(0, 1fr) 26px 26px;
+    grid-template-columns: 18px 20px minmax(0, 1fr) 26px 26px !important;
 }
 
 .file-tree-item:hover,
@@ -1333,6 +1333,8 @@ html.dark .empty-state {
 }
 
 .home-footer {
+    position: relative;
+    z-index: 10;
     margin-top: 48px;
     padding-top: 32px;
     border-top: 1px solid var(--border-color);
@@ -1344,6 +1346,7 @@ html.dark .empty-state {
     font-size: 13px;
     color: var(--text-color);
     text-align: center;
+    pointer-events: auto !important;
 }
 
 .home-footer span {
@@ -1359,10 +1362,14 @@ html.dark .empty-state {
 }
 
 .footer-link {
+    position: relative;
+    z-index: 11;
     color: var(--accent-color);
     text-decoration: none;
     font-weight: 600;
     opacity: 0.65;
+    cursor: pointer !important;
+    pointer-events: auto !important;
     transition: opacity 0.2s ease, text-decoration 0.2s ease;
 }
 
@@ -3839,7 +3846,20 @@ html.platform-mobile .file-tree-context-menu .context-menu-item {
 }
 
 html.platform-mobile .file-tree-item {
-    grid-template-columns: 18px 20px minmax(0, 1fr) 32px !important;
+    grid-template-columns: 20px 22px minmax(0, 1fr) 32px !important;
+}
+
+html.platform-mobile .file-tree-item.has-refresh {
+    grid-template-columns: 20px 22px minmax(0, 1fr) 32px 32px !important;
+}
+
+html.platform-mobile .file-tree-refresh-btn,
+html.platform-mobile .file-tree-filter-btn {
+    width: 32px !important;
+    height: 32px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
 }
 
 html.platform-mobile .file-tree-more-btn {

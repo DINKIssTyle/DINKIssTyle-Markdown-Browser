@@ -10,7 +10,7 @@ import { createUnsavedMarkdownTab, getActiveTab, renderTabs } from './main-tabs.
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip, syncDocumentMetadataUI } from './main-render.js';
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
-import { SaveFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { SaveFile, ReadFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn, LogError, LogInfo } from './wails-runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
 import { getCurrentAccentColor } from './main-theme.js';
@@ -3638,6 +3638,28 @@ function restoreEditorViewPosition(topLine, fallbackScrollTop = 0) {
 
 export async function createNewDocument() {
     if (isMobilePlatform()) {
+        try {
+            const defaultDir = await GetDefaultStorageDirectory();
+            if (defaultDir) {
+                let candidateName = "Untitled.md";
+                let candidatePath = `${defaultDir}/${candidateName}`;
+                for (let i = 1; i < 1000; i++) {
+                    try {
+                        await ReadFile(candidatePath);
+                        candidateName = `Untitled ${i}.md`;
+                        candidatePath = `${defaultDir}/${candidateName}`;
+                    } catch {
+                        break;
+                    }
+                }
+                await SaveFile(candidatePath, "");
+                await openPath(candidatePath, { pushHistory: true, setHome: true, newTab: true, openInEditMode: true });
+                showToast("New document created.");
+                return;
+            }
+        } catch (err) {
+            console.warn("Mobile createNewDocument storage dir fallback:", err);
+        }
         await createUnsavedMarkdownTab();
         showToast("New document created.");
         return;
@@ -3648,8 +3670,7 @@ export async function createNewDocument() {
         const selectedPath = await ShowSaveFileDialog(defaultName);
         if (selectedPath) {
             await SaveFile(selectedPath, "");
-            await openPath(selectedPath, { pushHistory: true, setHome: true, newTab: true });
-            enterEditMode();
+            await openPath(selectedPath, { pushHistory: true, setHome: true, newTab: true, openInEditMode: true });
             showToast("New document created.");
         }
     } catch (e) {

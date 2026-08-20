@@ -20,7 +20,7 @@ import {
 } from './main-ui.js';
 import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { BrowserOpenURL, LogError, LogInfo } from './wails-runtime';
-import { openExternalURLForCurrentPlatform } from './platform-common.js';
+import { openExternalURLForCurrentPlatform, isMobileUntitledPath } from './platform-common.js';
 import {
     createHorizontalSwipeTracker,
     horizontalGestureDisposition,
@@ -149,8 +149,12 @@ export async function openPath(path, options = {}) {
         const shouldReadContent = documentType === 'markdown';
         let fileContent = content ?? "";
         if (shouldReadContent) {
-            updateProgress('Reading markdown file', 42);
-            fileContent = await ReadFile(path);
+            if (isMobileUntitledPath(path)) {
+                fileContent = content ?? "";
+            } else {
+                updateProgress('Reading markdown file', 42);
+                fileContent = await ReadFile(path);
+            }
         } else {
             updateProgress('Preparing preview', 42);
         }
@@ -163,7 +167,9 @@ export async function openPath(path, options = {}) {
         await loadFile(path, fileContent, pushHistory, setHome, tab);
         if (!isLiveTab(tab)) return;
         if (openInEditMode && documentType === 'markdown' && state.activeTabId === targetTabId) {
-            enterEditMode();
+            if (!state.isEditing) {
+                enterEditMode();
+            }
         } else if (openInEditMode && documentType === 'markdown') {
             tab.isEditing = true;
             tab.editorOriginalContent = fileContent;
@@ -486,12 +492,34 @@ function getPreferredLocalizedBundledPath(key, fallbackPath) {
     return document.defaultPath || fallbackPath;
 }
 
+const bundledMarkdownModules = import.meta.glob('../public/*.md', { as: 'raw', eager: true });
+
 async function loadBundledMarkdown(path) {
-    const response = await fetch(path);
-    if (!response.ok) {
-        throw new Error(`Failed to load bundled markdown: ${path}`);
+    const cleanName = path.replace(/^\/+/, '');
+    const globKey = `../public/${cleanName}`;
+    if (typeof bundledMarkdownModules[globKey] === 'string') {
+        return bundledMarkdownModules[globKey];
     }
-    return await response.text();
+
+    try {
+        const response = await fetch(path);
+        if (response.ok) {
+            return await response.text();
+        }
+    } catch {
+        // fetch fallback
+    }
+
+    try {
+        const response = await fetch('.' + path);
+        if (response.ok) {
+            return await response.text();
+        }
+    } catch {
+        // relative fetch fallback
+    }
+
+    throw new Error(`Failed to load bundled markdown: ${path}`);
 }
 
 // ── Link Resolution ────────────────────────────────────────

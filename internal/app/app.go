@@ -572,27 +572,18 @@ func (a *App) ReadImageAsDataURL(path string) (string, error) {
 // On Android: Public /storage/emulated/0/Documents or app internal Documents
 // On Desktop: User's Documents directory
 func (a *App) GetDefaultStorageDirectory() (string, error) {
+	if pubDir := ensurePublicDocumentsDirectory(); pubDir != "" {
+		return filepath.Clean(pubDir), nil
+	}
+
 	home, err := os.UserHomeDir()
 	if err != nil {
 		home = "."
 	}
 
-	var target string
-	switch goruntime.GOOS {
-	case "ios":
-		target = filepath.Join(home, "Documents")
-	case "android":
-		pubDocs := "/storage/emulated/0/Documents"
-		if err := os.MkdirAll(pubDocs, 0755); err == nil {
-			target = pubDocs
-		} else {
-			target = filepath.Join(home, "Documents")
-		}
-	default:
-		target = filepath.Join(home, "Documents")
-		if _, err := os.Stat(target); os.IsNotExist(err) {
-			target = home
-		}
+	target := filepath.Join(home, "Documents")
+	if _, err := os.Stat(target); os.IsNotExist(err) {
+		target = home
 	}
 
 	if err := os.MkdirAll(target, 0755); err != nil {

@@ -6,7 +6,7 @@
 import {
     state, el, HOME_SCREEN_PATH,
     kindFromPath, documentTypeFromPath, escapeHTML, formatSaveDialogMessage,
-    syncEngineSelector, getPathDirname, getScroller,
+    syncEngineSelector, getPathDirname, getScroller, basename,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
 import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, getEditorSelectionSnapshot, getEditorStateSnapshot, getEditorTopLineSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
@@ -794,7 +794,7 @@ export async function createAndSwitchToNewTab(path = HOME_SCREEN_PATH, options =
     saveCurrentScroll();
     const tab = createTab({
         path,
-        title: path === HOME_SCREEN_PATH ? 'Start' : 'Loading...',
+        title: path === HOME_SCREEN_PATH ? 'Start' : (options.title || basename(path) || 'Untitled'),
     });
     state.tabs.push(tab);
     state.activeTabId = tab.id;

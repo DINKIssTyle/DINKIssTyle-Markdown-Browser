@@ -24,6 +24,7 @@ import {
 } from './main-editor.js';
 import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
+import { isMobilePlatform } from './platform-common.js';
 
 // ... (omitted lines)
 
@@ -268,7 +269,6 @@ function scrollPreviewHeadingToTop(heading) {
 }
 import { copyTextToClipboard, showToast } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
-import { isMobilePlatform } from './platform-common.js';
 
 let isSidebarOpen = false;
 let activeSidebarTab = 'files';
@@ -577,6 +577,17 @@ export async function updateFileTree(options = {}) {
 }
 
 async function getFileTreeRootPath() {
+    if (isMobilePlatform()) {
+        try {
+            const defaultDir = await GetDefaultStorageDirectory();
+            if (defaultDir) {
+                return defaultDir;
+            }
+        } catch (error) {
+            console.warn("GetDefaultStorageDirectory failed:", error);
+        }
+    }
+
     if (state.currentFolder) {
         return state.currentFolder;
     }
