@@ -56,6 +56,35 @@
         [self triggerDKSTSearchInDocInView:subview];
     }
 }
+@interface WKWebView (DKSTScrollViewFix)
+@end
+
+@implementation WKWebView (DKSTScrollViewFix)
++ (void)load {
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        Class class = [self class];
+        SEL originalSelector = @selector(didMoveToWindow);
+        SEL swizzledSelector = @selector(dkst_didMoveToWindow);
+        Method originalMethod = class_getInstanceMethod(class, originalSelector);
+        Method swizzledMethod = class_getInstanceMethod(class, swizzledSelector);
+        if (originalMethod && swizzledMethod) {
+            method_exchangeImplementations(originalMethod, swizzledMethod);
+        }
+    });
+}
+
+- (void)dkst_didMoveToWindow {
+    [self dkst_didMoveToWindow];
+    if (self.window != nil) {
+        self.scrollView.bounces = NO;
+        self.scrollView.alwaysBounceVertical = NO;
+        self.scrollView.alwaysBounceHorizontal = NO;
+        if (@available(iOS 11.0, *)) {
+            self.scrollView.contentInsetAdjustmentBehavior = UIScrollViewContentInsetAdjustmentNever;
+        }
+    }
+}
 @end
 
 // Referencing the class directly prevents the static linker from stripping the

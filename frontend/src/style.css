@@ -7271,12 +7271,14 @@ html.dark .settings-switch input+span::after {
    iOS and Android exceptions live in their own blocks below. */
 html.platform-mobile body {
     position: fixed;
-    top: var(--mobile-viewport-top, 0px);
+    top: 0;
     right: 0;
-    bottom: auto;
+    bottom: 0;
     left: 0;
     height: var(--mobile-viewport-height, 100dvh);
     min-height: 0;
+    overflow: hidden;
+    overscroll-behavior: none;
 }
 
 html.platform-mobile,
@@ -7286,8 +7288,9 @@ html.platform-mobile * {
 }
 
 html.platform-mobile #app {
-    height: var(--mobile-viewport-height, 100dvh);
+    height: 100%;
     min-height: 0;
+    overflow: hidden;
 }
 
 html.platform-mobile .address-bar,

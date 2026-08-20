@@ -153,21 +153,43 @@ function setupVisualViewport() {
     const viewport = window.visualViewport;
     const root = document.documentElement;
 
+    const resetWindowScroll = () => {
+        if (window.scrollX !== 0 || window.scrollY !== 0) {
+            window.scrollTo(0, 0);
+        }
+        if (document.documentElement.scrollTop !== 0 || document.documentElement.scrollLeft !== 0) {
+            document.documentElement.scrollTop = 0;
+            document.documentElement.scrollLeft = 0;
+        }
+        if (document.body && (document.body.scrollTop !== 0 || document.body.scrollLeft !== 0)) {
+            document.body.scrollTop = 0;
+            document.body.scrollLeft = 0;
+        }
+    };
+
     const update = () => {
-        const height = viewport?.height || window.innerHeight;
-        const offsetTop = viewport?.offsetTop || 0;
+        const height = viewport ? Math.round(viewport.height) : window.innerHeight;
+        const offsetTop = viewport ? Math.round(viewport.offsetTop) : 0;
         const keyboardHeight = Math.max(0, window.innerHeight - height - offsetTop);
         root.style.setProperty('--mobile-viewport-height', `${height}px`);
-        root.style.setProperty('--mobile-viewport-top', `${offsetTop}px`);
         root.style.setProperty('--mobile-keyboard-height', `${keyboardHeight}px`);
         root.classList.toggle('mobile-keyboard-visible', keyboardHeight > 100);
+        resetWindowScroll();
         window.dispatchEvent(new CustomEvent('app:viewport-change', { detail: { height, offsetTop, keyboardHeight } }));
     };
 
     update();
     viewport?.addEventListener('resize', update);
-    viewport?.addEventListener('scroll', update);
+    viewport?.addEventListener('scroll', () => {
+        resetWindowScroll();
+    });
+    window.addEventListener('scroll', resetWindowScroll, { passive: true });
     window.addEventListener('orientationchange', () => window.setTimeout(update, 80));
+    document.addEventListener('focusin', () => {
+        requestAnimationFrame(resetWindowScroll);
+        window.setTimeout(resetWindowScroll, 50);
+        window.setTimeout(resetWindowScroll, 200);
+    }, { passive: true });
 }
 
 function setupTouchFeedback() {
