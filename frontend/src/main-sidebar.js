@@ -26,6 +26,7 @@ import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, Ge
 import { LogError } from './wails-runtime';
 import { isMobilePlatform } from './platform-common.js';
 import { triggerHaptic } from './main-haptic.js';
+import { updateCustomVerticalScrollbars } from './main-settings.js';
 
 // ... (omitted lines)
 
@@ -399,8 +400,31 @@ function bindResizer() {
     });
 }
 
+let sidebarTransitionTimer = null;
+
+export function notifySidebarTransition() {
+    document.documentElement.classList.add('is-sidebar-transitioning');
+    if (el.contentViewScrollbar) {
+        el.contentViewScrollbar.classList.remove('is-overflowing', 'is-active');
+    }
+    if (el.editorViewScrollbar) {
+        el.editorViewScrollbar.classList.remove('is-overflowing', 'is-active');
+    }
+
+    if (sidebarTransitionTimer) {
+        clearTimeout(sidebarTransitionTimer);
+    }
+
+    sidebarTransitionTimer = setTimeout(() => {
+        document.documentElement.classList.remove('is-sidebar-transitioning');
+        sidebarTransitionTimer = null;
+        updateCustomVerticalScrollbars();
+    }, 300);
+}
+
 export function closeSidebar() {
     isSidebarOpen = false;
+    notifySidebarTransition();
     updateSidebarUI();
     el.appSidebar.classList.add('hidden');
     el.btnSidebarToggle.classList.remove('active');
@@ -410,6 +434,7 @@ export function closeSidebar() {
 
 export function toggleSidebar() {
     isSidebarOpen = !isSidebarOpen;
+    notifySidebarTransition();
     el.appSidebar.classList.toggle('hidden', !isSidebarOpen);
     el.btnSidebarToggle.classList.toggle('active', isSidebarOpen);
     syncSidebarOffset();
@@ -425,6 +450,7 @@ export function toggleSidebarTab(tabId, options = {}) {
     const shouldClose = isSidebarOpen && activeSidebarTab === tabId;
     activeSidebarTab = tabId;
     isSidebarOpen = !shouldClose;
+    notifySidebarTransition();
     updateSidebarUI();
     el.appSidebar.classList.toggle('hidden', !isSidebarOpen);
     el.btnSidebarToggle.classList.toggle('active', isSidebarOpen);
@@ -445,6 +471,7 @@ export function toggleSidebarTab(tabId, options = {}) {
 export function openSidebarTab(tabId) {
     activeSidebarTab = tabId;
     isSidebarOpen = true;
+    notifySidebarTransition();
     updateSidebarUI();
     el.appSidebar.classList.remove('hidden');
     el.btnSidebarToggle.classList.add('active');

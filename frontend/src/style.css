@@ -109,6 +109,9 @@ html {
     overscroll-behavior: none;
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 body {
@@ -123,6 +126,9 @@ body {
     touch-action: pan-x pan-y;
     -webkit-text-size-adjust: 100%;
     transition: background-color 0.3s ease, color 0.3s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .startup-splash {
@@ -2184,6 +2190,14 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
     opacity: 1;
 }
 
+html.is-sidebar-transitioning .custom-v-scrollbar,
+html.platform-mobile #app-sidebar:not(.hidden) ~ #main-workspace .custom-v-scrollbar {
+    opacity: 0 !important;
+    visibility: hidden !important;
+    pointer-events: none !important;
+    transition: none !important;
+}
+
 .custom-v-scrollbar-thumb {
     position: absolute;
     top: 0;
@@ -4124,6 +4138,9 @@ html.dark .progress-stream-text {
     opacity: 0;
     visibility: hidden;
     transition: all 0.25s ease;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .modal-overlay:not(.hidden) {
@@ -4141,6 +4158,9 @@ html.dark .progress-stream-text {
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.3);
     transform: scale(0.9);
     transition: transform 0.25s cubic-bezier(0.18, 0.89, 0.32, 1.28);
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .modal-content.language-picker-modal {
@@ -4704,6 +4724,9 @@ html.dark .progress-stream-text {
     border: none;
     transition: all 0.2s ease;
     box-sizing: border-box;
+    user-select: none;
+    -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 .modal-btn.primary {
@@ -7371,9 +7394,12 @@ html.platform-mobile.mobile-keyboard-visible .edit-toolbar {
     box-shadow: 0 5px 16px rgba(0, 0, 0, 0.14);
 }
 
-html.platform-mobile :is(button, a[href], [role="button"], select, .nav-btn, .tool-btn, .tab-item, .action-btn, .sidebar-tab-btn, .recent-item, .modal-btn, .outline-item) {
+html.platform-mobile :is(button, a[href], [role="button"], select, label, .nav-btn, .tool-btn, .tab-item, .action-btn, .sidebar-tab-btn, .recent-item, .modal-btn, .outline-item, .modal-content, .modal-overlay, .modal-actions, .modal-option-grid, .modal-option-item, .modal-language-container, .modal-viewer-translation-container, .spellcheck-language-option, .language-option, .settings-shell, .settings-tab, .settings-tabs, .settings-card, .settings-footer, .settings-modal-header, .settings-modal-heading, .settings-control-row, .interface-setting-item, .toolbar-visibility-item) {
     touch-action: manipulation;
     -webkit-tap-highlight-color: transparent;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
     transition: transform 300ms cubic-bezier(0.34, 1.56, 0.64, 1), filter 300ms ease;
     will-change: transform;
 }
@@ -8048,6 +8074,79 @@ html.platform-mobile .modal-overlay {
     justify-content: center;
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
+}
+
+/* Phone Fullscreen Settings Modal (Smartphone Viewports Only: Phones in Portrait or Landscape) */
+@media (max-width: 600px), (max-height: 480px) and (orientation: landscape) {
+    html.platform-mobile #ai-settings-modal.modal-overlay,
+    #ai-settings-modal.modal-overlay {
+        padding: 0 !important;
+        align-items: stretch !important;
+        justify-content: stretch !important;
+        width: 100% !important;
+        height: var(--mobile-viewport-height, 100dvh) !important;
+        max-height: var(--mobile-viewport-height, 100dvh) !important;
+    }
+
+    html.platform-mobile #ai-settings-modal .ai-settings-content,
+    #ai-settings-modal .ai-settings-content {
+        width: 100% !important;
+        max-width: 100% !important;
+        height: 100% !important;
+        height: var(--mobile-viewport-height, 100dvh) !important;
+        max-height: var(--mobile-viewport-height, 100dvh) !important;
+        border-radius: 0 !important;
+        border: none !important;
+        box-shadow: none !important;
+        transform: none !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        display: flex !important;
+        flex-direction: column !important;
+        overflow: hidden !important;
+    }
+
+    html.platform-mobile #ai-settings-modal .settings-modal-header,
+    #ai-settings-modal .settings-modal-header {
+        min-height: 60px !important;
+        padding: 12px 16px !important;
+        padding-top: max(12px, env(safe-area-inset-top, 0px)) !important;
+        padding-left: max(16px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(16px, env(safe-area-inset-right, 0px)) !important;
+    }
+
+    html.platform-mobile #ai-settings-modal .settings-shell,
+    #ai-settings-modal .settings-shell {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow: hidden !important;
+    }
+
+    html.platform-mobile #ai-settings-modal .settings-tabs,
+    #ai-settings-modal .settings-tabs {
+        padding-left: max(8px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(8px, env(safe-area-inset-right, 0px)) !important;
+    }
+
+    html.platform-mobile #ai-settings-modal .settings-content-scroll,
+    #ai-settings-modal .settings-content-scroll {
+        flex: 1 1 0 !important;
+        min-height: 0 !important;
+        overflow-y: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        padding-left: max(14px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(14px, env(safe-area-inset-right, 0px)) !important;
+    }
+
+    html.platform-mobile #ai-settings-modal .settings-footer,
+    #ai-settings-modal .settings-footer {
+        padding-bottom: max(16px, env(safe-area-inset-bottom, 0px)) !important;
+        padding-left: max(14px, env(safe-area-inset-left, 0px)) !important;
+        padding-right: max(14px, env(safe-area-inset-right, 0px)) !important;
+    }
 }
 
 html.platform-mobile #modal-content {
@@ -8059,6 +8158,9 @@ html.platform-mobile #modal-content {
     overflow-y: auto !important;
     -webkit-overflow-scrolling: touch !important;
     box-sizing: border-box !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+    -webkit-touch-callout: none !important;
 }
 
 html.platform-mobile #modal-content.language-picker-modal {
@@ -8341,20 +8443,18 @@ html.platform-mobile .progress-value {
     font-size: 13px !important;
 }
 
-html.platform-mobile :is(.cm-editor, .cm-content, .cm-scroller, .cm-line, textarea, #markdown-container, #app, body) {
+html.platform-mobile :is(.cm-editor, .cm-content, .cm-scroller, .cm-line, textarea, #markdown-container, #app, body, .modal-overlay, .modal-content, .modal-btn, .modal-actions, .modal-option-grid, .modal-language-container, .modal-viewer-translation-container, .settings-shell, .settings-modal-header, .settings-footer) {
     -webkit-touch-callout: none !important;
 }
 
-html.platform-ios .cm-gutters,
-html.platform-ios .cm-lineNumbers,
-html.platform-ios .cm-gutterElement {
+html.platform-ios :is(.cm-gutters, .cm-lineNumbers, .cm-gutterElement, .modal-overlay, .modal-content, .modal-btn, .modal-actions, .modal-option-grid, .modal-language-container, .modal-viewer-translation-container, .settings-shell, .settings-modal-header, .settings-footer) {
     user-select: none !important;
     -webkit-user-select: none !important;
     -webkit-touch-callout: none !important;
 }
 
-html.platform-ios :is(#markdown-container, .cm-content) {
-    -webkit-touch-callout: none;
+html.platform-ios :is(#markdown-container, .cm-content, #app, body) {
+    -webkit-touch-callout: none !important;
 }
 
 /* Disable sticky hover effects & color fading on mobile & touch interaction while preserving base backgrounds & borders */

@@ -1415,7 +1415,7 @@ function showTranslationLanguagePrompt() {
 
         const mountLanguagePicker = () => {
             el.modalLanguageContainer.innerHTML = `
-                <input type="text" class="language-filter-input" placeholder="Filter languages..." autocomplete="off" spellcheck="false" />
+                <input type="text" class="language-filter-input" placeholder="Filter languages..." autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                 <div class="language-list"></div>
             `;
 

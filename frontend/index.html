@@ -161,7 +161,8 @@
                     <div id="sidebar-panel-search" class="sidebar-panel hidden">
                         <div class="search-input-container">
                             <div class="search-input-wrap">
-                                <input type="text" id="search-input" placeholder="Search keyword..." />
+                                <input type="text" id="search-input" placeholder="Search keyword..."
+                                    autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                 <button id="btn-clear-search" class="clear-search-btn hidden" type="button"
                                     aria-label="Clear search">
                                     <span class="material-symbols-outlined" aria-hidden="true">close</span>
@@ -316,7 +317,7 @@
                                     <span class="material-symbols-outlined editor-find-icon"
                                         aria-hidden="true">search</span>
                                     <input type="text" id="editor-find-input" class="editor-find-input" placeholder="Find"
-                                        spellcheck="false" autocomplete="off" />
+                                        autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                 </div>
                                 <div class="editor-find-nav">
                                     <button id="editor-find-prev" class="editor-find-nav-btn" title="Previous (⇧⏎)"
@@ -338,7 +339,7 @@
                                     <span class="material-symbols-outlined editor-find-icon"
                                         aria-hidden="true">swap_horiz</span>
                                     <input type="text" id="editor-replace-input" class="editor-find-input"
-                                        placeholder="Replace" spellcheck="false" autocomplete="off" />
+                                        placeholder="Replace" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                 </div>
                                 <div class="editor-replace-actions">
                                     <button id="editor-replace-one" class="editor-find-action-btn"
@@ -585,7 +586,7 @@
                 <h3 id="modal-title">Prompt</h3>
                 <p id="modal-message"></p>
                 <div id="modal-input-group" class="modal-input-group">
-                    <input type="text" id="modal-input" />
+                    <input type="text" id="modal-input" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                 </div>
                 <div id="modal-option-grid" class="modal-option-grid hidden"></div>
                 <div id="modal-language-container" class="modal-language-container hidden"></div>
@@ -941,7 +942,7 @@
                                     </span>
                                     <span class="settings-control-slot">
                                         <input id="editor-author-name" type="text" placeholder="Leave blank"
-                                            autocomplete="off" />
+                                            autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                     </span>
                                 </label>
                                 <div class="settings-control-row">
@@ -1164,10 +1165,12 @@
                                             </select>
                                         </label>
                                         <label class="ai-setting-field">Endpoint
-                                            <input type="text" id="ai-general-endpoint" placeholder="localhost:11434" />
+                                            <input type="text" id="ai-general-endpoint" placeholder="localhost:11434"
+                                                autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                         </label>
                                         <label class="ai-setting-field">Model
-                                            <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b" />
+                                            <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b"
+                                                autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                             <div id="ai-general-model-picker" class="ai-model-picker hidden">
                                                 <button type="button" id="ai-general-model-trigger"
                                                     class="ai-model-trigger" aria-haspopup="dialog"
@@ -1186,7 +1189,8 @@
                                         </label>
                                         <label class="ai-setting-field">API key
                                             <span class="settings-password-field">
-                                                <input type="password" id="ai-general-key" placeholder="Bearer token" />
+                                                <input type="password" id="ai-general-key" placeholder="Bearer token"
+                                                    autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                                 <button type="button" class="settings-password-toggle"
                                                     data-password-target="ai-general-key" aria-label="Show API key">
                                                     <span class="material-symbols-outlined"
@@ -1213,14 +1217,17 @@
                                     </div>
                                     <div class="ai-setting-grid">
                                         <label class="ai-setting-field">Endpoint
-                                            <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434" />
+                                            <input type="text" id="ai-fim-endpoint" placeholder="localhost:11434"
+                                                autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                         </label>
                                         <label class="ai-setting-field">Model
-                                            <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b" />
+                                            <input type="text" id="ai-fim-model" placeholder="qwen2.5-coder:0.5b"
+                                                autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                         </label>
                                         <label class="ai-setting-field">API key
                                             <span class="settings-password-field">
-                                                <input type="password" id="ai-fim-key" placeholder="Bearer token" />
+                                                <input type="password" id="ai-fim-key" placeholder="Bearer token"
+                                                    autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                                 <button type="button" class="settings-password-toggle"
                                                     data-password-target="ai-fim-key" aria-label="Show API key">
                                                     <span class="material-symbols-outlined"

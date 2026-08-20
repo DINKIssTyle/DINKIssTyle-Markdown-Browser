@@ -86,6 +86,12 @@ function triggerScrollbarActive(scrollbarEl) {
 
 export function updateCustomVerticalScrollbars(activeTarget = null) {
     if (!document.documentElement.classList.contains('platform-mobile')) return;
+    if (document.documentElement.classList.contains('is-sidebar-transitioning')) return;
+    if (window.innerWidth <= 768 && el.appSidebar && !el.appSidebar.classList.contains('hidden')) {
+        el.contentViewScrollbar?.classList.remove('is-overflowing', 'is-active');
+        el.editorViewScrollbar?.classList.remove('is-overflowing', 'is-active');
+        return;
+    }
     if (!el.documentArea) return;
 
     const docRect = el.documentArea.getBoundingClientRect();

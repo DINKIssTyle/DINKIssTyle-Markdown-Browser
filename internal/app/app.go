@@ -1172,6 +1172,26 @@ func (a *App) ShowPageSetup() {
 	showPageSetup(a.window)
 }
 
+func sanitizeHeaderValue(v string) string {
+	v = strings.TrimSpace(v)
+	var b strings.Builder
+	for _, r := range v {
+		if (r >= 0x20 && r <= 0x7E) || r == '\t' {
+			b.WriteRune(r)
+		}
+	}
+	return strings.TrimSpace(b.String())
+}
+
+func setSafeHeader(req *http.Request, key, value string) {
+	key = sanitizeHeaderValue(key)
+	value = sanitizeHeaderValue(value)
+	if key == "" || value == "" {
+		return
+	}
+	req.Header.Set(key, value)
+}
+
 // MakeAIRequest proxies a POST request to avoid CORS issues caused by local AI servers
 func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body string) (string, error) {
 	ctx, cancel, requestID := a.beginAIRequest()
@@ -1183,7 +1203,7 @@ func (a *App) MakeAIRequest(endpoint string, headers map[string]string, body str
 		return "", err
 	}
 	for k, v := range headers {
-		req.Header.Set(k, v)
+		setSafeHeader(req, k, v)
 	}
 
 	client := &http.Client{Timeout: 120 * time.Second}
@@ -1362,7 +1382,7 @@ func doAIEndpointRequest(method string, endpoint string, headers map[string]stri
 			continue
 		}
 		for k, v := range headers {
-			req.Header.Set(k, v)
+			setSafeHeader(req, k, v)
 		}
 		if method != http.MethodGet {
 			req.Header.Set("Content-Type", "application/json")
@@ -1642,7 +1662,7 @@ func (a *App) MakeLMStudioRequest(endpoint string, headers map[string]string, bo
 		return "", err
 	}
 	for k, v := range headers {
-		req.Header.Set(k, v)
+		setSafeHeader(req, k, v)
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")

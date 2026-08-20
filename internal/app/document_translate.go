@@ -448,8 +448,8 @@ func (a *App) doLMStudioChatStream(ctx context.Context, endpoint string, apiKey 
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	if strings.TrimSpace(apiKey) != "" {
-		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
+	if cleanKey := sanitizeHeaderValue(apiKey); cleanKey != "" {
+		req.Header.Set("Authorization", "Bearer "+cleanKey)
 	}
 
 	client := &http.Client{Timeout: timeout}
@@ -550,8 +550,8 @@ func (a *App) doOpenAIChatStream(ctx context.Context, endpoint string, apiKey st
 	}
 	req.Header.Set("Content-Type", "application/json")
 	req.Header.Set("Accept", "text/event-stream")
-	if strings.TrimSpace(apiKey) != "" {
-		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
+	if cleanKey := sanitizeHeaderValue(apiKey); cleanKey != "" {
+		req.Header.Set("Authorization", "Bearer "+cleanKey)
 	}
 
 	client := &http.Client{Timeout: timeout}
@@ -666,8 +666,8 @@ func doAIChatPost(ctx context.Context, endpoint string, apiKey string, body []by
 		return nil, err
 	}
 	req.Header.Set("Content-Type", "application/json")
-	if strings.TrimSpace(apiKey) != "" {
-		req.Header.Set("Authorization", "Bearer "+strings.TrimSpace(apiKey))
+	if cleanKey := sanitizeHeaderValue(apiKey); cleanKey != "" {
+		req.Header.Set("Authorization", "Bearer "+cleanKey)
 	}
 
 	client := &http.Client{Timeout: timeout}

@@ -1683,13 +1683,13 @@ export function bindAIEvents() {
             aiRequestQueue = [];
         }
         window.aiState.generalProvider = el.aiGeneralProvider.value;
-        window.aiState.generalEndpoint = el.aiGeneralEndpoint.value;
-        window.aiState.generalModel = el.aiGeneralModel.value || "gemma-4-e4b-it";
-        window.aiState.generalKey = el.aiGeneralKey.value;
+        window.aiState.generalEndpoint = sanitizeAIEndpoint(el.aiGeneralEndpoint.value);
+        window.aiState.generalModel = sanitizeAIModelName(el.aiGeneralModel.value) || "gemma-4-e4b-it";
+        window.aiState.generalKey = sanitizeAIHeaderValue(el.aiGeneralKey.value);
         window.aiState.generalTemp = clampTemperature(el.aiGeneralTemp.value);
-        window.aiState.fimEndpoint = el.aiFimEndpoint.value;
-        window.aiState.fimModel = el.aiFimModel.value || "qwen2.5-coder-0.5b-instruct-mlx";
-        window.aiState.fimKey = el.aiFimKey.value;
+        window.aiState.fimEndpoint = sanitizeAIEndpoint(el.aiFimEndpoint.value);
+        window.aiState.fimModel = sanitizeAIModelName(el.aiFimModel.value) || "qwen2.5-coder-0.5b-instruct-mlx";
+        window.aiState.fimKey = sanitizeAIHeaderValue(el.aiFimKey.value);
         window.aiState.fimTemp = parseFloat(el.aiFimTemp.value) || 0;
         state.koreanImeFixEnabled = el.aiToggleImeFix.checked;
         state.lightAccentColor = normalizeAccentColor(el.lightAccentCustom?.value, state.lightAccentColor);
@@ -2035,11 +2035,13 @@ async function requestFIM() {
     lastFimContextKey = contextKey;
     const requestSeq = ++fimRequestSeq;
 
-    const endpoint = window.aiState.fimEndpoint.startsWith("http") ? window.aiState.fimEndpoint : `http://${window.aiState.fimEndpoint}`;
+    const endpoint = sanitizeAIEndpoint(window.aiState.fimEndpoint);
+    const resolvedEndpoint = endpoint.startsWith("http") ? endpoint : `http://${endpoint}`;
 
     try {
         const headers = { "Content-Type": "application/json" };
-        if (window.aiState.fimKey) headers["Authorization"] = `Bearer ${window.aiState.fimKey}`;
+        const fimKey = sanitizeAIHeaderValue(window.aiState.fimKey);
+        if (fimKey) headers["Authorization"] = `Bearer ${fimKey}`;
         // FIM 관련 
         const payload = {
             model: window.aiState.fimModel,
@@ -2052,7 +2054,7 @@ async function requestFIM() {
             payload.temperature = window.aiState.fimTemp;
         }
 
-        const responseJson = await MakeAIRequest(`${endpoint}/v1/completions`, headers, JSON.stringify(payload));
+        const responseJson = await MakeAIRequest(`${resolvedEndpoint}/v1/completions`, headers, JSON.stringify(payload));
         if (requestSeq < fimRequestSeq) return;
         if (!cmView || cmView.composing || !isFIMEnabled()) return;
 
@@ -2469,11 +2471,12 @@ async function sendPrompt() {
         clearSupportAgentPrompt();
     }
 
-    let endpoint = window.aiState.generalEndpoint.trim();
+    let endpoint = sanitizeAIEndpoint(window.aiState.generalEndpoint);
     if (!endpoint.startsWith("http")) endpoint = `http://${endpoint}`;
 
     const headers = { "Content-Type": "application/json" };
-    if (window.aiState.generalKey) headers["Authorization"] = `Bearer ${window.aiState.generalKey}`;
+    const generalKey = sanitizeAIHeaderValue(window.aiState.generalKey);
+    if (generalKey) headers["Authorization"] = `Bearer ${generalKey}`;
 
     enqueueAIRequest({
         id: ++nextAIQueueJobId,
@@ -2685,7 +2688,7 @@ function syncGeneralModelControl() {
 }
 
 async function refreshLMStudioModels({ keepOpen = false } = {}) {
-    const endpointValue = el.aiGeneralEndpoint.value.trim();
+    const endpointValue = sanitizeAIEndpoint(el.aiGeneralEndpoint?.value || "");
     if (!endpointValue) {
         lmStudioModels = [];
         lmStudioModelsLoading = false;
@@ -2765,9 +2768,33 @@ function escapeHTMLAttr(value) {
         .replace(/>/g, '&gt;');
 }
 
+export function sanitizeAIHeaderValue(value) {
+    if (!value) return "";
+    return String(value)
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[\r\n\t]/g, '')
+        .trim();
+}
+
+export function sanitizeAIEndpoint(value) {
+    if (!value) return "";
+    return String(value)
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[\r\n\t\s]/g, '')
+        .trim();
+}
+
+export function sanitizeAIModelName(value) {
+    if (!value) return "";
+    return String(value)
+        .replace(/[\u200B-\u200D\uFEFF]/g, '')
+        .replace(/[\r\n\t]/g, '')
+        .trim();
+}
+
 function getGeneralAIHeaders() {
     const headers = {};
-    const key = el.aiGeneralKey.value.trim();
+    const key = sanitizeAIHeaderValue(el.aiGeneralKey?.value || window.aiState?.generalKey || "");
     if (key) {
         headers.Authorization = `Bearer ${key}`;
     }
