@@ -429,6 +429,11 @@ func (a *App) FrontendReady() []string {
 	return paths
 }
 
+// LogClientMessage logs client frontend messages to Go console (and Xcode console)
+func (a *App) LogClientMessage(level string, message string) {
+	log.Printf("[frontend-%s] %s", level, message)
+}
+
 // OpenFile opens a file dialog and returns the file path and content
 func (a *App) OpenFile() (FileResult, error) {
 	selection, err := a.wailsApp.Dialog.OpenFileWithOptions(&application.OpenFileDialogOptions{

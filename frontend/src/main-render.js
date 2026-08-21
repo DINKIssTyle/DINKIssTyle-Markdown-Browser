@@ -1532,27 +1532,40 @@ export async function renderActiveTab() {
 async function renderHomeScreen(shouldContinue = () => true) {
     if (state.isEditing) await exitEditMode(false);
     if (!shouldContinue()) return;
-    // 다른 탭에서 편집 중이었을 때 남아있는 에디터 DOM 정리
-    el.editToolbar.classList.add('hidden');
-    el.editorView.classList.add('hidden');
-    el.mainContainer.classList.remove('is-editing');
-    el.btnEdit.classList.remove('active');
-    el.selectEngine.disabled = false;
-    await renderRecentFiles();
+    // Clean up editor DOM when switching from editing tab
+    el.editToolbar?.classList.add('hidden');
+    el.editorView?.classList.add('hidden');
+    el.mainContainer?.classList.remove('is-editing');
+    el.btnEdit?.classList.remove('active');
+    if (el.selectEngine) el.selectEngine.disabled = false;
+
+    // Immediately display homeScreen to prevent any black screen flash or freeze
+    el.markdownContainer?.classList.add('hidden');
+    el.htmlFrame?.classList.add('hidden');
+    el.homeScreen?.classList.remove('hidden');
+
+    try {
+        await renderRecentFiles();
+    } catch (err) {
+        console.error('Failed to render recent files on home screen:', err);
+    }
+
     if (!shouldContinue()) return;
     cleanupHTMLFrame();
     clearHighlight();
-    getScroller().classList.remove('html-mode');
-    el.markdownContainer.classList.add('hidden');
-    el.htmlFrame.classList.add('hidden');
-    el.homeScreen.classList.remove('hidden');
-    getScroller().scrollTop = state.navHistory[state.navIndex]?.scroll ?? 0;
-    getScroller().classList.remove('image-mode');
+    const scroller = getScroller();
+    if (scroller) {
+        scroller.classList.remove('html-mode');
+        scroller.scrollTop = state.navHistory[state.navIndex]?.scroll ?? 0;
+        scroller.classList.remove('image-mode');
+    }
     syncEditingPreviewReturnButton();
 
-    const { updateNavButtons } = await import('./main-navigation.js');
-    if (!shouldContinue()) return;
-    updateNavButtons();
+    try {
+        const { updateNavButtons } = await import('./main-navigation.js');
+        if (!shouldContinue()) return;
+        updateNavButtons();
+    } catch (_) {}
 }
 
 // ── Post Processing ────────────────────────────────────────

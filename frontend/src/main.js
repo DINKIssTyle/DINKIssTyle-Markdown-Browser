@@ -59,6 +59,13 @@ import { EventsOn, LogError, OnFileDrop } from './wails-runtime';
 
 const platformReady = initializePlatform();
 
+window.addEventListener('error', event => {
+    LogError(`[global-error] ${event.message} at ${event.filename}:${event.lineno}`);
+});
+window.addEventListener('unhandledrejection', event => {
+    LogError(`[unhandled-rejection] ${event.reason?.message || event.reason}`);
+});
+
 window.addEventListener('DOMContentLoaded', async () => {
     await platformReady;
     const splashStartedAt = performance.now();
@@ -67,28 +74,41 @@ window.addEventListener('DOMContentLoaded', async () => {
     updateLinuxInstallLink(runningOnLinux);
 
     try {
-        await loadSettings();
-        await renderRecentFiles();
+        try { await loadSettings(); } catch (err) { LogError(`loadSettings error: ${err}`); }
+        try { await renderRecentFiles(); } catch (err) { LogError(`renderRecentFiles error: ${err}`); }
 
-        bindToolbar();
-        bindDocumentMetadataUI();
-        bindHomeScreen();
-        bindSystemInstallModal();
-        bindHighlightNav();
-        bindContextMenu();
-        setupDragAndDrop();
-        bindMenuEvents();
-        initSidebar();
+        try {
+            bindToolbar();
+            bindDocumentMetadataUI();
+            bindHomeScreen();
+            bindSystemInstallModal();
+            bindHighlightNav();
+            bindContextMenu();
+            setupDragAndDrop();
+            bindMenuEvents();
+            initSidebar();
+        } catch (err) {
+            LogError(`bindUI error: ${err}`);
+        }
 
         // AI Init
-        window.aiState = await initAI();
-        bindAIEvents();
+        try {
+            window.aiState = await initAI();
+            bindAIEvents();
+        } catch (err) {
+            LogError(`initAI error: ${err}`);
+        }
         if (!isMobilePlatform()) {
             bindUpdateEvents({ openSettings });
         }
 
         // Step 2: Check for pending startup files BEFORE rendering the first tab
-        const startupPaths = await FrontendReady();
+        let startupPaths = [];
+        try {
+            startupPaths = await FrontendReady();
+        } catch (err) {
+            LogError(`FrontendReady error: ${err}`);
+        }
         const hasStartupFiles = (startupPaths && startupPaths.length > 0);
         const initialPath = hasStartupFiles ? startupPaths[0] : HOME_SCREEN_PATH;
 
@@ -120,13 +140,15 @@ window.addEventListener('DOMContentLoaded', async () => {
         document.addEventListener('copy', () => {
             showToast('Copied to clipboard.');
         });
+    } catch (criticalErr) {
+        LogError(`Critical startup crash: ${criticalErr}`);
     } finally {
         await hideStartupSplash(splashStartedAt);
     }
 });
 
 async function hideStartupSplash(startedAt) {
-    const splash = el.startupSplash;
+    const splash = el.startupSplash || document.getElementById('startup-splash');
     if (!splash) {
         return;
     }
@@ -147,7 +169,7 @@ function removeAfterOpacityTransition(element) {
     const remove = () => {
         if (removed) return;
         removed = true;
-        element.remove();
+        try { element.remove(); } catch (_) {}
     };
     const handleTransitionEnd = event => {
         if (event.target === element && event.propertyName === 'opacity') {
@@ -158,13 +180,7 @@ function removeAfterOpacityTransition(element) {
     element.addEventListener('transitionend', handleTransitionEnd);
     element.addEventListener('transitioncancel', remove, { once: true });
 
-    const styles = window.getComputedStyle(element);
-    const durations = parseCSSTimeList(styles.transitionDuration);
-    const delays = parseCSSTimeList(styles.transitionDelay);
-    const transitionMs = durations.reduce((maximum, duration, index) => (
-        Math.max(maximum, duration + (delays[index % delays.length] || 0))
-    ), 0);
-    window.setTimeout(remove, transitionMs + 50);
+    window.setTimeout(remove, 300);
 }
 
 function parseCSSTimeList(value) {
