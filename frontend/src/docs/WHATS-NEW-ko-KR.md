@@ -1,5 +1,5 @@
 ---
-title: "DKST Markdown Browser 2.2"
+title: "DKST Markdown Browser 3.0"
 author: "DINKI'ssTyle"
 team: "DKST"
 date: "2026-08-06"
@@ -23,6 +23,7 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 ### 🎛️ 공통
 * **홈 버튼 버그 수정**: 파일 트리에서 열려 있는 마크다운 문서의 홈 위치가 시작 페이지로 설정되는 문제를 수정했습니다.
+* **Mermaid 에러 방어**: Mermaid 렌더링 에러 발생 시 앱의 쉘이 손상되지 않도록 방어 로직을 추가하고, 회귀 테스트를 통해 예상 가능한 렌더링 문제를 수정했습니다.
 
 ### 🖥️ Windows, macOS, Linux
 * **실행 파일 상세 정보**: 빌드 시 현재 버전이 올바르게 삽입되지 않던 문제를 해결했습니다.
@@ -31,7 +32,8 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 * **문서 연결**: 마크다운 문서 연결 기능이 추가되었습니다.
 * **문서 폴더**: 최신 안드로이드 기준에 맞게 수정하고, 앱이 사용하는 문서 폴더를 지정했습니다. 이로 인해 파일 접근 권한 요청이 나타날 수 있습니다.
 
-
+### 📱 iPadOS/iOS
+* **iCloud 문서 열기 방식 변경**: Finder에서 iCloud 파일을 열 때 앱 샌드박스를 거치지 않고 직접 열도록 변경되었습니다.
 
 
 

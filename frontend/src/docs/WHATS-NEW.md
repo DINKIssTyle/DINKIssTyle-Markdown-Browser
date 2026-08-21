@@ -16,6 +16,7 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 ### 🎛️ Common
 * **Home Button Bug Fix**: Fixed an issue where the home location in the file tree was set to the starting page for open Markdown documents.
+* **Mermaid Error Protection**: Added defensive logic to prevent app shell breakage during Mermaid rendering errors, and resolved predictable rendering issues through regression tests.
 
 ### 🖥️ Windows, macOS, Linux
 * **Executable Details**: Resolved an issue where the current version was not being inserted correctly during builds.
@@ -23,6 +24,9 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 ### 📱 Android
 * **Document Linking**: Document linking feature has been added.
 * **Document Folder**: Updated to match the latest Android standards and specified the document folder used by the app. This may prompt for file access permissions.
+
+### 📱 iPadOS/iOS
+* **Changed iCloud Document Opening Method**: When opening iCloud files from Finder, they are now opened directly without going through the app sandbox.
 
 ## 3.0.2
 

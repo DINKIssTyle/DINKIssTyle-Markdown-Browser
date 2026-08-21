@@ -12,6 +12,7 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 
 ### 🎛️ Común
 * **Corrección de error del botón de inicio**: Se corrigió un problema por el cual la ubicación de inicio en el árbol de archivos se establecía en la página inicial para los documentos Markdown abiertos.
+* **Protección contra errores de Mermaid**: Se añadió lógica defensiva para evitar daños en el shell de la aplicación cuando ocurren errores de renderizado de Mermaid, y se corrigieron problemas de renderizado predecibles mediante pruebas de regresión.
 
 ### 🖥️ Windows, macOS, Linux
 * **Detalles ejecutables**: Se resolvió un problema por el cual la versión actual no se insertaba correctamente durante las compilaciones.
@@ -19,6 +20,9 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 ### 📱 Android
 * **Vinculación de documentos**: Se ha añadido la función de vinculación de documentos.
 * **Carpeta de documentos**: Actualizado para coincidir con los últimos estándares de Android y se especificó la carpeta de documentos utilizada por la aplicación. Esto puede solicitar permisos de acceso a archivos.
+
+### 📱 iPadOS/iOS
+* **Cambio en el método de apertura de documentos de iCloud**: Al abrir archivos de iCloud desde Finder, ahora se abren directamente sin pasar por el sandbox de la aplicación.
 
 ## 3.0.2
 
