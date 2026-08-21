@@ -543,7 +543,7 @@ func (a *App) GetRelativePath(basePath, targetPath string) (string, error) {
 // ReadFile reads the content of a file
 func (a *App) ReadFile(path string) (string, error) {
 	resolved := resolvePersistedDocumentPath(path)
-	content, err := os.ReadFile(resolved)
+	content, err := readDocumentFile(resolved)
 	if err != nil {
 		return "", err
 	}
@@ -553,7 +553,11 @@ func (a *App) ReadFile(path string) (string, error) {
 // SaveFile saves the content to a file
 func (a *App) SaveFile(path string, content string) error {
 	resolved := resolvePersistedDocumentPath(path)
-	return os.WriteFile(resolved, []byte(content), 0644)
+	if err := writeDocumentFile(resolved, []byte(content), 0644); err != nil {
+		return err
+	}
+	log.Printf("document: saved path=%s", resolved)
+	return nil
 }
 
 // ReadImageAsDataURL reads a local image file and returns a data URL for stable rendering.
@@ -742,7 +746,7 @@ func (a *App) GetRecentFiles() []RecentFile {
 
 func (a *App) saveRecentFile(path string) {
 	a.ensurePersistentPaths()
-	persistedPath := persistIncomingDocument(path)
+	persistedPath := filepath.Clean(path)
 	recent := a.GetRecentFiles()
 
 	// Check if already exists
@@ -1033,8 +1037,10 @@ func (a *App) HandleFileDrop(path string) (FileResult, error) {
 
 //wails:ignore
 func (a *App) HandleSystemOpenFile(path string) {
-	persisted := persistIncomingDocument(path)
-	a.queueOpenRequests([]string{persisted}, "")
+	// On iOS, URLs delivered by UIScene are open-in-place documents. Keeping
+	// the original path preserves iCloud/File Provider ownership and sync.
+	log.Printf("document: system open path=%s", path)
+	a.queueOpenRequests([]string{path}, "")
 	a.showMainWindow()
 }
 
@@ -2118,4 +2124,3 @@ func setDefaultMarkdownApp() {
 func (a *App) Haptic(style string) {
 	platformHaptic(style)
 }
-

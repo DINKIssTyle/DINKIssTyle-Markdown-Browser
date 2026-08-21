@@ -9,10 +9,10 @@ package app
 
 import (
 	"fmt"
+	"io"
 	"log"
 	"os"
 	"path/filepath"
-	"strings"
 )
 
 // ensurePublicDocumentsDirectory ensures the public ~/Documents directory exists
@@ -50,9 +50,10 @@ This is your public Documents folder. Any Markdown (.md) or HTML (.html) files s
 	return docsDir
 }
 
-// persistIncomingDocument ensures any document opened from an ephemeral location
-// (like tmp/ or ...-Inbox/) is copied or moved into ~/Documents so it persists
-// across app container UUID rotations and iOS tmp cleanups.
+// persistIncomingDocument copies app-owned imports from tmp/Inbox into
+// ~/Documents. Paths outside the app container (including iCloud Drive and
+// third-party file providers) are opened in place and must never be moved or
+// silently replaced with a local copy.
 func persistIncomingDocument(sourcePath string) string {
 	cleanSource := filepath.Clean(sourcePath)
 	if cleanSource == "" {
@@ -64,61 +65,37 @@ func persistIncomingDocument(sourcePath string) string {
 		return cleanSource
 	}
 
-	// If it is already inside ~/Documents, keep as is
-	if isInsideDir(docsDir, cleanSource) {
+	if !isEphemeralIOSIncomingDocument(cleanSource, os.TempDir(), docsDir) {
 		return cleanSource
 	}
 
 	// Check if the source file exists
 	info, err := os.Stat(cleanSource)
 	if err != nil || info.IsDir() {
-		// If source doesn't exist, try resolving candidate in ~/Documents
-		candidate := filepath.Join(docsDir, filepath.Base(cleanSource))
-		if _, statErr := os.Stat(candidate); statErr == nil {
-			return candidate
-		}
 		return cleanSource
 	}
 
 	fileName := filepath.Base(cleanSource)
-	destPath := filepath.Join(docsDir, fileName)
-
-	// If destination already exists with same size, return it
-	if destInfo, statErr := os.Stat(destPath); statErr == nil {
-		if destInfo.Size() == info.Size() {
-			return destPath
-		}
-		// Generate unique destination filename if different
-		destPath = findAvailablePath(docsDir, fileName)
-	}
-
-	// Try moving (rename), or copy fallback
-	if err := os.Rename(cleanSource, destPath); err == nil {
-		log.Printf("ios-documents: moved incoming file %s -> %s", cleanSource, destPath)
-		return destPath
-	}
-
-	if err := copyFile(cleanSource, destPath, info.Mode().Perm()); err == nil {
+	destPath, err := copyImportedDocument(cleanSource, docsDir, fileName, info.Mode().Perm())
+	if err == nil {
 		log.Printf("ios-documents: copied incoming file %s -> %s", cleanSource, destPath)
 		return destPath
 	}
+	log.Printf("ios-documents: failed to preserve imported file path=%s err=%v", cleanSource, err)
 
 	return cleanSource
 }
 
-// resolvePersistedDocumentPath recovers a valid current container path for paths
-// saved with an old container UUID or from tmp/com.dinkisstyle.mdbrowser-Inbox/
+// resolvePersistedDocumentPath recovers a valid current container path only for
+// app Documents paths saved with an old iOS data-container UUID.
 func resolvePersistedDocumentPath(savedPath string) string {
 	cleanPath := filepath.Clean(savedPath)
 	if cleanPath == "" {
 		return cleanPath
 	}
 
-	// If currently accessible at saved path, persist if in tmp
+	// Existing open-in-place URLs must remain unchanged.
 	if _, err := os.Stat(cleanPath); err == nil {
-		if strings.Contains(cleanPath, "/tmp/") || strings.Contains(cleanPath, "-Inbox") {
-			return persistIncomingDocument(cleanPath)
-		}
 		return cleanPath
 	}
 
@@ -127,9 +104,14 @@ func resolvePersistedDocumentPath(savedPath string) string {
 		return cleanPath
 	}
 
-	// Try matching by filename in ~/Documents
-	baseName := filepath.Base(cleanPath)
-	candidate := filepath.Join(docsDir, baseName)
+	// iOS may change the app data-container UUID. Recover only paths that can
+	// be proven to refer to a previous app container's Documents directory;
+	// never redirect an unavailable external URL merely by matching its name.
+	relativePath, ok := previousIOSContainerDocumentRelativePath(cleanPath)
+	if !ok {
+		return cleanPath
+	}
+	candidate := filepath.Join(docsDir, filepath.FromSlash(relativePath))
 	if _, err := os.Stat(candidate); err == nil {
 		log.Printf("ios-documents: recovered old path %s -> %s", cleanPath, candidate)
 		return candidate
@@ -138,19 +120,46 @@ func resolvePersistedDocumentPath(savedPath string) string {
 	return cleanPath
 }
 
-func isInsideDir(parent, target string) bool {
-	rel, err := filepath.Rel(parent, target)
-	return err == nil && rel != "." && !filepath.IsAbs(rel) && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
-func findAvailablePath(directory, fileName string) string {
-	ext := filepath.Ext(fileName)
-	base := strings.TrimSuffix(fileName, ext)
-	for i := 2; i < 1000; i++ {
-		candidate := filepath.Join(directory, fmt.Sprintf("%s %d%s", base, i, ext))
-		if _, err := os.Stat(candidate); os.IsNotExist(err) {
-			return candidate
-		}
+func copyImportedDocument(sourcePath, docsDir, fileName string, mode os.FileMode) (string, error) {
+	if mode == 0 {
+		mode = 0644
 	}
-	return filepath.Join(directory, fileName)
+	mode |= 0200
+
+	for attempt := 1; attempt < 1000; attempt++ {
+		destPath := filepath.Join(docsDir, fileName)
+		if attempt > 1 {
+			ext := filepath.Ext(fileName)
+			base := fileName[:len(fileName)-len(ext)]
+			destPath = filepath.Join(docsDir, fmt.Sprintf("%s %d%s", base, attempt, ext))
+		}
+
+		output, err := os.OpenFile(destPath, os.O_CREATE|os.O_EXCL|os.O_WRONLY, mode)
+		if os.IsExist(err) {
+			continue
+		}
+		if err != nil {
+			return "", err
+		}
+
+		input, openErr := os.Open(sourcePath)
+		if openErr != nil {
+			_ = output.Close()
+			_ = os.Remove(destPath)
+			return "", openErr
+		}
+		_, copyErr := io.Copy(output, input)
+		closeInputErr := input.Close()
+		syncErr := output.Sync()
+		closeOutputErr := output.Close()
+		for _, operationErr := range []error{copyErr, closeInputErr, syncErr, closeOutputErr} {
+			if operationErr != nil {
+				_ = os.Remove(destPath)
+				return "", operationErr
+			}
+		}
+		return destPath, nil
+	}
+
+	return "", fmt.Errorf("unable to allocate a destination for %q", fileName)
 }
