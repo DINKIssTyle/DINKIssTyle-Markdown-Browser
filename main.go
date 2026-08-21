@@ -19,19 +19,33 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
+//go:embed build/appicon.png
+var appIconDarwinPNG []byte
+
+//go:embed build/appicon_winlin.png
+var appIconOtherPNG []byte
+
 //go:embed build/markdown-doc.png
 var documentIconPNG []byte
 
+func getAppIconPNG() []byte {
+	if runtime.GOOS == "darwin" {
+		return appIconDarwinPNG
+	}
+	return appIconOtherPNG
+}
+
 func main() {
-	appcore.SetIntegrationIcons(appIconPNG, documentIconPNG)
+	appIcon := getAppIconPNG()
+	appcore.SetIntegrationIcons(appIcon, documentIconPNG)
 	service := appcore.NewApp()
-	registerIOSOpenFileHandler(service.HandleSystemOpenFile)
-	registerAndroidOpenFileHandler(service.HandleSystemOpenFile)
+	appcore.RegisterIOSOpenFileHandler(service.HandleSystemOpenFile)
+	appcore.RegisterAndroidOpenFileHandler(service.HandleSystemOpenFile)
 
 	wailsApp := application.New(application.Options{
 		Name:        appcore.AppName,
 		Description: "An elegant cross-platform viewer for Markdown and HTML files.",
-		Icon:        platformApplicationIcon(appIconPNG),
+		Icon:        platformApplicationIcon(appIcon),
 		Services: []application.Service{
 			application.NewService(service),
 		},

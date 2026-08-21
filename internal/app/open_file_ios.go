@@ -1,6 +1,11 @@
 //go:build ios
 
-package main
+/*
+ * Created by DINKIssTyle on 2026.
+ * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
+ */
+
+package app
 
 /*
 #include <stdlib.h>
@@ -15,11 +20,11 @@ var iosOpenFiles struct {
 	pending []string
 }
 
-// registerIOSOpenFileHandler connects UIKit document-open callbacks to the
+// RegisterIOSOpenFileHandler connects UIKit document-open callbacks to the
 // application's normal open-file queue. UIKit can deliver a URL before main()
 // has finished constructing the Wails application, so early paths are retained
 // until the handler is available.
-func registerIOSOpenFileHandler(handler func(string)) {
+func RegisterIOSOpenFileHandler(handler func(string)) {
 	iosOpenFiles.Lock()
 	iosOpenFiles.handler = handler
 	pending := append([]string(nil), iosOpenFiles.pending...)

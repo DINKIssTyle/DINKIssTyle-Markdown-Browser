@@ -1,13 +1,10 @@
-//go:build darwin
+//go:build !ios
 
 /*
  * Created by DINKIssTyle on 2026.
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-package main
+package app
 
-import _ "embed"
-
-//go:embed build/appicon.png
-var appIconPNG []byte
+func RegisterIOSOpenFileHandler(_ func(string)) {}

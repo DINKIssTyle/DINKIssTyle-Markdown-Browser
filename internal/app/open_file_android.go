@@ -1,6 +1,11 @@
 //go:build android
 
-package main
+/*
+ * Created by DINKIssTyle on 2026.
+ * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
+ */
+
+package app
 
 /*
 #include <jni.h>
@@ -29,9 +34,9 @@ var androidOpenFiles struct {
 	pending []string
 }
 
-// registerAndroidOpenFileHandler connects Android Intent open/share callbacks to the
+// RegisterAndroidOpenFileHandler connects Android Intent open/share callbacks to the
 // application's normal open-file queue.
-func registerAndroidOpenFileHandler(handler func(string)) {
+func RegisterAndroidOpenFileHandler(handler func(string)) {
 	androidOpenFiles.Lock()
 	androidOpenFiles.handler = handler
 	pending := append([]string(nil), androidOpenFiles.pending...)
