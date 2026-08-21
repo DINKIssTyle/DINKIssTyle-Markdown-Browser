@@ -19,9 +19,6 @@ import (
 //go:embed all:frontend/dist
 var assets embed.FS
 
-//go:embed build/appicon.png
-var appIconPNG []byte
-
 //go:embed build/markdown-doc.png
 var documentIconPNG []byte
 

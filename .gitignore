@@ -25,3 +25,4 @@ build/ios/xcode/main.xcodeproj/**/xcuserdata/
 build/ios/xcode/main.xcodeproj/project.xcworkspace/xcuserdata/dinki.xcuserdatad/UserInterfaceState.xcuserstate
 
 build/backup/
+build/android/app/release/DKST-Markdown-Browser-Android.apk

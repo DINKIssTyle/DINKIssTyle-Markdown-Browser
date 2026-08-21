@@ -19,7 +19,7 @@ release: "1"
 contents:
   - src: "./bin/DKST Markdown Browser"
     dst: "/usr/local/bin/DKST Markdown Browser"
-  - src: "./build/appicon.png"
+  - src: "./build/appicon_winlin.png"
     dst: "/usr/share/icons/hicolor/128x128/apps/DKST Markdown Browser.png"
   - src: "./build/linux/DKST Markdown Browser.desktop"
     dst: "/usr/share/applications/DKST Markdown Browser.desktop"

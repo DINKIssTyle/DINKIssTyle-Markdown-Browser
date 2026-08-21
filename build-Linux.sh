@@ -9,6 +9,7 @@ set -euo pipefail
 APP_NAME="DKST Markdown Browser"
 ARCH="${1:-amd64}"   # amd64 | arm64 | arm (default amd64)
 OUT_DIR="./dist/linux"
+ICON_SRC="./build/appicon_winlin.png"
 CONFIG_FILE="internal/app/config.go"
 APP_VERSION_LDFLAG="dinkisstyle-markdown-browser/internal/app.AppVersion"
 
@@ -129,9 +130,15 @@ if [ -f "${BIN_PATH}" ]; then
     OUT_BIN="${OUT_DIR}/${APP_NAME}-${VERSION}-linux-${ARCH}"
     cp "${BIN_PATH}" "${OUT_BIN}"
     chmod +x "${OUT_BIN}"
+    if [ -f "${ICON_SRC}" ]; then
+        cp "${ICON_SRC}" "${OUT_DIR}/${APP_NAME}.png"
+    fi
     echo ""
     echo "✅ Build completed!"
     echo "   Output Path : ${OUT_BIN}"
+    if [ -f "${OUT_DIR}/${APP_NAME}.png" ]; then
+        echo "   App Icon    : ${OUT_DIR}/${APP_NAME}.png"
+    fi
 else
     echo "❌ Error: Executable not found at ${BIN_PATH}"
     exit 1
