@@ -14,6 +14,7 @@ import mermaid from 'mermaid';
 import hljs from './vendor/highlight.js/highlight.common.js';
 import { getCurrentAccentColor } from './main-theme.js';
 import { parseDocumentFrontMatter } from './frontmatter.mjs';
+import { isMermaidBlock, cleanMermaidSource, cleanupMermaidDomArtifacts } from './mermaid-helper.mjs';
 
 import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
@@ -938,6 +939,7 @@ function getMermaidConfig() {
     const textColor = isDark ? '#f5f5f7' : '#1d1d1f';
     return {
         startOnLoad: false,
+        suppressErrorRendering: true,
         theme: isDark ? 'dark' : 'default',
         securityLevel: 'loose',
         fontFamily: '-apple-system, BlinkMacSystemFont, "SF Pro Text", Helvetica, Arial, sans-serif',
@@ -1811,49 +1813,52 @@ async function renderMermaidSub(container = el.markdownContainer) {
     const codeBlocks = container.querySelectorAll('pre code');
     if (codeBlocks.length === 0) return;
 
-    const mermaidKeywords = [
-        'graph', 'flowchart', 'sequenceDiagram', 'gantt', 'classDiagram',
-        'stateDiagram', 'erDiagram', 'journey', 'pie', 'gitGraph',
-        'requirementDiagram', 'mindmap', 'timeline'
-    ];
-
     for (let i = 0; i < codeBlocks.length; i++) {
         const codeBlock = codeBlocks[i];
         const pre = codeBlock.parentElement;
         if (!pre || pre.tagName !== 'PRE') continue;
 
-        const content = codeBlock.textContent.trim();
+        const rawContent = codeBlock.textContent || '';
+        if (!isMermaidBlock(rawContent, codeBlock.className, pre.className)) continue;
+
+        const content = cleanMermaidSource(rawContent.trim());
         if (!content) continue;
 
-        // Mermaid 여부 확인: 클래스명에 포함되어 있거나, 첫 번째 단어가 키워드인 경우
-        const hasMermaidClass = codeBlock.className.includes('mermaid') || pre.className.includes('mermaid');
-        const firstWord = content.split(/[ \n]/)[0];
-        const isMermaidKeyword = mermaidKeywords.includes(firstWord);
+        // 고유 ID 생성 (Mermaid 렌더링용)
+        const id = `mermaid_graph_${Date.now()}_${i}`;
 
-        if (hasMermaidClass || isMermaidKeyword) {
-            // 고유 ID 생성 (Mermaid 렌더링용)
-            const id = `mermaid_graph_${Date.now()}_${i}`;
+        try {
+            // 렌더링 직전 테마를 한 번 더 동기화 (다크 모드 전환 대응)
+            mermaid.initialize(getMermaidConfig());
 
-            try {
-                // 렌더링 직전 테마를 한 번 더 동기화 (다크 모드 전환 대응)
-                mermaid.initialize(getMermaidConfig());
+            // 1단계: 구문 유효성 사전 검증 (오류 시 mermaid.render() 호출을 원천 차단하여 DOM 오염 방지)
+            const parseResult = await mermaid.parse(content, { suppressErrors: false });
+            if (parseResult === false) {
+                throw new Error('Mermaid syntax validation failed');
+            }
 
-                // 개별 블록을 직접 렌더링하여 SVG 획득
-                const { svg } = await mermaid.render(id, content);
-                const container = document.createElement('div');
-                container.className = 'mermaid-rendered';
-                container.innerHTML = svg;
+            // 2단계: 개별 블록을 직접 렌더링하여 SVG 획득
+            const { svg } = await mermaid.render(id, content);
+            const renderedDiv = document.createElement('div');
+            renderedDiv.className = 'mermaid-rendered';
+            renderedDiv.innerHTML = svg;
 
-                // 기존 pre 블록을 결과 SVG로 교체
-                pre.replaceWith(container);
-            } catch (err) {
-                console.error(`Mermaid render failed [${id}]:`, err);
+            // 기존 pre 블록을 결과 SVG로 교체
+            pre.replaceWith(renderedDiv);
+        } catch (err) {
+            console.error(`Mermaid render failed [${id}]:`, err);
+            cleanupMermaidDomArtifacts(id);
+
+            // 쉘을 손상시키지 않고 코드 블록 내부에만 안전하게 에러 배지 표시
+            if (!pre.querySelector('.mermaid-error')) {
                 const errorDiv = document.createElement('div');
                 errorDiv.className = 'mermaid-error';
                 errorDiv.innerHTML = `<span class="material-symbols-outlined" style="font-size:16px;vertical-align:middle">warning</span> Mermaid Syntax Error`;
-                errorDiv.title = err.message;
+                errorDiv.title = err?.message || 'Mermaid Syntax Error';
                 pre.appendChild(errorDiv);
             }
+        } finally {
+            cleanupMermaidDomArtifacts(id);
         }
     }
 }
