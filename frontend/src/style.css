@@ -971,6 +971,9 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 .file-tree {
     flex: 1;
     overflow-y: auto;
+    scrollbar-gutter: stable;
+    will-change: scroll-position;
+    transform: translateZ(0);
     padding: 10px 0 10px;
 }
 
@@ -997,7 +1000,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
     cursor: pointer;
     font-size: 13px;
     line-height: 1.25;
-    transform: none !important;
+    transform: translateZ(0);
     transition: background 0.12s ease, color 0.12s ease;
 }
 
@@ -3891,16 +3894,15 @@ html.platform-mobile .file-tree-context-menu .context-menu-item {
     color: var(--text-secondary);
     cursor: pointer;
     opacity: 0;
-    visibility: hidden;
     pointer-events: none;
-    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease, visibility 0.15s ease;
+    transition: opacity 0.15s ease, background-color 0.15s ease, color 0.15s ease;
+    will-change: opacity;
     flex-shrink: 0;
 }
 
 .file-tree-item:hover .file-tree-more-btn,
 .file-tree-more-btn:focus-visible {
     opacity: 0.65;
-    visibility: visible;
     pointer-events: auto;
 }
 
