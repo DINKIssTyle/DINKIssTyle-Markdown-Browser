@@ -8,6 +8,17 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
 
+## 3.0.3
+
+### 🎛️ Común
+* **Corrección de error del botón de inicio**: Se corrigió un problema por el cual la ubicación de inicio en el árbol de archivos se establecía en la página inicial para los documentos Markdown abiertos.
+
+### 🖥️ Windows, macOS, Linux
+* **Detalles ejecutables**: Se resolvió un problema por el cual la versión actual no se insertaba correctamente durante las compilaciones.
+
+### 📱 Android
+* **Vinculación de documentos**: Se ha añadido la función de vinculación de documentos.
+* **Carpeta de documentos**: Actualizado para coincidir con los últimos estándares de Android y se especificó la carpeta de documentos utilizada por la aplicación. Esto puede solicitar permisos de acceso a archivos.
 
 ## 3.0.2
 

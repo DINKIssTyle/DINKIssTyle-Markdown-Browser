@@ -12,7 +12,17 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
 
+## 3.0.3
 
+### 🎛️ Common
+* **Home Button Bug Fix**: Fixed an issue where the home location in the file tree was set to the starting page for open Markdown documents.
+
+### 🖥️ Windows, macOS, Linux
+* **Executable Details**: Resolved an issue where the current version was not being inserted correctly during builds.
+
+### 📱 Android
+* **Document Linking**: Document linking feature has been added.
+* **Document Folder**: Updated to match the latest Android standards and specified the document folder used by the app. This may prompt for file access permissions.
 
 ## 3.0.2
 

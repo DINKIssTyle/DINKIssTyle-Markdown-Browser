@@ -9,6 +9,19 @@
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
 
 
+## 3.0.3
+
+### 🎛️ 通用
+* **主页按钮错误修复**: 修复了文件树中的主页位置设置为打开的 Markdown 文档的起始页面的问题。
+
+### 🖥️ Windows, macOS, Linux
+* **可执行文件详情**: 解决了构建过程中当前版本未正确插入的问题。
+
+### 📱 Android
+* **文档链接**: 添加了文档链接功能。
+* **文档文件夹**: 已更新以匹配最新的 Android 标准，并指明了应用程序使用的文档文件夹。这可能会提示文件访问权限。
+
+
 ## 3.0.2
 
 ### 🎛️ 通用

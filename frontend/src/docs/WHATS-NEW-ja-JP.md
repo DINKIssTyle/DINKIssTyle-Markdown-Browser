@@ -9,6 +9,18 @@ DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow*
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 軽快でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！<br><br>Windows、macOS、Linux、iOS、iPadOS、およびAndroidで利用可能になりました。<br><br></div>
 
 
+## 3.0.3
+
+### 🎛️ 共通
+* **ホームボタンのバグ修正**: ファイルツリーで開いているMarkdown文書のホーム位置が開始ページに設定されない問題を修正しました。
+
+### 🖥️ Windows, macOS, Linux
+* **実行ファイルの詳細情報**: ビルド時に現在のバージョンが正しく挿入されない問題を解決しました。
+
+### 📱 Android
+* **ドキュメントリンク**: Markdown文書へのリンク機能が追加されました。
+* **ドキュメントフォルダ**: 最新のAndroid標準に合わせて修正し、アプリが使用するドキュメントフォルダを指定しました。これにより、ファイルアクセス許可の要求が表示される場合があります。
+
 ## 3.0.2
 
 ### 🎛️ 共通
