@@ -829,7 +829,7 @@ function bindFileTreeEvents() {
 
             await openPath(path, {
                 pushHistory: true,
-                setHome: false,
+                setHome: true,
                 newTab: wantsNewTab || state.isEditing,
                 openInEditMode: state.isEditing && documentTypeFromPath(path) === 'markdown',
             });
@@ -930,7 +930,7 @@ function showFileTreeContextMenu(event, path, isDir) {
             const { openPath } = await import('./main-navigation.js');
             await openPath(path, {
                 pushHistory: true,
-                setHome: false,
+                setHome: true,
                 newTab: true,
             });
         };

@@ -17,7 +17,7 @@
         PackageDisplayName="DKST Markdown Browser"
         PublisherName="CN=DINKIssTyle"
         PublisherDisplayName="DINKIssTyle"
-        Version="2.2.4.0"
+        Version="3.0.3.0"
         PackageDescription="An elegant cross-platform viewer for Markdown and HTML files.">
         <Capabilities>
             <Capability Name="runFullTrust" />

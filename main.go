@@ -26,6 +26,7 @@ func main() {
 	appcore.SetIntegrationIcons(appIconPNG, documentIconPNG)
 	service := appcore.NewApp()
 	registerIOSOpenFileHandler(service.HandleSystemOpenFile)
+	registerAndroidOpenFileHandler(service.HandleSystemOpenFile)
 
 	wailsApp := application.New(application.Options{
 		Name:        appcore.AppName,

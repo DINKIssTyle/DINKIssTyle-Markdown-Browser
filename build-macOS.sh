@@ -40,8 +40,14 @@ read_app_version() {
 
 sync_wails_product_version() {
     perl -0pi -e 's/^  version: "[^"]+"/  version: "'"${VERSION}"'"/m' build/config.yml
-    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION}" build/darwin/Info.plist
-    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" build/darwin/Info.plist
+    /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION}" build/darwin/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${VERSION}" build/darwin/Info.plist
+    /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" build/darwin/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${VERSION}" build/darwin/Info.plist
+    /usr/libexec/PlistBuddy -c "Set :NSHumanReadableCopyright © 2026 DINKI'ssTyle" build/darwin/Info.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string © 2026 DINKI'ssTyle" build/darwin/Info.plist
+    if [ -f build/darwin/Info.dev.plist ]; then
+        /usr/libexec/PlistBuddy -c "Set :CFBundleVersion ${VERSION}" build/darwin/Info.dev.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleVersion string ${VERSION}" build/darwin/Info.dev.plist
+        /usr/libexec/PlistBuddy -c "Set :CFBundleShortVersionString ${VERSION}" build/darwin/Info.dev.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :CFBundleShortVersionString string ${VERSION}" build/darwin/Info.dev.plist
+        /usr/libexec/PlistBuddy -c "Set :NSHumanReadableCopyright © 2026 DINKI'ssTyle" build/darwin/Info.dev.plist 2>/dev/null || /usr/libexec/PlistBuddy -c "Add :NSHumanReadableCopyright string © 2026 DINKI'ssTyle" build/darwin/Info.dev.plist
+    fi
     plutil -lint build/darwin/Info.plist >/dev/null
 }
 

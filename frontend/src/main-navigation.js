@@ -73,6 +73,11 @@ export async function openIncomingFiles(paths) {
             newTab: firstFileNeedsNewTab || index > 0,
         });
     }
+
+    try {
+        const { updateFileTree } = await import('./main-sidebar.js');
+        await updateFileTree({ forceRefresh: true });
+    } catch (_) {}
 }
 
 export function shouldOpenAdditionalFileInNewTab() {

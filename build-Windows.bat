@@ -47,8 +47,10 @@ if %ERRORLEVEL% neq 0 (
     exit /b 1
 )
 
-powershell -NoProfile -Command "$content = Get-Content 'build/config.yml' -Raw; $content = $content -replace '(?m)^  version: \"[^\"]+\"', '  version: \"!VERSION!\"'; Set-Content 'build/config.yml' $content"
-powershell -NoProfile -Command "$content = Get-Content 'build/windows/info.json' -Raw; $content = $content -replace '\"file_version\":\s*\"[^\"]+\"', '\"file_version\": \"!VERSION!\"'; $content = $content -replace '\"ProductVersion\":\s*\"[^\"]+\"', '\"ProductVersion\": \"!VERSION!\"'; Set-Content 'build/windows/info.json' $content"
+powershell -NoProfile -Command "$content = Get-Content 'build/config.yml' -Raw; $content = $content -replace '(?m)^  version: \"[^\"]+\"', '  version: \"!VERSION!\"'; $content = $content -replace '(?m)^  copyright: \"[^\"]+\"', '  copyright: \"© 2026 DINKI''ssTyle\"'; Set-Content 'build/config.yml' $content"
+powershell -NoProfile -Command "$content = Get-Content 'build/windows/info.json' -Raw; $content = $content -replace '\"file_version\":\s*\"[^\"]+\"', '\"file_version\": \"!VERSION!\"'; $content = $content -replace '\"ProductVersion\":\s*\"[^\"]+\"', '\"ProductVersion\": \"!VERSION!\"'; $content = $content -replace '\"LegalCopyright\":\s*\"[^\"]+\"', '\"LegalCopyright\": \"© 2026 DINKI''ssTyle\"'; Set-Content 'build/windows/info.json' $content"
+powershell -NoProfile -Command "$content = Get-Content 'build/windows/wails.exe.manifest' -Raw; $content = $content -replace 'version=\"[^\"]+\"', 'version=\"!VERSION!\"'; Set-Content 'build/windows/wails.exe.manifest' $content"
+powershell -NoProfile -Command "$content = Get-Content 'build/windows/nsis/wails_tools.nsh' -Raw; $content = $content -replace '!define INFO_PRODUCTVERSION \"[^\"]+\"', '!define INFO_PRODUCTVERSION \"!VERSION!\"'; $content = $content -replace '!define INFO_COPYRIGHT \"[^\"]+\"', '!define INFO_COPYRIGHT \"© 2026 DINKI''ssTyle\"'; Set-Content 'build/windows/nsis/wails_tools.nsh' $content"
 if %ERRORLEVEL% neq 0 (
     echo [ERROR] Failed to sync Wails 3 build metadata
     exit /b 1

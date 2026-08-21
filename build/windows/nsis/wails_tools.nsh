@@ -14,10 +14,10 @@
     !define INFO_PRODUCTNAME "DKST Markdown Browser"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "3.0.0"
+    !define INFO_PRODUCTVERSION "3.0.3"
 !endif
 !ifndef INFO_COPYRIGHT
-    !define INFO_COPYRIGHT "(c) 2026, DINKI'ssTyle"
+    !define INFO_COPYRIGHT "© 2026 DINKI'ssTyle"
 !endif
 !ifndef PRODUCT_EXECUTABLE
     !define PRODUCT_EXECUTABLE "${INFO_PROJECTNAME}.exe"

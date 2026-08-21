@@ -1,13 +1,13 @@
 {
 	"fixed": {
-		"file_version": "3.0.0"
+		"file_version": "3.0.3"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "3.0.0",
+			"ProductVersion": "3.0.3",
 			"CompanyName": "DINKIssTyle",
 			"FileDescription": "A lightweight and elegant cross-platform. Markdown viewer and editor",
-			"LegalCopyright": "(c) 2026, DINKI'ssTyle",
+			"LegalCopyright": "© 2026 DINKI'ssTyle",
 			"ProductName": "DKST Markdown Browser",
 			"Comments": "DKST Markdown Browser"
 		}

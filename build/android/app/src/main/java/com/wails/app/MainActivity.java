@@ -112,6 +112,227 @@ public class MainActivity extends AppCompatActivity {
 
         // Load the application
         loadApplication();
+
+        // Check and request storage permissions for public Documents folder access
+        checkAndRequestStoragePermissions();
+
+        // Handle incoming file or share Intent
+        handleIncomingIntent(getIntent());
+    }
+
+    private void checkAndRequestStoragePermissions() {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
+            if (!android.os.Environment.isExternalStorageManager()) {
+                try {
+                    Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_APP_ALL_FILES_ACCESS_PERMISSION);
+                    intent.setData(Uri.parse("package:" + getPackageName()));
+                    startActivity(intent);
+                } catch (Exception e) {
+                    try {
+                        Intent intent = new Intent(android.provider.Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION);
+                        startActivity(intent);
+                    } catch (Exception ignored) {}
+                }
+            }
+        } else if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
+            if (checkSelfPermission(android.Manifest.permission.WRITE_EXTERNAL_STORAGE) != PackageManager.PERMISSION_GRANTED) {
+                requestPermissions(new String[]{
+                    android.Manifest.permission.READ_EXTERNAL_STORAGE,
+                    android.Manifest.permission.WRITE_EXTERNAL_STORAGE
+                }, 7020);
+            }
+        }
+
+        // Ensure the public Documents/DKST Markdown Browser directory exists
+        try {
+            File publicDocs = new File(android.os.Environment.getExternalStoragePublicDirectory(android.os.Environment.DIRECTORY_DOCUMENTS), "DKST Markdown Browser");
+            if (!publicDocs.exists()) {
+                publicDocs.mkdirs();
+            }
+        } catch (Exception ignored) {}
+    }
+
+    // Native method implemented in Go (android_open_file_android.go)
+    public static native void nativeOpenAndroidFile(String path);
+
+    @Override
+    protected void onNewIntent(Intent intent) {
+        super.onNewIntent(intent);
+        setIntent(intent);
+        handleIncomingIntent(intent);
+    }
+
+    private void handleIncomingIntent(@Nullable Intent intent) {
+        if (intent == null) return;
+        String action = intent.getAction();
+        if (action == null) return;
+
+        if (Intent.ACTION_VIEW.equals(action)) {
+            Uri uri = intent.getData();
+            if (uri == null && intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
+                uri = intent.getClipData().getItemAt(0).getUri();
+            }
+            if (uri != null) {
+                processIncomingUriAsync(uri);
+            }
+        } else if (Intent.ACTION_SEND.equals(action)) {
+            Uri streamUri = null;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                streamUri = intent.getParcelableExtra(Intent.EXTRA_STREAM, Uri.class);
+            } else {
+                streamUri = intent.getParcelableExtra(Intent.EXTRA_STREAM);
+            }
+            if (streamUri == null && intent.getClipData() != null && intent.getClipData().getItemCount() > 0) {
+                streamUri = intent.getClipData().getItemAt(0).getUri();
+            }
+
+            if (streamUri != null) {
+                processIncomingUriAsync(streamUri);
+            } else {
+                CharSequence text = intent.getCharSequenceExtra(Intent.EXTRA_TEXT);
+                if (text != null && text.length() > 0) {
+                    processIncomingTextAsync(text.toString());
+                }
+            }
+        } else if (Intent.ACTION_SEND_MULTIPLE.equals(action)) {
+            ArrayList<Uri> uris;
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
+                uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM, Uri.class);
+            } else {
+                uris = intent.getParcelableArrayListExtra(Intent.EXTRA_STREAM);
+            }
+            if (uris != null) {
+                for (Uri uri : uris) {
+                    if (uri != null) {
+                        processIncomingUriAsync(uri);
+                    }
+                }
+            }
+        }
+    }
+
+    private void processIncomingUriAsync(Uri uri) {
+        new Thread(() -> {
+            try {
+                String path = resolveAndCopyUri(uri);
+                if (path != null && !path.isEmpty()) {
+                    dispatchIncomingFile(path);
+                }
+            } catch (Exception e) {
+                Log.e(TAG, "Error handling incoming uri: " + uri, e);
+            }
+        }).start();
+    }
+
+    private void processIncomingTextAsync(String text) {
+        new Thread(() -> {
+            try {
+                File incomingDir = new File(getCacheDir(), "incoming");
+                if (!incomingDir.exists()) {
+                    incomingDir.mkdirs();
+                }
+                String filename = "shared_note_" + System.currentTimeMillis() + ".md";
+                File destFile = new File(incomingDir, filename);
+                try (OutputStream os = new FileOutputStream(destFile)) {
+                    os.write(text.getBytes(java.nio.charset.StandardCharsets.UTF_8));
+                }
+                dispatchIncomingFile(destFile.getAbsolutePath());
+            } catch (Exception e) {
+                Log.e(TAG, "Error saving incoming text as markdown", e);
+            }
+        }).start();
+    }
+
+    private String resolveAndCopyUri(Uri uri) {
+        if (uri == null) return null;
+
+        String scheme = uri.getScheme();
+        if ("file".equalsIgnoreCase(scheme)) {
+            String path = uri.getPath();
+            if (path != null && new File(path).exists()) {
+                return path;
+            }
+        }
+
+        // Query file name from ContentResolver
+        String displayName = null;
+        if ("content".equalsIgnoreCase(scheme)) {
+            try (Cursor cursor = getContentResolver().query(uri, new String[]{OpenableColumns.DISPLAY_NAME}, null, null, null)) {
+                if (cursor != null && cursor.moveToFirst()) {
+                    int nameIndex = cursor.getColumnIndex(OpenableColumns.DISPLAY_NAME);
+                    if (nameIndex >= 0) {
+                        displayName = cursor.getString(nameIndex);
+                    }
+                }
+            } catch (Exception e) {
+                Log.w(TAG, "Could not resolve display name for uri: " + uri, e);
+            }
+        }
+
+        if (displayName == null || displayName.trim().isEmpty()) {
+            displayName = uri.getLastPathSegment();
+        }
+        if (displayName == null || displayName.trim().isEmpty()) {
+            displayName = "document.md";
+        } else {
+            // Strip any directory path components
+            int lastSlash = Math.max(displayName.lastIndexOf('/'), displayName.lastIndexOf('\\'));
+            if (lastSlash >= 0) {
+                displayName = displayName.substring(lastSlash + 1);
+            }
+        }
+
+        // Ensure supported extension if missing
+        String lowerName = displayName.toLowerCase();
+        if (!lowerName.endsWith(".md") && !lowerName.endsWith(".markdown") &&
+            !lowerName.endsWith(".html") && !lowerName.endsWith(".htm") &&
+            !lowerName.endsWith(".txt")) {
+            String mimeType = getContentResolver().getType(uri);
+            if (mimeType != null && mimeType.contains("html")) {
+                displayName += ".html";
+            } else {
+                displayName += ".md";
+            }
+        }
+
+        File incomingDir = new File(getCacheDir(), "incoming");
+        if (!incomingDir.exists()) {
+            incomingDir.mkdirs();
+        }
+
+        File destFile = new File(incomingDir, displayName);
+        if (destFile.exists()) {
+            destFile.delete();
+        }
+
+        try (InputStream in = getContentResolver().openInputStream(uri);
+             OutputStream out = new FileOutputStream(destFile)) {
+            if (in == null) {
+                Log.e(TAG, "Cannot open input stream for URI: " + uri);
+                return null;
+            }
+            byte[] buffer = new byte[8192];
+            int bytesRead;
+            while ((bytesRead = in.read(buffer)) != -1) {
+                out.write(buffer, 0, bytesRead);
+            }
+            return destFile.getAbsolutePath();
+        } catch (Exception e) {
+            Log.e(TAG, "Failed to copy content uri to file: " + uri, e);
+            return null;
+        }
+    }
+
+    private void dispatchIncomingFile(String path) {
+        if (path == null || path.isEmpty()) return;
+        Log.i(TAG, "Dispatching incoming file to native Go: " + path);
+        try {
+            nativeOpenAndroidFile(path);
+        } catch (UnsatisfiedLinkError e) {
+            Log.e(TAG, "nativeOpenAndroidFile not linked yet: " + path, e);
+        } catch (Exception e) {
+            Log.e(TAG, "Error invoking nativeOpenAndroidFile: " + path, e);
+        }
     }
 
     @SuppressLint("SetJavaScriptEnabled")

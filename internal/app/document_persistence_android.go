@@ -15,36 +15,44 @@ import (
 	"strings"
 )
 
-// ensurePublicDocumentsDirectory ensures the public /storage/emulated/0/Documents or app external documents directory exists
+// ensurePublicDocumentsDirectory ensures an accessible documents directory exists
 // and contains a starter welcome document if empty.
 func ensurePublicDocumentsDirectory() string {
 	candidates := []string{
-		"/storage/emulated/0/Documents",
-		"/sdcard/Documents",
 		"/storage/emulated/0/Documents/DKST Markdown Browser",
 		"/sdcard/Documents/DKST Markdown Browser",
+		"/storage/emulated/0/Android/data/com.dinkisstyle.mdbrowser/files/Documents/DKST Markdown Browser",
 		"/storage/emulated/0/Android/data/com.dinkisstyle.mdbrowser/files/Documents",
 	}
+
+	if home, err := os.UserHomeDir(); err == nil && home != "" {
+		candidates = append(candidates,
+			filepath.Join(home, "files", "Documents", "DKST Markdown Browser"),
+			filepath.Join(home, "files", "Documents"),
+			filepath.Join(home, "Documents", "DKST Markdown Browser"),
+			filepath.Join(home, "Documents"),
+		)
+	}
+	candidates = append(candidates,
+		"/data/user/0/com.dinkisstyle.mdbrowser/files/Documents/DKST Markdown Browser",
+		"/data/user/0/com.dinkisstyle.mdbrowser/files/Documents",
+		"/data/data/com.dinkisstyle.mdbrowser/files/Documents/DKST Markdown Browser",
+		"/data/data/com.dinkisstyle.mdbrowser/files/Documents",
+	)
 
 	var docsDir string
 	for _, cand := range candidates {
 		if err := os.MkdirAll(cand, 0755); err == nil {
-			// Verify write permission
+			// Verify write and read permission
 			testFile := filepath.Join(cand, ".dkst_write_test")
 			if writeErr := os.WriteFile(testFile, []byte("ok"), 0644); writeErr == nil {
+				if readData, readErr := os.ReadFile(testFile); readErr == nil && string(readData) == "ok" {
+					_ = os.Remove(testFile)
+					docsDir = cand
+					break
+				}
 				_ = os.Remove(testFile)
-				docsDir = cand
-				break
 			}
-		}
-	}
-
-	if docsDir == "" {
-		home, err := os.UserHomeDir()
-		if err == nil && home != "" {
-			fallback := filepath.Join(home, "Documents")
-			_ = os.MkdirAll(fallback, 0755)
-			docsDir = fallback
 		}
 	}
 
@@ -58,8 +66,8 @@ func ensurePublicDocumentsDirectory() string {
 		welcomePath := filepath.Join(docsDir, "Welcome.md")
 		welcomeContent := `# Welcome to DKST Markdown Browser
 
-This is your public Documents folder (` + docsDir + `).
-Any Markdown (.md) or HTML (.html) files saved here can be easily accessed, managed, and edited from Android file managers (Samsung My Files, Google Files, etc.) or PC via USB.
+This is your Documents folder (` + docsDir + `).
+Any Markdown (.md) or HTML (.html) files saved here can be easily accessed, managed, and edited.
 
 ## Features
 - **Fast Markdown Rendering**: Supports GitHub Flavored Markdown, Math/LaTeX, Mermaid diagrams, and code highlighting.
@@ -72,6 +80,15 @@ Any Markdown (.md) or HTML (.html) files saved here can be easily accessed, mana
 	}
 
 	return docsDir
+}
+
+func isReadableFile(path string) bool {
+	f, err := os.Open(path)
+	if err != nil {
+		return false
+	}
+	_ = f.Close()
+	return true
 }
 
 // persistIncomingDocument ensures any document opened from cache/download/temp is saved into Documents
@@ -93,7 +110,7 @@ func persistIncomingDocument(sourcePath string) string {
 	info, err := os.Stat(cleanSource)
 	if err != nil || info.IsDir() {
 		candidate := filepath.Join(docsDir, filepath.Base(cleanSource))
-		if _, statErr := os.Stat(candidate); statErr == nil {
+		if isReadableFile(candidate) {
 			return candidate
 		}
 		return cleanSource
@@ -102,21 +119,17 @@ func persistIncomingDocument(sourcePath string) string {
 	fileName := filepath.Base(cleanSource)
 	destPath := filepath.Join(docsDir, fileName)
 
-	if destInfo, statErr := os.Stat(destPath); statErr == nil {
-		if destInfo.Size() == info.Size() {
+	// Copy the file into Documents directory keeping its exact filename
+	if err := copyFile(cleanSource, destPath, info.Mode().Perm()); err == nil {
+		if isReadableFile(destPath) {
+			log.Printf("android-documents: persisted incoming file %s -> %s", cleanSource, destPath)
 			return destPath
 		}
-		destPath = findAvailablePath(docsDir, fileName)
 	}
 
-	if err := os.Rename(cleanSource, destPath); err == nil {
-		log.Printf("android-documents: moved incoming file %s -> %s", cleanSource, destPath)
-		return destPath
-	}
-
-	if err := copyFile(cleanSource, destPath, info.Mode().Perm()); err == nil {
-		log.Printf("android-documents: copied incoming file %s -> %s", cleanSource, destPath)
-		return destPath
+	// Fallback to cleanSource if it is already readable
+	if isReadableFile(cleanSource) {
+		return cleanSource
 	}
 
 	return cleanSource
@@ -128,7 +141,7 @@ func resolvePersistedDocumentPath(savedPath string) string {
 		return cleanPath
 	}
 
-	if _, err := os.Stat(cleanPath); err == nil {
+	if isReadableFile(cleanPath) {
 		return cleanPath
 	}
 
@@ -139,7 +152,7 @@ func resolvePersistedDocumentPath(savedPath string) string {
 
 	baseName := filepath.Base(cleanPath)
 	candidate := filepath.Join(docsDir, baseName)
-	if _, err := os.Stat(candidate); err == nil {
+	if isReadableFile(candidate) {
 		log.Printf("android-documents: recovered path %s -> %s", cleanPath, candidate)
 		return candidate
 	}
