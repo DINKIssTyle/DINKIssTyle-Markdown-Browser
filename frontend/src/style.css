@@ -636,7 +636,7 @@ body.sidebar-is-resizing #app-sidebar.hidden {
 }
 
 .sidebar-header {
-    height: 48px;
+    height: 45px;
     display: flex;
     align-items: center;
     justify-content: space-around;
@@ -2146,6 +2146,13 @@ html[data-scrollbar-visibility="when-scrolling"] .cm-scroller.is-scrollbar-activ
     background: var(--accent-color);
 }
 
+/* The macOS window edge clips one pixel from the scrollbar in the rightmost pane. */
+html.platform-darwin :is(#main-container:not(.is-editing) #content-view,
+    #main-container.is-editing .document-area:not(.editor-preview-first) #content-view,
+    #main-container.is-editing .document-area.editor-preview-first .cm-scroller)::-webkit-scrollbar {
+    width: 9px;
+}
+
 html[data-scrollbar-visibility="never"] #content-view::-webkit-scrollbar,
 html[data-scrollbar-visibility="never"] .cm-scroller::-webkit-scrollbar {
     display: none !important;
@@ -2191,7 +2198,7 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
 }
 
 html.is-sidebar-transitioning .custom-v-scrollbar,
-html.platform-mobile #app-sidebar:not(.hidden) ~ #main-workspace .custom-v-scrollbar {
+html.platform-mobile #app-sidebar:not(.hidden)~#main-workspace .custom-v-scrollbar {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
@@ -3309,6 +3316,8 @@ body.editor-split-is-resizing-vertical * {
     max-width: 320px;
     max-height: 320px;
     overflow-y: auto;
+    scrollbar-width: none;
+    -ms-overflow-style: none;
     padding: 8px;
     border: 1px solid var(--border-color);
     border-radius: 14px;
@@ -3316,6 +3325,12 @@ body.editor-split-is-resizing-vertical * {
     backdrop-filter: blur(20px);
     box-shadow: 0 18px 44px rgba(0, 0, 0, 0.16);
     z-index: 150;
+}
+
+.editor-slash-menu::-webkit-scrollbar {
+    display: none;
+    width: 0;
+    height: 0;
 }
 
 .editor-slash-empty {
@@ -8025,7 +8040,8 @@ html.platform-mobile .ai-prompt-stream-kind {
 }
 
 /* Phone Portrait Mode: Hide AI Prompt Left Badge/Icon and Center Prompt Box */
-@media (max-width: 768px) and (orientation: portrait), (max-width: 500px) {
+@media (max-width: 768px) and (orientation: portrait),
+(max-width: 500px) {
     .ai-prompt-box {
         transform: translateX(-50%) !important;
         gap: 0 !important;
@@ -8064,7 +8080,9 @@ html.platform-mobile .modal-overlay {
 }
 
 /* Phone Fullscreen Settings Modal (Smartphone Viewports Only: Phones in Portrait or Landscape) */
-@media (max-width: 600px), (max-height: 480px) and (orientation: landscape) {
+@media (max-width: 600px),
+(max-height: 480px) and (orientation: landscape) {
+
     html.platform-mobile #ai-settings-modal.modal-overlay,
     #ai-settings-modal.modal-overlay {
         padding: 0 !important;
@@ -8327,11 +8345,11 @@ html.platform-mobile .settings-update-status-heading p {
     font-size: 15px !important;
 }
 
-html.platform-mobile .settings-update-versions > div span {
+html.platform-mobile .settings-update-versions>div span {
     font-size: 12px !important;
 }
 
-html.platform-mobile .settings-update-versions > div strong {
+html.platform-mobile .settings-update-versions>div strong {
     font-size: 17px !important;
     font-weight: 700 !important;
 }
