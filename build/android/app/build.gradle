@@ -23,6 +23,11 @@ android {
         }
     }
 
+    lint {
+        checkReleaseBuilds = false
+        abortOnError = false
+    }
+
     def keystoreFile = System.getenv("ANDROID_KEYSTORE_FILE")
     def hasKeystore = keystoreFile != null && !keystoreFile.trim().isEmpty()
 

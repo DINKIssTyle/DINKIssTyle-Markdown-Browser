@@ -8079,9 +8079,12 @@ html.platform-mobile .modal-overlay {
     -webkit-touch-callout: none !important;
 }
 
-/* Phone Fullscreen Settings Modal (Smartphone Viewports Only: Phones in Portrait or Landscape) */
-@media (max-width: 600px),
-(max-height: 480px) and (orientation: landscape) {
+/* Phone & Foldable Fullscreen Settings Modal (Viewport width <= 920px or landscape phone/foldable <= 540px)
+   - Phones & Foldables: Fullscreen settings view for optimized touch layout and screen space
+   - Tablets & Desktop (width > 920px): Floating centered window modal (form sheet) matching iPad & Desktop
+*/
+@media (max-width: 920px),
+(max-height: 540px) and (orientation: landscape) {
 
     html.platform-mobile #ai-settings-modal.modal-overlay,
     #ai-settings-modal.modal-overlay {
