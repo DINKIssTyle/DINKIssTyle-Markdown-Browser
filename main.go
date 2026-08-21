@@ -58,11 +58,9 @@ func main() {
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
 		FileAssociations: []string{".md", ".markdown", ".html", ".htm"},
-		SingleInstance: &application.SingleInstanceOptions{
-			UniqueID:               "com.dinkisstyle.mdbrowser",
-			OnSecondInstanceLaunch: service.HandleSecondInstanceLaunch,
-		},
-		ShouldQuit: service.ShouldQuit,
+		SingleInstance:   getSingleInstanceOptions(service),
+		ShouldQuit:       service.ShouldQuit,
+		DisableDefaultSignalHandler: runtime.GOOS == "ios",
 	})
 
 	window := wailsApp.Window.NewWithOptions(application.WebviewWindowOptions{
@@ -121,4 +119,14 @@ func platformApplicationIcon(icon []byte) []byte {
 		return nil
 	}
 	return icon
+}
+
+func getSingleInstanceOptions(service *appcore.App) *application.SingleInstanceOptions {
+	if runtime.GOOS == "ios" || runtime.GOOS == "android" {
+		return nil
+	}
+	return &application.SingleInstanceOptions{
+		UniqueID:               "com.dinkisstyle.mdbrowser",
+		OnSecondInstanceLaunch: service.HandleSecondInstanceLaunch,
+	}
 }

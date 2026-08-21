@@ -115,18 +115,17 @@ extern WailsAppDelegate *appDelegate;
     }
 
     UIWindowScene *windowScene = (UIWindowScene *)scene;
-    UIViewController *rootViewController = appDelegate.window.rootViewController;
-    UIColor *backgroundColor = appDelegate.window.backgroundColor
-        ?: [UIColor colorNamed:@"LaunchBackground"]
-        ?: [UIColor whiteColor];
 
+    if (appDelegate.window != nil) {
+        appDelegate.window.windowScene = windowScene;
+        [appDelegate.window makeKeyAndVisible];
+        self.window = appDelegate.window;
+        return;
+    }
+
+    UIColor *backgroundColor = [UIColor colorNamed:@"LaunchBackground"] ?: [UIColor blackColor];
     UIWindow *sceneWindow = [[UIWindow alloc] initWithWindowScene:windowScene];
     sceneWindow.backgroundColor = backgroundColor;
-    if (rootViewController == nil) {
-        rootViewController = [[UIViewController alloc] init];
-        rootViewController.view.backgroundColor = backgroundColor;
-    }
-    sceneWindow.rootViewController = rootViewController;
     [sceneWindow makeKeyAndVisible];
 
     self.window = sceneWindow;
