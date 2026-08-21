@@ -120,6 +120,7 @@ func main() {
 	for _, required := range [][]byte{
 		[]byte("WailsAppDelegate"),
 		[]byte("WailsSceneDelegate"),
+		[]byte("sceneWindow.windowScene = windowScene"),
 		[]byte("WailsIOSOpenFile"),
 		[]byte("openURLContexts"),
 		[]byte("UIApplicationMain"),

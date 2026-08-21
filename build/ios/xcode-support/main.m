@@ -69,18 +69,28 @@ extern WailsAppDelegate *appDelegate;
     }
 
     UIWindowScene *windowScene = (UIWindowScene *)scene;
-    UIViewController *rootViewController = appDelegate.window.rootViewController;
-    UIColor *backgroundColor = appDelegate.window.backgroundColor
+    UIWindow *sceneWindow = appDelegate.window;
+    UIColor *backgroundColor = sceneWindow.backgroundColor
         ?: [UIColor colorNamed:@"LaunchBackground"]
         ?: [UIColor whiteColor];
 
-    UIWindow *sceneWindow = [[UIWindow alloc] initWithWindowScene:windowScene];
-    sceneWindow.backgroundColor = backgroundColor;
-    if (rootViewController == nil) {
-        rootViewController = [[UIViewController alloc] init];
-        rootViewController.view.backgroundColor = backgroundColor;
+    // Wails creates its bootstrap window in didFinishLaunchingWithOptions and
+    // later replaces that window's root controller with the WebView controller.
+    // Keep that same window instance when UIKit reconnects a persisted scene.
+    // Creating a second window here can leave Wails updating a window that is
+    // no longer presented, which appears as a black screen after a force-quit
+    // and relaunch on iPadOS.
+    if (sceneWindow == nil) {
+        sceneWindow = [[UIWindow alloc] initWithWindowScene:windowScene];
+    } else {
+        sceneWindow.windowScene = windowScene;
     }
-    sceneWindow.rootViewController = rootViewController;
+    sceneWindow.backgroundColor = backgroundColor;
+    if (sceneWindow.rootViewController == nil) {
+        UIViewController *rootViewController = [[UIViewController alloc] init];
+        rootViewController.view.backgroundColor = backgroundColor;
+        sceneWindow.rootViewController = rootViewController;
+    }
     [sceneWindow makeKeyAndVisible];
 
     self.window = sceneWindow;
