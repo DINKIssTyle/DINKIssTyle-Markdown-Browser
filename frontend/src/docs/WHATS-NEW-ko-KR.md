@@ -18,6 +18,24 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
+## 3.0.4
+
+### 🎛️ 공통
+* **아직 없음**: 
+
+### 🖥️ Windows, macOS, Linux
+* **아직 없음**: 
+
+### 📱 Android, iPadOS/iOS
+* **플로팅 내비게이터 크기 조정**: 검색이나 맞춤법 검사 등에 사용되는 플로팅 버튼의 터치 영역을 키워 터치스크린에서의 사용성을 높였습니다.
+
+
+### 📱 Android
+* **아직 없음**: 
+
+### 📱 iPadOS
+* **스크롤바 버그 수정**: 사이드 패널이 열려 있을 때 스크롤바가 항상 표시되어야 하지만, 사라지는 현상이 있었습니다.
+
 
 ## 3.0.3
 
@@ -36,6 +54,11 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 * **iCloud 문서 열기 방식 변경**: Finder에서 iCloud 파일을 열 때 앱 샌드박스를 거치지 않고 직접 열도록 변경되었습니다.
 
 
+## 이전 체인지로그
+
+
+<details>
+<summary><b>3.0.1 ~ 3.0.2 변경 사항</b></summary>
 
 ## 3.0.2
 
@@ -62,14 +85,11 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 ### 📱 iOS/iPadOS 및 Android
 * **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다
 
+</details>
 
-
-
-
-## 이전 체인지로그
 
 <details>
-<summary><b>버젼 2.2 기간 변경 사항</b></summary>
+<summary><b>2.2</b></summary>
   
 ### 주요 변경 사항 (Highlights)
 * **프런트 매터(Front Matter) 완벽 지원**
@@ -99,7 +119,7 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 
 <details>
-<summary><b>버젼 2.1 기간 변경 사항</b></summary>
+<summary><b>2.1</b></summary>
   
 ### 주요 변경 사항 (Highlights)
 - **통합 사이드바 도입**: 파일 트리, 개요(Outline), 검색 기능이 통합된 사이드바 추가 (CTRL+ALT+S / macOS: CMD+OPT+S)

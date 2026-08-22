@@ -8456,6 +8456,82 @@ html.platform-mobile .progress-value {
     font-size: 13px !important;
 }
 
+/* 9. Floating Highlight & Spellcheck Navigators on Mobile & Tablet (Apple HIG Standard) */
+html.platform-mobile .highlight-nav {
+    min-height: 46px !important;
+    padding: 4px 10px 4px 14px !important;
+    gap: 6px !important;
+    font-size: 15px !important;
+    border-radius: 999px !important;
+    border: 1px solid var(--border-color) !important;
+    background: color-mix(in srgb, var(--surface-elevated) 92%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+    bottom: calc(var(--editor-ai-dock-height, 42px) + 16px + env(safe-area-inset-bottom, 0px)) !important;
+    max-width: calc(100vw - 32px) !important;
+    box-sizing: border-box !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+html.platform-mobile .highlight-nav button {
+    width: 38px !important;
+    height: 38px !important;
+    font-size: 20px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+html.platform-mobile #hl-counter {
+    min-width: 52px !important;
+    font-size: 15px !important;
+    font-weight: 600 !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+html.platform-mobile .spellcheck-navigator {
+    min-width: auto !important;
+    height: 46px !important;
+    padding: 0 10px 0 14px !important;
+    gap: 6px !important;
+    border-radius: 999px !important;
+    border: 1px solid var(--border-color) !important;
+    background: color-mix(in srgb, var(--surface-elevated) 92%, transparent) !important;
+    backdrop-filter: blur(20px) saturate(180%) !important;
+    -webkit-backdrop-filter: blur(20px) saturate(180%) !important;
+    box-shadow: 0 6px 22px rgba(0, 0, 0, 0.18), 0 1px 4px rgba(0, 0, 0, 0.08) !important;
+    bottom: calc(var(--editor-ai-dock-height, 42px) + 16px + env(safe-area-inset-bottom, 0px)) !important;
+    max-width: calc(100vw - 32px) !important;
+    box-sizing: border-box !important;
+    user-select: none !important;
+    -webkit-user-select: none !important;
+}
+
+html.platform-mobile .spellcheck-nav-btn {
+    width: 38px !important;
+    height: 38px !important;
+    border-radius: 999px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    flex-shrink: 0 !important;
+}
+
+html.platform-mobile .spellcheck-nav-btn .material-symbols-outlined {
+    font-size: 24px !important;
+}
+
+html.platform-mobile .spellcheck-nav-count {
+    min-width: 48px !important;
+    font-size: 15px !important;
+    font-weight: 700 !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
 html.platform-mobile :is(.cm-editor, .cm-content, .cm-scroller, .cm-line, textarea, #markdown-container, #app, body, .modal-overlay, .modal-content, .modal-btn, .modal-actions, .modal-option-grid, .modal-language-container, .modal-viewer-translation-container, .settings-shell, .settings-modal-header, .settings-footer) {
     -webkit-touch-callout: none !important;
 }
