@@ -449,6 +449,14 @@ const TOOLBAR_COLLAPSED_BUTTON_IDS = Object.freeze([
     'ed-render-mode-menu',
     'ed-toolbar-hidden',
 ]);
+const NON_MARKDOWN_VISIBLE_TOOL_IDS = Object.freeze([
+    'ed-find-replace',
+    'ed-font-minus',
+    'ed-font-plus',
+    'ed-cancel',
+    'ed-save-as',
+    'ed-save',
+]);
 const TOOLBAR_DIRECT_TOOL_IDS = Object.freeze([
     'ed-find-replace',
     'ed-page-info',
@@ -818,12 +826,7 @@ function syncRenderModeIcon() {
 }
 
 export function syncToolbarForDocumentType() {
-    const isNonMarkdown = state.currentDocumentType === 'code' || state.currentDocumentType === 'text';
-    if (el.edRenderModeMenu) el.edRenderModeMenu.disabled = isNonMarkdown;
-    if (el.edRenderMode) el.edRenderMode.disabled = isNonMarkdown;
-    if (el.edPreviewToggle) el.edPreviewToggle.disabled = isNonMarkdown;
-    if (el.edSplitDirection) el.edSplitDirection.disabled = isNonMarkdown;
-    if (el.edSplitSwap) el.edSplitSwap.disabled = isNonMarkdown;
+    applyEditorToolbarMode();
 }
 
 function updateActiveTabTitleFromContent(content) {
@@ -837,11 +840,26 @@ function updateActiveTabTitleFromContent(content) {
 }
 
 export function applyEditorToolbarMode() {
+    const isNonMarkdown = state.currentDocumentType === 'code' || state.currentDocumentType === 'text';
+    const managedIds = new Set([...TOOLBAR_DIRECT_TOOL_IDS, ...TOOLBAR_COLLAPSED_BUTTON_IDS]);
+
+    if (isNonMarkdown) {
+        const visibleIds = new Set(NON_MARKDOWN_VISIBLE_TOOL_IDS);
+        managedIds.forEach(id => {
+            getToolbarElement(id)?.classList.toggle('hidden', !visibleIds.has(id));
+        });
+        el.edRenderMode?.classList.add('hidden');
+        el.edRenderMode?.previousElementSibling?.classList.add('hidden');
+        el.edRenderMode?.previousElementSibling?.previousElementSibling?.classList.add('hidden');
+        closeToolbarPopup();
+        requestAnimationFrame(syncToolbarGroupVisibility);
+        return;
+    }
+
     const mode = normalizeEditorToolbarMode(state.editorToolbarMode);
     state.editorToolbarMode = mode;
     const config = TOOLBAR_MODE_CONFIG[mode];
     const shown = new Set(config.show);
-    const managedIds = new Set([...TOOLBAR_DIRECT_TOOL_IDS, ...TOOLBAR_COLLAPSED_BUTTON_IDS]);
 
     managedIds.forEach(id => {
         getToolbarElement(id)?.classList.toggle('hidden', !shown.has(id));
