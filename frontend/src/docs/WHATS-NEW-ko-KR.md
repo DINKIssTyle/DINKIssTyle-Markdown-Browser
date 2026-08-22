@@ -23,15 +23,12 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 ### 🎛️ 공통
 
 * **비침해적 OS 파일 연결**: Non-intrusive File Association 기능을 통해 .txt, .py, .c, .m 등 다양한 일반 텍스트 및 소스 코드 파일을 열 수 있습니다. 이는 최소한의 개입을 통한 파일 연결 방식입니다.
+* **코드 및 스크립트 편집 지원**: 다양한 코드나 스크립트 소스를 구문 강조 기능을 사용하여 편집하고 열람할 수 있습니다.
 
-### 🖥️ Windows, macOS, Linux
-* **아직 없음**: 
 
 ### 📱 Android, iPadOS/iOS
 * **플로팅 내비게이터 크기 조정**: 검색이나 맞춤법 검사 등에 사용되는 플로팅 버튼의 터치 영역을 키워 터치스크린에서의 사용성을 높였습니다.
 
-### 📱 Android
-* **아직 없음**: 
 
 ### 📱 iPadOS
 * **스크롤바 버그 수정**: 사이드 패널이 열려 있을 때 스크롤바가 항상 표시되어야 하지만, 사라지는 현상이 있었습니다.
@@ -54,11 +51,8 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 * **iCloud 문서 열기 방식 변경**: Finder에서 iCloud 파일을 열 때 앱 샌드박스를 거치지 않고 직접 열도록 변경되었습니다.
 
 
-## 이전 체인지로그
 
 
-<details>
-<summary><b>3.0.1 ~ 3.0.2 변경 사항</b></summary>
 
 ## 3.0.2
 
@@ -85,7 +79,6 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 ### 📱 iOS/iPadOS 및 Android
 * **iOS, Android UI**: 모바일(스마트폰)과 타블렛(iPad/Android Tablet) 환경에서 모든 UI 요소의 폰트 사이즈가 Apple Human Interface Guidelines (iOS/iPadOS Typography) 표준 규격에 일치하도록 최적화합니다
 
-</details>
 
 
 <details>

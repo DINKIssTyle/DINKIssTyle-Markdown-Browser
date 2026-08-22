@@ -14,19 +14,15 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 ## 3.0.4
 
-
 ### 🎛️ Common
 
 * **Non-intrusive OS File Association**: You can open various plain text and source code files such as .txt, .py, .c, .m using the Non-intrusive File Association feature. This is a file association method with minimal intervention.
+* **Code and Script Editing Support**: You can edit and view various code and script sources with syntax highlighting.
 
-### 🖥️ Windows, macOS, Linux
-* **Not yet available**: 
 
 ### 📱 Android, iPadOS/iOS
 * **Adjustable Floating Navigator Size**: The touch area of the floating button used for search or spell check has been enlarged to improve usability on touchscreens.
 
-### 📱 Android
-* **Not yet available**: 
 
 ### 📱 iPadOS
 * **Scrollbar Bug Fix**: When the side panel is open, the scrollbar should always be visible, but it was disappearing.
