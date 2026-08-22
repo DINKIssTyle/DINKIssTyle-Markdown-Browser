@@ -70,8 +70,8 @@ export const LOCALIZED_BUNDLED_DOCUMENT_PATHS = Object.freeze([
 ]);
 
 // ── DOM Helpers ────────────────────────────────────────────
-export const $ = id => document.getElementById(id);
-export const getScroller = () => document.getElementById('content-view');
+export const $ = id => (typeof document !== 'undefined' ? document.getElementById(id) : null);
+export const getScroller = () => (typeof document !== 'undefined' ? document.getElementById('content-view') : null);
 
 // ── Cached DOM Element References ──────────────────────────
 export const el = {
@@ -245,7 +245,7 @@ export const el = {
     settingsPanelReading: $('settings-panel-reading'),
     settingsPanelEditor: $('settings-panel-editor'),
     settingsPanelAi: $('settings-panel-ai'),
-    settingsContentScroll: document.querySelector('.settings-content-scroll'),
+    settingsContentScroll: typeof document !== 'undefined' ? document.querySelector('.settings-content-scroll') : null,
     settingsDirtyStatus: $('settings-dirty-status'),
     settingsMarginSegmented: $('settings-margin-segmented'),
     settingsThemeModeSegmented: $('settings-theme-mode-segmented'),
@@ -477,8 +477,10 @@ export function documentTypeFromPath(path) {
     if (path === HOME_SCREEN_PATH) return 'home';
     if (isBundledDocumentPath(path)) return 'markdown';
     if (isImagePath(path)) return 'image';
-    if (/\.html?$/i.test(path)) return 'html';
-    if (isMarkdownPath(path) || /\.txt$/i.test(path)) return 'markdown';
+    if (isHTMLPath(path)) return 'html';
+    if (isMarkdownPath(path)) return 'markdown';
+    if (isSourceCodePath(path)) return 'code';
+    if (isPlainTextPath(path)) return 'text';
     return 'unsupported';
 }
 
@@ -486,16 +488,36 @@ export function isMarkdownPath(path) {
     return /\.(md|markdown)$/i.test(path || "");
 }
 
+export function isHTMLPath(path) {
+    return /\.html?$/i.test(path || "");
+}
+
+export function isSourceCodePath(path) {
+    return /\.(py|lua|c|h|m|mm|cpp|hpp|cc|cxx|hh|js|ts|jsx|tsx|mjs|cjs|go|rs|java|kt|kts|swift|rb|php|sh|bash|zsh|fish|ps1|bat|cmd|css|scss|less|sass|sql|xml|toml|yaml|yml|json)$/i.test(path || "");
+}
+
+export function isPlainTextPath(path) {
+    const filename = (path || "").split(/[\\/]/).pop() || "";
+    if (/^(LICENSE|LICENCE|README|CHANGELOG|AUTHORS|Makefile|Dockerfile|Gemfile)$/i.test(filename)) {
+        return true;
+    }
+    return /\.(txt|log|ini|conf|env|cfg|def)$/i.test(path || "");
+}
+
 export function isImagePath(path) {
     return /\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(path || "");
 }
 
 export function isTextPreviewPath(path) {
-    return /\.(md|markdown|txt)$/i.test(path || "");
+    return isMarkdownPath(path) || isSourceCodePath(path) || isPlainTextPath(path);
+}
+
+export function isEditableDocumentType(type) {
+    return type === 'markdown' || type === 'code' || type === 'text';
 }
 
 export function isSupportedPreviewPath(path) {
-    return isTextPreviewPath(path) || /\.html?$/i.test(path || "") || isImagePath(path);
+    return isTextPreviewPath(path) || isHTMLPath(path) || isImagePath(path);
 }
 
 export function normalizeFileURLPath(path) {
@@ -577,7 +599,11 @@ export function formatDisplayPath(path) {
 
 export function deriveTabTitle(path, content, { maxContentLength = Infinity } = {}) {
     if (path === HOME_SCREEN_PATH) return 'Start';
-    if (documentTypeFromPath(path) === 'html') {
+    const docType = documentTypeFromPath(path);
+    if (docType === 'code' || docType === 'text' || docType === 'image') {
+        return basename(path) || 'Untitled';
+    }
+    if (docType === 'html') {
         const doc = new DOMParser().parseFromString(content, 'text/html');
         const title = doc.querySelector('title')?.textContent?.trim();
         return title || basename(path);

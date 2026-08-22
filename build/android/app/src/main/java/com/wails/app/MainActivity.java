@@ -286,7 +286,17 @@ public class MainActivity extends AppCompatActivity {
         String lowerName = displayName.toLowerCase();
         if (!lowerName.endsWith(".md") && !lowerName.endsWith(".markdown") &&
             !lowerName.endsWith(".html") && !lowerName.endsWith(".htm") &&
-            !lowerName.endsWith(".txt")) {
+            !lowerName.endsWith(".txt") && !lowerName.endsWith(".log") &&
+            !lowerName.endsWith(".py") && !lowerName.endsWith(".lua") &&
+            !lowerName.endsWith(".c") && !lowerName.endsWith(".h") &&
+            !lowerName.endsWith(".m") && !lowerName.endsWith(".mm") &&
+            !lowerName.endsWith(".cpp") && !lowerName.endsWith(".hpp") &&
+            !lowerName.endsWith(".js") && !lowerName.endsWith(".ts") &&
+            !lowerName.endsWith(".json") && !lowerName.endsWith(".yaml") &&
+            !lowerName.endsWith(".yml") && !lowerName.endsWith(".toml") &&
+            !lowerName.endsWith(".sh") && !lowerName.endsWith(".go") &&
+            !lowerName.endsWith(".rs") && !lowerName.endsWith(".css") &&
+            !lowerName.endsWith(".sql")) {
             String mimeType = getContentResolver().getType(uri);
             if (mimeType != null && mimeType.contains("html")) {
                 displayName += ".html";

@@ -440,6 +440,8 @@ func (a *App) OpenFile() (FileResult, error) {
 		Title: "Open Document",
 		Filters: []application.FileFilter{
 			{DisplayName: "Document Files (*.md;*.markdown;*.html;*.htm)", Pattern: "*.md;*.markdown;*.html;*.htm"},
+			{DisplayName: "Source & Text Files (*.txt;*.py;*.lua;*.c;*.m;...)", Pattern: "*.txt;*.log;*.py;*.lua;*.c;*.h;*.m;*.mm;*.cpp;*.hpp;*.js;*.ts;*.jsx;*.tsx;*.json;*.yaml;*.yml;*.toml;*.go;*.rs;*.sh;*.css;*.sql"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
 		},
 		Window: a.window,
 	}).PromptForSingleSelection()
@@ -463,7 +465,9 @@ func (a *App) SelectDocument(basePath string) (string, error) {
 		Title:     "Select Document",
 		Directory: defaultDirectoryForBasePath(basePath),
 		Filters: []application.FileFilter{
-			{DisplayName: "Document Files", Pattern: "*.md;*.markdown;*.html;*.htm"},
+			{DisplayName: "Document Files (*.md;*.markdown;*.html;*.htm)", Pattern: "*.md;*.markdown;*.html;*.htm"},
+			{DisplayName: "Source & Text Files (*.txt;*.py;*.lua;*.c;*.m;...)", Pattern: "*.txt;*.log;*.py;*.lua;*.c;*.h;*.m;*.mm;*.cpp;*.hpp;*.js;*.ts;*.jsx;*.tsx;*.json;*.yaml;*.yml;*.toml;*.go;*.rs;*.sh;*.css;*.sql"},
+			{DisplayName: "All Files (*.*)", Pattern: "*.*"},
 		},
 		Window: a.window,
 	}).PromptForSingleSelection()
@@ -698,7 +702,7 @@ func (a *App) SearchMarkdown(dir string, query string) ([]map[string]string, err
 		if err != nil {
 			return err
 		}
-		if !info.IsDir() && isMarkdownPath(path) {
+		if !info.IsDir() && (isMarkdownPath(path) || isPlainTextOrCodePath(path)) {
 			content, err := os.ReadFile(path)
 			if err != nil {
 				return nil // Skip files that can't be read
@@ -1082,8 +1086,22 @@ func isHTMLPath(path string) bool {
 	return ext == ".html" || ext == ".htm"
 }
 
+func isPlainTextOrCodePath(path string) bool {
+	ext := strings.ToLower(filepath.Ext(path))
+	switch ext {
+	case ".txt", ".log", ".ini", ".conf", ".env", ".cfg", ".toml", ".yaml", ".yml", ".json",
+		".py", ".lua", ".c", ".h", ".m", ".mm", ".cpp", ".hpp", ".cc", ".cxx", ".hh",
+		".js", ".ts", ".jsx", ".tsx", ".mjs", ".cjs",
+		".go", ".rs", ".java", ".kt", ".kts", ".swift", ".rb", ".php",
+		".sh", ".bash", ".zsh", ".fish", ".ps1", ".bat", ".cmd",
+		".css", ".scss", ".less", ".sass", ".sql", ".xml", ".svg":
+		return true
+	}
+	return false
+}
+
 func isSupportedDocumentPath(path string) bool {
-	return isMarkdownPath(path) || isHTMLPath(path)
+	return isMarkdownPath(path) || isHTMLPath(path) || isPlainTextOrCodePath(path)
 }
 
 func normalizeDocumentPath(path string, workingDir string) (string, bool) {
@@ -1852,7 +1870,7 @@ Exec=%s %%f
 Icon=dkst-markdown-browser
 Terminal=false
 Categories=Utility;TextEditor;
-MimeType=text/markdown;text/x-markdown;application/x-markdown;application/x-extension-md;application/x-extension-markdown;
+MimeType=text/markdown;text/x-markdown;application/x-markdown;application/x-extension-md;application/x-extension-markdown;text/plain;
 StartupWMClass=DKST Markdown Browser
 `, quoteDesktopExec(binPath))
 	if err := os.WriteFile(desktopPath, []byte(entry), 0644); err != nil {

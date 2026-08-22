@@ -8,6 +8,25 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
 
+## 3.0.4
+
+
+### 🎛️ Común
+
+* **Asociación de Archivos del SO No Intrusiva**: Puedes abrir varios archivos de texto plano y código fuente como .txt, .py, .c, .m utilizando la función de Asociación de Archivos No Intrusiva. Este es un método de asociación de archivos con mínima intervención.
+
+### 🖥️ Windows, macOS, Linux
+* **Aún no disponible**: 
+
+### 📱 Android, iPadOS/iOS
+* **Tamaño del Navegador Flotante Ajustable**: El área táctil del botón flotante utilizado para buscar o verificar ortografía se ha ampliado para mejorar la usabilidad en pantallas táctiles.
+
+### 📱 Android
+* **Aún no disponible**: 
+
+### 📱 iPadOS
+* **Corrección de error de la barra de desplazamiento**: Cuando el panel lateral está abierto, la barra de desplazamiento siempre debería ser visible, pero había desaparecido.
+
 ## 3.0.3
 
 ### 🎛️ Común

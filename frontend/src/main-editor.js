@@ -4,7 +4,7 @@
  */
 
 import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES, getSlashCommands as getConfiguredSlashCommands } from './config.js';
-import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS } from './main-state.js';
+import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS, documentTypeFromPath, isEditableDocumentType } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { createUnsavedMarkdownTab, getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip, syncDocumentMetadataUI } from './main-render.js';
@@ -30,7 +30,7 @@ import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoD
 import { SearchCursor } from '@codemirror/search';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { HighlightStyle, syntaxHighlighting } from '@codemirror/language';
+import { HighlightStyle, syntaxHighlighting, LanguageDescription } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { enqueueLLMTask, ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
@@ -61,9 +61,11 @@ let spellcheckTooltipHideTimer = 0;
 let spellcheckTooltipPositionFrame = 0;
 let toolbarDisabledTooltip = null;
 let toolbarDisabledTooltipButton = null;
+let setEditorPreviewVisibleFn = null;
 export let cmView = null;
 export const themeCompartment = new Compartment();
 export const tokenColorCompartment = new Compartment();
+export const languageCompartment = new Compartment();
 const historyCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
@@ -806,6 +808,15 @@ function syncRenderModeIcon() {
         el.edRenderModeMenu.title = isRealtime ? 'Realtime' : 'Line Change';
         el.edRenderModeMenu.setAttribute('aria-label', el.edRenderModeMenu.title);
     }
+}
+
+export function syncToolbarForDocumentType() {
+    const isNonMarkdown = state.currentDocumentType === 'code' || state.currentDocumentType === 'text';
+    if (el.edRenderModeMenu) el.edRenderModeMenu.disabled = isNonMarkdown;
+    if (el.edRenderMode) el.edRenderMode.disabled = isNonMarkdown;
+    if (el.edPreviewToggle) el.edPreviewToggle.disabled = isNonMarkdown;
+    if (el.edSplitDirection) el.edSplitDirection.disabled = isNonMarkdown;
+    if (el.edSplitSwap) el.edSplitSwap.disabled = isNonMarkdown;
 }
 
 function updateActiveTabTitleFromContent(content) {
@@ -3363,7 +3374,7 @@ export function initCodeMirror() {
                 ...historyKeymap,
                 indentWithTab
             ]),
-            markdown({ base: markdownLanguage, codeLanguages: languages }),
+            languageCompartment.of(markdown({ base: markdownLanguage, codeLanguages: languages })),
             themeCompartment.of(document.documentElement.classList.contains('dark') ? oneDark : []),
             tokenColorCompartment.of(getTokenColorExtension()),
             ghostTextField,
@@ -3583,6 +3594,13 @@ export function syncEditorSessionFromState() {
         state.editingPreviewFolder = state.editingSourceFolder || state.currentFolder;
     }
 
+    updateEditorLanguageForPath(state.editingSourcePath || state.currentFilePath);
+    const isNonMarkdown = state.currentDocumentType === 'code' || state.currentDocumentType === 'text';
+    if (isNonMarkdown) {
+        setEditorPreviewVisible(false);
+    }
+    syncToolbarForDocumentType();
+
     const restoreTopLine = Math.max(1, Math.round(Number(state.editorTopLine) || 1));
     const restoreScrollTop = Math.max(0, Number(state.editorScrollTop) || 0);
     requestAnimationFrame(() => {
@@ -3711,12 +3729,40 @@ export async function createNewDocument() {
     }
 }
 
+export async function updateEditorLanguageForPath(filePath) {
+    if (!cmView) return;
+    const type = documentTypeFromPath(filePath);
+    if (type === 'markdown') {
+        cmView.dispatch({
+            effects: languageCompartment.reconfigure(markdown({ base: markdownLanguage, codeLanguages: languages }))
+        });
+        return;
+    }
+    if (type === 'code') {
+        const desc = LanguageDescription.matchFilePath(languages, filePath);
+        if (desc) {
+            try {
+                const support = await desc.load();
+                cmView.dispatch({
+                    effects: languageCompartment.reconfigure(support)
+                });
+                return;
+            } catch (e) {
+                console.warn('Failed to load language support for', filePath, e);
+            }
+        }
+    }
+    cmView.dispatch({
+        effects: languageCompartment.reconfigure([])
+    });
+}
+
 export function enterEditMode() {
     if (state.isEditing) {
         handleCancel();
         return;
     }
-    if (state.currentDocumentType !== 'markdown') return;
+    if (!isEditableDocumentType(state.currentDocumentType)) return;
 
     hideLinkTooltip();
     clearSpellcheckSuggestions();
@@ -3728,6 +3774,13 @@ export function enterEditMode() {
     state.editingSourceFolder = state.currentFolder;
     state.editingPreviewPath = state.currentFilePath;
     state.editingPreviewFolder = state.currentFolder;
+
+    updateEditorLanguageForPath(state.currentFilePath);
+    const isNonMarkdown = state.currentDocumentType === 'code' || state.currentDocumentType === 'text';
+    if (isNonMarkdown) {
+        setEditorPreviewVisible(false);
+    }
+    syncToolbarForDocumentType();
 
     const nextSelection = normalizeEditorSelectionSnapshot(state.editorSelection, state.currentMarkdownSource.length);
     resetEditorHistoryAroundSync(() => {
@@ -5296,6 +5349,11 @@ function bindEditorPaneSplitter() {
 
     updateSplitControls();
     updatePreviewToggle();
+    setEditorPreviewVisibleFn = (visible) => {
+        if (isPreviewVisible === visible) return;
+        isPreviewVisible = visible;
+        updatePreviewToggle();
+    };
 
     const positionTooltip = event => {
         const tooltip = el.linkTooltip;
@@ -5465,6 +5523,18 @@ export function toggleEditorPreview() {
     if (!state.isEditing || !el.edPreviewToggle) return false;
     el.edPreviewToggle.click();
     return true;
+}
+
+export function setEditorPreviewVisible(visible) {
+    if (typeof setEditorPreviewVisibleFn === 'function') {
+        setEditorPreviewVisibleFn(visible);
+        return true;
+    }
+    const container = el.documentArea;
+    if (container) {
+        container.classList.toggle('editor-preview-hidden', !visible);
+    }
+    return false;
 }
 
 function readStoredBoolean(key, fallback) {

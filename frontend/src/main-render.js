@@ -20,7 +20,7 @@ import {
     state, el, getScroller, HOME_SCREEN_PATH, debounce,
     joinPath, formatDisplayPath, isExternalURL, splitLinkTarget, syncEngineSelector, getPathDirname,
     isBundledDocumentPath, normalizeAppLocalFileHref, normalizeFileURLPath, isActiveMarkdownEditTab,
-    decodeLocalMarkdownPath, basename, isImagePath, escapeHTML, escapeAttr,
+    decodeLocalMarkdownPath, basename, isImagePath, escapeHTML, escapeAttr, isEditableDocumentType,
 } from './main-state.js';
 import { getActiveTab } from './main-tabs.js';
 import { exitEditMode, getCurrentEditorText, updateEditToolbarScrollbar } from './main-editor.js';
@@ -1431,11 +1431,12 @@ export async function renderActiveTab() {
     el.currentPath.innerText = formatDisplayPath(state.currentFilePath);
 
     // Update edit button state
-    const isMarkdown = state.currentDocumentType === 'markdown' &&
+    const isEditable = isEditableDocumentType(state.currentDocumentType) &&
         state.currentFilePath !== HOME_SCREEN_PATH &&
         !isBundledDocumentPath(state.currentFilePath);
+    const isMarkdown = state.currentDocumentType === 'markdown' && isEditable;
     syncDocumentMetadataUI(isMarkdown ? state.currentMarkdownSource : '');
-    el.btnEdit.disabled = !isMarkdown;
+    el.btnEdit.disabled = !isEditable;
 
     // Disable translate button when not in viewer mode or not a markdown file
     const isViewerMarkdown = isMarkdown && !state.isEditing;
@@ -1443,7 +1444,7 @@ export async function renderActiveTab() {
         el.btnTranslate.disabled = !isViewerMarkdown;
     }
 
-    if (state.isEditing && !isMarkdown) {
+    if (state.isEditing && !isEditable) {
         state.isEditing = false;
         state.editorOriginalContent = "";
     }
@@ -1487,6 +1488,14 @@ export async function renderActiveTab() {
         await renderImageDocument(state.currentFilePath, shouldContinue);
     } else if (state.currentDocumentType === 'unsupported') {
         renderUnsupportedDocument(state.currentFilePath);
+    } else if (state.currentDocumentType === 'code' || state.currentDocumentType === 'text') {
+        el.htmlFrame.classList.add('hidden');
+        if (state.isEditing) {
+            el.markdownContainer.innerHTML = '';
+        } else {
+            el.markdownContainer.classList.remove('hidden');
+            renderCodeOrTextDocument(state.currentMarkdownSource, state.currentFilePath, state.currentDocumentType);
+        }
     } else {
         el.htmlFrame.classList.add('hidden');
         el.markdownContainer.classList.remove('hidden');
@@ -1802,6 +1811,75 @@ function renderUnsupportedDocument(path) {
             <div class="unsupported-preview-message">Unsupported File Type</div>
         </div>
     `;
+}
+
+function renderCodeOrTextDocument(content, path, type) {
+    cleanupHTMLFrame({ resetSource: true });
+    el.homeScreen.classList.add('hidden');
+    el.htmlFrame.classList.add('hidden');
+    el.markdownContainer.classList.remove('hidden');
+
+    if (type === 'code') {
+        const ext = (path || '').split('.').pop()?.toLowerCase() || '';
+        const langMap = {
+            py: 'python',
+            js: 'javascript',
+            ts: 'typescript',
+            jsx: 'javascript',
+            tsx: 'typescript',
+            mjs: 'javascript',
+            cjs: 'javascript',
+            c: 'c',
+            h: 'c',
+            m: 'objectivec',
+            mm: 'objectivec',
+            cpp: 'cpp',
+            hpp: 'cpp',
+            cc: 'cpp',
+            cxx: 'cpp',
+            hh: 'cpp',
+            lua: 'lua',
+            go: 'go',
+            rs: 'rust',
+            java: 'java',
+            kt: 'kotlin',
+            kts: 'kotlin',
+            swift: 'swift',
+            rb: 'ruby',
+            php: 'php',
+            sh: 'bash',
+            bash: 'bash',
+            zsh: 'bash',
+            sql: 'sql',
+            json: 'json',
+            yaml: 'yaml',
+            yml: 'yaml',
+            toml: 'ini',
+            ini: 'ini',
+            conf: 'ini',
+            css: 'css',
+            scss: 'scss',
+            less: 'less',
+            xml: 'xml',
+            svg: 'xml',
+        };
+        const lang = langMap[ext] || '';
+        let highlighted = '';
+        try {
+            if (lang && typeof hljs !== 'undefined' && hljs.getLanguage && hljs.getLanguage(lang)) {
+                highlighted = hljs.highlight(content, { language: lang, ignoreIllegals: true }).value;
+            } else if (typeof hljs !== 'undefined' && hljs.highlightAuto) {
+                highlighted = hljs.highlightAuto(content).value;
+            } else {
+                highlighted = escapeHTML(content);
+            }
+        } catch (_) {
+            highlighted = escapeHTML(content);
+        }
+        el.markdownContainer.innerHTML = `<pre class="source-code-viewer"><code class="hljs ${lang ? `language-${lang}` : ''}">${highlighted}</code></pre>`;
+    } else {
+        el.markdownContainer.innerHTML = `<pre class="plaintext-viewer"><code>${escapeHTML(content)}</code></pre>`;
+    }
 }
 
 // ── Mermaid Rendering ──────────────────────────────────────

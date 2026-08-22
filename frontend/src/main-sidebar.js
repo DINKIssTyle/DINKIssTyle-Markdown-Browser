@@ -1133,6 +1133,8 @@ function iconForFile(path) {
     if (/\.(png|jpe?g|gif|webp|svg|bmp|ico|avif)$/i.test(lower)) return 'image';
     if (/\.html?$/i.test(lower)) return 'html';
     if (/\.(md|markdown)$/i.test(lower)) return 'article';
-    if (/\.txt$/i.test(lower)) return 'description';
+    if (/\.(py|lua|c|h|m|mm|cpp|hpp|cc|cxx|hh|js|ts|jsx|tsx|mjs|cjs|go|rs|java|kt|kts|swift|rb|php|sh|bash|zsh|fish|ps1|bat|cmd|sql)$/i.test(lower)) return 'code';
+    if (/\.(json|yaml|yml|toml|xml|css|scss|less|sass)$/i.test(lower)) return 'data_object';
+    if (/\.(txt|log|ini|conf|env|cfg|def)$/i.test(lower) || /^(license|licence|readme|changelog|makefile|dockerfile)$/i.test(lower)) return 'description';
     return 'draft';
 }

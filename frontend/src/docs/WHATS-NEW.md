@@ -12,6 +12,26 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
 
+## 3.0.4
+
+
+### 🎛️ Common
+
+* **Non-intrusive OS File Association**: You can open various plain text and source code files such as .txt, .py, .c, .m using the Non-intrusive File Association feature. This is a file association method with minimal intervention.
+
+### 🖥️ Windows, macOS, Linux
+* **Not yet available**: 
+
+### 📱 Android, iPadOS/iOS
+* **Adjustable Floating Navigator Size**: The touch area of the floating button used for search or spell check has been enlarged to improve usability on touchscreens.
+
+### 📱 Android
+* **Not yet available**: 
+
+### 📱 iPadOS
+* **Scrollbar Bug Fix**: When the side panel is open, the scrollbar should always be visible, but it was disappearing.
+
+
 ## 3.0.3
 
 ### 🎛️ Common

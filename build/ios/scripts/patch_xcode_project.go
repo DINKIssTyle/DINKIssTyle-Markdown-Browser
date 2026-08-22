@@ -64,6 +64,19 @@ var (
 					<string>net.daringfireball.markdown</string>
 				</array>
 			</dict>
+			<dict>
+				<key>CFBundleTypeName</key>
+				<string>Plain Text / Source Code</string>
+				<key>CFBundleTypeRole</key>
+				<string>Viewer</string>
+				<key>LSHandlerRank</key>
+				<string>Alternate</string>
+				<key>LSItemContentTypes</key>
+				<array>
+					<string>public.plain-text</string>
+					<string>public.source-code</string>
+				</array>
+			</dict>
 		</array>
 `)
 	fileSharingEntry = []byte(`		<key>UIFileSharingEnabled</key>

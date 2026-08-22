@@ -8,7 +8,7 @@ import 'katex/dist/katex.min.css';
 import { DEFAULT_CONTENT_FONT_SIZE, MIN_SPLASH_MS } from './config.js';
 
 // ── Module Imports ─────────────────────────────────────────
-import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector, normalizeFileURLPath } from './main-state.js';
+import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector, normalizeFileURLPath, isEditableDocumentType } from './main-state.js';
 import {
     createTab, getActiveTab, syncGlobalsFromTab, renderTabs,
     createAndSwitchToNewTab, closeTab, reopenClosedTab, activateTabByShortcut, switchToTab,
@@ -902,7 +902,7 @@ function toggleSidebarTabFromShortcut(code) {
 
 async function toggleEditModeFromShortcut() {
     if (!state.isEditing) {
-        if (state.currentDocumentType === 'markdown') {
+        if (isEditableDocumentType(state.currentDocumentType)) {
             enterEditMode();
         }
         return;

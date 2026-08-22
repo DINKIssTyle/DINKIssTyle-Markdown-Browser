@@ -9,7 +9,7 @@ import {
     documentTypeFromPath, kindFromPath, splitLinkTarget, isExternalURL,
     joinPath, getScroller, syncEngineSelector, deriveTabTitle,
     isMacOS, isEditableTarget, isBundledDocumentPath, isActiveMarkdownEditTab,
-    isSupportedPreviewPath, getLocalizedBundledDocument,
+    isSupportedPreviewPath, getLocalizedBundledDocument, isEditableDocumentType,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
 import { renderActiveTab, hideLinkTooltip } from './main-render.js';
@@ -151,13 +151,13 @@ export async function openPath(path, options = {}) {
         }
 
         const documentType = documentTypeFromPath(path);
-        const shouldReadContent = documentType === 'markdown';
+        const shouldReadContent = isEditableDocumentType(documentType);
         let fileContent = content ?? "";
         if (shouldReadContent) {
             if (isMobileUntitledPath(path)) {
                 fileContent = content ?? "";
             } else {
-                updateProgress('Reading markdown file', 42);
+                updateProgress(documentType === 'markdown' ? 'Reading markdown file' : 'Reading file', 42);
                 fileContent = await ReadFile(path);
             }
         } else {
@@ -171,11 +171,11 @@ export async function openPath(path, options = {}) {
         if (!isLiveTab(tab)) return;
         await loadFile(path, fileContent, pushHistory, setHome, tab);
         if (!isLiveTab(tab)) return;
-        if (openInEditMode && documentType === 'markdown' && state.activeTabId === targetTabId) {
+        if (openInEditMode && isEditableDocumentType(documentType) && state.activeTabId === targetTabId) {
             if (!state.isEditing) {
                 enterEditMode();
             }
-        } else if (openInEditMode && documentType === 'markdown') {
+        } else if (openInEditMode && isEditableDocumentType(documentType)) {
             tab.isEditing = true;
             tab.editorOriginalContent = fileContent;
             tab.editingSourcePath = path;
@@ -296,13 +296,14 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
     }
     const documentType = documentTypeFromPath(path);
     const isTargetActive = isActiveTab(tab);
+    const isTextContent = isEditableDocumentType(documentType);
 
     if (!isTargetActive) {
         tab.path = path;
         tab.kind = kindFromPath(path);
         tab.documentType = documentType;
         tab.currentFolder = getPathDirname(path);
-        tab.currentMarkdownSource = documentType === 'markdown' ? content : "";
+        tab.currentMarkdownSource = isTextContent ? content : "";
         tab.editorSelection = (tab.editorSelections || {})[path] || null;
         tab.pendingKeyword = tab.pendingKeyword || "";
         tab.pendingAnchor = tab.pendingAnchor || "";
@@ -330,7 +331,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
     state.currentFilePath = path;
     state.currentDocumentType = documentType;
     state.currentFolder = getPathDirname(path);
-    state.currentMarkdownSource = state.currentDocumentType === 'markdown' ? content : "";
+    state.currentMarkdownSource = isTextContent ? content : "";
     if (tab) {
         tab.editorSelections = tab.editorSelections || {};
         state.editorSelection = tab.editorSelections[path] || null;

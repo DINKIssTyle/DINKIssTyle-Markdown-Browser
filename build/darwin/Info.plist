@@ -8,13 +8,48 @@
 			<key>CFBundleTypeExtensions</key>
 			<array>
 				<string>md</string>
+				<string>markdown</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
 			<string>markdown-doc</string>
 			<key>CFBundleTypeName</key>
-			<string>DKSTDocument</string>
+			<string>Markdown Document</string>
 			<key>CFBundleTypeRole</key>
 			<string>Editor</string>
+			<key>LSHandlerRank</key>
+			<string>Owner</string>
+		</dict>
+		<dict>
+			<key>CFBundleTypeExtensions</key>
+			<array>
+				<string>txt</string>
+				<string>log</string>
+				<string>py</string>
+				<string>lua</string>
+				<string>c</string>
+				<string>h</string>
+				<string>m</string>
+				<string>mm</string>
+				<string>cpp</string>
+				<string>hpp</string>
+				<string>js</string>
+				<string>ts</string>
+				<string>json</string>
+				<string>yaml</string>
+				<string>yml</string>
+				<string>toml</string>
+				<string>sh</string>
+				<string>go</string>
+				<string>rs</string>
+				<string>sql</string>
+				<string>css</string>
+			</array>
+			<key>CFBundleTypeName</key>
+			<string>Plain Text / Source Code</string>
+			<key>CFBundleTypeRole</key>
+			<string>Viewer</string>
+			<key>LSHandlerRank</key>
+			<string>Alternate</string>
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
@@ -32,9 +67,9 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.0.3</string>
+	<string>3.0.4</string>
 	<key>CFBundleVersion</key>
-	<string>3.0.3</string>
+	<string>3.0.4</string>
 	<key>LSMinimumSystemVersion</key>
 	<string>12.0.0</string>
 	<key>NSHighResolutionCapable</key>

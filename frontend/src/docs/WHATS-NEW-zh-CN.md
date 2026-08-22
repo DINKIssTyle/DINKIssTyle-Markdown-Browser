@@ -8,6 +8,21 @@
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
 
+### 🎛️ 通用
+
+* **非侵入式操作系统文件关联**：您可以使用非侵入式文件关联功能打开各种纯文本和源代码文件，如.txt、.py、.c、.m。这是一种干预最小的文件关联方法。
+
+### 🖥️ Windows, macOS, Linux
+* **暂不支持**：
+
+### 📱 Android, iPadOS/iOS
+* **可调节浮动导航器大小**：已增大用于搜索或拼写检查的浮动按钮的触摸区域，以提高在触摸屏上的可用性。
+
+### 📱 Android
+* **暂不支持**：
+
+### 📱 iPadOS
+* **滚动条错误修复**：当侧边栏打开时，滚动条应该始终可见，但它会消失。
 
 ## 3.0.3
 

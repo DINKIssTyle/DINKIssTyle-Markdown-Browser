@@ -1781,6 +1781,20 @@ html.dark .html-frame {
     font-size: 1em;
 }
 
+.markdown-container pre.source-code-viewer,
+.markdown-container pre.plaintext-viewer {
+    margin: 0;
+    background: transparent;
+    border: none;
+    padding: 12px 16px;
+    font-family: var(--code-font);
+    font-size: 14px;
+    line-height: 1.6;
+    overflow-x: auto;
+    white-space: pre-wrap;
+    word-break: break-word;
+}
+
 .markdown-container pre code.hljs {
     display: block;
     overflow-x: visible;

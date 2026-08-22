@@ -21,14 +21,14 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 ## 3.0.4
 
 ### 🎛️ 공통
-* **아직 없음**: 
+
+* **비침해적 OS 파일 연결**: Non-intrusive File Association 기능을 통해 .txt, .py, .c, .m 등 다양한 일반 텍스트 및 소스 코드 파일을 열 수 있습니다. 이는 최소한의 개입을 통한 파일 연결 방식입니다.
 
 ### 🖥️ Windows, macOS, Linux
 * **아직 없음**: 
 
 ### 📱 Android, iPadOS/iOS
 * **플로팅 내비게이터 크기 조정**: 검색이나 맞춤법 검사 등에 사용되는 플로팅 버튼의 터치 영역을 키워 터치스크린에서의 사용성을 높였습니다.
-
 
 ### 📱 Android
 * **아직 없음**: 
