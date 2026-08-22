@@ -27,6 +27,7 @@ content_paste
 contextual_token
 contrast
 dark_mode
+data_object
 delete
 description
 device_thermostat
