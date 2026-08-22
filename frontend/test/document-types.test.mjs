@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 
 import {
+    state,
     documentTypeFromPath,
     isMarkdownPath,
     isHTMLPath,
@@ -11,6 +12,9 @@ import {
     isEditableDocumentType,
     isSupportedPreviewPath,
     deriveTabTitle,
+    isActiveMarkdownEditTab,
+    isActiveEditTab,
+    HOME_SCREEN_PATH,
 } from '../src/main-state.js';
 
 test('identifies markdown paths correctly', () => {
@@ -95,4 +99,37 @@ test('derives tab title using filename for code and plain text files', () => {
 
     const markdownContent = '# Main Heading\nParagraph text';
     assert.equal(deriveTabTitle('/docs/guide.md', markdownContent), 'Main Heading');
+});
+
+test('identifies active edit tab for markdown, code, and text files when editing', () => {
+    state.isEditing = true;
+
+    state.currentDocumentType = 'markdown';
+    state.currentFilePath = '/docs/notes.md';
+    assert.equal(isActiveMarkdownEditTab(), true);
+    assert.equal(isActiveEditTab(), true);
+
+    state.currentDocumentType = 'code';
+    state.currentFilePath = '/src/main.py';
+    assert.equal(isActiveMarkdownEditTab(), true);
+    assert.equal(isActiveEditTab(), true);
+
+    state.currentDocumentType = 'text';
+    state.currentFilePath = '/docs/todo.txt';
+    assert.equal(isActiveMarkdownEditTab(), true);
+    assert.equal(isActiveEditTab(), true);
+
+    state.currentDocumentType = 'html';
+    state.currentFilePath = '/public/index.html';
+    assert.equal(isActiveMarkdownEditTab(), false);
+    assert.equal(isActiveEditTab(), false);
+
+    state.currentDocumentType = 'markdown';
+    state.currentFilePath = HOME_SCREEN_PATH;
+    assert.equal(isActiveMarkdownEditTab(), false);
+
+    state.isEditing = false;
+    state.currentFilePath = '/docs/notes.md';
+    assert.equal(isActiveMarkdownEditTab(), false);
+    assert.equal(isActiveEditTab(), false);
 });

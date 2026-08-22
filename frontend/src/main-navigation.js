@@ -411,8 +411,8 @@ export async function reloadCurrent() {
             return;
         }
 
-        if (reloadDocumentType === 'markdown') {
-            updateProgress('Reading markdown file', 48);
+        if (isEditableDocumentType(reloadDocumentType)) {
+            updateProgress(reloadDocumentType === 'markdown' ? 'Reading markdown file' : 'Reading file', 48);
             nextContent = await ReadFile(reloadPath);
             throwIfTaskCancelled(taskId);
         } else {
@@ -440,14 +440,14 @@ async function applyReloadedContent(tab, path, documentType, content) {
         return;
     }
     if (!isActiveTab(tab)) {
-        tab.currentMarkdownSource = documentType === 'markdown' ? content : "";
+        tab.currentMarkdownSource = isEditableDocumentType(documentType) ? content : "";
         if (tab.path === path) {
             tab.title = deriveTabTitle(path, content);
         }
         renderTabs();
         return;
     }
-    state.currentMarkdownSource = documentType === 'markdown' ? content : "";
+    state.currentMarkdownSource = isEditableDocumentType(documentType) ? content : "";
     syncTabFromGlobals(tab);
     await renderActiveTab();
 }

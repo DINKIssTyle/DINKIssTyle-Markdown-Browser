@@ -361,7 +361,7 @@ function setupImageLoadScrollSync(container) {
     if (images.length === 0) return;
 
     const handleImageLoad = debounce(() => {
-        if (state.isEditing && isActiveMarkdownEditTab()) {
+        if (state.isEditing && state.currentDocumentType === 'markdown' && isActiveMarkdownEditTab()) {
             import('./main-editor.js').then(mod => {
                 mod.triggerImmediateScrollSync();
             });
@@ -481,7 +481,7 @@ export function scrollPreviewToEditorLines(lineNumbers, editorScrollInfo) {
         return;
     }
 
-    if (!state.isEditing || !isActiveMarkdownEditTab()) {
+    if (!state.isEditing || state.currentDocumentType !== 'markdown' || !isActiveMarkdownEditTab()) {
         return;
     }
     if (state.editingPreviewPath && state.editingSourcePath && state.editingPreviewPath !== state.editingSourcePath) {
@@ -523,7 +523,7 @@ export function scrollPreviewToEditorLines(lineNumbers, editorScrollInfo) {
 }
 
 export function scrollPreviewToEditorLine(lineNumber) {
-    if (!state.isEditing || !isActiveMarkdownEditTab()) {
+    if (!state.isEditing || state.currentDocumentType !== 'markdown' || !isActiveMarkdownEditTab()) {
         return;
     }
     if (state.editingPreviewPath && state.editingSourcePath && state.editingPreviewPath !== state.editingSourcePath) {

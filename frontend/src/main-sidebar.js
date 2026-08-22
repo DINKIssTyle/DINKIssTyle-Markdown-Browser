@@ -7,7 +7,7 @@ import {
     state, el, HOME_SCREEN_PATH,
     getPathDirname, documentTypeFromPath, basename,
     escapeHTML, escapeAttr, isBundledDocumentPath, getScroller,
-    isSupportedPreviewPath, isImagePath,
+    isSupportedPreviewPath, isImagePath, isEditableDocumentType,
 } from './main-state.js';
 import { handleSearch, updateSearchClearButton, handleSearchInputKeydown, clearSearchInput } from './main-ui.js';
 import { debounce } from './main-state.js';
@@ -831,7 +831,7 @@ function bindFileTreeEvents() {
                 pushHistory: true,
                 setHome: true,
                 newTab: wantsNewTab || state.isEditing,
-                openInEditMode: state.isEditing && documentTypeFromPath(path) === 'markdown',
+                openInEditMode: state.isEditing && isEditableDocumentType(documentTypeFromPath(path)),
             });
             if (window.innerWidth <= 768 && document.documentElement.classList.contains('platform-mobile')) {
                 closeSidebar();

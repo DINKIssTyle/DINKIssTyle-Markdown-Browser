@@ -711,10 +711,12 @@ export function isBundledDocumentPath(path) {
 
 export function isActiveMarkdownEditTab() {
     return state.isEditing &&
-        state.currentDocumentType === 'markdown' &&
+        isEditableDocumentType(state.currentDocumentType) &&
         state.currentFilePath !== HOME_SCREEN_PATH &&
         !isBundledDocumentPath(state.currentFilePath);
 }
+
+export const isActiveEditTab = isActiveMarkdownEditTab;
 
 // ── Engine Selector Sync ───────────────────────────────────
 
