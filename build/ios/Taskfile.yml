@@ -41,6 +41,7 @@ tasks:
   build:
     summary: Creates a build of the application for iOS
     deps:
+      - task: common:sync:version
       - task: generate:ios:xcode
       - task: common:go:mod:tidy
       - task: common:build:frontend

@@ -158,6 +158,7 @@ tasks:
   create:app:bundle:
     summary: Creates an `.app` bundle
     deps:
+      - task: common:sync:version
       - task: common:generate:file-association-icons
     cmds:
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.app/Contents/MacOS"
@@ -186,6 +187,7 @@ tasks:
 
   run:
     deps:
+      - task: common:sync:version
       - task: common:generate:file-association-icons
     cmds:
       - mkdir -p "{{.BIN_DIR}}/{{.APP_NAME}}.dev.app/Contents/MacOS"

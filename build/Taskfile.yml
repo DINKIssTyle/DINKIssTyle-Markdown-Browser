@@ -1,6 +1,12 @@
 version: '3'
 
 tasks:
+  sync:version:
+    summary: Synchronize AppVersion from internal/app/config.go to all platform manifests
+    run: once
+    cmds:
+      - go run build/scripts/sync_version.go
+
   go:mod:tidy:
     summary: Runs `go mod tidy`
     internal: true
@@ -85,6 +91,7 @@ tasks:
     generates:
       - dist/**/*
     deps:
+      - task: sync:version
       - task: install:frontend:deps
       - task: generate:bindings
         vars:

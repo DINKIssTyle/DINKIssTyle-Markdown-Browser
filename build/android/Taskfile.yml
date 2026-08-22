@@ -38,6 +38,7 @@ tasks:
   build:
     summary: Creates a debug build of the application for Android
     deps:
+      - task: common:sync:version
       - task: common:go:mod:tidy
       - task: generate:android:overlay
       - task: common:build:frontend
@@ -178,6 +179,8 @@ tasks:
 
   assemble:apk:
     summary: Assembles a debug APK using Gradle
+    deps:
+      - task: common:sync:version
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -193,6 +196,8 @@ tasks:
 
   assemble:apk:release:
     summary: Assembles a release APK using Gradle (signed with the debug keystore unless ANDROID_KEYSTORE_FILE is set)
+    deps:
+      - task: common:sync:version
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -208,6 +213,8 @@ tasks:
 
   assemble:aab:
     summary: Assembles a debug AAB (Android App Bundle) using Gradle
+    deps:
+      - task: common:sync:version
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -223,6 +230,8 @@ tasks:
 
   assemble:aab:release:
     summary: Assembles a release AAB for Play Store upload (signed with the debug keystore unless ANDROID_KEYSTORE_FILE is set)
+    deps:
+      - task: common:sync:version
     preconditions:
       - sh: 'command -v java >/dev/null || [ -n "$JAVA_HOME" ]'
         msg: "Java not found. Install a JDK (e.g. brew install openjdk@21) and/or set JAVA_HOME"
@@ -433,6 +442,8 @@ tasks:
 
   studio:
     summary: Open the generated Android project in Android Studio
+    deps:
+      - task: common:sync:version
     cmds:
       - |
         if command -v studio >/dev/null 2>&1; then

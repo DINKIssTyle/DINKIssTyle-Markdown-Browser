@@ -107,6 +107,8 @@ tasks:
   generate:syso:
     summary: Generates Windows `.syso` file
     dir: build
+    deps:
+      - task: common:sync:version
     cmds:
       - wails3 generate syso -arch {{.ARCH}} -icon windows/icon.ico -manifest windows/wails.exe.manifest -info windows/info.json -out ../wails_windows_{{.ARCH}}.syso
     vars:
@@ -116,6 +118,7 @@ tasks:
     summary: Creates an NSIS installer
     dir: build/windows/nsis
     deps:
+      - task: common:sync:version
       - task: build
       - task: common:generate:file-association-icons
     preconditions:
@@ -138,6 +141,7 @@ tasks:
   create:msix:package:
     summary: Creates an MSIX package
     deps:
+      - task: common:sync:version
       - task: build
     cmds:
       - |-

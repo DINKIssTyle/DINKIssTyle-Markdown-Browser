@@ -14,7 +14,7 @@
     !define INFO_PRODUCTNAME "DKST Markdown Browser"
 !endif
 !ifndef INFO_PRODUCTVERSION
-    !define INFO_PRODUCTVERSION "3.0.3"
+    !define INFO_PRODUCTVERSION "3.0.4"
 !endif
 !ifndef INFO_COPYRIGHT
     !define INFO_COPYRIGHT "© 2026 DINKI'ssTyle"
