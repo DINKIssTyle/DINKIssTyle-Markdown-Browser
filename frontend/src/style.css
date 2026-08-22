@@ -2200,8 +2200,7 @@ html[data-scrollbar-visibility="when-scrolling"] .custom-v-scrollbar.is-overflow
     opacity: 1;
 }
 
-html.is-sidebar-transitioning .custom-v-scrollbar,
-html.platform-mobile #app-sidebar:not(.hidden)~#main-workspace .custom-v-scrollbar {
+html.is-sidebar-transitioning .custom-v-scrollbar {
     opacity: 0 !important;
     visibility: hidden !important;
     pointer-events: none !important;
@@ -7717,6 +7716,13 @@ html.platform-mobile .sidebar-hint {
 
     #app-sidebar:not(.hidden)~#main-workspace {
         display: none !important;
+    }
+
+    html.platform-mobile #app-sidebar:not(.hidden)~#main-workspace .custom-v-scrollbar {
+        opacity: 0 !important;
+        visibility: hidden !important;
+        pointer-events: none !important;
+        transition: none !important;
     }
 
     #sidebar-resizer {
