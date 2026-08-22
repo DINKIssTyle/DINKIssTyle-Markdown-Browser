@@ -701,6 +701,13 @@ function buildEditorMarkdownHighlight(colors) {
         { tag: tags.keyword, color: colors.keyword, fontWeight: '700' },
         { tag: tags.atom, color: colors.attribute },
         { tag: tags.bool, color: colors.attribute, fontWeight: '700' },
+        { tag: tags.number, color: colors.attribute },
+        { tag: tags.operator, color: colors.marker },
+        { tag: tags.function(tags.variableName), color: colors.heading },
+        { tag: tags.function(tags.propertyName), color: colors.heading },
+        { tag: tags.typeName, color: colors.attribute, fontWeight: '700' },
+        { tag: tags.className, color: colors.attribute, fontWeight: '700' },
+        { tag: tags.definition(tags.variableName), color: colors.heading },
         { tag: tags.comment, color: colors.comment, fontStyle: 'italic' },
         { tag: tags.escape, color: colors.invalid, fontWeight: '700' },
         { tag: tags.invalid, color: colors.invalid, textDecoration: `underline wavy ${colors.invalid}` },
@@ -3739,13 +3746,16 @@ export async function updateEditorLanguageForPath(filePath) {
         return;
     }
     if (type === 'code') {
-        const desc = LanguageDescription.matchFilePath(languages, filePath);
+        const fileName = basename(filePath);
+        const desc = LanguageDescription.matchFilename(languages, fileName);
         if (desc) {
             try {
                 const support = await desc.load();
-                cmView.dispatch({
-                    effects: languageCompartment.reconfigure(support)
-                });
+                if (cmView) {
+                    cmView.dispatch({
+                        effects: languageCompartment.reconfigure(support)
+                    });
+                }
                 return;
             } catch (e) {
                 console.warn('Failed to load language support for', filePath, e);
