@@ -1549,6 +1549,7 @@ async function renderHomeScreen(shouldContinue = () => true) {
     el.mainContainer?.classList.remove('is-editing');
     el.btnEdit?.classList.remove('active');
     if (el.selectEngine) el.selectEngine.disabled = false;
+    syncAIControls();
 
     // Immediately display homeScreen to prevent any black screen flash or freeze
     el.markdownContainer?.classList.add('hidden');

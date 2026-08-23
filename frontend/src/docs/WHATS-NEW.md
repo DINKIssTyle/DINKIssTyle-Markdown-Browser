@@ -26,6 +26,7 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 ### 🎛️ Common
 
 * **Ensure Editor Space**: Ensure there is enough space at the bottom of the editor so it is not obscured by the AI toolbar.
+* **AI Toolbar Persistence Issue**: Fixes the issue where the AI toolbar does not disappear when not in edit tab.
 
 ## 3.0.5
 

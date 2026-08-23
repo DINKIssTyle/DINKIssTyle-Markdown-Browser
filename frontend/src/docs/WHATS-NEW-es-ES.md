@@ -22,6 +22,7 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 ### 🎛️ Común
 
 * **Asegurar espacio del editor**: Asegúrese de que haya suficiente espacio en la parte inferior del editor para que no esté obstruido por la barra de herramientas de IA.
+* **Problema de la barra de herramientas de IA persistente**: Soluciona el problema en el que la barra de herramientas de IA no desaparece cuando no se está en la pestaña de edición.
 
 ## 3.0.5
 

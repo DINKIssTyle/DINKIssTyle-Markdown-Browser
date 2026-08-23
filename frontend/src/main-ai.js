@@ -2518,7 +2518,7 @@ export function syncAIControls() {
     if (!state.isEditing && isPromptBoxVisible()) {
         hidePromptBox({ restoreEditorFocus: false, immediate: true });
     }
-    const showAiDock = state.isEditing && generalAvailable;
+    const showAiDock = isEditorPromptAvailable() && generalAvailable;
     if (showAiDock) {
         showAIDock();
     } else {
