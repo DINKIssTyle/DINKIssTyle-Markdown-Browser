@@ -521,7 +521,17 @@ func (a *App) ShowSaveFileDialog(defaultName string) (string, error) {
 		},
 		Window: a.window,
 	}).PromptForSingleSelection()
-	return selection, err
+	if err != nil {
+		return "", err
+	}
+	return ensureMarkdownExtension(selection), nil
+}
+
+func ensureMarkdownExtension(path string) string {
+	if path == "" || filepath.Ext(path) != "" {
+		return path
+	}
+	return path + ".md"
 }
 
 // GetRelativePath calculates relative path from base to target
@@ -976,8 +986,17 @@ func (a *App) ConfirmOpenExternalURL(url string) (bool, error) {
 
 // AskConfirm shows a native confirmation dialog with custom button labels.
 func (a *App) AskConfirm(title string, message string, okText string, cancelText string) bool {
+	// Windows MessageBox does not support custom labels for question dialogs.
+	// Wails renders Yes/No and dispatches callbacks only for those exact labels.
+	// Waiting for labels such as Discard/Cancel therefore leaves the frontend
+	// promise unresolved on Windows.
+	if goruntime.GOOS == "windows" {
+		response := a.askDialog(title, message, []string{"Yes", "No"}, "Yes", "No")
+		return response == "Yes"
+	}
+
 	// macOS(darwin)일 경우: 첫 번째 요소가 가장 오른쪽(기본 버튼)으로 가므로 순서를 바꿈
-	// Windows/Linux: 배열 순서대로 왼쪽->오른쪽 배치
+	// Linux: 배열 순서대로 왼쪽->오른쪽 배치
 	buttons := []string{cancelText, okText}
 	if goruntime.GOOS == "darwin" {
 		buttons = []string{okText, cancelText}
@@ -989,8 +1008,22 @@ func (a *App) AskConfirm(title string, message string, okText string, cancelText
 
 // AskSaveDiscardCancel shows a dialog with Save, Discard, and Cancel options.
 func (a *App) AskSaveDiscardCancel(title string, message string) string {
+	// Windows question dialogs are limited to Yes/No. Ask a second question
+	// after No so all three logical outcomes remain available without relying
+	// on unsupported custom labels.
+	if goruntime.GOOS == "windows" {
+		if a.askDialog(title, message, []string{"Yes", "No"}, "Yes", "No") == "Yes" {
+			return "Save"
+		}
+		discardMessage := message + "\n\nDiscard the unsaved changes instead?"
+		if a.askDialog(title, discardMessage, []string{"Yes", "No"}, "No", "No") == "Yes" {
+			return "Discard"
+		}
+		return "Cancel"
+	}
+
 	// macOS(darwin): [Save](1st, far right, default) [Cancel](2nd) [Discard](3rd)
-	// Windows/Linux: [Save] [Discard] [Cancel]
+	// Linux: [Save] [Discard] [Cancel]
 	buttons := []string{"Save", "Discard", "Cancel"}
 	if goruntime.GOOS == "darwin" {
 		buttons = []string{"Save", "Cancel", "Discard"}

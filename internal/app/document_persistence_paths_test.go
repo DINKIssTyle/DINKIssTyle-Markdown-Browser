@@ -53,3 +53,25 @@ func TestPreviousIOSContainerDocumentRelativePath(t *testing.T) {
 		})
 	}
 }
+
+func TestEnsureMarkdownExtension(t *testing.T) {
+	tests := []struct {
+		name string
+		path string
+		want string
+	}{
+		{name: "empty selection", path: "", want: ""},
+		{name: "missing extension", path: "/tmp/Untitled", want: "/tmp/Untitled.md"},
+		{name: "markdown extension", path: "/tmp/Untitled.md", want: "/tmp/Untitled.md"},
+		{name: "long markdown extension", path: "/tmp/Untitled.markdown", want: "/tmp/Untitled.markdown"},
+		{name: "explicit other extension", path: "/tmp/Untitled.txt", want: "/tmp/Untitled.txt"},
+	}
+
+	for _, test := range tests {
+		t.Run(test.name, func(t *testing.T) {
+			if got := ensureMarkdownExtension(test.path); got != test.want {
+				t.Fatalf("ensureMarkdownExtension(%q) = %q, want %q", test.path, got, test.want)
+			}
+		})
+	}
+}
