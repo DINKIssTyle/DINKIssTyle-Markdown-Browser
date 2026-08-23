@@ -92,6 +92,7 @@ const SPELLCHECK_CHUNK_TARGET_LENGTH = 700;
 const SPELLCHECK_CHUNK_MAX_LENGTH = 1000;
 const SPELLCHECK_COORDINATE_RECOVERY_RADIUS = 360;
 const SPELLCHECK_SCROLL_MARGIN = 220;
+const EDITOR_OVERLAY_SCROLL_GAP = 8;
 export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
     { key: 'plain', label: 'Plain Text' },
     { key: 'heading', label: 'Headings' },
@@ -3326,6 +3327,30 @@ const koreanImeEnterFix = [
 
 // ── Editor Mode ────────────────────────────────────────────
 
+function getEditorAIDockScrollMargin(view) {
+    const dock = el.editorAiDock;
+    if (!dock
+        || dock.classList.contains('hidden')
+        || !dock.classList.contains('is-visible')) {
+        return null;
+    }
+
+    const editorRect = view.scrollDOM.getBoundingClientRect();
+    const dockRect = dock.getBoundingClientRect();
+    const overlapsHorizontally = dockRect.left < editorRect.right && dockRect.right > editorRect.left;
+    const reachesEditorBottom = dockRect.bottom >= editorRect.bottom - 1;
+    if (!overlapsHorizontally || !reachesEditorBottom || dockRect.top >= editorRect.bottom) {
+        return null;
+    }
+
+    const coveredHeight = editorRect.bottom - Math.max(editorRect.top, dockRect.top);
+    if (coveredHeight <= 0) return null;
+
+    return {
+        bottom: Math.ceil(Math.min(editorRect.height, coveredHeight + EDITOR_OVERLAY_SCROLL_GAP)),
+    };
+}
+
 export function initCodeMirror() {
     if (cmView) return;
 
@@ -3342,6 +3367,7 @@ export function initCodeMirror() {
             }])),
             slashMenuKeymap,
             lineNumbers(),
+            EditorView.scrollMargins.of(getEditorAIDockScrollMargin),
             historyCompartment.of(history()),
             keymap.of([
                 {

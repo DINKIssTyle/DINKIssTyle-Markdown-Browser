@@ -1,3 +1,12 @@
+---
+title: "DKST Markdown Browser 3.0"
+author: "DINKI'ssTyle"
+team: "DKST"
+date: "2026-08-06"
+tags: ["readme"]
+draft: false
+---
+
 <div align="left"><img src="img/textflow.png" width="32"/></div>
 
 Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda en la creación de documentos utilizando atajos de fragmentos de código. Con soporte de IA, OCR, capturas de pantalla flotantes y varias otras características, mejora la eficiencia de tu flujo de trabajo. [Más información](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
@@ -7,6 +16,20 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
+
+## 3.0.6
+
+### 🎛️ Común
+
+* **Asegurar espacio del editor**: Asegúrese de que haya suficiente espacio en la parte inferior del editor para que no esté obstruido por la barra de herramientas de IA.
+
+## 3.0.5
+
+### 🖥️ Windows
+- Se soluciona el botón cancelar no responsivo en la barra de herramientas del modo editar
+
+### 🖥️ Linux
+- Se soluciona que los nuevos archivos de documento no se crean como Markdown
 
 ## 3.0.4
 

@@ -14,8 +14,8 @@ android {
         applicationId "com.dinkisstyle.mdbrowser"
         minSdk 21
         targetSdk 35
-        versionCode 30004
-        versionName "3.0.4"
+        versionCode 30006
+        versionName "3.0.6"
 
         // Configure supported ABIs
         ndk {

@@ -1,3 +1,12 @@
+---
+title: "DKST Markdown Browser 3.0"
+author: "DINKI'ssTyle"
+team: "DKST"
+date: "2026-08-06"
+tags: ["readme"]
+draft: false
+---
+
 <div align="left"><img src="img/textflow.png" width="32"/></div>
 
 如果您喜欢 DKST Markdown Browser，请体验 **DKST Text Flow**。它使用快捷方式来帮助您撰写文档。除了 AI 支持之外，它还提供了 OCR、浮动截图等各种功能来提高工作效率。[了解更多](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
@@ -7,6 +16,20 @@
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
+
+## 3.0.6
+
+### 🎛️ 通用
+
+* **确保编辑器底部可见**: 确保编辑器底部不会被 AI 工具栏遮挡。
+
+## 3.0.5
+
+### 🖥️ Windows
+- 修复编辑模式工具栏中取消按钮无响应的问题
+
+### 🖥️ Linux
+- 修复新文档文件未以 Markdown 格式创建的问题
 
 ## 3.0.4
 

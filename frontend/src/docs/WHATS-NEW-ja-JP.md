@@ -1,3 +1,12 @@
+---
+title: "DKST Markdown Browser 3.0"
+author: "DINKI'ssTyle"
+team: "DKST"
+date: "2026-08-06"
+tags: ["readme"]
+draft: false
+---
+
 <div align="left"><img src="img/textflow.png" width="32"/></div>
 
 DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow**を体験してみてください。スニペットショートカットが執筆作業をサポートします。AI支援はもちろん、OCRやフローティングスクリーンショットなど多様な機能で作業効率を高めます。[詳細はこちら](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
@@ -7,6 +16,20 @@ DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow*
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 軽快でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！<br><br>Windows、macOS、Linux、iOS、iPadOS、およびAndroidで利用可能になりました。<br><br></div>
+
+## 3.0.6
+
+### 🎛️ 共通
+
+* **エディター下部の確保**: AIツールバーによって隠れないように、エディターの下部を確保します。
+
+## 3.0.5
+
+### 🖥️ Windows
+- エディットモードのツールバーでキャンセルボタンが反応しない問題を修正
+
+### 🖥️ Linux
+- 新規ドキュメントファイルがMarkdownとして作成されない問題を修正
 
 ## 3.0.4
 

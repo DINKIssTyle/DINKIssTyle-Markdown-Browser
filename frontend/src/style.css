@@ -33,6 +33,7 @@
     --header-height: 56px;
     --sidebar-width: 300px;
     --editor-ai-dock-height: 42px;
+    --editor-bottom-blank-space: 4.8em;
 
     /* ── Mobile Toolbar Button Dimension Constants (4 Categories) ─────── */
     /* 1. Mobile Main Toolbar Buttons (#toolbar .nav-btn) */
@@ -9316,6 +9317,8 @@ html.dark .ai-prompt-shell:focus-within {
     line-height: 1.6;
     max-width: none;
     margin: 0 auto;
+    /* Three visual lines of document-free space above bottom overlays. */
+    padding-bottom: var(--editor-bottom-blank-space) !important;
     /* padding-left: calc(1px + var(--document-padding-inline)) !important;
     padding-right: calc(1px + var(--document-padding-inline)) !important; */
     transition: padding 0.24s ease;
