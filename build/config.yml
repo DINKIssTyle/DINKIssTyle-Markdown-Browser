@@ -11,7 +11,7 @@ info:
   description: "A lightweight and elegant cross-platform. Markdown viewer and editor" # The application description
   copyright: "© 2026 DINKI'ssTyle" # Copyright text
   comments: "DKST Markdown Browser" # Comments
-  version: "3.0.6" # The application version
+  version: "3.0.7" # The application version
   cfBundleIconName: "appicon" # The macOS icon name in Assets.car icon bundles (optional)
   #                               # Should match the name of your .icon file without the extension
   #                               # If not set and Assets.car exists, defaults to "appicon"

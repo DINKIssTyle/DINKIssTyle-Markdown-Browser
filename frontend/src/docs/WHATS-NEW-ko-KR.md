@@ -18,6 +18,10 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
+## 3.0.7
+### 🎛️ 공통
+* **코드 블록 복사 버튼**: 우측 상단에 고정되지 않던 문제 해결
+
 ## 3.0.6
 
 ### 🎛️ 공통
@@ -29,10 +33,10 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 ## 3.0.5
 
 ### 🖥️ Windows
-- Fix cancel button unresponsive in edit mode toolbar
-
+- 편집 모드 도구 모음에서 취소 버튼이 작동하지 않는 문제 수정
+- 
 ### 🖥️ Linux
-- Fix new document files not created as Markdown
+- 마크다운으로 생성되지 않은 새 문서 파일 수정
 
 ## 3.0.4
 
