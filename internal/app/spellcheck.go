@@ -44,7 +44,8 @@ func (a *App) SpellCheckDocument(req SpellCheckRequest) (SpellCheckResult, error
 	if strings.TrimSpace(content) == "" {
 		return SpellCheckResult{}, fmt.Errorf("document content is empty")
 	}
-	if strings.TrimSpace(req.AI.Endpoint) == "" || strings.TrimSpace(req.AI.Model) == "" {
+	if strings.ToLower(strings.TrimSpace(req.AI.Provider)) != "apple" &&
+		(strings.TrimSpace(req.AI.Endpoint) == "" || strings.TrimSpace(req.AI.Model) == "") {
 		return SpellCheckResult{}, fmt.Errorf("AI endpoint and model are required")
 	}
 

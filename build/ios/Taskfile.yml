@@ -100,15 +100,29 @@ tasks:
     cmds:
       - |
         MAIN_M=build/ios/xcode-support/main.m
-        xcrun -sdk {{.IOS_SDK}} clang \
+        APPLE_AI_SWIFT=build/apple-intelligence/AppleIntelligenceBridge.swift
+        LINK_TEMP=$(mktemp -d /tmp/dkst-ios-link.XXXXXX)
+        MODULE_CACHE=$(mktemp -d /tmp/dkst-ios-swift-cache.XXXXXX)
+        trap 'rm -rf "$LINK_TEMP" "$MODULE_CACHE"' EXIT
+        xcrun -sdk {{.IOS_SDK}} clang -c -fobjc-arc \
           -target {{.IOS_TARGET}} \
           -isysroot {{.SDK_PATH}} \
+          "$MAIN_M" -o "$LINK_TEMP/main.o"
+        CLANG_MODULE_CACHE_PATH="$MODULE_CACHE" SWIFT_MODULE_CACHE_PATH="$MODULE_CACHE" \
+          xcrun -sdk {{.IOS_SDK}} swiftc -parse-as-library -c "$APPLE_AI_SWIFT" \
+          -module-name DKSTAppleIntelligenceBridge \
+          -target {{.IOS_TARGET}} -sdk {{.SDK_PATH}} \
+          -o "$LINK_TEMP/apple-intelligence.o"
+        xcrun -sdk {{.IOS_SDK}} swiftc \
+          -target {{.IOS_TARGET}} -sdk {{.SDK_PATH}} \
+          "$LINK_TEMP/main.o" "$LINK_TEMP/apple-intelligence.o" \
           -framework Foundation -framework UIKit -framework WebKit \
-          -framework Security -framework CoreFoundation \
-          -framework UniformTypeIdentifiers \
-          -lresolv \
+          -framework Security -framework CoreFoundation -framework UniformTypeIdentifiers \
+          -Xlinker -weak_framework -Xlinker FoundationModels \
+          -Xlinker -lresolv \
+          -Xlinker -force_load -Xlinker "{{.BIN_DIR}}/{{.APP_NAME}}.a" \
           -o "{{.BIN_DIR}}/{{.APP_NAME | lower}}" \
-          "$MAIN_M" -Wl,-force_load,"{{.BIN_DIR}}/{{.APP_NAME}}.a"
+          -Xlinker -no_warn_duplicate_libraries
 
   create:app:bundle:
     summary: Creates an iOS `.app` bundle

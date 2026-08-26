@@ -15,7 +15,7 @@ import {
     syncScrollbarSettingsControls,
     syncThemeSettingsControls,
 } from './main-settings.js';
-import { GetSettings, MakeAIRequest, MakeLMStudioRequest, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { GetSettings, MakeAIRequest, MakeLMStudioRequest, MakeAppleIntelligenceRequest, GetAppleIntelligenceStatus, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn } from './wails-runtime';
 import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
 import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, updateProgress } from './main-ui.js';
@@ -28,6 +28,7 @@ import { collectUpdateSettingsFromControls, syncUpdateSettingsControls } from '.
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
+import { platform } from './platform-common.js';
 
 export const setGhostTextEffect = StateEffect.define();
 
@@ -77,6 +78,7 @@ let lmStudioModels = [];
 let lmStudioModelsLoading = false;
 let lmStudioModelsError = "";
 let unloadingInstanceId = "";
+let appleIntelligenceStatusRequest = 0;
 let aiRequestInFlight = false;
 let aiRequestQueue = [];
 let activeAIQueueJob = null;
@@ -125,6 +127,16 @@ const AI_EDIT_RULES = Object.freeze({
     noChangeKeepOriginal: 'If the instruction does not require a change, return the original <selected_text> unchanged.',
     noExtras: 'Do not add explanations, code fences, labels, or quotes.',
 });
+
+const APPLE_INTELLIGENCE_PLATFORMS = new Set(['darwin', 'ios']);
+
+function isAppleIntelligencePlatform() {
+    return APPLE_INTELLIGENCE_PLATFORMS.has(platform);
+}
+
+function isAppleIntelligenceProvider(provider = el.aiGeneralProvider?.value) {
+    return provider === 'apple';
+}
 
 const AI_CONTEXT_RULES = Object.freeze({
     referenceOnlyOutput: 'The surrounding context is REFERENCE ONLY. Never rewrite it, never continue it, and never include it in the output.',
@@ -1399,11 +1411,16 @@ export async function initAI() {
     };
 
     // UI Load
+    configureAppleIntelligenceProviderOption();
     el.aiFeaturesDisabled.checked = state.aiFeaturesDisabled;
     if (el.aiFeaturesEnabled) {
         el.aiFeaturesEnabled.checked = !state.aiFeaturesDisabled;
     }
     el.aiGeneralProvider.value = aiState.generalProvider;
+    if (!el.aiGeneralProvider.value) {
+        aiState.generalProvider = 'openai';
+        el.aiGeneralProvider.value = aiState.generalProvider;
+    }
     el.aiGeneralEndpoint.value = aiState.generalEndpoint;
     el.aiGeneralModel.value = aiState.generalModel;
     el.aiGeneralKey.value = aiState.generalKey;
@@ -1435,6 +1452,7 @@ export async function initAI() {
     syncGeneralTemperatureControl();
     syncGeneralModelControl();
     updateGeneralModelTrigger();
+    void refreshAppleIntelligenceStatus();
 
     return aiState;
 }
@@ -1461,6 +1479,7 @@ export function openSettings(activeTab = lastSettingsTab) {
     if (el.aiGeneralProvider.value === 'lmstudio') {
         refreshLMStudioModels({ keepOpen: false });
     }
+    void refreshAppleIntelligenceStatus();
     el.aiSettingsModal.classList.remove('hidden');
     requestAnimationFrame(() => {
         captureSettingsBaseline();
@@ -2335,7 +2354,9 @@ async function runAIRequestJob(job) {
     let resultText = "";
     let supportReport = "";
 
-    if (job.provider === "lmstudio") {
+    if (job.provider === "apple") {
+        resultText = await MakeAppleIntelligenceRequest(job.systemPrompt, job.contextualPrompt, job.temperature);
+    } else if (job.provider === "lmstudio") {
         let base = endpoint.replace(/\/$/, "");
         base = base.replace(/\/api\/v1$/, "").replace(/\/v1$/, "");
         endpoint = base + "/api/v1/chat";
@@ -2472,7 +2493,7 @@ async function sendPrompt() {
     }
 
     let endpoint = sanitizeAIEndpoint(window.aiState.generalEndpoint);
-    if (!endpoint.startsWith("http")) endpoint = `http://${endpoint}`;
+    if (window.aiState.generalProvider !== 'apple' && !endpoint.startsWith("http")) endpoint = `http://${endpoint}`;
 
     const headers = { "Content-Type": "application/json" };
     const generalKey = sanitizeAIHeaderValue(window.aiState.generalKey);
@@ -2666,21 +2687,68 @@ function syncAISettingsSections() {
 function handleGeneralProviderChange() {
     closeGeneralModelPopover();
     syncGeneralModelControl();
-    refreshLMStudioModels({ keepOpen: false });
+    if (el.aiGeneralProvider.value === 'lmstudio') {
+        refreshLMStudioModels({ keepOpen: false });
+    }
+    void refreshAppleIntelligenceStatus();
 }
 
 function handleGeneralEndpointChange() {
+    if (isAppleIntelligenceProvider()) return;
     refreshLMStudioModels({ keepOpen: isGeneralModelPopoverOpen() });
 }
 
 function syncGeneralModelControl() {
-    const usePicker = true;
+    const useAppleIntelligence = isAppleIntelligenceProvider();
+    const usePicker = !useAppleIntelligence;
+    el.aiGeneralEndpointField?.classList.toggle('hidden', useAppleIntelligence);
+    el.aiGeneralModelField?.classList.toggle('hidden', useAppleIntelligence);
+    el.aiGeneralKeyField?.classList.toggle('hidden', useAppleIntelligence);
+    el.aiAppleIntelligenceStatus?.classList.toggle('hidden', !useAppleIntelligence);
+    if (el.aiGeneralProviderBadge) {
+        el.aiGeneralProviderBadge.textContent = useAppleIntelligence ? 'On-device model' : 'Instruct model';
+    }
     el.aiGeneralModel.classList.toggle('hidden', usePicker);
     el.aiGeneralModelPicker.classList.toggle('hidden', !usePicker);
     updateGeneralModelTrigger();
 }
 
+function configureAppleIntelligenceProviderOption() {
+    const option = el.aiGeneralProvider?.querySelector('option[value="apple"]');
+    if (!option) return;
+    if (!isAppleIntelligencePlatform()) {
+        option.remove();
+    }
+}
+
+async function refreshAppleIntelligenceStatus() {
+    if (!isAppleIntelligenceProvider() || !el.aiAppleIntelligenceStatus || !el.aiAppleIntelligenceMessage) {
+        el.aiAppleIntelligenceStatus?.classList.add('hidden');
+        return;
+    }
+
+    const request = ++appleIntelligenceStatusRequest;
+    el.aiAppleIntelligenceStatus.classList.remove('hidden');
+    el.aiAppleIntelligenceStatus.dataset.state = 'checking';
+    el.aiAppleIntelligenceMessage.textContent = 'Checking Apple Intelligence…';
+
+    try {
+        const status = await GetAppleIntelligenceStatus();
+        if (request !== appleIntelligenceStatusRequest || !isAppleIntelligenceProvider()) return;
+        window.aiState.appleIntelligenceStatus = status;
+        el.aiAppleIntelligenceStatus.dataset.state = status.available ? 'available' : (status.state || 'unavailable');
+        el.aiAppleIntelligenceMessage.textContent = status.message || (status.available
+            ? 'Apple Intelligence is working.'
+            : 'Apple Intelligence is unavailable.');
+    } catch (err) {
+        if (request !== appleIntelligenceStatusRequest || !isAppleIntelligenceProvider()) return;
+        el.aiAppleIntelligenceStatus.dataset.state = 'error';
+        el.aiAppleIntelligenceMessage.textContent = err?.message || 'Apple Intelligence availability could not be checked.';
+    }
+}
+
 async function refreshLMStudioModels({ keepOpen = false } = {}) {
+    if (isAppleIntelligenceProvider()) return;
     const endpointValue = sanitizeAIEndpoint(el.aiGeneralEndpoint?.value || "");
     if (!endpointValue) {
         lmStudioModels = [];

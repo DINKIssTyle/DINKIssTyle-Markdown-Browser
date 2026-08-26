@@ -115,7 +115,7 @@ type AppSettings struct {
 	AIFIMModel               string            `json:"aiFimModel"`
 	AIFIMKey                 string            `json:"aiFimKey"`
 	AIFIMTemp                float64           `json:"aiFimTemp"`
-	AIGeneralProvider        string            `json:"aiGeneralProvider"` // "openai" or "lmstudio"
+	AIGeneralProvider        string            `json:"aiGeneralProvider"` // "openai", "lmstudio", or "apple"
 	AISelectionContext       bool              `json:"aiSelectionContext"`
 	AIGithubCompatible       bool              `json:"aiGithubCompatible"`
 	AISupportAgent           bool              `json:"aiSupportAgent"`
@@ -907,7 +907,7 @@ func (a *App) getSettingsUnlocked() AppSettings {
 	settings.AIGeneralEnabled = true
 	settings.AIGeneralToolbarEnabled = true
 	settings.AIToolbarCollapsed = false
-	settings.AIGeneralProvider = "lmstudio" // "openai" | "lmstudio"
+	settings.AIGeneralProvider = "lmstudio" // "openai" | "lmstudio" | "apple"
 	settings.AIGeneralTemp = 0.0
 	settings.AIFIMEnabled = true
 	settings.AIFIMToolbarEnabled = false
@@ -939,6 +939,11 @@ func (a *App) saveSettingsUnlocked(settings AppSettings) {
 }
 
 func normalizeSettings(settings *AppSettings) {
+	switch settings.AIGeneralProvider {
+	case "openai", "lmstudio", "apple":
+	default:
+		settings.AIGeneralProvider = "lmstudio"
+	}
 	switch settings.ScrollbarVisibility {
 	case "when-scrolling", "always":
 	default:

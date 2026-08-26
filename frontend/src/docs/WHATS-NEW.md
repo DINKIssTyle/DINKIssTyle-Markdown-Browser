@@ -21,6 +21,7 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
 
+
 ## 3.0.6
 
 ### 🎛️ Common

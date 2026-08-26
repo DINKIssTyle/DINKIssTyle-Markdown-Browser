@@ -22,6 +22,7 @@ import (
 
 const translationChunkTargetRunes = 6000
 const translationChunkOverlapRunes = 800
+const appleIntelligenceChunkTargetRunes = 2400
 
 type TranslationLanguage struct {
 	Code       string `json:"code"`
@@ -103,7 +104,8 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 	if len(req.Languages) == 0 {
 		return TranslatedDocumentResult{}, fmt.Errorf("at least one language is required")
 	}
-	if strings.TrimSpace(req.AI.Endpoint) == "" || strings.TrimSpace(req.AI.Model) == "" {
+	if strings.ToLower(strings.TrimSpace(req.AI.Provider)) != "apple" &&
+		(strings.TrimSpace(req.AI.Endpoint) == "" || strings.TrimSpace(req.AI.Model) == "") {
 		return TranslatedDocumentResult{}, fmt.Errorf("AI endpoint and model are required")
 	}
 
@@ -123,7 +125,11 @@ func (a *App) TranslateDocumentCopies(req TranslateDocumentRequest) (TranslatedD
 	defer cancel()
 	defer a.finishAIRequest(requestID)
 
-	chunks := chunkMarkdownForTranslation(req.Content)
+	chunkTargetRunes := translationChunkTargetRunes
+	if strings.EqualFold(strings.TrimSpace(req.AI.Provider), "apple") {
+		chunkTargetRunes = appleIntelligenceChunkTargetRunes
+	}
+	chunks := chunkMarkdownForTranslation(req.Content, chunkTargetRunes)
 	totalSteps := len(targets) * len(chunks)
 	completedSteps := 0
 	completedTargets := make([]TranslatedDocumentTarget, 0, len(targets))
@@ -264,7 +270,10 @@ func isUpperAlpha(value string, length int) bool {
 	return true
 }
 
-func chunkMarkdownForTranslation(content string) []translationChunk {
+func chunkMarkdownForTranslation(content string, targetRunes int) []translationChunk {
+	if targetRunes <= 0 {
+		targetRunes = translationChunkTargetRunes
+	}
 	blocks := splitMarkdownBlocks(content)
 	chunks := make([]translationChunk, 0)
 	var current strings.Builder
@@ -282,7 +291,7 @@ func chunkMarkdownForTranslation(content string) []translationChunk {
 		if block == "" {
 			continue
 		}
-		if current.Len() > 0 && runeLen(current.String())+runeLen(block) > translationChunkTargetRunes {
+		if current.Len() > 0 && runeLen(current.String())+runeLen(block) > targetRunes {
 			flush()
 		}
 		if current.Len() > 0 {
@@ -373,6 +382,9 @@ func (a *App) requestTranslationChunk(ctx context.Context, ai TranslationAIConfi
 
 func (a *App) requestAIChat(ctx context.Context, ai TranslationAIConfig, systemPrompt string, userPrompt string, progressKind string, responseFormat map[string]string) (string, error) {
 	provider := strings.ToLower(strings.TrimSpace(ai.Provider))
+	if provider == "apple" {
+		return a.requestAppleIntelligenceChat(ctx, ai, systemPrompt, userPrompt)
+	}
 	if provider == "lmstudio" {
 		return a.requestLMStudioChat(ctx, ai, systemPrompt, userPrompt, progressKind)
 	}

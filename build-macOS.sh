@@ -172,9 +172,10 @@ fi
 
 APP_BUNDLE="./bin/${APP_NAME}.app"
 rm -rf "${APP_BUNDLE}"
-mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources"
+mkdir -p "${APP_BUNDLE}/Contents/MacOS" "${APP_BUNDLE}/Contents/Resources" "${APP_BUNDLE}/Contents/Frameworks"
 cp "./bin/${APP_NAME}" "${APP_BUNDLE}/Contents/MacOS/${APP_NAME}"
 cp "./build/darwin/Info.plist" "${APP_BUNDLE}/Contents/Info.plist"
+scripts/build-apple-intelligence-bridge.sh "${ARCH}" "${APP_BUNDLE}/Contents/Frameworks/libDKSTAppleIntelligence.dylib"
 
 # ── .app Bundle Processing & Signing ─────────────────────────
 if [ -d "${APP_BUNDLE}" ]; then

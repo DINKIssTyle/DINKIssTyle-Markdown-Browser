@@ -1155,20 +1155,26 @@
                                             <h4>General AI</h4>
                                             <p>For chat, rewriting, translation, and document assistance.</p>
                                         </div>
-                                        <span class="settings-badge">Instruct model</span>
+                                        <span id="ai-general-provider-badge" class="settings-badge">Instruct model</span>
                                     </div>
                                     <div class="ai-setting-grid">
                                         <label class="ai-setting-field ai-setting-field-full">Provider
                                             <select id="ai-general-provider">
                                                 <option value="openai">OpenAI compatible</option>
                                                 <option value="lmstudio">LM Studio native</option>
+                                                <option value="apple">Apple Intelligence (Experimental)</option>
                                             </select>
                                         </label>
-                                        <label class="ai-setting-field">Endpoint
+                                        <div id="ai-apple-intelligence-status" class="ai-apple-intelligence-status hidden"
+                                            role="status" aria-live="polite">
+                                            <span class="material-symbols-outlined" aria-hidden="true">info</span>
+                                            <p id="ai-apple-intelligence-message">Checking Apple Intelligence…</p>
+                                        </div>
+                                        <label id="ai-general-endpoint-field" class="ai-setting-field">Endpoint
                                             <input type="text" id="ai-general-endpoint" placeholder="localhost:11434"
                                                 inputmode="text" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                         </label>
-                                        <label class="ai-setting-field">Model
+                                        <label id="ai-general-model-field" class="ai-setting-field">Model
                                             <input type="text" id="ai-general-model" placeholder="qwen2.5-coder:0.5b"
                                                 inputmode="text" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                                             <div id="ai-general-model-picker" class="ai-model-picker hidden">
@@ -1187,7 +1193,7 @@
                                                 </div>
                                             </div>
                                         </label>
-                                        <label class="ai-setting-field">API key
+                                        <label id="ai-general-key-field" class="ai-setting-field">API key
                                             <span class="settings-password-field">
                                                 <input type="password" id="ai-general-key" placeholder="Bearer token"
                                                     inputmode="text" autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />

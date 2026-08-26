@@ -1650,13 +1650,14 @@ function getTranslationAIConfig() {
     if (state.aiFeaturesDisabled || aiState.generalAvailable === false) {
         return { error: "General AI is disabled in AI Settings." };
     }
+    const provider = aiState.generalProvider || "openai";
     const endpoint = String(aiState.generalEndpoint || "").trim();
     const model = String(aiState.generalModel || "").trim();
-    if (!endpoint || !model) {
+    if (provider !== 'apple' && (!endpoint || !model)) {
         return { error: "Set a General AI endpoint and model before translating." };
     }
     return {
-        provider: aiState.generalProvider || "openai",
+        provider,
         endpoint,
         model,
         key: aiState.generalKey || "",

@@ -114,6 +114,8 @@ func main() {
 		[]byte(`INFOPLIST_FILE = "../xcode-support/Info.plist"`),
 		[]byte(`path = "../xcode-support/main.m"`),
 		[]byte(`path = "../xcode-support/Assets.xcassets"`),
+		[]byte(`path = "../../apple-intelligence/AppleIntelligenceBridge.swift"`),
+		[]byte(`FoundationModels.framework in Frameworks`),
 	} {
 		if !bytes.Contains(project, required) {
 			fail("validate maintained Xcode project", fmt.Errorf("missing %q", required))

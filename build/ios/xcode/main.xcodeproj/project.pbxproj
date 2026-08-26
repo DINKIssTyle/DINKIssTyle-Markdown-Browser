@@ -17,6 +17,8 @@
 		C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */; };
 		C0DEBEEF00000000000000F8 /* ../xcode-support/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000108 /* ../xcode-support/Assets.xcassets */; };
 		C0DEBEEF00000000000000F9 /* ../xcode-support/LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000109 /* ../xcode-support/LaunchScreen.storyboard */; };
+		C0DEBEEF00000000000000FA /* AppleIntelligenceBridge.swift in Sources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF000000000000010A /* AppleIntelligenceBridge.swift */; };
+		C0DEBEEF00000000000000FB /* FoundationModels.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF000000000000010B /* FoundationModels.framework */; settings = {ATTRIBUTES = (Weak, ); }; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
@@ -32,6 +34,8 @@
 		C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "DKST Markdown Browser.a"; path = "../../../bin/DKST Markdown Browser.a"; sourceTree = SOURCE_ROOT; };
 		C0DEBEEF0000000000000108 /* ../xcode-support/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "../xcode-support/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
 		C0DEBEEF0000000000000109 /* ../xcode-support/LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "../xcode-support/LaunchScreen.storyboard"; sourceTree = SOURCE_ROOT; };
+		C0DEBEEF000000000000010A /* AppleIntelligenceBridge.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "../../apple-intelligence/AppleIntelligenceBridge.swift"; sourceTree = SOURCE_ROOT; };
+		C0DEBEEF000000000000010B /* FoundationModels.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = FoundationModels.framework; path = System/Library/Frameworks/FoundationModels.framework; sourceTree = SDKROOT; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -46,6 +50,7 @@
 				C0DEBEEF00000000000000F4 /* Security.framework in Frameworks */,
 				C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */,
 				C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */,
+				C0DEBEEF00000000000000FB /* FoundationModels.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -76,6 +81,7 @@
 				C0DEBEEF0000000000000003 /* ../xcode-support/Info.plist */,
 				C0DEBEEF0000000000000108 /* ../xcode-support/Assets.xcassets */,
 				C0DEBEEF0000000000000109 /* ../xcode-support/LaunchScreen.storyboard */,
+				C0DEBEEF000000000000010A /* AppleIntelligenceBridge.swift */,
 			);
 			name = "Xcode Support (maintained)";
 			sourceTree = "<group>";
@@ -90,6 +96,7 @@
 				C0DEBEEF0000000000000105 /* CoreFoundation.framework */,
 				C0DEBEEF0000000000000106 /* libresolv.tbd */,
 				C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */,
+				C0DEBEEF000000000000010B /* FoundationModels.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -186,6 +193,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				C0DEBEEF0000000000000001 /* ../xcode-support/main.m in Sources */,
+				C0DEBEEF00000000000000FA /* AppleIntelligenceBridge.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -209,6 +217,7 @@
 				PRODUCT_NAME = DKSTMarkdownBrowser;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
@@ -232,6 +241,7 @@
 				PRODUCT_NAME = DKSTMarkdownBrowser;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
+				SWIFT_VERSION = 6.0;
 				SUPPORTS_MACCATALYST = NO;
 				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";

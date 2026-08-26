@@ -5269,6 +5269,52 @@ html.dark .ai-settings-content .ai-setting-group {
     padding-top: 2px;
 }
 
+.ai-apple-intelligence-status {
+    grid-column: 1 / -1;
+    display: flex;
+    align-items: flex-start;
+    gap: 9px;
+    padding: 10px 12px;
+    border: 1px solid color-mix(in srgb, var(--accent-color) 28%, var(--border-color));
+    border-radius: 9px;
+    background: color-mix(in srgb, var(--accent-color) 7%, var(--surface-color));
+    color: var(--text-muted);
+}
+
+.ai-apple-intelligence-status .material-symbols-outlined {
+    flex: 0 0 auto;
+    margin-top: 1px;
+    color: var(--accent-color);
+    font-size: 17px;
+}
+
+.ai-apple-intelligence-status p {
+    margin: 0;
+    font-size: 11px;
+    line-height: 1.45;
+}
+
+.ai-apple-intelligence-status[data-state="available"] {
+    border-color: color-mix(in srgb, #2e9b58 36%, var(--border-color));
+    background: color-mix(in srgb, #2e9b58 8%, var(--surface-color));
+}
+
+.ai-apple-intelligence-status[data-state="available"] .material-symbols-outlined {
+    color: #2e9b58;
+}
+
+.ai-apple-intelligence-status[data-state="error"],
+.ai-apple-intelligence-status[data-state="device-not-eligible"],
+.ai-apple-intelligence-status[data-state="os-not-supported"],
+.ai-apple-intelligence-status[data-state="app-support-unavailable"] {
+    border-color: color-mix(in srgb, #c0392b 34%, var(--border-color));
+    background: color-mix(in srgb, #c0392b 7%, var(--surface-color));
+}
+
+.ai-apple-intelligence-status.hidden {
+    display: none;
+}
+
 html.dark .ai-settings-content .ai-setting-note {
     color: rgba(226, 232, 240, 0.72);
 }

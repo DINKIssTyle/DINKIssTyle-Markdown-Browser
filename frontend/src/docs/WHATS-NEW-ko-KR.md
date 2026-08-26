@@ -19,8 +19,14 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
 ## 3.0.7
+
 ### 🎛️ 공통
 * **코드 블록 복사 버튼**: 우측 상단에 고정되지 않던 문제 해결
+
+### macOS, iPadOS, iOS
+
+* **Apple intelligence 도입**: 지원 환경에서 AI 제공자를 Apple Intelligence로 선택할 수 있으며, 별도의 LLM 서버가 필요 없습니다.
+
 
 ## 3.0.6
 
