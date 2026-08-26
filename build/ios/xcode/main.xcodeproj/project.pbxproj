@@ -1,12 +1,13 @@
 // !$*UTF8*$!
 {
 	archiveVersion = 1;
-	classes = {};
-	objectVersion = 56;
+	classes = {
+	};
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
-		C0DEBEEF0000000000000001 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000002 /* main.m */; };
+		C0DEBEEF0000000000000001 /* ../xcode-support/main.m in Sources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000002 /* ../xcode-support/main.m */; };
 		C0DEBEEF00000000000000F1 /* UIKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000101 /* UIKit.framework */; };
 		C0DEBEEF00000000000000F2 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000102 /* Foundation.framework */; };
 		C0DEBEEF00000000000000F3 /* WebKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000103 /* WebKit.framework */; };
@@ -14,24 +15,41 @@
 		C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000105 /* CoreFoundation.framework */; };
 		C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000106 /* libresolv.tbd */; };
 		C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */; };
-		C0DEBEEF00000000000000F8 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000108 /* Assets.xcassets */; };
-		C0DEBEEF00000000000000F9 /* LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000109 /* LaunchScreen.storyboard */; };
+		C0DEBEEF00000000000000F8 /* ../xcode-support/Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000108 /* ../xcode-support/Assets.xcassets */; };
+		C0DEBEEF00000000000000F9 /* ../xcode-support/LaunchScreen.storyboard in Resources */ = {isa = PBXBuildFile; fileRef = C0DEBEEF0000000000000109 /* ../xcode-support/LaunchScreen.storyboard */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		C0DEBEEF0000000000000002 /* main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../xcode-support/main.m"; sourceTree = SOURCE_ROOT; };
-		C0DEBEEF0000000000000003 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "../xcode-support/Info.plist"; sourceTree = SOURCE_ROOT; };
+		C0DEBEEF0000000000000002 /* ../xcode-support/main.m */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.c.objc; path = "../xcode-support/main.m"; sourceTree = SOURCE_ROOT; };
+		C0DEBEEF0000000000000003 /* ../xcode-support/Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "../xcode-support/Info.plist"; sourceTree = SOURCE_ROOT; };
 		C0DEBEEF0000000000000004 /* DKSTMarkdownBrowser.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = DKSTMarkdownBrowser.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		C0DEBEEF0000000000000101 /* UIKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UIKit.framework; path = System/Library/Frameworks/UIKit.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000102 /* Foundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Foundation.framework; path = System/Library/Frameworks/Foundation.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000103 /* WebKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WebKit.framework; path = System/Library/Frameworks/WebKit.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000104 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000105 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = System/Library/Frameworks/CoreFoundation.framework; sourceTree = SDKROOT; };
-		C0DEBEEF0000000000000106 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.text-based-dylib-definition; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
+		C0DEBEEF0000000000000106 /* libresolv.tbd */ = {isa = PBXFileReference; lastKnownFileType = "sourcecode.text-based-dylib-definition"; name = libresolv.tbd; path = usr/lib/libresolv.tbd; sourceTree = SDKROOT; };
 		C0DEBEEF0000000000000107 /* DKST Markdown Browser.a */ = {isa = PBXFileReference; lastKnownFileType = archive.ar; name = "DKST Markdown Browser.a"; path = "../../../bin/DKST Markdown Browser.a"; sourceTree = SOURCE_ROOT; };
-		C0DEBEEF0000000000000108 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "../xcode-support/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
-		C0DEBEEF0000000000000109 /* LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "../xcode-support/LaunchScreen.storyboard"; sourceTree = SOURCE_ROOT; };
+		C0DEBEEF0000000000000108 /* ../xcode-support/Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = "../xcode-support/Assets.xcassets"; sourceTree = SOURCE_ROOT; };
+		C0DEBEEF0000000000000109 /* ../xcode-support/LaunchScreen.storyboard */ = {isa = PBXFileReference; lastKnownFileType = file.storyboard; path = "../xcode-support/LaunchScreen.storyboard"; sourceTree = SOURCE_ROOT; };
 /* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		C0DEBEEF0000000000000056 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */,
+				C0DEBEEF00000000000000F1 /* UIKit.framework in Frameworks */,
+				C0DEBEEF00000000000000F2 /* Foundation.framework in Frameworks */,
+				C0DEBEEF00000000000000F3 /* WebKit.framework in Frameworks */,
+				C0DEBEEF00000000000000F4 /* Security.framework in Frameworks */,
+				C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */,
+				C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXGroup section */
 		C0DEBEEF0000000000000010 = {
@@ -39,7 +57,7 @@
 			children = (
 				C0DEBEEF0000000000000020 /* Products */,
 				C0DEBEEF0000000000000045 /* Frameworks */,
-				C0DEBEEF0000000000000030 /* main */,
+				C0DEBEEF0000000000000030 /* Xcode Support (maintained) */,
 			);
 			sourceTree = "<group>";
 		};
@@ -51,13 +69,13 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
-		C0DEBEEF0000000000000030 /* main */ = {
+		C0DEBEEF0000000000000030 /* Xcode Support (maintained) */ = {
 			isa = PBXGroup;
 			children = (
-				C0DEBEEF0000000000000002 /* main.m */,
-				C0DEBEEF0000000000000003 /* Info.plist */,
-				C0DEBEEF0000000000000108 /* Assets.xcassets */,
-				C0DEBEEF0000000000000109 /* LaunchScreen.storyboard */,
+				C0DEBEEF0000000000000002 /* ../xcode-support/main.m */,
+				C0DEBEEF0000000000000003 /* ../xcode-support/Info.plist */,
+				C0DEBEEF0000000000000108 /* ../xcode-support/Assets.xcassets */,
+				C0DEBEEF0000000000000109 /* ../xcode-support/LaunchScreen.storyboard */,
 			);
 			name = "Xcode Support (maintained)";
 			sourceTree = "<group>";
@@ -104,7 +122,7 @@
 			isa = PBXProject;
 			attributes = {
 				LastUpgradeCheck = 1500;
-				ORGANIZATIONNAME = "DINKIssTyle";
+				ORGANIZATIONNAME = DINKIssTyle;
 				TargetAttributes = {
 					C0DEBEEF0000000000000040 = {
 						CreatedOnToolsVersion = 15.0;
@@ -133,29 +151,12 @@
 			isa = PBXResourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C0DEBEEF00000000000000F8 /* Assets.xcassets in Resources */,
-				C0DEBEEF00000000000000F9 /* LaunchScreen.storyboard in Resources */,
+				C0DEBEEF00000000000000F8 /* ../xcode-support/Assets.xcassets in Resources */,
+				C0DEBEEF00000000000000F9 /* ../xcode-support/LaunchScreen.storyboard in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
 /* End PBXResourcesBuildPhase section */
-
-/* Begin PBXFrameworksBuildPhase section */
-		C0DEBEEF0000000000000056 /* Frameworks */ = {
-			isa = PBXFrameworksBuildPhase;
-			buildActionMask = 2147483647;
-			files = (
-				C0DEBEEF00000000000000F7 /* DKST Markdown Browser.a in Frameworks */,
-				C0DEBEEF00000000000000F1 /* UIKit.framework in Frameworks */,
-				C0DEBEEF00000000000000F2 /* Foundation.framework in Frameworks */,
-				C0DEBEEF00000000000000F3 /* WebKit.framework in Frameworks */,
-				C0DEBEEF00000000000000F4 /* Security.framework in Frameworks */,
-				C0DEBEEF00000000000000F5 /* CoreFoundation.framework in Frameworks */,
-				C0DEBEEF00000000000000F6 /* libresolv.tbd in Frameworks */,
-			);
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXFrameworksBuildPhase section */
 
 /* Begin PBXShellScriptBuildPhase section */
 		C0DEBEEF0000000000000055 /* Prebuild: Wails Go Archive */ = {
@@ -184,7 +185,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				C0DEBEEF0000000000000001 /* main.m in Sources */,
+				C0DEBEEF0000000000000001 /* ../xcode-support/main.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -203,12 +204,12 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "-all_load";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dinkisstyle.mdbrowser";
+				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = DKSTMarkdownBrowser;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Debug;
@@ -225,12 +226,12 @@
 				IPHONEOS_DEPLOYMENT_TARGET = 15.0;
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_LDFLAGS = "-all_load";
-				PRODUCT_BUNDLE_IDENTIFIER = "com.dinkisstyle.mdbrowser";
+				PRODUCT_BUNDLE_IDENTIFIER = com.dinkisstyle.mdbrowser;
 				PRODUCT_NAME = DKSTMarkdownBrowser;
 				SDKROOT = iphoneos;
 				SUPPORTED_PLATFORMS = "iphoneos iphonesimulator";
-				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				SUPPORTS_MACCATALYST = NO;
+				SUPPORTS_MAC_DESIGNED_FOR_IPHONE_IPAD = NO;
 				TARGETED_DEVICE_FAMILY = "1,2";
 			};
 			name = Release;

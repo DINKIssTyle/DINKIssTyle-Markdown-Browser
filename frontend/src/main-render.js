@@ -880,7 +880,19 @@ function enhanceTaskLists(container) {
 function enhanceCodeBlockCopyButtons(container) {
     container.querySelectorAll('pre > code').forEach(codeBlock => {
         const pre = codeBlock.parentElement;
-        if (!pre || pre.querySelector(':scope > .code-copy-button')) return;
+        if (!pre) return;
+
+        let wrapper = pre.parentElement?.classList.contains('code-block-wrapper')
+            ? pre.parentElement
+            : null;
+        if (wrapper?.querySelector(':scope > .code-copy-button')) return;
+
+        if (!wrapper) {
+            wrapper = document.createElement('div');
+            wrapper.className = 'code-block-wrapper';
+            pre.before(wrapper);
+            wrapper.appendChild(pre);
+        }
 
         const button = document.createElement('button');
         button.type = 'button';
@@ -913,7 +925,7 @@ function enhanceCodeBlockCopyButtons(container) {
             }
         });
 
-        pre.appendChild(button);
+        wrapper.appendChild(button);
     });
 }
 

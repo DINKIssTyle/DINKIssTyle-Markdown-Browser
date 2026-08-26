@@ -8,11 +8,11 @@ import { SaveSettings } from '../bindings/dinkisstyle-markdown-browser/internal/
 import { normalizeThemeMode } from './main-theme.js';
 
 const MAIN_TOOLBAR_BUTTONS = [
-    ['newDocument', 'mainToolbarNewDocument', 'settingsToolbarNewDocument', ['btnNewDoc']],
-    ['edit', 'mainToolbarEdit', 'settingsToolbarEdit', ['btnEdit']],
-    ['translate', 'mainToolbarTranslate', 'settingsToolbarTranslate', ['btnTranslate']],
-    ['fontSize', 'mainToolbarFontSize', 'settingsToolbarFontSize', ['btnFontMinus', 'btnFontPlus']],
-    ['theme', 'mainToolbarTheme', 'settingsToolbarTheme', ['btnThemeToggle']],
+    ['newDocument', 'mainToolbarNewDocument', 'settingsToolbarNewDocument', ['btnNewDoc'], true],
+    ['edit', 'mainToolbarEdit', 'settingsToolbarEdit', ['btnEdit'], true],
+    ['translate', 'mainToolbarTranslate', 'settingsToolbarTranslate', ['btnTranslate'], true],
+    ['fontSize', 'mainToolbarFontSize', 'settingsToolbarFontSize', ['btnFontMinus', 'btnFontPlus'], true],
+    ['theme', 'mainToolbarTheme', 'settingsToolbarTheme', ['btnThemeToggle'], false],
 ];
 
 const SCROLLBAR_VISIBILITY_VALUES = new Set(['when-scrolling', 'always']);
@@ -223,8 +223,11 @@ export function collectScrollbarSettingsFromControls() {
 }
 
 export function loadMainToolbarVisibility(settings = {}) {
-    MAIN_TOOLBAR_BUTTONS.forEach(([stateKey, settingKey]) => {
-        state.mainToolbarButtons[stateKey] = settings[settingKey] !== false;
+    MAIN_TOOLBAR_BUTTONS.forEach(([stateKey, settingKey, , , defaultVisible]) => {
+        const persistedValue = settings[settingKey];
+        state.mainToolbarButtons[stateKey] = typeof persistedValue === 'boolean'
+            ? persistedValue
+            : defaultVisible;
     });
     applyMainToolbarVisibility();
 }

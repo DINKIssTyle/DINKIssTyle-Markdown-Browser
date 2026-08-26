@@ -77,7 +77,7 @@
                     <span class="material-symbols-outlined" aria-hidden="true">format_size</span>
                     <span class="font-adjust-label" aria-hidden="true">+</span>
                 </button>
-                <button id="btn-theme-toggle" title="Toggle Theme" aria-label="Toggle Theme" class="nav-btn icon-btn">
+                <button id="btn-theme-toggle" title="Toggle Theme" aria-label="Toggle Theme" class="nav-btn icon-btn hidden">
                     <span class="material-symbols-outlined" aria-hidden="true">dark_mode</span>
                 </button>
                 <button id="ed-settings" title="Settings" aria-label="Settings" class="nav-btn icon-btn">
@@ -113,7 +113,7 @@
                 <span class="material-symbols-outlined">text_increase</span>
                 <span>Increase Font</span>
             </button>
-            <button class="mobile-menu-item" data-action="theme" type="button">
+            <button class="mobile-menu-item hidden" data-action="theme" type="button">
                 <span class="material-symbols-outlined">dark_mode</span>
                 <span>Toggle Theme</span>
             </button>
@@ -878,7 +878,7 @@
                                             <small>Switch between light and dark mode</small>
                                         </label>
                                         <label class="settings-switch">
-                                            <input id="settings-toolbar-theme" type="checkbox" checked />
+                                            <input id="settings-toolbar-theme" type="checkbox" />
                                             <span aria-hidden="true"></span>
                                             <span class="settings-switch-label">On</span>
                                         </label>

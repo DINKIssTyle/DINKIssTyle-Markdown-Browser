@@ -15,6 +15,19 @@ func (function roundTripFunc) RoundTrip(request *http.Request) (*http.Response, 
 	return function(request)
 }
 
+func TestDefaultMainToolbarVisibility(t *testing.T) {
+	app := &App{settingsPath: t.TempDir() + "/settings.json"}
+	settings := app.getSettingsUnlocked()
+
+	if settings.MainToolbarTheme {
+		t.Fatal("theme toolbar button should be hidden by default")
+	}
+	if !settings.MainToolbarNewDocument || !settings.MainToolbarEdit ||
+		!settings.MainToolbarTranslate || !settings.MainToolbarFontSize {
+		t.Fatal("changing the theme default should not hide the other toolbar buttons")
+	}
+}
+
 func TestNormalizeSettingsScrollbarVisibility(t *testing.T) {
 	tests := []struct {
 		name  string

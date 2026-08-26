@@ -890,7 +890,7 @@ func (a *App) getSettingsUnlocked() AppSettings {
 	settings.MainToolbarEdit = true
 	settings.MainToolbarTranslate = true
 	settings.MainToolbarFontSize = true
-	settings.MainToolbarTheme = true
+	settings.MainToolbarTheme = false
 	settings.FontSize = 16
 	settings.Engine = "marked"              // "marked" | "html"
 	settings.EditorRenderMode = "realtime"  // "realtime" | "cursor"

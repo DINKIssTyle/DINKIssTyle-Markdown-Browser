@@ -392,7 +392,7 @@ export const state = {
         edit: true,
         translate: true,
         fontSize: true,
-        theme: true,
+        theme: false,
     },
     aiFeaturesDisabled: false,
     aiSelectionContextEnabled: false,
