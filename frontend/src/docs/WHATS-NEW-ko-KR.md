@@ -7,7 +7,6 @@ tags: ["readme"]
 draft: false
 ---
 
-
 <div align="left"><img src="img/textflow.png" width="32"/></div>
 
 DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경험해보세요. 스니펫을 단축어를 이용해 문서 작성을 돕습니다. AI 지원은 물론, OCR, 플로팅 스크린샷과 같은 다양한 기능을 통해 작업 효율을 높여줍니다. [더 알아보기](https://github.com/DINKIssTyle/DINKIssTyle-Text-Flow)
@@ -28,7 +27,7 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 ### 🖥️ macOS
 * **편집 모드 버그 수정**: 수정 사항을 적용하고 종료할 때 앱이 멈추는 현상이 있었습니다.
 
-### 🍎 macOS, iPadOS, iOS
+### 🍎 macOS, iPadOS/iOS
 
 * **Apple intelligence 도입**: 지원 환경에서 AI 제공자를 Apple Intelligence로 선택할 수 있으며, 이 경우 별도의 LLM 서버가 필요 없습니다. 다만, 문맥 길이의 제약으로 인해 기능이 원활하지 않을 수 있습니다.
 

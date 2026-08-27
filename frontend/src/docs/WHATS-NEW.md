@@ -22,6 +22,24 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
 
 
+## 3.0.7
+
+### 🎛️ Common
+* **Added Translation & Spell Check Languages**: You can now add and use desired languages in Settings.
+* **Code Block Copy Button**: Fixed an issue where the copy button was not pinned to the top right.
+* **Main Toolbar Theme Button**: For new users, the theme button is now an optional setting that can be enabled in Settings.
+
+### 🖥️ macOS
+* **Edit Mode Bug Fix**: Fixed an issue where the app would freeze when applying changes and exiting.
+
+### 🍎 macOS, iPadOS/iOS
+* **Apple Intelligence Support**: In supported environments, you can select Apple Intelligence as the AI provider without needing a separate LLM server. Note that functionality may be limited due to context length constraints.
+
+### 📱 Android, iPadOS/iOS
+* **Improved Ask AI Invocation**: Fixed an issue on tablets and mobile devices where the Ask AI prompt window was not triggered for text selected via tap.
+
+
+
 ## 3.0.6
 
 ### 🎛️ Common

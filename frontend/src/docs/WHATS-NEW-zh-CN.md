@@ -16,6 +16,24 @@ draft: false
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
+ 
+## 3.0.7
+
+### 🎛️ 通用
+* **添加翻译与拼写检查支持语言**: 可以在设置中添加所需的语言进行使用。
+* **代码块复制按钮**: 修复了复制按钮未固定在右上角的问题。
+* **主工具栏主题按钮**: 对于新用户，主题按钮现为可在设置中开启的选项。
+
+### 🖥️ macOS
+* **编辑模式错误修复**: 修复了应用更改并退出时应用出现卡死的问题。
+
+### 🍎 macOS, iPadOS/iOS
+* **引入 Apple Intelligence**: 在受支持的环境下，可以选择 Apple Intelligence 作为 AI 提供商，无需额外配置 LLM 服务器。但由于上下文长度限制，部分功能可能会受到限制。
+
+### 📱 Android, iPadOS/iOS
+* **改进 Ask AI 调用**: 修复了在平板及移动设备上通过点击选中文本时无法调出 Ask AI 提示窗口的问题。
+
+
 
 ## 3.0.6
 
