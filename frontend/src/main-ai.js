@@ -85,6 +85,7 @@ let aiRequestQueue = [];
 let activeAIQueueJob = null;
 let nextAIQueueJobId = 0;
 let aiPromptHideTimer = null;
+let aiSelectionRefreshFrame = 0;
 let aiPromptBusyState = null;
 let aiProgressTaskId = 0;
 let supportAgentPromptText = "";
@@ -1898,7 +1899,7 @@ export function bindAIEvents() {
     });
 
     // Detect selection for prompt and typing for FIM
-    document.addEventListener('selectionchange', handleSelectionChange);
+    document.addEventListener('selectionchange', schedulePromptRefreshForEditorSelection);
     const handleViewportUpdate = () => {
         if (isPromptBoxVisible()) {
             positionPromptBox();
@@ -1914,6 +1915,7 @@ export function bindAIEvents() {
 
     el.editorView.addEventListener('keydown', handleEditorKeydown, true);
     el.editorView.addEventListener('input', handleEditorInput, true);
+    el.editorView.addEventListener('compositionend', schedulePromptRefreshForEditorSelection, true);
 }
 
 function handleEditorInput() {
@@ -1983,6 +1985,16 @@ function handleSelectionChange() {
         return;
     }
     refreshPromptForSelection({ preserveInput: true });
+}
+
+export function schedulePromptRefreshForEditorSelection() {
+    if (aiSelectionRefreshFrame) {
+        cancelAnimationFrame(aiSelectionRefreshFrame);
+    }
+    aiSelectionRefreshFrame = requestAnimationFrame(() => {
+        aiSelectionRefreshFrame = 0;
+        handleSelectionChange();
+    });
 }
 
 export function showPromptBoxAtSelection() {

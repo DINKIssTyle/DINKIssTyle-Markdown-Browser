@@ -34,7 +34,7 @@ import { languages } from '@codemirror/language-data';
 import { HighlightStyle, syntaxHighlighting, LanguageDescription } from '@codemirror/language';
 import { tags } from '@lezer/highlight';
 import { oneDark } from '@codemirror/theme-one-dark';
-import { enqueueLLMTask, ghostTextField, hidePromptBox, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
+import { enqueueLLMTask, ghostTextField, hidePromptBox, schedulePromptRefreshForEditorSelection, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 import { showTextPrompt } from './main-dialogs.js';
 import { buildDocumentFrontMatter, formatLocalISODate, getFirstMarkdownLineTitle, parseDocumentFrontMatter } from './frontmatter.mjs';
 import { isMobilePlatform, isMobileUntitledPath, saveDocumentAsForCurrentPlatform } from './platform-common.js';
@@ -3493,6 +3493,7 @@ export function initCodeMirror() {
                             }
                             tab.editorState = update.state;
                         }
+                        schedulePromptRefreshForEditorSelection();
                     }
                     updatePreviewForEditorChange(update);
                 }
