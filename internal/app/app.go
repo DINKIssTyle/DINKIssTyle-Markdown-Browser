@@ -125,6 +125,7 @@ type AppSettings struct {
 	LastUpdateCheck          string            `json:"lastUpdateCheck"`
 	DocumentMargin           string            `json:"documentMargin"`
 	ViewerFontFamily         string            `json:"viewerFontFamily"`
+	LanguageCodes            []string          `json:"languageCodes"`
 }
 
 // App struct
@@ -954,6 +955,7 @@ func (a *App) getSettingsUnlocked() AppSettings {
 	settings.AIFIMTemp = 0.0
 	settings.DocumentMargin = "none"
 	settings.ViewerFontFamily = ""
+	settings.LanguageCodes = []string{"en-US", "es-ES", "fr-FR", "de-DE", "ko-KR", "zh-CN", "zh-TW", "ja-JP"}
 	settings.UpdateCheckInterval = updateCheckIntervalWeekly
 
 	data, err := os.ReadFile(a.settingsPath)
@@ -1003,6 +1005,23 @@ func normalizeSettings(settings *AppSettings) {
 	if settings.DocumentMargin == "" {
 		settings.DocumentMargin = "none"
 	}
+	seenLanguageCodes := make(map[string]struct{}, len(settings.LanguageCodes))
+	normalizedLanguageCodes := make([]string, 0, len(settings.LanguageCodes))
+	for _, rawCode := range settings.LanguageCodes {
+		code := strings.TrimSpace(rawCode)
+		if code == "" {
+			continue
+		}
+		if _, seen := seenLanguageCodes[code]; seen {
+			continue
+		}
+		seenLanguageCodes[code] = struct{}{}
+		normalizedLanguageCodes = append(normalizedLanguageCodes, code)
+		if len(normalizedLanguageCodes) == 10 {
+			break
+		}
+	}
+	settings.LanguageCodes = normalizedLanguageCodes
 }
 
 // GetSystemTheme returns the current theme (light/dark)

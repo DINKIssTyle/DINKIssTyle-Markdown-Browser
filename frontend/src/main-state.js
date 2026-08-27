@@ -238,10 +238,12 @@ export const el = {
     settingsTitle: $('settings-title'),
     settingsClose: $('settings-close'),
     settingsTabCommon: $('settings-tab-common'),
+    settingsTabLanguage: $('settings-tab-language'),
     settingsTabReading: $('settings-tab-reading'),
     settingsTabEditor: $('settings-tab-editor'),
     settingsTabAi: $('settings-tab-ai'),
     settingsPanelCommon: $('settings-panel-common'),
+    settingsPanelLanguage: $('settings-panel-language'),
     settingsPanelReading: $('settings-panel-reading'),
     settingsPanelEditor: $('settings-panel-editor'),
     settingsPanelAi: $('settings-panel-ai'),
@@ -260,6 +262,12 @@ export const el = {
     settingsToolbarTranslate: $('settings-toolbar-translate'),
     settingsToolbarFontSize: $('settings-toolbar-font-size'),
     settingsToolbarTheme: $('settings-toolbar-theme'),
+    settingsLanguageSearch: $('settings-language-search'),
+    settingsLanguageResults: $('settings-language-results'),
+    settingsLanguageList: $('settings-language-list'),
+    settingsLanguageCount: $('settings-language-count'),
+    settingsLanguageStatus: $('settings-language-status'),
+    settingsLanguageCodes: $('settings-language-codes'),
     settingsTabUpdate: $('settings-tab-update'),
     settingsPanelUpdate: $('settings-panel-update'),
     updateCheckInterval: $('update-check-interval'),
@@ -414,6 +422,7 @@ export const state = {
     outlineHeadingFormatEnabled: false,
     documentMargin: "none",
     viewerFontFamily: "",
+    languageCodes: [],
 };
 
 // ── Pure Utility Functions ─────────────────────────────────

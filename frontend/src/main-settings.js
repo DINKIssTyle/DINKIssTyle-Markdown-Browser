@@ -298,6 +298,7 @@ export function buildSettingsPayload(overrides = {}) {
         fileTreeFilterEnabled: state.fileTreeFilterEnabled,
         documentMargin: state.documentMargin,
         viewerFontFamily: state.viewerFontFamily,
+        languageCodes: state.languageCodes,
         recentFileDisplayLimit: state.recentFileDisplayLimit,
         outlineHeadingFormat: state.outlineHeadingFormatEnabled,
         aiFeaturesDisabled: state.aiFeaturesDisabled,

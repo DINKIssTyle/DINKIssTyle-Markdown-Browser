@@ -667,6 +667,14 @@
                                 <small>Colors and style</small>
                             </span>
                         </button>
+                        <button id="settings-tab-language" class="settings-tab" type="button" role="tab"
+                            aria-selected="false" aria-controls="settings-panel-language">
+                            <span class="material-symbols-outlined" aria-hidden="true">translate</span>
+                            <span class="settings-tab-copy">
+                                <strong>Language</strong>
+                                <small>Translate and check</small>
+                            </span>
+                        </button>
                         <button id="settings-tab-reading" class="settings-tab" type="button" role="tab"
                             aria-selected="false" aria-controls="settings-panel-reading">
                             <span class="material-symbols-outlined" aria-hidden="true">globe_book</span>
@@ -884,6 +892,42 @@
                                         </label>
                                     </div>
                                 </div>
+                            </section>
+                        </section>
+
+                        <section id="settings-panel-language" class="settings-panel hidden" role="tabpanel"
+                            aria-labelledby="settings-tab-language">
+                            <header class="settings-panel-header">
+                                <div class="settings-panel-kicker">Writing languages</div>
+                                <h2>Language</h2>
+                                <p>Manage languages for translation and spellcheck.</p>
+                            </header>
+                            <section class="ai-setting-group settings-card settings-language-card">
+                                <div class="settings-card-heading settings-language-heading">
+                                    <div>
+                                        <h4>Registered languages</h4>
+                                        <p>Add up to 10 languages and arrange their order.</p>
+                                    </div>
+                                    <span id="settings-language-count" class="settings-badge">8 / 10</span>
+                                </div>
+                                <input id="settings-language-codes" type="hidden" value="[]" />
+                                <div id="settings-language-list" class="settings-language-list"
+                                    aria-label="Registered languages"></div>
+                            </section>
+                            <section class="ai-setting-group settings-card settings-language-search-card">
+                                <label class="settings-language-search-label" for="settings-language-search">
+                                    <span class="material-symbols-outlined" aria-hidden="true">search</span>
+                                    <span>Find a language</span>
+                                </label>
+                                <input id="settings-language-search" type="search"
+                                    placeholder="Search English, 한국어, ja-JP…" autocapitalize="none"
+                                    autocorrect="off" autocomplete="off" spellcheck="false"
+                                    data-settings-signature-ignore />
+                                <div id="settings-language-results" class="settings-language-results hidden"
+                                    aria-live="polite"></div>
+                                <p id="settings-language-status" class="settings-language-status">
+                                    Search by language name, native name, or locale code.
+                                </p>
                             </section>
                         </section>
 

@@ -3,13 +3,14 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, TRANSLATION_LANGUAGES, getSlashCommands as getConfiguredSlashCommands } from './config.js';
+import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, getSlashCommands as getConfiguredSlashCommands } from './config.js';
 import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS, documentTypeFromPath, isEditableDocumentType } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { createUnsavedMarkdownTab, getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip, syncDocumentMetadataUI } from './main-render.js';
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
+import { getConfiguredLanguages } from './main-languages.js';
 import { SaveFile, ReadFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn, LogError, LogInfo } from './wails-runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
@@ -1397,19 +1398,20 @@ function bindTranslationProgressEvents() {
 }
 
 function getStoredTranslationLanguageCodes() {
+    const configuredCodes = new Set(getConfiguredLanguages().map(language => language.code));
     try {
         const stored = localStorage.getItem(TRANSLATION_LANGUAGE_STORAGE_KEY);
         if (stored !== null) {
             const parsed = JSON.parse(stored);
             if (!Array.isArray(parsed)) {
-                return [...DEFAULT_TRANSLATION_LANGUAGE_CODES];
+                return DEFAULT_TRANSLATION_LANGUAGE_CODES.filter(code => configuredCodes.has(code));
             }
-            return parsed.filter(code => TRANSLATION_LANGUAGES.some(language => language.code === code));
+            return parsed.filter(code => configuredCodes.has(code));
         }
     } catch {
         // Ignore malformed user storage and fall back to defaults.
     }
-    return [...DEFAULT_TRANSLATION_LANGUAGE_CODES];
+    return DEFAULT_TRANSLATION_LANGUAGE_CODES.filter(code => configuredCodes.has(code));
 }
 
 function storeTranslationLanguageCodes(codes) {
@@ -1417,28 +1419,21 @@ function storeTranslationLanguageCodes(codes) {
 }
 
 function getOrderedTranslationLanguageCodes(selectedCodes) {
-    return TRANSLATION_LANGUAGES
+    return getConfiguredLanguages()
         .filter(language => selectedCodes.has(language.code))
         .map(language => language.code);
 }
 
 function showTranslationLanguagePrompt() {
     return new Promise((resolve) => {
+        const configuredLanguages = getConfiguredLanguages();
         const selectedCodes = new Set(getStoredTranslationLanguageCodes());
         const modalContent = el.modalOverlay.querySelector('.modal-content');
-        let filterText = "";
-        let isComposingFilterText = false;
-        let filterInput = null;
         let languageList = null;
 
         const renderLanguageList = () => {
-            const query = filterText.trim().toLowerCase();
-            const filtered = TRANSLATION_LANGUAGES.filter(language => {
-                const haystack = `${language.name} ${language.nativeName} ${language.code}`.toLowerCase();
-                return !query || haystack.includes(query);
-            });
-            languageList.innerHTML = filtered.length
-                ? filtered.map(language => `
+            languageList.innerHTML = configuredLanguages.length
+                ? configuredLanguages.map(language => `
                     <label class="language-option">
                         <input type="checkbox" value="${escapeAttr(language.code)}" ${selectedCodes.has(language.code) ? 'checked' : ''} />
                         <span class="language-option-name">
@@ -1452,26 +1447,10 @@ function showTranslationLanguagePrompt() {
 
         const mountLanguagePicker = () => {
             el.modalLanguageContainer.innerHTML = `
-                <input type="text" class="language-filter-input" placeholder="Filter languages..." autocapitalize="none" autocorrect="off" autocomplete="off" spellcheck="false" />
                 <div class="language-list"></div>
             `;
 
-            filterInput = el.modalLanguageContainer.querySelector('.language-filter-input');
             languageList = el.modalLanguageContainer.querySelector('.language-list');
-
-            filterInput?.addEventListener('compositionstart', () => {
-                isComposingFilterText = true;
-            });
-            filterInput?.addEventListener('compositionend', event => {
-                isComposingFilterText = false;
-                filterText = event.target.value || "";
-                renderLanguageList();
-            });
-            filterInput?.addEventListener('input', event => {
-                if (isComposingFilterText || event.isComposing) return;
-                filterText = event.target.value || "";
-                renderLanguageList();
-            });
 
             languageList?.addEventListener('change', event => {
                 const input = event.target.closest('input[type="checkbox"]');
@@ -1495,7 +1474,7 @@ function showTranslationLanguagePrompt() {
         };
 
         const handleOk = () => {
-            const selected = TRANSLATION_LANGUAGES.filter(language => selectedCodes.has(language.code));
+            const selected = configuredLanguages.filter(language => selectedCodes.has(language.code));
             cleanup();
             storeTranslationLanguageCodes(selected.map(language => language.code));
             resolve(selected);
@@ -1523,7 +1502,7 @@ function showTranslationLanguagePrompt() {
 
         const handleKey = event => {
             if (!el.modalOverlay || el.modalOverlay.classList.contains('hidden')) return;
-            if (isComposingFilterText || event.isComposing) return;
+            if (event.isComposing) return;
 
             if (event.key === 'Escape') {
                 event.preventDefault();
@@ -1534,29 +1513,6 @@ function showTranslationLanguagePrompt() {
             const checkboxes = getLanguageCheckboxes();
             const active = document.activeElement;
             const checkboxIndex = checkboxes.indexOf(active);
-
-            if (event.key === 'Tab') {
-                if (active === filterInput && !event.shiftKey) {
-                    event.preventDefault();
-                    focusFirstLanguageCheckbox();
-                    return;
-                }
-                if (checkboxIndex >= 0 && !event.shiftKey) {
-                    event.preventDefault();
-                    el.modalBtnOk.focus();
-                    return;
-                }
-                if (checkboxIndex >= 0 && event.shiftKey) {
-                    event.preventDefault();
-                    filterInput?.focus();
-                    return;
-                }
-                if (active === el.modalBtnOk && event.shiftKey) {
-                    event.preventDefault();
-                    focusLanguageCheckbox(checkboxes.length - 1);
-                    return;
-                }
-            }
 
             if (['ArrowDown', 'ArrowRight'].includes(event.key) && checkboxes.length > 0) {
                 event.preventDefault();
@@ -1607,7 +1563,7 @@ function showTranslationLanguagePrompt() {
         el.modalBtnOk.addEventListener('click', handleOk);
         el.modalBtnCancel.addEventListener('click', handleCancel);
         document.addEventListener('keydown', handleKey, true);
-        setTimeout(() => filterInput?.focus(), 50);
+        setTimeout(focusFirstLanguageCheckbox, 50);
     });
 }
 
@@ -1738,12 +1694,23 @@ async function translateCurrentDocument() {
 }
 
 export function showViewerTranslationPrompt() {
+    const configuredLanguages = getConfiguredLanguages();
+    if (configuredLanguages.length === 0) {
+        showToast('Register a language in Settings → Language before translating.', 'translate');
+        return Promise.resolve(null);
+    }
     return new Promise((resolve) => {
         const modalContent = el.modalOverlay.querySelector('.modal-content');
         
         // Populate select elements
-        const storedSource = localStorage.getItem('dkst.viewer.translation.source') || 'auto';
-        const storedTarget = localStorage.getItem('dkst.viewer.translation.target') || 'ko-KR'; // default target language
+        const savedTarget = localStorage.getItem('dkst.viewer.translation.target') || 'ko-KR';
+        const storedTarget = configuredLanguages.some(language => language.code === savedTarget)
+            ? savedTarget
+            : configuredLanguages[0].code;
+        const savedSource = localStorage.getItem('dkst.viewer.translation.source') || 'auto';
+        const storedSource = savedSource === 'auto' || configuredLanguages.some(language => language.code === savedSource)
+            ? savedSource
+            : 'auto';
         const storedCreateFile = localStorage.getItem('dkst.viewer.translation.createFile') !== 'false';
 
         const sourceSelect = document.getElementById('viewer-translation-source');
@@ -1752,14 +1719,14 @@ export function showViewerTranslationPrompt() {
 
         sourceSelect.innerHTML = `
             <option value="auto" ${storedSource === 'auto' ? 'selected' : ''}>Auto (Detect)</option>
-            ${TRANSLATION_LANGUAGES.map(lang => `
+            ${configuredLanguages.map(lang => `
                 <option value="${escapeAttr(lang.code)}" ${storedSource === lang.code ? 'selected' : ''}>
                     ${escapeHTML(lang.name)} (${escapeHTML(lang.nativeName)})
                 </option>
             `).join('')}
         `;
 
-        targetSelect.innerHTML = TRANSLATION_LANGUAGES.map(lang => `
+        targetSelect.innerHTML = configuredLanguages.map(lang => `
             <option value="${escapeAttr(lang.code)}" ${storedTarget === lang.code ? 'selected' : ''}>
                 ${escapeHTML(lang.name)} (${escapeHTML(lang.nativeName)})
             </option>
@@ -1788,8 +1755,8 @@ export function showViewerTranslationPrompt() {
 
             cleanup();
             
-            const sourceLang = sourceCode === 'auto' ? { code: 'auto', name: 'Auto (Detect)' } : TRANSLATION_LANGUAGES.find(l => l.code === sourceCode);
-            const targetLang = TRANSLATION_LANGUAGES.find(l => l.code === targetCode);
+            const sourceLang = sourceCode === 'auto' ? { code: 'auto', name: 'Auto (Detect)' } : configuredLanguages.find(l => l.code === sourceCode);
+            const targetLang = configuredLanguages.find(l => l.code === targetCode);
             
             resolve({ source: sourceLang, target: targetLang, createFile: createFileVal });
         };
@@ -1917,9 +1884,10 @@ export async function translateViewerDocument() {
 }
 
 function getStoredSpellcheckLanguageCode() {
+    const configuredLanguages = getConfiguredLanguages();
     try {
         const stored = localStorage.getItem(SPELLCHECK_LANGUAGE_STORAGE_KEY);
-        if (stored === 'auto' || TRANSLATION_LANGUAGES.some(language => language.code === stored)) {
+        if (stored === 'auto' || configuredLanguages.some(language => language.code === stored)) {
             return stored;
         }
     } catch {
@@ -1930,10 +1898,11 @@ function getStoredSpellcheckLanguageCode() {
 
 function showSpellcheckLanguagePrompt() {
     return new Promise((resolve) => {
+        const configuredLanguages = getConfiguredLanguages();
         const modalContent = el.modalOverlay.querySelector('.modal-content');
         const languageItems = [
             { code: 'auto', name: 'Auto Detect', nativeName: 'Language auto detection', auto: true },
-            ...TRANSLATION_LANGUAGES.map(language => ({ ...language, auto: false })),
+            ...configuredLanguages.map(language => ({ ...language, auto: false })),
         ];
         let selectedCode = getStoredSpellcheckLanguageCode();
 

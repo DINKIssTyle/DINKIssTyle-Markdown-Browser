@@ -25,6 +25,7 @@ import { isCancellationError } from './main-cancel.js';
 import { createDeltaTicker, normalizeDeltaText } from './main-delta-ticker.js';
 import { applyAccentColors, applyThemeMode, normalizeThemeMode, DARK_ACCENT_PRESETS, DEFAULT_DARK_ACCENT_COLOR, DEFAULT_LIGHT_ACCENT_COLOR, LIGHT_ACCENT_PRESETS, normalizeAccentColor, applyDocumentMarginStyle, applyViewerFontFamily } from './main-theme.js';
 import { collectUpdateSettingsFromControls, syncUpdateSettingsControls } from './main-update.js';
+import { bindLanguageSettingsEvents, collectLanguageSettingsFromControls, syncLanguageSettingsControls } from './main-languages.js';
 import gfmReference from './prompts/GFM.md?raw';
 import { EditorSelection, StateField, StateEffect } from '@codemirror/state';
 import { Decoration, WidgetType, EditorView } from '@codemirror/view';
@@ -1041,27 +1042,32 @@ async function persistAISettings() {
 function syncSettingsTabs(activeTab = 'appearance') {
     const normalizedTab = activeTab === 'common' ? 'appearance' : activeTab;
     const isCommon = normalizedTab === 'appearance';
+    const isLanguage = normalizedTab === 'language';
     const isReading = normalizedTab === 'reading';
     const isEditor = normalizedTab === 'editor';
     const isAi = normalizedTab === 'ai';
     const isUpdate = normalizedTab === 'update';
     lastSettingsTab = normalizedTab;
     el.settingsTabCommon?.classList.toggle('active', isCommon);
+    el.settingsTabLanguage?.classList.toggle('active', isLanguage);
     el.settingsTabReading?.classList.toggle('active', isReading);
     el.settingsTabEditor?.classList.toggle('active', isEditor);
     el.settingsTabAi?.classList.toggle('active', isAi);
     el.settingsTabUpdate?.classList.toggle('active', isUpdate);
     el.settingsTabCommon?.setAttribute('aria-selected', String(isCommon));
+    el.settingsTabLanguage?.setAttribute('aria-selected', String(isLanguage));
     el.settingsTabReading?.setAttribute('aria-selected', String(isReading));
     el.settingsTabEditor?.setAttribute('aria-selected', String(isEditor));
     el.settingsTabAi?.setAttribute('aria-selected', String(isAi));
     el.settingsTabUpdate?.setAttribute('aria-selected', String(isUpdate));
     el.settingsTabCommon?.setAttribute('tabindex', isCommon ? '0' : '-1');
+    el.settingsTabLanguage?.setAttribute('tabindex', isLanguage ? '0' : '-1');
     el.settingsTabReading?.setAttribute('tabindex', isReading ? '0' : '-1');
     el.settingsTabEditor?.setAttribute('tabindex', isEditor ? '0' : '-1');
     el.settingsTabAi?.setAttribute('tabindex', isAi ? '0' : '-1');
     el.settingsTabUpdate?.setAttribute('tabindex', isUpdate ? '0' : '-1');
     el.settingsPanelCommon?.classList.toggle('hidden', !isCommon);
+    el.settingsPanelLanguage?.classList.toggle('hidden', !isLanguage);
     el.settingsPanelReading?.classList.toggle('hidden', !isReading);
     el.settingsPanelEditor?.classList.toggle('hidden', !isEditor);
     el.settingsPanelAi?.classList.toggle('hidden', !isAi);
@@ -1076,10 +1082,12 @@ function syncSettingsTabs(activeTab = 'appearance') {
 
 function getSettingsFormSignature() {
     if (!el.aiSettingsModal) return "";
-    const values = Array.from(el.aiSettingsModal.querySelectorAll('input, select')).map(control => ({
-        id: control.id || control.dataset.tokenColorKey || control.name || control.type,
-        value: control.type === 'checkbox' ? control.checked : control.value,
-    }));
+    const values = Array.from(el.aiSettingsModal.querySelectorAll('input, select'))
+        .filter(control => !control.hasAttribute('data-settings-signature-ignore'))
+        .map(control => ({
+            id: control.id || control.dataset.tokenColorKey || control.name || control.type,
+            value: control.type === 'checkbox' ? control.checked : control.value,
+        }));
     return JSON.stringify(values);
 }
 
@@ -1467,6 +1475,7 @@ export function openSettings(activeTab = lastSettingsTab) {
     };
     syncSettingsTabs(activeTab);
     syncCommonSettingsControls();
+    syncLanguageSettingsControls();
     syncEditorSettingsControls();
     syncUpdateSettingsControls();
     if (el.aiFeaturesDisabled) {
@@ -1489,13 +1498,16 @@ export function openSettings(activeTab = lastSettingsTab) {
 }
 
 export function bindAIEvents() {
+    bindLanguageSettingsEvents();
     el.settingsTabCommon?.addEventListener('click', () => syncSettingsTabs('appearance'));
+    el.settingsTabLanguage?.addEventListener('click', () => syncSettingsTabs('language'));
     el.settingsTabReading?.addEventListener('click', () => syncSettingsTabs('reading'));
     el.settingsTabEditor?.addEventListener('click', () => syncSettingsTabs('editor'));
     el.settingsTabAi?.addEventListener('click', () => syncSettingsTabs('ai'));
     el.settingsTabUpdate?.addEventListener('click', () => syncSettingsTabs('update'));
     const settingsTabs = [
         { element: el.settingsTabCommon, name: 'appearance' },
+        { element: el.settingsTabLanguage, name: 'language' },
         { element: el.settingsTabReading, name: 'reading' },
         { element: el.settingsTabEditor, name: 'editor' },
         { element: el.settingsTabAi, name: 'ai' },
@@ -1718,6 +1730,7 @@ export function bindAIEvents() {
         collectUpdateSettingsFromControls();
         collectScrollbarSettingsFromControls();
         collectMainToolbarSettingsFromControls();
+        collectLanguageSettingsFromControls();
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);
         applyDocumentMarginStyle(state.documentMargin);
         applyViewerFontFamily(state.viewerFontFamily);

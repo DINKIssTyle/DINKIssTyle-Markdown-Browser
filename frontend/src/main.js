@@ -38,6 +38,7 @@ import {
     syncThemeSettingsControls, syncScrollbarSettingsControls, syncMainToolbarSettingsControls,
     persistAppSettings,
 } from './main-settings.js';
+import { loadLanguageSettings } from './main-languages.js';
 import { initializePlatform, isMobilePlatform, printForCurrentPlatform } from './platform-common.js';
 
 import {
@@ -216,6 +217,7 @@ async function loadSettings() {
     loadScrollbarVisibility(s);
     loadMainToolbarVisibility(s);
     loadThemeMode(s);
+    loadLanguageSettings(s);
     state.documentMargin = s.documentMargin || "none";
     state.viewerFontFamily = s.viewerFontFamily || "";
 

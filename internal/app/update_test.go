@@ -28,6 +28,39 @@ func TestDefaultMainToolbarVisibility(t *testing.T) {
 	}
 }
 
+func TestDefaultLanguageCodesPreserveExistingLanguages(t *testing.T) {
+	app := &App{settingsPath: t.TempDir() + "/settings.json"}
+	settings := app.getSettingsUnlocked()
+	want := []string{"en-US", "es-ES", "fr-FR", "de-DE", "ko-KR", "zh-CN", "zh-TW", "ja-JP"}
+
+	if len(settings.LanguageCodes) != len(want) {
+		t.Fatalf("LanguageCodes length = %d, want %d", len(settings.LanguageCodes), len(want))
+	}
+	for index, code := range want {
+		if settings.LanguageCodes[index] != code {
+			t.Fatalf("LanguageCodes[%d] = %q, want %q", index, settings.LanguageCodes[index], code)
+		}
+	}
+}
+
+func TestNormalizeSettingsLanguageCodes(t *testing.T) {
+	settings := AppSettings{LanguageCodes: []string{
+		" ko-KR ", "en-US", "ko-KR", "fr-FR", "de-DE", "es-ES", "ja-JP",
+		"zh-CN", "zh-TW", "it-IT", "pt-BR", "uk-UA",
+	}}
+	normalizeSettings(&settings)
+
+	want := []string{"ko-KR", "en-US", "fr-FR", "de-DE", "es-ES", "ja-JP", "zh-CN", "zh-TW", "it-IT", "pt-BR"}
+	if len(settings.LanguageCodes) != len(want) {
+		t.Fatalf("LanguageCodes length = %d, want %d", len(settings.LanguageCodes), len(want))
+	}
+	for index, code := range want {
+		if settings.LanguageCodes[index] != code {
+			t.Fatalf("LanguageCodes[%d] = %q, want %q", index, settings.LanguageCodes[index], code)
+		}
+	}
+}
+
 func TestNormalizeSettingsScrollbarVisibility(t *testing.T) {
 	tests := []struct {
 		name  string
