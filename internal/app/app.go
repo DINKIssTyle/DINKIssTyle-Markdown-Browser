@@ -146,6 +146,7 @@ type App struct {
 	showWhatsNew       bool
 	editorState        EditorSessionState
 	allowNextQuit      bool
+	quitPromptOpen     bool
 }
 
 type EditorSessionState struct {
@@ -402,14 +403,53 @@ func (a *App) HandleWindowClosing() bool {
 
 //wails:ignore
 func (a *App) ShouldQuit() bool {
+	allowQuit, showPrompt := a.prepareQuit()
+	if !showPrompt {
+		return allowQuit
+	}
+
+	// On macOS, Wails calls ShouldQuit synchronously from AppKit's main
+	// thread. Waiting for an attached dialog here prevents AppKit from
+	// delivering the sheet's button callback. Cancel this quit attempt and
+	// ask from a goroutine, then retry once after the user accepts.
+	go func() {
+		cancel := a.OnBeforeClose()
+		a.finishQuitPrompt(cancel)
+		if !cancel && a.wailsApp != nil {
+			a.wailsApp.Quit()
+		}
+	}()
+
+	return false
+}
+
+func (a *App) prepareQuit() (allowQuit bool, showPrompt bool) {
 	a.mu.Lock()
+	defer a.mu.Unlock()
+
 	if a.allowNextQuit {
 		a.allowNextQuit = false
-		a.mu.Unlock()
-		return true
+		return true, false
 	}
-	a.mu.Unlock()
-	return !a.OnBeforeClose()
+	if !a.editorState.IsEditing || !a.editorState.HasUnsaved {
+		return true, false
+	}
+	if a.quitPromptOpen {
+		return false, false
+	}
+
+	a.quitPromptOpen = true
+	return false, true
+}
+
+func (a *App) finishQuitPrompt(cancel bool) {
+	a.mu.Lock()
+	defer a.mu.Unlock()
+
+	a.quitPromptOpen = false
+	if !cancel {
+		a.allowNextQuit = true
+	}
 }
 
 // FrontendReady marks the UI as ready to receive open-file events and returns queued paths.

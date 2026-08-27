@@ -12,6 +12,7 @@ note
 !internal/app/update_test.go
 !internal/app/document_persistence_paths_test.go
 !internal/app/apple_intelligence_test.go
+!internal/app/quit_test.go
 
 bin/
 
