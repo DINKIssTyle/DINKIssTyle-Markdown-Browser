@@ -1,6 +1,11 @@
 package app
 
-import "testing"
+import (
+	"bytes"
+	"testing"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
+)
 
 func TestPrepareQuitAllowsCleanEditor(t *testing.T) {
 	a := &App{
@@ -71,5 +76,38 @@ func TestCancelledQuitPromptCanBeShownAgain(t *testing.T) {
 	allow, prompt := a.prepareQuit()
 	if allow || !prompt {
 		t.Fatalf("prepareQuit() after cancel = (%v, %v), want (false, true)", allow, prompt)
+	}
+}
+
+func TestWithAppDialogIcon(t *testing.T) {
+	previousIcon := appIconPNG
+	t.Cleanup(func() {
+		appIconPNG = previousIcon
+	})
+
+	expected := []byte{0x89, 0x50, 0x4e, 0x47}
+	appIconPNG = expected
+	dialog := &application.MessageDialog{}
+
+	if result := withAppDialogIcon(dialog); result != dialog {
+		t.Fatal("withAppDialogIcon should return the original dialog")
+	}
+	if !bytes.Equal(dialog.Icon, expected) {
+		t.Fatalf("dialog icon = %v, want %v", dialog.Icon, expected)
+	}
+}
+
+func TestWithAppDialogIconAllowsMissingIcon(t *testing.T) {
+	previousIcon := appIconPNG
+	t.Cleanup(func() {
+		appIconPNG = previousIcon
+	})
+
+	appIconPNG = nil
+	dialog := &application.MessageDialog{}
+
+	withAppDialogIcon(dialog)
+	if dialog.Icon != nil {
+		t.Fatalf("dialog icon = %v, want nil", dialog.Icon)
 	}
 }

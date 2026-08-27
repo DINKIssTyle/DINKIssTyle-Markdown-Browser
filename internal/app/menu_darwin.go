@@ -5,6 +5,7 @@ package app
 import "github.com/wailsapp/wails/v3/pkg/application"
 
 // BuildAppMenu constructs the native macOS menu using the Wails 3 menu API.
+//
 //wails:ignore
 func (a *App) BuildAppMenu() *application.Menu {
 	menu := a.wailsApp.NewMenu()
@@ -52,7 +53,7 @@ func (a *App) BuildAppMenu() *application.Menu {
 	menu.AddRole(application.WindowMenu)
 	help := menu.AddSubmenu("Help")
 	help.Add("DKST Markdown Browser Help").OnClick(func(_ *application.Context) {
-		a.wailsApp.Dialog.Info().AttachToWindow(a.window).SetTitle("Help").SetMessage(
+		withAppDialogIcon(a.wailsApp.Dialog.Info()).AttachToWindow(a.window).SetTitle("Help").SetMessage(
 			"• New Document: ⌘N\n• New Tab: ⌘T\n• Open File: ⌘O or 📂 button\n• Home: ⇧⌘H or ⌂ button\n• Refresh: ⌘R or ↻ button\n• Search: ⌘F or 🔍 button\n• Toggle Theme: ⌘K or 🌓 button\n• History: ⌘[ / ⌘] or ← → buttons\n• Font Size: ⌘+/⌘-",
 		).Show()
 	})

@@ -256,11 +256,18 @@ func (a *App) showError(title, message string) {
 		log.Printf("%s: %s", title, message)
 		return
 	}
-	a.wailsApp.Dialog.Error().
+	withAppDialogIcon(a.wailsApp.Dialog.Error()).
 		AttachToWindow(a.window).
 		SetTitle(title).
 		SetMessage(message).
 		Show()
+}
+
+func withAppDialogIcon(dialog *application.MessageDialog) *application.MessageDialog {
+	if len(appIconPNG) > 0 {
+		dialog.SetIcon(appIconPNG)
+	}
+	return dialog
 }
 
 func (a *App) askDialog(title, message string, labels []string, defaultLabel, cancelLabel string) string {
@@ -268,7 +275,7 @@ func (a *App) askDialog(title, message string, labels []string, defaultLabel, ca
 		return cancelLabel
 	}
 	result := make(chan string, 1)
-	dialog := a.wailsApp.Dialog.Question().AttachToWindow(a.window).SetTitle(title).SetMessage(message)
+	dialog := withAppDialogIcon(a.wailsApp.Dialog.Question()).AttachToWindow(a.window).SetTitle(title).SetMessage(message)
 	for _, label := range labels {
 		label := label
 		button := dialog.AddButton(label).OnClick(func() {

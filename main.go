@@ -37,7 +37,10 @@ func getAppIconPNG() []byte {
 
 func main() {
 	appIcon := getAppIconPNG()
-	appcore.SetIntegrationIcons(appIcon, documentIconPNG)
+	// appicon.png is the full-bleed source used to generate Apple's icon
+	// assets. Dialogs need the already-shaped cross-platform artwork so the
+	// source graphic is not shown as a square on macOS.
+	appcore.SetIntegrationIcons(appIconOtherPNG, documentIconPNG)
 	service := appcore.NewApp()
 	appcore.RegisterIOSOpenFileHandler(service.HandleSystemOpenFile)
 	appcore.RegisterAndroidOpenFileHandler(service.HandleSystemOpenFile)
@@ -57,9 +60,9 @@ func main() {
 		Mac: application.MacOptions{
 			ApplicationShouldTerminateAfterLastWindowClosed: true,
 		},
-		FileAssociations: []string{".md", ".markdown", ".html", ".htm"},
-		SingleInstance:   getSingleInstanceOptions(service),
-		ShouldQuit:       service.ShouldQuit,
+		FileAssociations:            []string{".md", ".markdown", ".html", ".htm"},
+		SingleInstance:              getSingleInstanceOptions(service),
+		ShouldQuit:                  service.ShouldQuit,
 		DisableDefaultSignalHandler: runtime.GOOS == "ios",
 	})
 
