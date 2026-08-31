@@ -72,6 +72,7 @@ function showScrollbarWhileScrolling(target) {
 }
 
 const customScrollbarTimers = new WeakMap();
+let customScrollbarUpdateFrame = null;
 
 function triggerScrollbarActive(scrollbarEl) {
     if (!scrollbarEl) return;
@@ -181,6 +182,18 @@ export function updateCustomVerticalScrollbars(activeTarget = null) {
     } else if (el.editorViewScrollbar) {
         el.editorViewScrollbar.classList.remove('is-overflowing', 'is-active');
     }
+}
+
+export function scheduleCustomVerticalScrollbarUpdate() {
+    if (!document.documentElement.classList.contains('platform-mobile')) return;
+
+    if (customScrollbarUpdateFrame !== null) {
+        window.cancelAnimationFrame(customScrollbarUpdateFrame);
+    }
+    customScrollbarUpdateFrame = window.requestAnimationFrame(() => {
+        customScrollbarUpdateFrame = null;
+        updateCustomVerticalScrollbars();
+    });
 }
 
 function bindScrollbarActivity() {

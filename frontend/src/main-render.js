@@ -29,6 +29,7 @@ import { applyHighlight, beginProgressTask, clearHighlight, copyTextToClipboard,
 import { GetRecentFiles, ReadFile, ReadImageAsDataURL, ListFileTree } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError, LogInfo } from './wails-runtime';
 import { refreshSidebarContent } from './main-sidebar.js';
+import { scheduleCustomVerticalScrollbarUpdate } from './main-settings.js';
 
 // ── Module-level State ─────────────────────────────────────
 let recentFilesCache = [];
@@ -1432,6 +1433,17 @@ export async function renderRecentFiles() {
 // ── Active Tab Rendering ───────────────────────────────────
 
 export async function renderActiveTab() {
+    try {
+        await renderActiveTabContent();
+    } finally {
+        // Tab changes replace the document without necessarily resizing the
+        // scroll container. Recalculate the iOS overlay scrollbar once the new
+        // document has reached the next layout frame.
+        scheduleCustomVerticalScrollbarUpdate();
+    }
+}
+
+async function renderActiveTabContent() {
     const tab = getActiveTab();
     if (!tab) return;
     const renderToken = ++activeTabRenderToken;

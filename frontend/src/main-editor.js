@@ -4128,7 +4128,10 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
 }
 
 async function handleSave() {
-    await saveCurrentDocument({ confirm: true, exitAfterSave: true });
+    await saveCurrentDocument({
+        confirm: true,
+        exitAfterSave: !isMobilePlatform(),
+    });
 }
 
 async function handleCancel() {

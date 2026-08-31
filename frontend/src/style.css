@@ -9587,19 +9587,9 @@ html.dark .ai-prompt-shell:focus-within {
     background: rgba(82, 169, 255, 0.26) !important;
 }
 
-.cm-editor .cm-content ::selection {
-    background: rgba(82, 169, 255, 0.26) !important;
-    color: var(--editor-plain-text-color, var(--text-color)) !important;
-}
-
 html.dark .cm-editor .cm-selectionBackground,
 html.dark .cm-editor.cm-focused .cm-selectionBackground {
     background: rgba(104, 184, 255, 0.34) !important;
-}
-
-html.dark .cm-editor .cm-content ::selection {
-    background: rgba(104, 184, 255, 0.34) !important;
-    color: var(--editor-plain-text-color, var(--text-color)) !important;
 }
 
 /* Link Tooltip */
