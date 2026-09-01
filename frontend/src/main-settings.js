@@ -235,6 +235,20 @@ export function collectScrollbarSettingsFromControls() {
     state.scrollbarVisibility = normalizeScrollbarVisibility(el.settingsScrollbarVisibility?.value);
 }
 
+export function loadRestoreWindowState(settings = {}) {
+    state.restoreWindowState = settings.restoreWindowState !== false;
+}
+
+export function syncRestoreWindowStateControl() {
+    if (el.settingsRestoreWindowState) {
+        el.settingsRestoreWindowState.checked = state.restoreWindowState !== false;
+    }
+}
+
+export function collectRestoreWindowStateFromControl() {
+    state.restoreWindowState = el.settingsRestoreWindowState?.checked ?? true;
+}
+
 export function loadMainToolbarVisibility(settings = {}) {
     MAIN_TOOLBAR_BUTTONS.forEach(([stateKey, settingKey, , , defaultVisible]) => {
         const persistedValue = settings[settingKey];
@@ -293,6 +307,7 @@ export function buildSettingsPayload(overrides = {}) {
         lightAccentColor: state.lightAccentColor,
         darkAccentColor: state.darkAccentColor,
         scrollbarVisibility: normalizeScrollbarVisibility(state.scrollbarVisibility),
+        restoreWindowState: state.restoreWindowState !== false,
         mainToolbarNewDocument: state.mainToolbarButtons.newDocument,
         mainToolbarEdit: state.mainToolbarButtons.edit,
         mainToolbarTranslate: state.mainToolbarButtons.translate,

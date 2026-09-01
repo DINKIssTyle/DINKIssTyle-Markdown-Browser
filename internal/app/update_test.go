@@ -4,9 +4,13 @@ import (
 	"context"
 	"io"
 	"net/http"
+	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 	"time"
+
+	"github.com/wailsapp/wails/v3/pkg/application"
 )
 
 type roundTripFunc func(*http.Request) (*http.Response, error)
@@ -25,6 +29,90 @@ func TestDefaultMainToolbarVisibility(t *testing.T) {
 	if !settings.MainToolbarNewDocument || !settings.MainToolbarEdit ||
 		!settings.MainToolbarTranslate || !settings.MainToolbarFontSize {
 		t.Fatal("changing the theme default should not hide the other toolbar buttons")
+	}
+}
+
+func TestWindowStateRestoreEnabledByDefault(t *testing.T) {
+	app := &App{settingsPath: t.TempDir() + "/settings.json"}
+	if !app.getSettingsUnlocked().RestoreWindowState {
+		t.Fatal("window size and position restore should be enabled by default")
+	}
+}
+
+func TestDisablingWindowStateRestoreRemovesSavedState(t *testing.T) {
+	tempDir := t.TempDir()
+	windowStatePath := filepath.Join(tempDir, "window-state.json")
+	if err := os.WriteFile(windowStatePath, []byte(`{"width":1200,"height":800}`), 0600); err != nil {
+		t.Fatal(err)
+	}
+	app := &App{
+		settingsPath:    filepath.Join(tempDir, "settings.json"),
+		windowStatePath: windowStatePath,
+	}
+	app.saveSettingsUnlocked(AppSettings{RestoreWindowState: false})
+	if _, err := os.Stat(windowStatePath); !os.IsNotExist(err) {
+		t.Fatalf("window state file still exists after disabling restore: %v", err)
+	}
+}
+
+func testScreen(x, y, width, height int, primary bool) *application.Screen {
+	return &application.Screen{
+		WorkArea:  application.Rect{X: x, Y: y, Width: width, Height: height},
+		IsPrimary: primary,
+	}
+}
+
+func TestClampWindowBoundsPreservesVisibleBounds(t *testing.T) {
+	want := application.Rect{X: 120, Y: 90, Width: 1200, Height: 800}
+	got, ok := clampWindowBounds(want, []*application.Screen{testScreen(0, 0, 1920, 1040, true)}, 800, 600)
+	if !ok || got != want {
+		t.Fatalf("clampWindowBounds() = (%+v, %v), want (%+v, true)", got, ok, want)
+	}
+}
+
+func TestClampWindowBoundsReturnsOffscreenWindowToPrimaryDisplay(t *testing.T) {
+	got, ok := clampWindowBounds(
+		application.Rect{X: 4200, Y: 200, Width: 1200, Height: 800},
+		[]*application.Screen{
+			testScreen(1920, 0, 1920, 1040, false),
+			testScreen(0, 0, 1920, 1040, true),
+		},
+		800,
+		600,
+	)
+	want := application.Rect{X: 720, Y: 200, Width: 1200, Height: 800}
+	if !ok || got != want {
+		t.Fatalf("clampWindowBounds() = (%+v, %v), want (%+v, true)", got, ok, want)
+	}
+}
+
+func TestClampWindowBoundsUsesIntersectingSecondaryDisplay(t *testing.T) {
+	want := application.Rect{X: -1700, Y: 100, Width: 1000, Height: 700}
+	got, ok := clampWindowBounds(want, []*application.Screen{
+		testScreen(0, 0, 1920, 1040, true),
+		testScreen(-1920, 0, 1920, 1040, false),
+	}, 800, 600)
+	if !ok || got != want {
+		t.Fatalf("clampWindowBounds() = (%+v, %v), want (%+v, true)", got, ok, want)
+	}
+}
+
+func TestClampWindowBoundsFitsOversizedWindowToWorkArea(t *testing.T) {
+	got, ok := clampWindowBounds(
+		application.Rect{X: -100, Y: -100, Width: 2400, Height: 1600},
+		[]*application.Screen{testScreen(0, 24, 1280, 720, true)},
+		800,
+		600,
+	)
+	want := application.Rect{X: 0, Y: 24, Width: 1280, Height: 720}
+	if !ok || got != want {
+		t.Fatalf("clampWindowBounds() = (%+v, %v), want (%+v, true)", got, ok, want)
+	}
+}
+
+func TestClampWindowBoundsRejectsInvalidSavedSize(t *testing.T) {
+	if got, ok := clampWindowBounds(application.Rect{X: 20, Y: 20}, []*application.Screen{testScreen(0, 0, 1920, 1040, true)}, 800, 600); ok {
+		t.Fatalf("clampWindowBounds() = (%+v, true), want invalid state", got)
 	}
 }
 

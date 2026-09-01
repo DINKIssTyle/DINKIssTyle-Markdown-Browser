@@ -72,6 +72,17 @@ if /I "%ARCH%"=="amd64" (
     echo [ERROR] Unknown architecture: %ARCH%  (amd64 ^| arm64 ^| 386^)
     exit /b 1
 )
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] Windows build failed
+    exit /b 1
+)
+
+REM Refuse to package a stale frontend bundle that omits desktop settings.
+findstr /c:"Remember window size and position" "frontend\dist\index.html" >nul
+if %ERRORLEVEL% neq 0 (
+    echo [ERROR] Window state setting is missing from frontend\dist\index.html
+    exit /b 1
+)
 
 REM ── Result Copy ────────────────────────────────────────────
 set EXE_PATH=bin\%APP_NAME%.exe
@@ -83,7 +94,8 @@ if exist "%EXE_PATH%" (
     echo.
     echo [TIP] To create an NSIS installer, use the scripts in build\windows\installer\.
 ) else (
-    echo [WARN] Executable not found: "%EXE_PATH%"
+    echo [ERROR] Executable not found: "%EXE_PATH%"
+    exit /b 1
 )
 
 endlocal

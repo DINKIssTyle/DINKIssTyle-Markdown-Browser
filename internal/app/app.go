@@ -83,6 +83,7 @@ type AppSettings struct {
 	LightAccentColor         string            `json:"lightAccentColor"`
 	DarkAccentColor          string            `json:"darkAccentColor"`
 	ScrollbarVisibility      string            `json:"scrollbarVisibility"`
+	RestoreWindowState       bool              `json:"restoreWindowState"`
 	MainToolbarNewDocument   bool              `json:"mainToolbarNewDocument"`
 	MainToolbarEdit          bool              `json:"mainToolbarEdit"`
 	MainToolbarTranslate     bool              `json:"mainToolbarTranslate"`
@@ -130,24 +131,28 @@ type AppSettings struct {
 
 // App struct
 type App struct {
-	wailsApp           *application.App
-	window             *application.WebviewWindow
-	settingsPath       string
-	recentPath         string
-	storageMu          sync.Mutex
-	mobileStorageReady bool
-	mu                 sync.Mutex
-	settingsMu         sync.Mutex
-	systemFontsOnce    sync.Once
-	systemFonts        []FontInfo
-	activeAIRequestID  int64
-	activeAICancel     context.CancelFunc
-	frontendReady      bool
-	pendingOpenFiles   []string
-	showWhatsNew       bool
-	editorState        EditorSessionState
-	allowNextQuit      bool
-	quitPromptOpen     bool
+	wailsApp            *application.App
+	window              *application.WebviewWindow
+	settingsPath        string
+	recentPath          string
+	windowStatePath     string
+	storageMu           sync.Mutex
+	mobileStorageReady  bool
+	mu                  sync.Mutex
+	settingsMu          sync.Mutex
+	windowStateMu       sync.Mutex
+	lastNormalBounds    application.Rect
+	lastWindowMaximised bool
+	systemFontsOnce     sync.Once
+	systemFonts         []FontInfo
+	activeAIRequestID   int64
+	activeAICancel      context.CancelFunc
+	frontendReady       bool
+	pendingOpenFiles    []string
+	showWhatsNew        bool
+	editorState         EditorSessionState
+	allowNextQuit       bool
+	quitPromptOpen      bool
 }
 
 type EditorSessionState struct {
@@ -198,8 +203,9 @@ func NewApp() *App {
 	os.MkdirAll(appDir, 0755)
 
 	return &App{
-		settingsPath: filepath.Join(appDir, "settings.json"),
-		recentPath:   filepath.Join(appDir, "recent.json"),
+		settingsPath:    filepath.Join(appDir, "settings.json"),
+		recentPath:      filepath.Join(appDir, "recent.json"),
+		windowStatePath: filepath.Join(appDir, "window-state.json"),
 	}
 }
 
@@ -321,6 +327,10 @@ func (a *App) DomReady() {
 		return
 	}
 	screens := a.wailsApp.Screen.GetAll()
+	if a.restoreWindowState(screens) {
+		return
+	}
+	a.RememberWindowBounds()
 
 	screen, ok := startupScreen(screens)
 	if ok && shouldMaximiseOnStartup(screen) {
@@ -400,6 +410,7 @@ func (a *App) OnBeforeClose() bool {
 
 //wails:ignore
 func (a *App) HandleWindowClosing() bool {
+	a.saveWindowState()
 	cancel := a.OnBeforeClose()
 	if !cancel {
 		a.mu.Lock()
@@ -411,6 +422,7 @@ func (a *App) HandleWindowClosing() bool {
 
 //wails:ignore
 func (a *App) ShouldQuit() bool {
+	a.saveWindowState()
 	allowQuit, showPrompt := a.prepareQuit()
 	if !showPrompt {
 		return allowQuit
@@ -934,6 +946,7 @@ func (a *App) getSettingsUnlocked() AppSettings {
 	settings.LightAccentColor = "#0071e3"
 	settings.DarkAccentColor = "#0a84ff"
 	settings.ScrollbarVisibility = "always" // "when-scrolling" | "always"
+	settings.RestoreWindowState = true
 	settings.MainToolbarNewDocument = true
 	settings.MainToolbarEdit = true
 	settings.MainToolbarTranslate = true
@@ -985,6 +998,9 @@ func (a *App) saveSettingsUnlocked(settings AppSettings) {
 	normalizeSettings(&settings)
 	data, _ := json.Marshal(settings)
 	os.WriteFile(a.settingsPath, data, 0644)
+	if !settings.RestoreWindowState && a.windowStatePath != "" {
+		_ = os.Remove(a.windowStatePath)
+	}
 }
 
 func normalizeSettings(settings *AppSettings) {

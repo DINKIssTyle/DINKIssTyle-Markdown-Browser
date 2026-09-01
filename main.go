@@ -92,6 +92,12 @@ func main() {
 	window.OnWindowEvent(events.Common.WindowRuntimeReady, func(_ *application.WindowEvent) {
 		service.DomReady()
 	})
+	window.OnWindowEvent(events.Common.WindowDidMove, func(_ *application.WindowEvent) {
+		service.RememberWindowBounds()
+	})
+	window.OnWindowEvent(events.Common.WindowDidResize, func(_ *application.WindowEvent) {
+		service.RememberWindowBounds()
+	})
 	window.RegisterHook(events.Common.WindowClosing, func(event *application.WindowEvent) {
 		if service.HandleWindowClosing() {
 			event.Cancel()

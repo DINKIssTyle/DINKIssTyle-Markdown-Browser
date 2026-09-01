@@ -88,6 +88,9 @@ tasks:
     sources:
       - "**/*"
       - exclude: node_modules/**/*
+      # dist is this task's output. Including it as an input can make Task's
+      # checksum cache accept an older bundle during a platform build.
+      - exclude: dist/**/*
     generates:
       - dist/**/*
     deps:

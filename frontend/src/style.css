@@ -4,7 +4,7 @@
     font-family: "Material Symbols Outlined";
     font-style: normal;
     font-weight: 400;
-    src: url("./assets/fonts/material-symbols-outlined.woff2?v=113") format("woff2");
+    src: url("./assets/fonts/material-symbols-outlined.woff2?v=116") format("woff2");
 }
 
 :root {
@@ -6325,6 +6325,10 @@ html.dark .ai-settings-content .ai-setting-group.settings-card {
     background: color-mix(in srgb, var(--surface-color) 68%, transparent);
 }
 
+html.platform-mobile .desktop-window-state-setting {
+    display: none !important;
+}
+
 .interface-setting-icon {
     width: 30px;
     height: 30px;
@@ -7500,6 +7504,12 @@ html.dark .settings-switch input+span::after {
         grid-column: 1 / -1 !important;
         grid-row: 2 !important;
         width: 100% !important;
+    }
+
+    .interface-setting-item>.settings-switch {
+        grid-column: 1 / -1 !important;
+        grid-row: 2 !important;
+        justify-self: end !important;
     }
 }
 

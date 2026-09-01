@@ -16,6 +16,18 @@ DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow*
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 軽快でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！<br><br>Windows、macOS、Linux、iOS、iPadOS、およびAndroidで利用可能になりました。<br><br></div>
+ 
+## 3.0.8
+### 🎛️ 共通
+* **エディターでのテキスト選択**: 二重に選択されて見えていた問題を修正しました。
+* **ウィンドウサイズ・位置の記憶**: 最後のウィンドウサイズと位置を記憶します。設定でこの機能を無効にすることができます。
+
+### 📱 Android, iPadOS/iOS
+* **モバイル保存ボタンの動作変更**: モバイル環境において、エディターの保存ボタンを押しても編集モードが終了しないように動作を変更しました。
+
+### 📱 iPadOS/iOS
+* **スクロールバーの長さの再計算**: タブが切り替わっても前のタブで計算されたスクロールバーの長さが表示され続けていた問題を修正しました。
+
 
 ## 3.0.7
 

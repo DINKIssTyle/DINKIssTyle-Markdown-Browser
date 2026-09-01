@@ -34,7 +34,7 @@ import {
     applyThemeMode, normalizeThemeMode, resolveEffectiveTheme,
 } from './main-theme.js';
 import {
-    loadScrollbarVisibility, loadMainToolbarVisibility, loadThemeMode,
+    loadScrollbarVisibility, loadMainToolbarVisibility, loadRestoreWindowState, loadThemeMode,
     syncThemeSettingsControls, syncScrollbarSettingsControls, syncMainToolbarSettingsControls,
     persistAppSettings,
 } from './main-settings.js';
@@ -215,6 +215,7 @@ async function loadSettings() {
     state.lightAccentColor = accentSettings.light;
     state.darkAccentColor = accentSettings.dark;
     loadScrollbarVisibility(s);
+    loadRestoreWindowState(s);
     loadMainToolbarVisibility(s);
     loadThemeMode(s);
     loadLanguageSettings(s);

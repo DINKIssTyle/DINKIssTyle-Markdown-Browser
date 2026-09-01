@@ -17,6 +17,18 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
  
+## 3.0.8
+### 🎛️ Común
+* **Selección de texto en el editor**: Se corrigió un problema donde el texto parecía seleccionarse por duplicado.
+* **Recordar tamaño y posición de la ventana**: Recuerda el último tamaño y posición de la ventana. Puedes desactivar esta función en Configuración.
+
+### 📱 Android, iPadOS/iOS
+* **Cambio en el comportamiento del botón guardar en móviles**: En entornos móviles, pulsar el botón guardar en el editor ya no cierra el modo de edición.
+
+### 📱 iPadOS/iOS
+* **Recálculo de longitud de la barra de desplazamiento**: Se corrigió un problema por el cual la longitud de la barra de desplazamiento calculada en la pestaña anterior seguía mostrándose tras cambiar de pestaña.
+
+
 ## 3.0.7
 
 ### 🎛️ Común

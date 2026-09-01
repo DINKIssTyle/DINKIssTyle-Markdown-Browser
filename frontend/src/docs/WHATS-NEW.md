@@ -21,6 +21,17 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
 
+## 3.0.8
+### 🎛️ Common
+* **Text Selection in Editor**: Fixed an issue where text appeared double-selected.
+* **Remember Window Size and Position**: Remembers the last window size and position. You can disable this feature in Settings.
+
+### 📱 Android, iPadOS/iOS
+* **Mobile Save Button Behavior Change**: In mobile environments, pressing the save button in the editor no longer exits edit mode.
+
+### 📱 iPadOS/iOS
+* **Recalculate Scrollbar Length**: Fixed an issue where the scrollbar length calculated in the previous tab continued to be displayed even after switching tabs.
+
 
 ## 3.0.7
 

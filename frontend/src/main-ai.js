@@ -8,10 +8,12 @@ import {
     applyMainToolbarVisibility,
     applyScrollbarVisibility,
     collectMainToolbarSettingsFromControls,
+    collectRestoreWindowStateFromControl,
     collectScrollbarSettingsFromControls,
     collectThemeSettingsFromControls,
     persistAppSettings,
     syncMainToolbarSettingsControls,
+    syncRestoreWindowStateControl,
     syncScrollbarSettingsControls,
     syncThemeSettingsControls,
 } from './main-settings.js';
@@ -1232,6 +1234,7 @@ function setAccentColor(mode, color) {
 function syncCommonSettingsControls() {
     renderAccentPresetControls();
     syncScrollbarSettingsControls();
+    syncRestoreWindowStateControl();
     syncMainToolbarSettingsControls();
     if (el.settingsDocumentMargin) {
         el.settingsDocumentMargin.value = state.documentMargin || "none";
@@ -1730,6 +1733,7 @@ export function bindAIEvents() {
         state.viewerFontFamily = el.settingsViewerFont?.value || "";
         collectUpdateSettingsFromControls();
         collectScrollbarSettingsFromControls();
+        collectRestoreWindowStateFromControl();
         collectMainToolbarSettingsFromControls();
         collectLanguageSettingsFromControls();
         applyAccentColors(state.lightAccentColor, state.darkAccentColor);

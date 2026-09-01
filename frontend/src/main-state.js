@@ -256,6 +256,7 @@ export const el = {
     settingsDocumentMargin: $('settings-document-margin'),
     settingsThemeMode: $('settings-theme-mode'),
     settingsScrollbarVisibility: $('settings-scrollbar-visibility'),
+    settingsRestoreWindowState: $('settings-restore-window-state'),
     settingsViewerFont: $('settings-viewer-font'),
     settingsToolbarNewDocument: $('settings-toolbar-new-document'),
     settingsToolbarEdit: $('settings-toolbar-edit'),
@@ -401,6 +402,7 @@ export const state = {
     darkAccentColor: "#0a84ff",
     themeMode: "auto",
     scrollbarVisibility: "always",
+    restoreWindowState: true,
     mainToolbarButtons: {
         newDocument: true,
         edit: true,

@@ -111,5 +111,6 @@ update
 vertical_align_top
 wand_stars
 warning
+web_asset
 zoom_in
 zoom_out
