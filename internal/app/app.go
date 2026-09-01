@@ -1262,7 +1262,7 @@ func (a *App) OpenExternalURL(url string) error {
 		log.Printf("external-url: launched url=%s", url)
 		return nil
 	case "windows":
-		err := exec.Command("rundll32", "url.dll,FileProtocolHandler", url).Start()
+		err := exec.Command("cmd", "/c", "start", "", url).Start()
 		if err != nil {
 			log.Printf("external-url: failed url=%s err=%v", url, err)
 			return err
