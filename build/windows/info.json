@@ -1,10 +1,10 @@
 {
 	"fixed": {
-		"file_version": "3.0.8"
+		"file_version": "3.0.9"
 	},
 	"info": {
 		"0000": {
-			"ProductVersion": "3.0.8",
+			"ProductVersion": "3.0.9",
 			"CompanyName": "DINKIssTyle",
 			"FileDescription": "A lightweight and elegant cross-platform. Markdown viewer and editor",
 			"LegalCopyright": "© 2026 DINKI'ssTyle",
