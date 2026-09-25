@@ -22,7 +22,7 @@ import {
     isEditingDocumentPath,
     saveCurrentDocument,
 } from './main-editor.js';
-import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { AskConfirm, DeleteFileTreePath, DuplicateFileTreePath, ListFileTree, GetRelativePath, RenameFileTreePath, GetDefaultStorageDirectory, OpenFileTreeLocation } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
 import { isMobilePlatform } from './platform-common.js';
 import { triggerHaptic } from './main-haptic.js';
@@ -916,6 +916,7 @@ function showFileTreeContextMenu(event, path, isDir) {
 
     fileTreeContextMenu.innerHTML = `
         ${!isDir ? `<button class="context-menu-item" id="ft-ctx-open-new-tab">Open In New Tab</button>` : ''}
+        ${!isMobilePlatform() ? `<button class="context-menu-item" id="ft-ctx-open-location">Open File Location</button>` : ''}
         ${state.isEditing && !isDir ? `<button class="context-menu-item" id="ft-ctx-insert">Insert</button>` : ''}
         <button class="context-menu-item" id="ft-ctx-rename">Rename</button>
         <button class="context-menu-item" id="ft-ctx-duplicate">Duplicate</button>
@@ -933,6 +934,19 @@ function showFileTreeContextMenu(event, path, isDir) {
                 setHome: true,
                 newTab: true,
             });
+        };
+    }
+
+    const openLocationBtn = fileTreeContextMenu.querySelector('#ft-ctx-open-location');
+    if (openLocationBtn) {
+        openLocationBtn.onclick = async () => {
+            closeFileTreeContextMenu();
+            try {
+                await OpenFileTreeLocation(path);
+            } catch (error) {
+                LogError(`OpenFileTreeLocation failed path=${path}: ${error?.message || error}`);
+                showToast('Could not open file location.', 'error');
+            }
         };
     }
 

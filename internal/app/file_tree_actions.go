@@ -9,9 +9,46 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"os/exec"
 	"path/filepath"
+	"runtime"
 	"strings"
 )
+
+// OpenFileTreeLocation reveals an item in the desktop file manager.
+func (a *App) OpenFileTreeLocation(path string) error {
+	switch runtime.GOOS {
+	case "darwin", "windows", "linux":
+	default:
+		return fmt.Errorf("opening file locations is not supported on this platform")
+	}
+	if strings.TrimSpace(path) == "" {
+		return fmt.Errorf("path is required")
+	}
+	path, err := filepath.Abs(path)
+	if err != nil {
+		return err
+	}
+	if _, err := os.Lstat(path); err != nil {
+		return err
+	}
+
+	var command *exec.Cmd
+	switch runtime.GOOS {
+	case "darwin":
+		command = exec.Command("open", "-R", path)
+	case "windows":
+		command = exec.Command("explorer.exe", "/select,", path)
+	case "linux":
+		command = exec.Command("xdg-open", filepath.Dir(path))
+	}
+	if err := command.Start(); err != nil {
+		return err
+	}
+	// Reap the launcher without waiting for the file manager to close.
+	go func() { _ = command.Wait() }()
+	return nil
+}
 
 func (a *App) DuplicateFileTreePath(path string) (string, error) {
 	path = strings.TrimSpace(path)
