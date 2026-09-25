@@ -21,6 +21,10 @@ If you are satisfied with DKST Markdown Browser, try **DKST Text Flow**. It help
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> A Lightweight and Elegant Cross-Platform<br>Markdown Viewer & Editor!<br><br>Now available on Windows, macOS, Linux, iOS, iPadOS, and Android.<br><br></div>
 
+## 3.0.9
+### 🖥️ Windows, macOS, Linux
+* **Open File Location**: Right-click on the file in the sidebar file tree to open its location.
+
 ## 3.0.8
 ### 🎛️ Common
 * **Text Selection in Editor**: Fixed an issue where text appeared double-selected.

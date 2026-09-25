@@ -16,6 +16,10 @@ draft: false
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 轻巧优雅的跨平台<br>Markdown 查看器和编辑器！<br><br>现已支持 Windows、macOS、Linux、iOS、iPadOS 和 Android。<br><br></div>
+
+## 3.0.9
+### 🖥️ Windows, macOS, Linux
+* **打开文件位置**: 在侧边栏文件树中右键单击文件以打开其位置。
  
 ## 3.0.8
 ### 🎛️ 通用

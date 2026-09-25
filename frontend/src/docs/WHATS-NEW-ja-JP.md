@@ -16,6 +16,12 @@ DKST Markdown Browserにご満足いただけたなら、次は**DKST Text Flow*
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 軽快でエレガントなクロスプラットフォーム<br>Markdownビューア＆エディタ！<br><br>Windows、macOS、Linux、iOS、iPadOS、およびAndroidで利用可能になりました。<br><br></div>
+
+## 3.0.9
+### 🖥️ Windows, macOS, Linux
+
+* **ファイルの場所を開く**: サイドバーのファイルツリーで右クリックすると、そのファイルの位置を開くことができます。
+
  
 ## 3.0.8
 ### 🎛️ 共通

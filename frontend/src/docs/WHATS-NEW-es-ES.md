@@ -16,6 +16,10 @@ Si estás satisfecho con DKST Markdown Browser, prueba **DKST Text Flow**. Ayuda
 <div align="center"><img src="icon-512.png" width="128"/></div>
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> ¡Un visor y editor de Markdown multiplataforma, ligero y elegante!<br><br>Ahora disponible en Windows, macOS, Linux, iOS, iPadOS y Android.<br><br></div>
+
+## 3.0.9
+### 🖥️ Windows, macOS, Linux
+* **Abrir ubicación del archivo**: Haz clic derecho en el archivo en el árbol de archivos de la barra lateral para abrir su ubicación.
  
 ## 3.0.8
 ### 🎛️ Común
