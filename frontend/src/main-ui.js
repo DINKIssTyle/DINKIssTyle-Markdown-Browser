@@ -19,6 +19,7 @@ let progressDeltaHideTimer = null;
 let contextMenuState = null;
 let mobileSelectionMenuTimer = null;
 let activeProgressTaskId = 0;
+const cancelledProgressTaskIds = new Set();
 
 // ── Toast ──────────────────────────────────────────────────
 
@@ -227,12 +228,14 @@ export function isProgressTaskActive(taskId) {
 }
 
 export function throwIfTaskCancelled(taskId) {
-    if (!isProgressTaskActive(taskId)) {
+    // A newer task owns the progress widget, but does not cancel background I/O.
+    if (cancelledProgressTaskIds.has(taskId)) {
         throw createCancelledTaskError();
     }
 }
 
 export function finishProgressTask(taskId) {
+    cancelledProgressTaskIds.delete(taskId);
     if (!isProgressTaskActive(taskId)) {
         return;
     }
@@ -246,6 +249,7 @@ export function cancelProgressTask(taskId) {
         return false;
     }
 
+    cancelledProgressTaskIds.add(taskId);
     activeProgressTaskId += 1;
     // cleanupHTMLFrame is called lazily to avoid circular dependency at load time
     import('./main-render.js').then(mod => mod.cleanupHTMLFrame({ resetSource: true }));

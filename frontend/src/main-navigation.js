@@ -16,7 +16,7 @@ import { renderActiveTab, hideLinkTooltip } from './main-render.js';
 import { undoAction, redoAction, getUndoDepth, getRedoDepth, enterEditMode, getEditorSelectionSnapshot } from './main-editor.js';
 import {
     showToast, beginProgressTask, updateProgress,
-    finishProgressTask, throwIfTaskCancelled, isCancelledTaskError,
+    finishProgressTask, throwIfTaskCancelled, isCancelledTaskError, isProgressTaskActive,
 } from './main-ui.js';
 import { OpenFile, ReadFile, OpenExternalPath, OpenExternalURL, AskConfirm, TouchRecentFile } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { BrowserOpenURL, LogError, LogInfo } from './wails-runtime';
@@ -30,6 +30,27 @@ import {
 } from './history-input.mjs';
 
 // ── Module-level State ─────────────────────────────────────
+// Only the newest request for a live tab may commit document state.
+const documentRequests = new WeakMap();
+function beginDocumentRequest(tab) {
+    const request = {};
+    const editor = isActiveTab(tab) ? state : tab;
+    const originalContent = editor.currentMarkdownSource;
+    const wasEditing = editor.isEditing;
+    documentRequests.set(tab, request);
+    const isCurrent = () => isLiveTab(tab) && documentRequests.get(tab) === request;
+    isCurrent.canCommit = () => {
+        const current = isActiveTab(tab) ? state : tab;
+        return isCurrent() &&
+            current.isEditing === wasEditing && current.currentMarkdownSource === originalContent;
+    };
+    return isCurrent;
+}
+
+function updateDocumentProgress(taskId, title, progress) {
+    if (isProgressTaskActive(taskId)) updateProgress(title, progress);
+}
+
 let lastHistoryMouseTrigger = { button: -1, timeStamp: -1 };
 let lastHistoryGestureTrigger = { direction: '', timeStamp: Number.NEGATIVE_INFINITY };
 const historyInputTargets = new WeakSet();
@@ -107,20 +128,23 @@ export async function openPath(path, options = {}) {
         await switchToTab(tabId);
     }
 
-    const tab = getActiveTab();
+    const tab = state.tabs.find(item => item.id === tabId);
     if (!tab) return;
+    const isCurrentRequest = beginDocumentRequest(tab);
     const targetTabId = tab.id;
     tab.pendingKeyword = keyword;
     tab.pendingAnchor = anchor;
-    state.pendingKeyword = keyword;
-    state.pendingAnchor = anchor;
+    if (isActiveTab(tab)) {
+        state.pendingKeyword = keyword;
+        state.pendingAnchor = anchor;
+    }
 
     const shouldShowProgress = path !== HOME_SCREEN_PATH;
     const taskId = shouldShowProgress ? beginProgressTask('Loading document', 18) : 0;
 
     try {
         if (path === HOME_SCREEN_PATH) {
-            if (!isLiveTab(tab)) return;
+            if (!isCurrentRequest()) return;
             if (isActiveTab(tab)) {
                 if (pushHistory) pushCurrentHistory(path);
                 state.currentFilePath = HOME_SCREEN_PATH;
@@ -138,14 +162,16 @@ export async function openPath(path, options = {}) {
         }
 
         if (isBundledDocumentPath(path)) {
-            updateProgress('Loading bundled document', 42);
+            updateDocumentProgress(taskId, 'Loading bundled document', 42);
             const bundled = await loadBundledMarkdown(path);
+            if (!isCurrentRequest()) return;
             throwIfTaskCancelled(taskId);
-            updateProgress('Rendering document', 82);
+            updateDocumentProgress(taskId, 'Rendering document', 82);
             const { yieldToUI } = await import('./main-ui.js');
             await yieldToUI();
+            if (!isCurrentRequest()) return;
             throwIfTaskCancelled(taskId);
-            if (!isLiveTab(tab)) return;
+            if (!isCurrentRequest.canCommit()) return;
             await loadFile(path, bundled, pushHistory, false, tab);
             return;
         }
@@ -157,20 +183,22 @@ export async function openPath(path, options = {}) {
             if (isMobileUntitledPath(path)) {
                 fileContent = content ?? "";
             } else {
-                updateProgress(documentType === 'markdown' ? 'Reading markdown file' : 'Reading file', 42);
+                updateDocumentProgress(taskId, documentType === 'markdown' ? 'Reading markdown file' : 'Reading file', 42);
                 fileContent = await ReadFile(path);
             }
         } else {
-            updateProgress('Preparing preview', 42);
+            updateDocumentProgress(taskId, 'Preparing preview', 42);
         }
+        if (!isCurrentRequest()) return;
         throwIfTaskCancelled(taskId);
-        updateProgress('Rendering document', 82);
+        updateDocumentProgress(taskId, 'Rendering document', 82);
         const { yieldToUI } = await import('./main-ui.js');
         await yieldToUI();
+        if (!isCurrentRequest()) return;
         throwIfTaskCancelled(taskId);
-        if (!isLiveTab(tab)) return;
+        if (!isCurrentRequest.canCommit()) return;
         await loadFile(path, fileContent, pushHistory, setHome, tab);
-        if (!isLiveTab(tab)) return;
+        if (!isCurrentRequest()) return;
         if (openInEditMode && isEditableDocumentType(documentType) && state.activeTabId === targetTabId) {
             if (!state.isEditing) {
                 enterEditMode();
@@ -185,6 +213,7 @@ export async function openPath(path, options = {}) {
         if (isCancelledTaskError(err)) {
             return;
         }
+        if (!isCurrentRequest()) return;
         console.error("openPath failed:", err);
         LogError(`openPath failed path=${path} anchor=${anchor}: ${err?.message || err}`);
         if (String(err?.message || err).includes('is a directory')) {
@@ -314,8 +343,8 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
             pushTabHistory(tab, path);
         }
         tab.title = deriveTabTitle(path, content);
-        await touchRecentPreviewPath(path);
         renderTabs();
+        await touchRecentPreviewPath(path);
         return;
     }
 
@@ -328,6 +357,10 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
         }
     }
 
+    if (pushHistory) {
+        pushCurrentHistory(path);
+    }
+
     state.currentFilePath = path;
     state.currentDocumentType = documentType;
     state.currentFolder = getPathDirname(path);
@@ -338,14 +371,8 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
     }
     syncEngineSelector();
 
-    await touchRecentPreviewPath(path);
-
     if (setHome && !isBundledDocumentPath(path)) {
         state.homeTargetPath = path;
-    }
-
-    if (pushHistory) {
-        pushCurrentHistory(path);
     }
 
     if (tab) {
@@ -355,6 +382,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
     }
 
     await renderActiveTab();
+    await touchRecentPreviewPath(path);
 }
 
 function isActiveTab(tab) {
@@ -386,8 +414,13 @@ async function touchRecentPreviewPath(path) {
 }
 
 export async function reloadCurrent() {
+    if (state.isEditing) {
+        showToast('Finish editing before refreshing the document.');
+        return;
+    }
     const tab = getActiveTab();
     if (!tab) return;
+    const isCurrentRequest = beginDocumentRequest(tab);
     const reloadPath = state.currentFilePath;
     const reloadDocumentType = state.currentDocumentType;
     if (reloadPath === HOME_SCREEN_PATH) {
@@ -400,34 +433,37 @@ export async function reloadCurrent() {
     try {
         let nextContent = "";
         if (isBundledDocumentPath(reloadPath)) {
-            updateProgress('Loading bundled document', 48);
+            updateDocumentProgress(taskId, 'Loading bundled document', 48);
             nextContent = await loadBundledMarkdown(reloadPath);
             throwIfTaskCancelled(taskId);
-            updateProgress('Rendering document', 82);
+            updateDocumentProgress(taskId, 'Rendering document', 82);
             const { yieldToUI } = await import('./main-ui.js');
             await yieldToUI();
             throwIfTaskCancelled(taskId);
+            if (!isCurrentRequest.canCommit()) return;
             await applyReloadedContent(tab, reloadPath, 'markdown', nextContent);
             return;
         }
 
         if (isEditableDocumentType(reloadDocumentType)) {
-            updateProgress(reloadDocumentType === 'markdown' ? 'Reading markdown file' : 'Reading file', 48);
+            updateDocumentProgress(taskId, reloadDocumentType === 'markdown' ? 'Reading markdown file' : 'Reading file', 48);
             nextContent = await ReadFile(reloadPath);
             throwIfTaskCancelled(taskId);
         } else {
-            updateProgress('Preparing preview', 48);
+            updateDocumentProgress(taskId, 'Preparing preview', 48);
             nextContent = "";
         }
-        updateProgress('Rendering document', 82);
+        updateDocumentProgress(taskId, 'Rendering document', 82);
         const { yieldToUI } = await import('./main-ui.js');
         await yieldToUI();
         throwIfTaskCancelled(taskId);
+        if (!isCurrentRequest.canCommit()) return;
         await applyReloadedContent(tab, reloadPath, reloadDocumentType, nextContent);
     } catch (error) {
         if (isCancelledTaskError(error)) {
             return;
         }
+        if (!isCurrentRequest()) return;
         LogError(`reloadCurrent failed path=${reloadPath}: ${error?.message || error}`);
         showToast(error?.message || 'Failed to refresh file.');
     } finally {
@@ -436,7 +472,7 @@ export async function reloadCurrent() {
 }
 
 async function applyReloadedContent(tab, path, documentType, content) {
-    if (!isLiveTab(tab)) {
+    if (!isLiveTab(tab) || tab.path !== path) {
         return;
     }
     if (!isActiveTab(tab)) {

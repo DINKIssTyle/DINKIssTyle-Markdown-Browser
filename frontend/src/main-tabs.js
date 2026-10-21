@@ -5,11 +5,11 @@
 
 import {
     state, el, HOME_SCREEN_PATH,
-    kindFromPath, documentTypeFromPath, escapeHTML, formatSaveDialogMessage,
+    kindFromPath, documentTypeFromPath, normalizeFileURLPath, escapeHTML, formatSaveDialogMessage,
     syncEngineSelector, getPathDirname, getScroller, basename,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, getEditorSelectionSnapshot, getEditorStateSnapshot, getEditorTopLineSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, getEditorSelectionSnapshot, getEditorStateSnapshot, getEditorTopLineSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState, syncEditorStateToBackend } from './main-editor.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -22,6 +22,7 @@ let dragState = null;
 let suppressClickUntil = 0;
 let dragBindingsReady = false;
 const closingTabIds = new Set();
+const pendingCloseTabIds = new Set();
 const closedTabs = [];
 const MAX_CLOSED_TABS = 20;
 
@@ -137,7 +138,7 @@ export function saveCurrentScroll() {
 
 export async function switchToTab(tabID) {
     const nextTab = state.tabs.find(tab => tab.id === tabID);
-    if (!nextTab || nextTab.id === state.activeTabId) {
+    if (!nextTab || pendingCloseTabIds.has(tabID) || nextTab.id === state.activeTabId) {
         return;
     }
     clearTransientEditorOverlays();
@@ -172,6 +173,7 @@ function isPhoneScreen() {
 // ── Tab Rendering ──────────────────────────────────────────
 
 export function renderTabs() {
+    syncEditorStateToBackend();
     ensureTabDragBindings();
     ensureMobileTabsModalBindings();
 
@@ -339,6 +341,7 @@ function ensureTabDragBindings() {
 
 function beginPointerDrag(tabNode, event) {
     const tabId = tabNode.dataset.tabId;
+    if (pendingCloseTabIds.has(tabId)) return;
     let sourceNode = tabNode;
 
     if (tabId !== state.activeTabId) {
@@ -569,68 +572,73 @@ async function moveTabToIndex(sourceTabID, insertionIndex) {
 
 export async function closeTab(tabID) {
     const tab = state.tabs.find(item => item.id === tabID);
-    if (!tab || closingTabIds.has(tabID)) return;
+    if (!tab || pendingCloseTabIds.has(tabID)) return;
 
-    const isActiveEditingTab = tabID === state.activeTabId && state.isEditing;
-    const hasUnsavedChanges = isActiveEditingTab ? hasUnsavedEditorChanges() : hasUnsavedTabChanges(tab);
+    pendingCloseTabIds.add(tabID);
+    try {
+        const isActiveEditingTab = tabID === state.activeTabId && state.isEditing;
+        const hasUnsavedChanges = isActiveEditingTab ? hasUnsavedEditorChanges() : hasUnsavedTabChanges(tab);
 
-    if ((isActiveEditingTab || tab.isEditing) && hasUnsavedChanges) {
-        const response = await AskSaveDiscardCancel("Unsaved Changes", formatSaveDialogMessage(tab.title, "The document has been modified. Do you want to save changes?"));
-        if (response === "Cancel") return;
+        if ((isActiveEditingTab || tab.isEditing) && hasUnsavedChanges) {
+            const response = await AskSaveDiscardCancel("Unsaved Changes", formatSaveDialogMessage(tab.title, "The document has been modified. Do you want to save changes?"));
+            if (response !== "Save" && response !== "Discard") return;
 
-        if (response === "Save") {
-            const saved = isActiveEditingTab
-                ? await saveCurrentDocument({ confirm: false, exitAfterSave: false })
-                : await saveTabDocument(tab, { confirm: false });
+            if (response === "Save") {
+                const saved = tabID === state.activeTabId && state.isEditing
+                    ? await saveCurrentDocument({ confirm: false, exitAfterSave: false })
+                    : await saveTabDocument(tab, { confirm: false });
 
-            if (!saved) {
-                LogError(`Auto-save on close failed: ${tab.path}`);
-                return;
+                if (!saved) {
+                    LogError(`Auto-save on close failed: ${tab.path}`);
+                    return;
+                }
+                // Edits made while the save was in flight still need a decision.
+                if (tabID === state.activeTabId ? hasUnsavedEditorChanges() : hasUnsavedTabChanges(tab)) return;
             }
         }
-    }
 
-    if (isActiveEditingTab) {
-        clearTransientEditorOverlays();
-        await exitEditMode(false);
-    }
+        if (tabID === state.activeTabId && state.isEditing) {
+            clearTransientEditorOverlays();
+            await exitEditMode(false);
+        }
 
-    let idx = state.tabs.findIndex(tab => tab.id === tabID);
-    if (idx === -1) return;
+        let idx = state.tabs.findIndex(tab => tab.id === tabID);
+        if (idx === -1) return;
 
-    const wasActive = state.tabs[idx].id === state.activeTabId;
-    rememberClosedTab(state.tabs[idx]);
-    await animateTabClose(tabID);
-    idx = state.tabs.findIndex(tab => tab.id === tabID);
-    if (idx === -1) {
+        rememberClosedTab(state.tabs[idx]);
+        await animateTabClose(tabID);
+        idx = state.tabs.findIndex(tab => tab.id === tabID);
+        if (idx === -1) {
+            return;
+        }
+        state.tabs.splice(idx, 1);
+
+        if (state.tabs.length === 0) {
+            const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
+            state.tabs.push(freshTab);
+            state.activeTabId = freshTab.id;
+            syncGlobalsFromTab(freshTab);
+            renderTabs();
+            await renderActiveTab();
+            return;
+        }
+
+        if (state.activeTabId === tabID) {
+            clearTransientEditorOverlays();
+            const fallback = state.tabs[Math.max(0, idx - 1)] || state.tabs[0];
+            state.activeTabId = fallback.id;
+            syncGlobalsFromTab(fallback);
+            syncEditorSessionFromState();
+            renderTabs();
+            await renderActiveTab();
+            return;
+        }
+
+        renderTabs();
+    } finally {
+        pendingCloseTabIds.delete(tabID);
         closingTabIds.delete(tabID);
-        return;
     }
-    state.tabs.splice(idx, 1);
-    closingTabIds.delete(tabID);
-
-    if (state.tabs.length === 0) {
-        const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
-        state.tabs.push(freshTab);
-        state.activeTabId = freshTab.id;
-        syncGlobalsFromTab(freshTab);
-        renderTabs();
-        renderActiveTab();
-        return;
-    }
-
-    if (wasActive) {
-        clearTransientEditorOverlays();
-        const fallback = state.tabs[Math.max(0, idx - 1)] || state.tabs[0];
-        state.activeTabId = fallback.id;
-        syncGlobalsFromTab(fallback);
-        syncEditorSessionFromState();
-        renderTabs();
-        renderActiveTab();
-        return;
-    }
-
-    renderTabs();
 }
 
 function rememberClosedTab(tab) {

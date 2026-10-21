@@ -1184,6 +1184,7 @@ async function renderMarkdownLiveBlocks(content, token) {
     el.markdownContainer.innerHTML = blockMarkup.join('');
     renderMathPlaceholders(el.markdownContainer);
     await postProcess(el.markdownContainer);
+    if (token !== previewRenderToken) return null;
     setupImageLoadScrollSync(el.markdownContainer);
     annotateLivePreviewLineAnchors(blocks, el.markdownContainer);
     restoreLivePreviewScrollAnchor(scrollAnchor);
@@ -1194,6 +1195,7 @@ async function renderMarkdownLiveBlocks(content, token) {
 }
 
 async function updateChangedLivePreviewBlocks(content, token) {
+    if (token !== previewRenderToken) return;
     const blocks = splitMarkdownIntoBlocks(content);
     const shouldRebuild = livePreviewBlocks.length !== blocks.length ||
         el.markdownContainer.querySelectorAll(`[${LIVE_BLOCK_ATTR}]`).length !== blocks.length;
@@ -1238,6 +1240,7 @@ async function updateChangedLivePreviewBlocks(content, token) {
         targetNode.innerHTML = html;
         renderMathPlaceholders(targetNode);
         await postProcess(targetNode);
+        if (token !== previewRenderToken) return;
         setupImageLoadScrollSync(targetNode);
         annotateLivePreviewBlockLineAnchors(targetNode, blocks[index]);
     }
@@ -1254,7 +1257,7 @@ export function queueEditorPreviewRender(content, editorTopLine, { delay = 100, 
     window._renderTimer = setTimeout(() => {
         updateChangedLivePreviewBlocks(content, token)
             .then(() => {
-                if (syncScroll) {
+                if (syncScroll && token === previewRenderToken) {
                     scrollPreviewToEditorLine(editorTopLine);
                 }
             })
@@ -1286,6 +1289,7 @@ export async function renderMarkdown(content, options = {}) {
     el.markdownContainer.innerHTML = html;
     renderMathPlaceholders(el.markdownContainer);
     await postProcess(el.markdownContainer);
+    if (token !== previewRenderToken) return;
     syncEditingPreviewReturnButton();
     if (!preserveLiveBlocks) {
         livePreviewBlocks = [];
@@ -1447,6 +1451,8 @@ async function renderActiveTabContent() {
     const tab = getActiveTab();
     if (!tab) return;
     const renderToken = ++activeTabRenderToken;
+    ++previewRenderToken;
+    clearTimeout(window._renderTimer);
     const tabId = tab.id;
     const shouldContinue = () => renderToken === activeTabRenderToken && state.activeTabId === tabId;
 

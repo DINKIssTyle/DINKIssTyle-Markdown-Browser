@@ -131,31 +131,34 @@ type AppSettings struct {
 
 // App struct
 type App struct {
-	wailsApp            *application.App
-	window              *application.WebviewWindow
-	settingsPath        string
-	recentPath          string
-	windowStatePath     string
-	storageMu           sync.Mutex
-	mobileStorageReady  bool
-	mu                  sync.Mutex
-	settingsMu          sync.Mutex
-	windowStateMu       sync.Mutex
-	lastNormalBounds    application.Rect
-	lastWindowMaximised bool
-	systemFontsOnce     sync.Once
-	systemFonts         []FontInfo
-	activeAIRequestID   int64
-	activeAICancel      context.CancelFunc
-	frontendReady       bool
-	pendingOpenFiles    []string
-	showWhatsNew        bool
-	editorState         EditorSessionState
-	allowNextQuit       bool
-	quitPromptOpen      bool
+	wailsApp             *application.App
+	window               *application.WebviewWindow
+	settingsPath         string
+	recentPath           string
+	windowStatePath      string
+	storageMu            sync.Mutex
+	mobileStorageReady   bool
+	mu                   sync.Mutex
+	settingsMu           sync.Mutex
+	windowStateMu        sync.Mutex
+	lastNormalBounds     application.Rect
+	lastWindowMaximised  bool
+	systemFontsOnce      sync.Once
+	systemFonts          []FontInfo
+	activeAIRequestID    int64
+	activeAICancel       context.CancelFunc
+	frontendReady        bool
+	pendingOpenFiles     []string
+	showWhatsNew         bool
+	editorStates         []EditorSessionState
+	editorStateRevision  uint64
+	quitApprovedRevision uint64
+	allowNextQuit        bool
+	quitPromptOpen       bool
 }
 
 type EditorSessionState struct {
+	TabID       string
 	IsEditing   bool
 	HasUnsaved  bool
 	CurrentPath string
@@ -362,50 +365,37 @@ func shouldMaximiseOnStartup(screen *application.Screen) bool {
 	return width <= compactScreenMaxWidth || height <= compactScreenMaxHeight
 }
 
-func (a *App) SyncEditorState(isEditing bool, hasUnsaved bool, currentPath string, content string, title string) {
+// SyncEditorSessions receives all dirty tabs. Revisions prevent older bridge
+// calls from replacing a newer snapshot.
+func (a *App) SyncEditorSessions(revision uint64, sessions []EditorSessionState) {
 	a.mu.Lock()
 	defer a.mu.Unlock()
-
-	a.editorState = EditorSessionState{
-		IsEditing:   isEditing,
-		HasUnsaved:  hasUnsaved,
-		CurrentPath: strings.TrimSpace(currentPath),
-		Content:     content,
-		Title:       strings.TrimSpace(title),
+	if revision <= a.editorStateRevision {
+		return
 	}
+	a.editorStateRevision = revision
+	a.editorStates = append([]EditorSessionState(nil), sessions...)
 }
 
 //wails:ignore
 func (a *App) OnBeforeClose() bool {
 	a.mu.Lock()
-	editorState := a.editorState
+	sessions := append([]EditorSessionState(nil), a.editorStates...)
+	revision := a.editorStateRevision
 	a.mu.Unlock()
 
-	if !editorState.IsEditing || !editorState.HasUnsaved {
-		return false
-	}
-
-	displayTitle := strings.TrimSpace(editorState.Title)
-	if displayTitle == "" && strings.TrimSpace(editorState.CurrentPath) != "" {
-		displayTitle = filepath.Base(editorState.CurrentPath)
-	}
-	response := a.AskSaveDiscardCancel("Unsaved Changes", buildSaveChangesMessage(displayTitle, "The document has been modified. Do you want to save changes before quitting?"))
-	switch response {
-	case "Save":
-		if strings.TrimSpace(editorState.CurrentPath) == "" {
-			a.showError("Save Failed", "This document does not have a save path yet. Save it manually before quitting.")
-			return true
-		}
-		if err := a.SaveFile(editorState.CurrentPath, editorState.Content); err != nil {
-			a.showError("Save Failed", fmt.Sprintf("Failed to save changes before quitting.\n\n%s", err))
-			return true
-		}
-		return false
-	case "Discard":
-		return false
-	default:
+	if confirmUnsavedSessions(sessions, a.AskSaveDiscardCancel, a.SaveFile, a.showError) {
 		return true
 	}
+
+	a.mu.Lock()
+	defer a.mu.Unlock()
+	// A change received while a native dialog was open needs a new decision.
+	if a.editorStateRevision != revision {
+		return true
+	}
+	a.quitApprovedRevision = revision
+	return false
 }
 
 //wails:ignore
@@ -449,9 +439,11 @@ func (a *App) prepareQuit() (allowQuit bool, showPrompt bool) {
 
 	if a.allowNextQuit {
 		a.allowNextQuit = false
-		return true, false
+		if a.quitApprovedRevision == a.editorStateRevision {
+			return true, false
+		}
 	}
-	if !a.editorState.IsEditing || !a.editorState.HasUnsaved {
+	if !hasUnsavedSessions(a.editorStates) {
 		return true, false
 	}
 	if a.quitPromptOpen {

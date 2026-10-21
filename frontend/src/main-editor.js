@@ -3,6 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { collectUnsavedSessions } from './tab-sessions.mjs';
 import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, getSlashCommands as getConfiguredSlashCommands } from './config.js';
 import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS, documentTypeFromPath, isEditableDocumentType } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
@@ -11,7 +12,7 @@ import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPrevie
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { getConfiguredLanguages } from './main-languages.js';
-import { SaveFile, ReadFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorState, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { SaveFile, ReadFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorSessions, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn, LogError, LogInfo } from './wails-runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
 import { getCurrentAccentColor } from './main-theme.js';
@@ -1039,14 +1040,18 @@ export function resetEditorFontSize() {
     return true;
 }
 
-function syncEditorStateToBackend() {
-    const content = getCurrentEditorText();
-    const hasUnsaved = state.isEditing && content !== state.editorOriginalContent;
-    const activeTab = getActiveTab();
-    const tabTitle = activeTab?.title || "";
-    const savePath = state.editingSourcePath || state.currentFilePath || "";
-    SyncEditorState(state.isEditing, hasUnsaved, savePath, content, tabTitle).catch((error) => {
-        LogError(`SyncEditorState failed: ${error}`);
+// Keep revisions monotonic across a WebView reload in the same backend process.
+let editorSessionRevision = Date.now() * 1000;
+let lastEditorSessionsJSON = null;
+
+export function syncEditorStateToBackend() {
+    const sessions = collectUnsavedSessions(state);
+    const json = JSON.stringify(sessions);
+    if (json === lastEditorSessionsJSON) return;
+    lastEditorSessionsJSON = json;
+    SyncEditorSessions(++editorSessionRevision, sessions).catch((error) => {
+        if (lastEditorSessionsJSON === json) lastEditorSessionsJSON = null;
+        LogError(`SyncEditorSessions failed: ${error}`);
     });
 }
 
@@ -3960,8 +3965,10 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
     }
 
     if (isMobilePlatform() && isMobileUntitledPath(targetPath)) {
-        const saved = await saveCurrentDocumentAs();
-        if (saved && exitAfterSave) await exitEditMode(true);
+        const saved = state.activeTabId === savingTabId
+            ? await saveCurrentDocumentAs()
+            : await saveTabDocument(savingTab, { confirm: false });
+        if (saved && exitAfterSave && state.activeTabId === savingTabId && !hasUnsavedEditorChanges()) await exitEditMode(true);
         return saved;
     }
 
@@ -3970,22 +3977,23 @@ export async function saveCurrentDocument({ confirm = true, exitAfterSave = true
         showToast("File saved successfully.", "check_circle");
         if (savingTab) {
             savingTab.title = deriveTabTitle(targetPath, contentToSave);
-            savingTab.currentMarkdownSource = contentToSave;
+            savingTab.currentMarkdownSource = state.activeTabId === savingTabId
+                ? getCurrentEditorText() : savingTab.currentMarkdownSource;
             savingTab.editorOriginalContent = contentToSave;
             savingTab.editingPreviewPath = savingTab.editingSourcePath || targetPath;
             savingTab.editingPreviewFolder = savingTab.editingSourceFolder || getPathDirname(targetPath);
         }
         if (state.activeTabId === savingTabId) {
             state.editorOriginalContent = contentToSave;
-            state.currentMarkdownSource = contentToSave;
+            state.currentMarkdownSource = getCurrentEditorText();
             state.editingPreviewPath = state.editingSourcePath || targetPath;
             state.editingPreviewFolder = state.editingSourceFolder || getPathDirname(targetPath);
-            syncEditorStateToBackend();
-            renderTabs();
-            if (exitAfterSave) {
+            if (exitAfterSave && !hasUnsavedEditorChanges()) {
                 await exitEditMode(true);
             }
         }
+        syncEditorStateToBackend();
+        renderTabs();
         return true;
     } catch (error) {
         LogError(`Save failed: ${error}`);
@@ -4006,10 +4014,13 @@ export async function saveCurrentDocumentAs() {
         try {
             const saved = await saveDocumentAsForCurrentPlatform(defaultName, contentToSave);
             if (saved) {
-                state.currentMarkdownSource = contentToSave;
-                state.editorOriginalContent = contentToSave;
+                if (state.activeTabId === savingTabId) {
+                    state.currentMarkdownSource = getCurrentEditorText();
+                    state.editorOriginalContent = contentToSave;
+                }
                 if (savingTab) {
-                    savingTab.currentMarkdownSource = contentToSave;
+                    savingTab.currentMarkdownSource = state.activeTabId === savingTabId
+                        ? getCurrentEditorText() : savingTab.currentMarkdownSource;
                     savingTab.editorOriginalContent = contentToSave;
                 }
                 syncEditorStateToBackend();
@@ -4036,7 +4047,8 @@ export async function saveCurrentDocumentAs() {
             savingTab.documentType = 'markdown';
             savingTab.title = deriveTabTitle(selectedPath, contentToSave);
             savingTab.currentFolder = selectedFolder;
-            savingTab.currentMarkdownSource = contentToSave;
+            savingTab.currentMarkdownSource = state.activeTabId === savingTabId
+                ? getCurrentEditorText() : savingTab.currentMarkdownSource;
             savingTab.editorOriginalContent = contentToSave;
             savingTab.editingSourcePath = selectedPath;
             savingTab.editingSourceFolder = selectedFolder;
@@ -4056,7 +4068,7 @@ export async function saveCurrentDocumentAs() {
             state.currentFilePath = selectedPath;
             state.currentFolder = selectedFolder;
             state.currentDocumentType = 'markdown';
-            state.currentMarkdownSource = contentToSave;
+            state.currentMarkdownSource = getCurrentEditorText();
             state.editorOriginalContent = contentToSave;
             state.editingSourcePath = selectedPath;
             state.editingSourceFolder = selectedFolder;
@@ -4099,7 +4111,8 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
             const saved = await saveDocumentAsForCurrentPlatform(basename(targetPath) || 'Untitled.md', contentToSave);
             if (saved) {
                 tab.editorOriginalContent = contentToSave;
-                tab.currentMarkdownSource = contentToSave;
+                if (state.activeTabId === tab.id) state.editorOriginalContent = contentToSave;
+                // Keep any edits made while this background save was in flight.
                 showToast('Document exported successfully.', 'check_circle');
                 renderTabs();
             }
@@ -4114,7 +4127,8 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
     try {
         await SaveFile(targetPath, contentToSave);
         tab.editorOriginalContent = contentToSave;
-        tab.currentMarkdownSource = contentToSave;
+        if (state.activeTabId === tab.id) state.editorOriginalContent = contentToSave;
+        // Keep any edits made while this background save was in flight.
         tab.editingPreviewPath = tab.editingSourcePath || targetPath;
         tab.editingPreviewFolder = tab.editingSourceFolder || getPathDirname(targetPath);
         showToast("File saved successfully.", "check_circle");
