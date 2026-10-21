@@ -17,6 +17,9 @@ DKST Markdown Browser가 만족스럽다면, 이어서 **DKST Text Flow**를 경
 
 <div align="center" style="font-size: 1.2rem; font-weight: 700;"> 가볍고 우아한 크로스플랫폼<br>마크다운 뷰어 및 에디터!<br><br>이제 Windows, macOS, Linux, iOS, iPadOS 및 Android에서 사용 가능합니다.<br><br></div>
 
+## 3.1.0
+### 🎛️ 공통
+* **코드 최적화 및 잠재적인 탭 버그 수정** 
 
 ## 3.0.9
 ### 🖥️ Windows, macOS, Linux

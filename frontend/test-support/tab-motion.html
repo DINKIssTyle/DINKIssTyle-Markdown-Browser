@@ -1,0 +1,87 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>DKST tab motion check</title>
+  <link rel="stylesheet" href="../src/style.css">
+  <style>
+    body { display: block; overflow: auto; background: var(--bg-color); color: var(--text-color); padding: 28px; }
+    main { max-width: 900px; margin: 0 auto; }
+    h1 { font-size: 16px; margin: 0 0 16px; }
+    .qa-window { border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+    .qa-document { padding: 26px 20px; min-height: 100px; }
+    .qa-controls { display: flex; flex-wrap: wrap; gap: 8px; margin: 18px 0; }
+    .qa-controls button { padding: 8px 12px; background: var(--surface-elevated); color: inherit; border: 1px solid var(--border-color); border-radius: 6px; }
+    .qa-mobile { max-width: 400px; border: 1px solid var(--border-color); border-radius: 12px; overflow: hidden; }
+    .qa-count { font-size: 12px; opacity: .7; margin-top: 8px; }
+  </style>
+</head>
+<body>
+<main>
+  <h1>DKST Markdown Browser · 탭 모션</h1>
+  <div class="qa-window">
+    <div class="tab-strip"><div id="qa-tabs" class="tabs-list"></div><button id="qa-add" class="tab-add-btn" aria-label="새 탭 추가"><span class="material-symbols-outlined">add</span></button></div>
+    <div class="qa-document"><strong id="qa-active">Design.md</strong><div class="qa-count" id="qa-count" aria-live="polite"></div></div>
+  </div>
+  <div class="qa-controls">
+    <button id="qa-burst">탭 3개 연속 추가</button>
+    <button id="qa-close">탭 2개 연속 닫기</button>
+    <button id="qa-update">제목·미저장 표시 갱신</button>
+    <button id="qa-reverse">순서 반전</button>
+    <button id="qa-theme">다크 모드 전환</button>
+  </div>
+  <div class="qa-mobile"><div id="qa-mobile" class="mobile-tabs-list"></div></div>
+</main>
+<script type="module">
+import { createTabListView } from '../src/tab-list-view.js';
+let tabs = [{ id: 'a', title: 'README.md' }, { id: 'b', title: 'Design.md' }, { id: 'c', title: 'Notes.md' }];
+let active = 'b', next = 1;
+const closing = new Set();
+const row = document.getElementById('qa-tabs');
+const mobile = document.getElementById('qa-mobile');
+const views = [makeView(row, false), makeView(mobile, true)];
+function makeView(container, isMobile) {
+  return createTabListView({ container,
+    createNode(tab) {
+      const node = document.createElement('div');
+      node.className = isMobile ? 'mobile-tab-row' : 'tab-item';
+      node.dataset.tabId = tab.id;
+      node.innerHTML = `<div class="${isMobile ? 'mobile-tab-info' : 'tab-container'}"><span class="${isMobile ? 'mobile-tab-title' : 'tab-title'}"></span><span class="material-symbols-outlined tab-unsaved-warning hidden" aria-label="Unsaved changes">warning</span>${isMobile ? '</div>' : ''}<button class="${isMobile ? 'mobile-tab-row-close' : 'tab-close-btn'}"><span class="material-symbols-outlined">close</span></button>${isMobile ? '' : '</div>'}`;
+      node.querySelector('button').onclick = event => { event.stopPropagation(); void close(tab.id); };
+      node.onclick = () => { if (!closing.has(tab.id)) { active = tab.id; render(); } };
+      return node;
+    },
+    updateNode(node, tab) {
+      node.classList.toggle('active', active === tab.id);
+      node.querySelector(isMobile ? '.mobile-tab-title' : '.tab-title').textContent = tab.title;
+      node.querySelector('.tab-unsaved-warning').classList.toggle('hidden', !tab.dirty);
+      node.querySelector('button').setAttribute('aria-label', `${tab.title} 닫기`);
+    },
+  });
+}
+function render() {
+  for (const view of views) view.sync(tabs.filter(tab => !closing.has(tab.id)));
+  document.getElementById('qa-active').textContent = tabs.find(tab => tab.id === active)?.title || '';
+  document.getElementById('qa-count').textContent = `열린 탭 ${tabs.length}개`;
+}
+async function close(id) {
+  if (closing.has(id) || tabs.length - closing.size <= 1) return;
+  closing.add(id);
+  await Promise.all(views.map(view => view.remove(id)));
+  tabs = tabs.filter(tab => tab.id !== id);
+  closing.delete(id);
+  if (active === id) active = tabs.find(tab => !closing.has(tab.id))?.id;
+  render();
+}
+function add() { const tab = { id: `new-${next}`, title: `Draft ${next++}.md` }; tabs.push(tab); active = tab.id; render(); }
+document.getElementById('qa-add').onclick = add;
+document.getElementById('qa-burst').onclick = () => { add(); add(); add(); };
+document.getElementById('qa-close').onclick = () => { const targets = tabs.filter(tab => !closing.has(tab.id)).slice(-2); for (const tab of targets) void close(tab.id); };
+document.getElementById('qa-update').onclick = () => { const tab = tabs.find(tab => tab.id === active); if (tab) { tab.title = tab.title === 'Edited notes.md' ? 'Notes.md' : 'Edited notes.md'; tab.dirty = !tab.dirty; render(); } };
+document.getElementById('qa-reverse').onclick = () => { tabs.reverse(); render(); };
+document.getElementById('qa-theme').onclick = () => document.documentElement.classList.toggle('dark');
+render();
+</script>
+</body>
+</html>

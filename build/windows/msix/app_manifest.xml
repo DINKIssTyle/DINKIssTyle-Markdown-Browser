@@ -10,7 +10,7 @@
   <Identity 
     Name="com.dinkisstyle.mdbrowser"
     Publisher="CN=DINKIssTyle"
-    Version="3.0.9.0"
+    Version="3.1.0.0"
     ProcessorArchitecture="arm64" />
   
   <Properties>

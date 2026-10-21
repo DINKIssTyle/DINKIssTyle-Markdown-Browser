@@ -77,15 +77,11 @@ export const AI_SUPPORT_AGENT_POP_MS = 300;
 export const AI_SUPPORT_AGENT_POP_SCALE = 1.15;
 export const AI_SUPPORT_AGENT_POP_ORIGIN = 'center center';
 
-export const TAB_CLOSE_ANIMATION = Object.freeze({
-    collapseMs: 200,
-    collapseDelayMs: 60,
-    contentFilterMs: 280,
-    contentOpacityMs: 200,
-    contentTransformMs: 80,
-    contentBlurPx: 8,
-    contentScale: 0.12,
-    fallbackPaddingMs: 40,
-    collapseEasing: 'cubic-bezier(0.2, 0, 0, 1)',
-    contentEasing: 'ease-in',
+export const TAB_MOTION = Object.freeze({
+    enterMs: 150,
+    exitMs: 110,
+    moveMs: 180,
+    enterOffsetPx: 3,
+    exitOffsetPx: 2,
+    easing: 'cubic-bezier(0.2, 0.7, 0.2, 1)',
 });

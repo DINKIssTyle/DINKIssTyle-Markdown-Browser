@@ -13,7 +13,7 @@ import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, ge
 import { syncEditorStateToBackend } from './main-session.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
-import { TAB_CLOSE_ANIMATION } from './config.js';
+import { createTabListView } from './tab-list-view.js';
 import { AskSaveDiscardCancel } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { LogError } from './wails-runtime';
 import { MOBILE_UNTITLED_PATH } from './platform-common.js';
@@ -22,6 +22,8 @@ import { MOBILE_UNTITLED_PATH } from './platform-common.js';
 let dragState = null;
 let suppressClickUntil = 0;
 let dragBindingsReady = false;
+let desktopTabView = null;
+let mobileTabView = null;
 const closingTabIds = new Set();
 const pendingCloseTabIds = new Set();
 const closedTabs = [];
@@ -172,18 +174,20 @@ function isPhoneScreen() {
 export function renderTabs() {
     ensureTabDragBindings();
     ensureMobileTabsModalBindings();
+    // A structural refresh must not leave a dragged node attached to body.
+    if (dragState?.isDragging) cleanupPointerDrag();
 
     if (isPhoneScreen()) {
+        desktopTabView?.dispose();
+        desktopTabView = null;
         const activeTab = getActiveTab() || state.tabs[0];
         if (!activeTab) return;
-
+        const dirty = shouldShowUnsavedWarning(activeTab);
         el.tabsList.innerHTML = `
-            <div class="tab-item active mobile-single-tab ${shouldShowUnsavedWarning(activeTab) ? 'has-unsaved-changes' : ''}" data-tab-id="${activeTab.id}">
+            <div class="tab-item active mobile-single-tab ${dirty ? 'has-unsaved-changes' : ''}" data-tab-id="${activeTab.id}">
                 <div class="tab-container">
                     <span class="tab-title">${escapeHTML(activeTab.title || 'Untitled')}</span>
-                    ${shouldShowUnsavedWarning(activeTab) ? `
-                        <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
-                    ` : ''}
+                    ${dirty ? '<span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>' : ''}
                     <div class="mobile-tab-right-group">
                         <span class="mobile-tab-count-badge">${state.tabs.length}</span>
                         <span class="material-symbols-outlined mobile-tab-dropdown-icon">expand_more</span>
@@ -191,60 +195,66 @@ export function renderTabs() {
                 </div>
             </div>
         `;
-
-        const singleTabNode = el.tabsList.querySelector('.mobile-single-tab');
-        if (singleTabNode) {
-            singleTabNode.onclick = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-                openMobileTabsModal();
-            };
-        }
+        el.tabsList.querySelector('.mobile-single-tab').onclick = event => {
+            event.preventDefault();
+            event.stopPropagation();
+            openMobileTabsModal();
+        };
+        if (el.mobileTabsModal && !el.mobileTabsModal.classList.contains('hidden')) renderMobileTabsList();
         return;
     }
 
-    el.tabsList.innerHTML = state.tabs.map(tab => `
-        <div class="tab-item ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''} ${closingTabIds.has(tab.id) ? 'removing-item' : ''}" data-tab-id="${tab.id}">
-            <div class="tab-container">
-                <span class="tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
-                ${shouldShowUnsavedWarning(tab) ? `
-                    <span class="material-symbols-outlined tab-unsaved-warning" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
-                ` : ''}
-                <button class="tab-close-btn" data-close-tab="${tab.id}" aria-label="Close Tab">
-                    <span class="material-symbols-outlined" aria-hidden="true">close</span>
-                </button>
-            </div>
-        </div>
-    `).join('');
-
-    el.tabsList.querySelectorAll('.tab-item').forEach(tabNode => {
-        tabNode.addEventListener('click', async event => {
-            if (Date.now() < suppressClickUntil) {
-                event.preventDefault();
-                return;
-            }
-            if (event.target.closest('[data-close-tab]')) {
-                return;
-            }
-            await switchToTab(tabNode.dataset.tabId);
+    if (!desktopTabView) {
+        el.tabsList.replaceChildren();
+        desktopTabView = createTabListView({
+            container: el.tabsList,
+            createNode: createDesktopTabNode,
+            updateNode: updateDesktopTabNode,
         });
+    }
+    desktopTabView.sync(state.tabs.filter(tab => !closingTabIds.has(tab.id)));
+    el.tabsList.querySelector('.tab-item.active[data-tab-id]')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+}
 
-        tabNode.addEventListener('pointerdown', event => {
-            if (event.button !== 0 || event.target.closest('[data-close-tab]')) {
-                return;
-            }
-            beginPointerDrag(tabNode, event);
-        });
+function createDesktopTabNode(tab) {
+    const node = document.createElement('div');
+    node.className = 'tab-item';
+    node.dataset.tabId = tab.id;
+    node.innerHTML = `
+        <div class="tab-container">
+            <span class="tab-title"></span>
+            <span class="material-symbols-outlined tab-unsaved-warning hidden" aria-label="Unsaved changes" title="Unsaved changes">warning</span>
+            <button class="tab-close-btn" aria-label="Close Tab">
+                <span class="material-symbols-outlined" aria-hidden="true">close</span>
+            </button>
+        </div>`;
+    const close = node.querySelector('.tab-close-btn');
+    close.dataset.closeTab = tab.id;
+    close.addEventListener('click', async event => {
+        event.stopPropagation();
+        await closeTab(tab.id);
     });
-
-    el.tabsList.querySelectorAll('[data-close-tab]').forEach(button => {
-        button.addEventListener('click', async event => {
-            event.stopPropagation();
-            await closeTab(button.dataset.closeTab);
-        });
+    node.addEventListener('click', async event => {
+        if (Date.now() < suppressClickUntil) {
+            event.preventDefault();
+            return;
+        }
+        if (!event.target.closest('[data-close-tab]')) await switchToTab(tab.id);
     });
+    node.addEventListener('pointerdown', event => {
+        if (event.button === 0 && !event.target.closest('[data-close-tab]')) beginPointerDrag(node, event);
+    });
+    return node;
+}
 
-    el.tabsList.querySelector('.tab-item.active')?.scrollIntoView({ block: 'nearest', inline: 'nearest' });
+function updateDesktopTabNode(node, tab) {
+    const dirty = shouldShowUnsavedWarning(tab);
+    node.classList.toggle('active', tab.id === state.activeTabId);
+    node.classList.toggle('has-unsaved-changes', dirty);
+    const title = node.querySelector('.tab-title');
+    const text = tab.title || 'Untitled';
+    if (title.textContent !== text) title.textContent = text;
+    node.querySelector('.tab-unsaved-warning').classList.toggle('hidden', !dirty);
 }
 
 let mobileTabsModalBound = false;
@@ -274,47 +284,61 @@ export function openMobileTabsModal() {
 export function closeMobileTabsModal() {
     if (!el.mobileTabsModal) return;
     el.mobileTabsModal.classList.add('hidden');
+    mobileTabView?.dispose();
+    mobileTabView = null;
 }
 
 function renderMobileTabsList() {
     if (!el.mobileTabsList) return;
+    if (!mobileTabView) {
+        el.mobileTabsList.replaceChildren();
+        mobileTabView = createTabListView({
+            container: el.mobileTabsList,
+            createNode: createMobileTabNode,
+            updateNode: updateMobileTabNode,
+        });
+    }
+    mobileTabView.sync(state.tabs.filter(tab => !closingTabIds.has(tab.id)));
+}
 
-    el.mobileTabsList.innerHTML = state.tabs.map(tab => `
-        <div class="mobile-tab-row ${tab.id === state.activeTabId ? 'active' : ''} ${shouldShowUnsavedWarning(tab) ? 'has-unsaved-changes' : ''}" data-tab-id="${tab.id}">
-            <div class="mobile-tab-info">
-                <span class="material-symbols-outlined mobile-tab-icon">${tab.id === state.activeTabId ? 'check_circle' : 'article'}</span>
-                <span class="mobile-tab-title">${escapeHTML(tab.title || 'Untitled')}</span>
-                ${shouldShowUnsavedWarning(tab) ? `
-                    <span class="material-symbols-outlined tab-unsaved-warning" title="Unsaved changes">warning</span>
-                ` : ''}
-            </div>
-            <button class="mobile-tab-row-close" data-close-mobile-tab="${tab.id}" title="Close Tab" aria-label="Close Tab">
-                <span class="material-symbols-outlined">close</span>
-            </button>
+function createMobileTabNode(tab) {
+    const row = document.createElement('div');
+    row.className = 'mobile-tab-row';
+    row.dataset.tabId = tab.id;
+    row.innerHTML = `
+        <div class="mobile-tab-info">
+            <span class="material-symbols-outlined mobile-tab-icon"></span>
+            <span class="mobile-tab-title"></span>
+            <span class="material-symbols-outlined tab-unsaved-warning hidden" title="Unsaved changes">warning</span>
         </div>
-    `).join('');
-
-    el.mobileTabsList.querySelectorAll('.mobile-tab-row').forEach(row => {
-        row.addEventListener('click', async (event) => {
-            if (event.target.closest('[data-close-mobile-tab]')) return;
-            const tabId = row.dataset.tabId;
-            closeMobileTabsModal();
-            await switchToTab(tabId);
-        });
+        <button class="mobile-tab-row-close" title="Close Tab" aria-label="Close Tab">
+            <span class="material-symbols-outlined">close</span>
+        </button>`;
+    const close = row.querySelector('.mobile-tab-row-close');
+    close.dataset.closeMobileTab = tab.id;
+    close.addEventListener('click', async event => {
+        event.stopPropagation();
+        await closeTab(tab.id);
+        if (!el.mobileTabsModal.classList.contains('hidden')) renderMobileTabsList();
     });
-
-    el.mobileTabsList.querySelectorAll('[data-close-mobile-tab]').forEach(btn => {
-        btn.addEventListener('click', async (event) => {
-            event.stopPropagation();
-            const tabId = btn.dataset.closeMobileTab;
-            await closeTab(tabId);
-            if (state.tabs.length === 0) {
-                closeMobileTabsModal();
-            } else {
-                renderMobileTabsList();
-            }
-        });
+    row.addEventListener('click', async event => {
+        if (event.target.closest('[data-close-mobile-tab]')) return;
+        closeMobileTabsModal();
+        await switchToTab(tab.id);
     });
+    return row;
+}
+
+function updateMobileTabNode(row, tab) {
+    const active = tab.id === state.activeTabId;
+    const dirty = shouldShowUnsavedWarning(tab);
+    row.classList.toggle('active', active);
+    row.classList.toggle('has-unsaved-changes', dirty);
+    row.querySelector('.mobile-tab-icon').textContent = active ? 'check_circle' : 'article';
+    const title = row.querySelector('.mobile-tab-title');
+    const text = tab.title || 'Untitled';
+    if (title.textContent !== text) title.textContent = text;
+    row.querySelector('.tab-unsaved-warning').classList.toggle('hidden', !dirty);
 }
 
 function shouldShowUnsavedWarning(tab) {
@@ -427,6 +451,7 @@ function startVisualDrag() {
     dragState.startY = stripRect.top + stripRect.height / 2;
 
     const rect = dragState.sourceNode.getBoundingClientRect();
+    desktopTabView?.stop(dragState.tabId);
     const placeholderNode = document.createElement('div');
     placeholderNode.className = 'tab-drag-placeholder';
     placeholderNode.style.width = `${rect.width}px`;
@@ -465,7 +490,7 @@ function updateDropIndicator(clientX, clientY) {
     }
 
     const otherNodes = [...el.tabsList.querySelectorAll('.tab-item')]
-        .filter(node => node.dataset.tabId !== dragState.tabId);
+        .filter(node => node.dataset.tabId && node.dataset.tabId !== dragState.tabId);
 
     if (otherNodes.length === 0) {
         dragState.insertionIndex = 0;
@@ -712,62 +737,12 @@ export async function reopenClosedTab() {
 }
 
 function animateTabClose(tabID) {
-    const tabNode = el.tabsList.querySelector(`[data-tab-id="${tabID}"]`);
-    if (!tabNode || window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
-        return Promise.resolve();
-    }
-
-    applyTabCloseMotionConfig(tabNode);
+    cancelPointerDrag();
     closingTabIds.add(tabID);
-    tabNode.style.width = `${tabNode.offsetWidth}px`;
-    tabNode.style.maxWidth = `${tabNode.offsetWidth}px`;
-    tabNode.style.flexBasis = `${tabNode.offsetWidth}px`;
-
-    return new Promise(resolve => {
-        let finished = false;
-        const finish = () => {
-            if (finished) {
-                return;
-            }
-            finished = true;
-            tabNode.removeEventListener('transitionend', handleTransitionEnd);
-            window.clearTimeout(timeoutId);
-            resolve();
-        };
-        const handleTransitionEnd = event => {
-            if (event.target === tabNode && event.propertyName === 'width') {
-                finish();
-            }
-        };
-        const timeoutId = window.setTimeout(finish, getTabCloseFallbackMs());
-
-        tabNode.addEventListener('transitionend', handleTransitionEnd);
-        requestAnimationFrame(() => {
-            tabNode.classList.add('removing-item');
-            tabNode.style.width = '0px';
-            tabNode.style.maxWidth = '0px';
-            tabNode.style.flexBasis = '0px';
-        });
-    });
-}
-
-function applyTabCloseMotionConfig(tabNode) {
-    const setVar = (name, value) => tabNode.style.setProperty(name, value);
-    setVar('--tab-close-collapse-duration', `${TAB_CLOSE_ANIMATION.collapseMs}ms`);
-    setVar('--tab-close-collapse-delay', `${TAB_CLOSE_ANIMATION.collapseDelayMs}ms`);
-    setVar('--tab-close-collapse-easing', TAB_CLOSE_ANIMATION.collapseEasing);
-    setVar('--tab-close-content-filter-duration', `${TAB_CLOSE_ANIMATION.contentFilterMs}ms`);
-    setVar('--tab-close-content-opacity-duration', `${TAB_CLOSE_ANIMATION.contentOpacityMs}ms`);
-    setVar('--tab-close-content-transform-duration', `${TAB_CLOSE_ANIMATION.contentTransformMs}ms`);
-    setVar('--tab-close-content-easing', TAB_CLOSE_ANIMATION.contentEasing);
-    setVar('--tab-close-content-blur', `${TAB_CLOSE_ANIMATION.contentBlurPx}px`);
-    setVar('--tab-close-content-scale', String(TAB_CLOSE_ANIMATION.contentScale));
-}
-
-function getTabCloseFallbackMs() {
-    return TAB_CLOSE_ANIMATION.collapseDelayMs
-        + TAB_CLOSE_ANIMATION.collapseMs
-        + TAB_CLOSE_ANIMATION.fallbackPaddingMs;
+    return Promise.all([
+        desktopTabView?.remove(tabID),
+        mobileTabView?.remove(tabID),
+    ]);
 }
 
 // ── New Tab ────────────────────────────────────────────────
