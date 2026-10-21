@@ -71,7 +71,7 @@ export async function initializePlatform() {
 
         const { state } = await import('./main-state.js');
         if (state.isEditing) {
-            const { openFindBar } = await import('./main-editor.js');
+            const { openFindBar } = await import('./editor-search.js');
             openFindBar(false, query);
         } else {
             const { highlightText } = await import('./main-ui.js');

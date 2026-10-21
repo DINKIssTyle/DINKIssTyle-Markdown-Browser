@@ -3,37 +3,33 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
-import { collectUnsavedSessions } from './tab-sessions.mjs';
+import { createSpellcheckChunks, normalizeSpellcheckSuggestions, mergeSpellcheckSuggestions } from './spellcheck-text.mjs';
+import { cmView, setEditorView } from './editor-view.js';
+import { themeCompartment, tokenColorCompartment, getTokenColorExtension, normalizeTokenColors, normalizeBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor } from './editor-appearance.js';
+import { openFindBar, isFindBarOpen, updateFindMatchesDebounced, bindEditorSearchEvents } from './editor-search.js';
+import { showTablePicker, showOptionGridPrompt, showEmojiPicker } from './editor-pickers.js';
+import { bindEditorPaneSplitter, setEditorPreviewVisible } from './editor-layout.js';
+import { syncEditorStateToBackend } from './main-session.js';
 import { DEFAULT_CONTENT_FONT_SIZE, DEFAULT_TRANSLATION_LANGUAGE_CODES, EDITOR_FONT_VISUAL_SCALE, getSlashCommands as getConfiguredSlashCommands } from './config.js';
-import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, debounce, escapeHTML, escapeAttr, isMacOS, documentTypeFromPath, isEditableDocumentType } from './main-state.js';
+import { state, el, getPathDirname, basename, deriveTabTitle, formatSaveDialogMessage, escapeHTML, escapeAttr, documentTypeFromPath, isEditableDocumentType } from './main-state.js';
 import { updateNavButtons, openPath } from './main-navigation.js';
 import { createUnsavedMarkdownTab, getActiveTab, renderTabs } from './main-tabs.js';
 import { renderActiveTab, renderMarkdown, queueEditorPreviewRender, scrollPreviewToEditorLine, scrollPreviewToEditorLines, hideLinkTooltip, syncDocumentMetadataUI } from './main-render.js';
 import { beginProgressTask, finishProgressTask, isProgressTaskActive, showToast, updateProgress, hideProgress, showProgressDelta } from './main-ui.js';
 import { persistAppSettings } from './main-settings.js';
 import { getConfiguredLanguages } from './main-languages.js';
-import { SaveFile, ReadFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, SyncEditorSessions, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
+import { SaveFile, ReadFile, AskConfirm, SelectDocument, SelectImage, GetRelativePath, ShowSaveFileDialog, GetTranslationTargets, TranslateDocumentCopies, SpellCheckDocument, GetDefaultStorageDirectory } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn, LogError, LogInfo } from './wails-runtime';
 import { isCancellationError, throwIfQueuedTaskCancelled } from './main-cancel.js';
-import { getCurrentAccentColor } from './main-theme.js';
 import { isImeKeyboardEvent, normalizeKoreanImeLineBreak, shouldMoveSlashSelectionAfterImeCommit, shouldRunSlashCommandAfterImeCommit } from './ime-enter-fix.mjs';
 import { getDeferredStandardOrderedListMarker, getStandardOrderedListEnterEdit } from './ordered-list-enter.mjs';
-import {
-    DEFAULT_EDITOR_PANE_PERCENT,
-    DEFAULT_EDITOR_SPLIT_MODE,
-    editorSplitPercentFromPosition,
-    normalizeEditorPanePercent,
-    normalizeEditorSplitMode,
-} from './editor-pane-split.mjs';
 
 import { EditorState, EditorSelection, Compartment, Prec, StateEffect, StateField, Transaction } from '@codemirror/state';
-import { EditorView, ViewPlugin, keymap, lineNumbers, placeholder, drawSelection, dropCursor, Decoration } from '@codemirror/view';
+import { EditorView, ViewPlugin, keymap, lineNumbers, drawSelection, dropCursor, Decoration } from '@codemirror/view';
 import { defaultKeymap, history, historyKeymap, indentWithTab, undo, redo, undoDepth, redoDepth } from '@codemirror/commands';
-import { SearchCursor } from '@codemirror/search';
 import { markdown, markdownLanguage } from '@codemirror/lang-markdown';
 import { languages } from '@codemirror/language-data';
-import { HighlightStyle, syntaxHighlighting, LanguageDescription } from '@codemirror/language';
-import { tags } from '@lezer/highlight';
+import { LanguageDescription } from '@codemirror/language';
 import { oneDark } from '@codemirror/theme-one-dark';
 import { enqueueLLMTask, ghostTextField, hidePromptBox, schedulePromptRefreshForEditorSelection, showAskAIPrompt, showPromptBoxAtSelection, syncAIControls } from './main-ai.js';
 import { showTextPrompt } from './main-dialogs.js';
@@ -44,10 +40,6 @@ import { isMobilePlatform, isMobileUntitledPath, saveDocumentAsForCurrentPlatfor
 let slashMenuState = null;
 let slashMenuEventsBound = false;
 let lastPreviewCursorLine = 1;
-let lastPreviewTopLine = 1;
-let findMatches = [];
-let currentMatchIndex = -1;
-let isFindBarOpen = false;
 let previewScrollSyncFrame = 0;
 let editorScrollEventsBound = false;
 let editorGutterResizeObserver = null;
@@ -55,7 +47,6 @@ let translationProgressEventsBound = false;
 let lastRenderedPreviewContent = "";
 let plainClickSelectionState = null;
 let spellcheckTooltip = null;
-let spellcheckCloseButton = null;
 let spellcheckNavigator = null;
 let spellcheckInProgress = false;
 let activeSpellcheckSuggestionId = null;
@@ -63,20 +54,11 @@ let spellcheckTooltipHideTimer = 0;
 let spellcheckTooltipPositionFrame = 0;
 let toolbarDisabledTooltip = null;
 let toolbarDisabledTooltipButton = null;
-let setEditorPreviewVisibleFn = null;
-export let cmView = null;
-export const themeCompartment = new Compartment();
-export const tokenColorCompartment = new Compartment();
 export const languageCompartment = new Compartment();
 const historyCompartment = new Compartment();
 
 const TRANSLATION_LANGUAGE_STORAGE_KEY = 'dkst.translation.languages';
 const SPELLCHECK_LANGUAGE_STORAGE_KEY = 'dkst.spellcheck.language';
-const EDITOR_PANE_PERCENT_STORAGE_KEY = 'dkst.editor.panePercent';
-const EDITOR_VERTICAL_PANE_PERCENT_STORAGE_KEY = 'dkst.editor.verticalPanePercent';
-const EDITOR_SPLIT_MODE_STORAGE_KEY = 'dkst.editor.splitMode';
-const EDITOR_HORIZONTAL_PREVIEW_FIRST_STORAGE_KEY = 'dkst.editor.horizontalPreviewFirst';
-const EDITOR_VERTICAL_PREVIEW_FIRST_STORAGE_KEY = 'dkst.editor.verticalPreviewFirst';
 const LIVE_TAB_TITLE_CONTENT_LIMIT = 8192;
 const IME_DIAGNOSTIC_EVENT_TYPES = Object.freeze([
     'keydown',
@@ -90,245 +72,8 @@ const IME_DIAGNOSTIC_LOG_LIMIT = 200;
 let imeDiagnosticSequence = 0;
 let imeDiagnosticStartedAt = 0;
 
-const SPELLCHECK_CHUNK_TARGET_LENGTH = 700;
-const SPELLCHECK_CHUNK_MAX_LENGTH = 1000;
-const SPELLCHECK_COORDINATE_RECOVERY_RADIUS = 360;
 const SPELLCHECK_SCROLL_MARGIN = 220;
 const EDITOR_OVERLAY_SCROLL_GAP = 8;
-export const EDITOR_TOKEN_COLOR_FIELDS = Object.freeze([
-    { key: 'plain', label: 'Plain Text' },
-    { key: 'heading', label: 'Headings' },
-    { key: 'emphasis', label: 'Emphasis' },
-    { key: 'link', label: 'Links' },
-    { key: 'quote', label: 'Blockquotes' },
-    { key: 'code', label: 'Inline Code' },
-    { key: 'codeBg', label: 'Code Background' },
-    { key: 'marker', label: 'Markers' },
-    { key: 'htmlTag', label: 'HTML Tags' },
-    { key: 'attribute', label: 'Attributes' },
-    { key: 'string', label: 'Strings' },
-    { key: 'keyword', label: 'Keywords' },
-    { key: 'comment', label: 'Comments' },
-    { key: 'invalid', label: 'Invalid' },
-]);
-
-const EDITOR_BACKGROUND_DEFAULTS = Object.freeze({
-    light: '#ffffff',
-    dark: '#1f2937',
-});
-
-const EDITOR_TOKEN_COLOR_DEFAULTS = Object.freeze({
-    light: Object.freeze({
-        plain: '#1f2937',
-        heading: '#1f2937',
-        emphasis: '#375d99',
-        link: '#0071e3',
-        quote: '#5b6f8f',
-        code: '#d14',
-        codeBg: '#dfe3eaff',
-        marker: '#0071e3',
-        htmlTag: '#0a7f8f',
-        attribute: '#8f5f00',
-        string: '#0f7b32',
-        keyword: '#8a3ffc',
-        comment: '#6b7280',
-        invalid: '#d92d20',
-    }),
-    dark: Object.freeze({
-        plain: '#e5e7eb',
-        heading: '#e5e7eb',
-        emphasis: '#c8d8ff',
-        link: '#7db7ff',
-        quote: '#9ab3d5',
-        code: '#ff8aa1',
-        codeBg: 'rgba(255, 255, 255, 0.1)',
-        marker: '#7db7ff',
-        htmlTag: '#6ee7f2',
-        attribute: '#ffd166',
-        string: '#8ee6a1',
-        keyword: '#d8b4fe',
-        comment: '#9ca3af',
-        invalid: '#fda29b',
-    }),
-});
-
-export const EDITOR_TOKEN_COLOR_PRESETS = Object.freeze([
-    {
-        key: 'default',
-        label: 'Default',
-        colors: null,
-        background: null,
-    },
-    {
-        key: 'seoul',
-        label: 'Seoul',
-        background: '#fcfcfc',
-        colors: Object.freeze({
-            plain: '#404040',
-            heading: '#618138',
-            emphasis: '#f294da',
-            link: '#2d4285',
-            quote: '#e36d3e',
-            code: '#9c4025',
-            codeBg: '#f7dda7',
-            marker: '#59555e',
-            htmlTag: '#cb5b30',
-            attribute: '#a41b4a',
-            string: '#a83a0a',
-            keyword: '#639f2d',
-            comment: '#548560',
-            invalid: '#c7445c',
-        }),
-    },
-    {
-        key: 'jeonju',
-        label: 'Jeonju',
-        background: '#e0e7e8',
-        colors: Object.freeze({
-            plain: '#642242',
-            heading: '#a83449',
-            emphasis: '#595384',
-            link: '#306bb2',
-            quote: '#cb5899',
-            code: '#6c407c',
-            codeBg: '#eacecd',
-            marker: '#0b773a',
-            htmlTag: '#5e2a65',
-            attribute: '#b33373',
-            string: '#817209',
-            keyword: '#9f48ac',
-            comment: '#675ca3',
-            invalid: '#ae2d40',
-        }),
-    },
-    {
-        key: 'gyeongju',
-        label: 'Gyeongju',
-        background: '#181625',
-        colors: Object.freeze({
-            plain: '#d89f9d',
-            heading: '#c93c8c',
-            emphasis: '#cce1ed',
-            link: '#98b2a8',
-            quote: '#c6b097',
-            code: '#ab9ac4',
-            codeBg: '#3d3d3d',
-            marker: '#aa6054',
-            htmlTag: '#9d838a',
-            attribute: '#bbadab',
-            string: '#db739b',
-            keyword: '#d2894b',
-            comment: '#7f9cb2',
-            invalid: '#9080b9',
-        }),
-    },
-    {
-        key: 'night',
-        label: 'Night',
-        background: '#1a1b26',
-        colors: Object.freeze({
-            plain: '#c0caf5',
-            heading: '#c0caf5',
-            emphasis: '#7aa2f7',
-            link: '#7dcfff',
-            quote: '#6b718cff',
-            code: '#f7768e',
-            codeBg: 'rgba(41, 46, 66, 0.6)',
-            marker: '#7aa2f7',
-            htmlTag: '#2ac3de',
-            attribute: '#e0af68',
-            string: '#9ece6a',
-            keyword: '#bb9af7',
-            comment: '#565f89',
-            invalid: '#f7768e',
-        }),
-    },
-    {
-        key: 'nord',
-        label: 'Nord',
-        background: '#2e3440',
-        colors: Object.freeze({
-            plain: '#d8dee9',
-            heading: '#eceff4',
-            emphasis: '#81a1c1',
-            link: '#88c0d0',
-            quote: '#a5a5a5',
-            code: '#d08770',
-            codeBg: 'rgba(76, 86, 106, 0.4)',
-            marker: '#5e81ac',
-            htmlTag: '#8fbcbb',
-            attribute: '#ebcb8b',
-            string: '#a3be8c',
-            keyword: '#b48ead',
-            comment: '#bfbfbf',
-            invalid: '#bf616a',
-        }),
-    },
-    {
-        key: 'catppuccin',
-        label: 'Catppuccin',
-        background: '#1e1e2e',
-        colors: Object.freeze({
-            plain: '#cdd6f4',
-            heading: '#cdd6f4',
-            emphasis: '#cba6f7',
-            link: '#89b4fa',
-            quote: '#b8b8b8',
-            code: '#f5c2e7',
-            codeBg: 'rgba(49, 50, 68, 0.6)',
-            marker: '#89b4fa',
-            htmlTag: '#94e2d5',
-            attribute: '#f9e2af',
-            string: '#a6e3a1',
-            keyword: '#cba6f7',
-            comment: '#7f849c',
-            invalid: '#f38ba8',
-        }),
-    },
-    {
-        key: 'one-dark-pro',
-        label: 'One Dark Pro',
-        background: '#282c34',
-        colors: Object.freeze({
-            plain: '#bebebe',
-            heading: '#abb2bf',
-            emphasis: '#61afef',
-            link: '#56b6c2',
-            quote: '#a7a7a7',
-            code: '#e06c75',
-            codeBg: 'rgba(85, 85, 85, 0.7)',
-            marker: '#61afef',
-            htmlTag: '#e06c75',
-            attribute: '#d19a66',
-            string: '#98c379',
-            keyword: '#c678dd',
-            comment: '#d2d2d2',
-            invalid: '#e06c75',
-        }),
-    },
-    {
-        key: 'solarized-light',
-        label: 'Solarized',
-        background: '#fdf6e3',
-        colors: Object.freeze({
-            plain: '#657b83',
-            heading: '#586e75',
-            emphasis: '#268bd2',
-            link: '#2aa198',
-            quote: '#686868',
-            code: '#d33682',
-            codeBg: 'rgba(238, 232, 213, 0.6)',
-            marker: '#268bd2',
-            htmlTag: '#2aa198',
-            attribute: '#b58900',
-            string: '#859900',
-            keyword: '#6c71c4',
-            comment: '#6e6e6e',
-            invalid: '#dc322f',
-        }),
-    },
-]);
-
 const setSpellcheckSuggestionsEffect = StateEffect.define();
 const removeSpellcheckSuggestionEffect = StateEffect.define();
 
@@ -630,113 +375,6 @@ const TOOLBAR_POPUP_GROUPS = Object.freeze({
 });
 let toolbarPopup = null;
 let toolbarPopupTrigger = null;
-function getEditorThemeName() {
-    return document.documentElement.classList.contains('dark') ? 'dark' : 'light';
-}
-
-export function getEditorDefaultTokenColors(themeName = getEditorThemeName()) {
-    const defaults = { ...(EDITOR_TOKEN_COLOR_DEFAULTS[themeName] || EDITOR_TOKEN_COLOR_DEFAULTS.light) };
-    if (themeName === 'light') {
-        const accentColor = getCurrentAccentColor();
-        defaults.link = accentColor;
-        defaults.marker = accentColor;
-    }
-    return defaults;
-}
-
-export function getEditorDefaultBackgroundColor(themeName = getEditorThemeName()) {
-    return EDITOR_BACKGROUND_DEFAULTS[themeName] || EDITOR_BACKGROUND_DEFAULTS.light;
-}
-
-function normalizeTokenColors(colors = {}, themeName = getEditorThemeName()) {
-    const defaults = getEditorDefaultTokenColors(themeName);
-    return Object.fromEntries(
-        EDITOR_TOKEN_COLOR_FIELDS.map(({ key }) => [key, isValidHexColor(colors[key]) ? colors[key] : defaults[key]])
-    );
-}
-
-function normalizeBackgroundColor(color, themeName = getEditorThemeName()) {
-    return isValidHexColor(color) ? color : getEditorDefaultBackgroundColor(themeName);
-}
-
-function isValidHexColor(value) {
-    return /^#[0-9a-f]{6}$/i.test(String(value || ''));
-}
-
-function hexToRgb(hex) {
-    const normalized = String(hex || '').replace('#', '');
-    if (!/^[0-9a-f]{6}$/i.test(normalized)) return null;
-    return {
-        r: parseInt(normalized.slice(0, 2), 16),
-        g: parseInt(normalized.slice(2, 4), 16),
-        b: parseInt(normalized.slice(4, 6), 16),
-    };
-}
-
-function getRelativeLuminance(hex) {
-    const rgb = hexToRgb(hex);
-    if (!rgb) return 1;
-    const channel = value => {
-        const normalized = value / 255;
-        return normalized <= 0.03928
-            ? normalized / 12.92
-            : Math.pow((normalized + 0.055) / 1.055, 2.4);
-    };
-    return 0.2126 * channel(rgb.r) + 0.7152 * channel(rgb.g) + 0.0722 * channel(rgb.b);
-}
-
-function buildEditorMarkdownHighlight(colors) {
-    return HighlightStyle.define([
-        { tag: tags.heading1, color: colors.heading, fontSize: '1.5em', fontWeight: '800' },
-        { tag: tags.heading2, color: colors.heading, fontSize: '1.35em', fontWeight: '800' },
-        { tag: tags.heading3, color: colors.heading, fontSize: '1.22em', fontWeight: '760' },
-        { tag: tags.heading4, color: colors.heading, fontSize: '1.12em', fontWeight: '740' },
-        { tag: tags.heading5, color: colors.heading, fontSize: '1.06em', fontWeight: '720' },
-        { tag: tags.heading6, color: colors.heading, fontSize: '1.02em', fontWeight: '700' },
-        { tag: tags.strong, color: colors.heading, fontWeight: '800' },
-        { tag: tags.emphasis, color: colors.emphasis, fontStyle: 'italic' },
-        { tag: tags.strikethrough, color: colors.comment, textDecoration: 'line-through' },
-        { tag: tags.link, color: colors.link, textDecoration: 'underline', textUnderlineOffset: '2px' },
-        { tag: tags.url, color: colors.link },
-        { tag: tags.quote, color: colors.quote, fontStyle: 'italic' },
-        { tag: tags.monospace, color: colors.code, backgroundColor: colors.codeBg },
-        { tag: tags.contentSeparator, color: colors.comment, fontWeight: '700' },
-        { tag: tags.list, color: colors.marker, fontWeight: '700' },
-        { tag: tags.meta, color: colors.comment },
-        { tag: tags.processingInstruction, color: colors.marker, fontWeight: '700' },
-        { tag: tags.tagName, color: colors.htmlTag, fontWeight: '700' },
-        { tag: tags.angleBracket, color: colors.comment },
-        { tag: tags.attributeName, color: colors.attribute },
-        { tag: tags.attributeValue, color: colors.string },
-        { tag: tags.string, color: colors.string },
-        { tag: tags.keyword, color: colors.keyword, fontWeight: '700' },
-        { tag: tags.atom, color: colors.attribute },
-        { tag: tags.bool, color: colors.attribute, fontWeight: '700' },
-        { tag: tags.number, color: colors.attribute },
-        { tag: tags.operator, color: colors.marker },
-        { tag: tags.function(tags.variableName), color: colors.heading },
-        { tag: tags.function(tags.propertyName), color: colors.heading },
-        { tag: tags.typeName, color: colors.attribute, fontWeight: '700' },
-        { tag: tags.className, color: colors.attribute, fontWeight: '700' },
-        { tag: tags.definition(tags.variableName), color: colors.heading },
-        { tag: tags.comment, color: colors.comment, fontStyle: 'italic' },
-        { tag: tags.escape, color: colors.invalid, fontWeight: '700' },
-        { tag: tags.invalid, color: colors.invalid, textDecoration: `underline wavy ${colors.invalid}` },
-    ]);
-}
-
-function getTokenColorExtension() {
-    if (!state.editorTokenColorsEnabled) {
-        return [];
-    }
-    return syntaxHighlighting(buildEditorMarkdownHighlight(state.editorTokenColors));
-}
-
-function applyEditorPlainTextColor() {
-    const plainTextColor = state.editorTokenColors?.plain || getEditorDefaultTokenColors().plain;
-    el.editorView?.style.setProperty('--editor-plain-text-color', plainTextColor);
-}
-
 export function applyEditorPreferencesFromSettings(settings = {}) {
     state.editorToolbarMode = normalizeEditorToolbarMode(settings.editorToolbarMode);
     state.editorPreviewScrollSyncEnabled = settings.editorPreviewScrollSync !== false;
@@ -953,37 +591,6 @@ async function setEditorRenderMode(mode) {
     await persistEditorPreferences();
 }
 
-export function applyEditorTokenColors() {
-    state.editorTokenColors = normalizeTokenColors(state.editorTokenColors);
-    applyEditorPlainTextColor();
-    if (cmView) {
-        cmView.dispatch({
-            effects: tokenColorCompartment.reconfigure(getTokenColorExtension())
-        });
-    }
-}
-
-export function applyEditorBackgroundColor() {
-    state.editorBackgroundColor = normalizeBackgroundColor(state.editorBackgroundColor);
-    el.editorView?.style.setProperty('--editor-background-color', state.editorBackgroundColor);
-    applyEditorPlainTextColor();
-    const isDarkBackground = getRelativeLuminance(state.editorBackgroundColor) < 0.45;
-    el.editorView?.style.setProperty(
-        '--editor-gutter-background-color',
-        isDarkBackground
-            ? 'color-mix(in srgb, var(--editor-background-color) 88%, black 12%)'
-            : 'color-mix(in srgb, var(--editor-background-color) 88%, white 12%)'
-    );
-    el.editorView?.style.setProperty(
-        '--editor-gutter-text-color',
-        isDarkBackground ? 'rgba(226, 232, 240, 0.62)' : 'rgba(31, 41, 55, 0.62)'
-    );
-    el.editorView?.style.setProperty(
-        '--editor-gutter-border-color',
-        isDarkBackground ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.08)'
-    );
-}
-
 function applyEditorFontSize() {
     if (!cmView) return;
     cmView.contentDOM.style.fontSize = `${state.currentFontSize * EDITOR_FONT_VISUAL_SCALE}px`;
@@ -1038,21 +645,6 @@ export function resetEditorFontSize() {
     applyEditorFontSize();
     void persistEditorPreferences();
     return true;
-}
-
-// Keep revisions monotonic across a WebView reload in the same backend process.
-let editorSessionRevision = Date.now() * 1000;
-let lastEditorSessionsJSON = null;
-
-export function syncEditorStateToBackend() {
-    const sessions = collectUnsavedSessions(state);
-    const json = JSON.stringify(sessions);
-    if (json === lastEditorSessionsJSON) return;
-    lastEditorSessionsJSON = json;
-    SyncEditorSessions(++editorSessionRevision, sessions).catch((error) => {
-        if (lastEditorSessionsJSON === json) lastEditorSessionsJSON = null;
-        LogError(`SyncEditorSessions failed: ${error}`);
-    });
 }
 
 function resetEditorHistoryAroundSync(applySync) {
@@ -1140,8 +732,6 @@ function schedulePreviewScrollSync(view = cmView) {
     previewScrollSyncFrame = requestAnimationFrame(() => {
         previewScrollSyncFrame = 0;
         const visibleLines = getVisibleLineNumbers(view);
-        const nextTopLine = visibleLines[0] || 1;
-        lastPreviewTopLine = nextTopLine;
         const editorScrollInfo = {
             scrollTop: view.scrollDOM.scrollTop,
             maxScrollTop: Math.max(0, view.scrollDOM.scrollHeight - view.scrollDOM.clientHeight),
@@ -1157,233 +747,6 @@ export function triggerImmediateScrollSync() {
     }
 }
 
-
-export function openFindBar(withReplace = false, initialQuery = '') {
-    if (!state.isEditing || !el.editorFindBar) return;
-
-    isFindBarOpen = true;
-    el.editorFindBar.classList.remove('hidden');
-    if (initialQuery) {
-        el.editorFindInput.value = initialQuery;
-    }
-    el.editorFindInput.focus();
-    el.editorFindInput.select();
-
-    if (withReplace) {
-        el.editorFindReplaceCheck.checked = true;
-        el.editorReplaceRow.classList.remove('hidden');
-    }
-
-    updateFindMatches();
-}
-
-function closeFindBar() {
-    if (!el.editorFindBar) return;
-    isFindBarOpen = false;
-    el.editorFindBar.classList.add('hidden');
-    if (cmView) cmView.focus();
-}
-
-const updateFindMatchesDebounced = debounce(() => {
-    if (!cmView || !isFindBarOpen) return;
-    const query = el.editorFindInput.value;
-    findMatches = [];
-    currentMatchIndex = -1;
-
-    if (!query) {
-        el.editorFindCount.textContent = '';
-        return;
-    }
-
-    const cursor = new SearchCursor(cmView.state.doc, query);
-    while (!cursor.next().done) {
-        findMatches.push({ from: cursor.value.from, to: cursor.value.to });
-    }
-
-    if (findMatches.length > 0) {
-        const pos = cmView.state.selection.main.from;
-        currentMatchIndex = findMatches.findIndex(m => m.from >= pos);
-        if (currentMatchIndex === -1) currentMatchIndex = 0;
-
-        el.editorFindCount.textContent = `${currentMatchIndex + 1} of ${findMatches.length}`;
-        highlightMatch(currentMatchIndex, false); // Don't jump while typing
-    } else {
-        el.editorFindCount.textContent = 'No results';
-    }
-}, 150);
-
-function updateFindMatches() {
-    if (!cmView) return;
-    const query = el.editorFindInput.value;
-    findMatches = [];
-    currentMatchIndex = -1;
-
-    if (!query) {
-        el.editorFindCount.textContent = '';
-        return;
-    }
-
-    const cursor = new SearchCursor(cmView.state.doc, query);
-    while (!cursor.next().done) {
-        findMatches.push({ from: cursor.value.from, to: cursor.value.to });
-    }
-
-    if (findMatches.length > 0) {
-        const pos = cmView.state.selection.main.from;
-        currentMatchIndex = findMatches.findIndex(m => m.from >= pos);
-        if (currentMatchIndex === -1) currentMatchIndex = 0;
-
-        highlightMatch(currentMatchIndex, true);
-    } else {
-        el.editorFindCount.textContent = 'No results';
-    }
-}
-
-function highlightMatch(index, scrollIntoView = true) {
-    if (!cmView || index < 0 || index >= findMatches.length) return;
-    const match = findMatches[index];
-
-    cmView.dispatch({
-        selection: { anchor: match.from, head: match.to },
-        scrollIntoView: scrollIntoView
-    });
-
-    el.editorFindCount.textContent = `${index + 1} of ${findMatches.length}`;
-}
-
-function findNext() {
-    if (findMatches.length === 0) return;
-    currentMatchIndex = (currentMatchIndex + 1) % findMatches.length;
-    highlightMatch(currentMatchIndex);
-}
-
-function findPrev() {
-    if (findMatches.length === 0) return;
-    currentMatchIndex = (currentMatchIndex - 1 + findMatches.length) % findMatches.length;
-    highlightMatch(currentMatchIndex);
-}
-
-function performReplace() {
-    if (!cmView || currentMatchIndex === -1) return;
-    const match = findMatches[currentMatchIndex];
-    const replacement = el.editorReplaceInput.value;
-
-    cmView.dispatch({
-        changes: { from: match.from, to: match.to, insert: replacement },
-        selection: { anchor: match.from, head: match.from + replacement.length }
-    });
-
-    updateFindMatches();
-}
-
-function performReplaceAll() {
-    if (!cmView || findMatches.length === 0) return;
-    const query = el.editorFindInput.value;
-    const replacement = el.editorReplaceInput.value;
-
-    let changes = [];
-    const cursor = new SearchCursor(cmView.state.doc, query);
-    while (!cursor.next().done) {
-        changes.push({ from: cursor.value.from, to: cursor.value.to, insert: replacement });
-    }
-
-    cmView.dispatch({
-        changes,
-        sequential: true
-    });
-
-    updateFindMatches();
-    showToast(`Replaced ${changes.length} occurrences.`);
-}
-
-function bindEditorSearchEvents() {
-    if (!el.edFindReplace) return;
-
-    el.edFindReplace.onclick = () => {
-        if (isFindBarOpen) closeFindBar();
-        else openFindBar();
-    };
-
-    el.editorFindInput.oninput = () => updateFindMatches();
-
-    // Overall Find Bar Keyboard handling
-    el.editorFindBar.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeFindBar();
-            e.preventDefault();
-            e.stopPropagation();
-            return;
-        }
-
-        if (e.key === 'Tab') {
-            const focusableElements = [
-                el.editorFindInput,
-                el.editorFindPrev,
-                el.editorFindNext,
-                el.editorFindReplaceCheck,
-                el.editorFindDone,
-                el.editorReplaceInput,
-                el.editorReplaceOne,
-                el.editorReplaceAll
-            ].filter(element => {
-                if (!element) return false;
-                // Check if element or its parent row is hidden
-                const isReplaceElement = [el.editorReplaceInput, el.editorReplaceOne, el.editorReplaceAll].includes(element);
-                if (isReplaceElement && el.editorReplaceRow.classList.contains('hidden')) {
-                    return false;
-                }
-                return true;
-            });
-
-            const currentIndex = focusableElements.indexOf(document.activeElement);
-
-            if (currentIndex !== -1) {
-                e.preventDefault();
-                if (e.shiftKey) {
-                    // Shift+Tab: move to previous, or wrap to last
-                    const prevIndex = (currentIndex - 1 + focusableElements.length) % focusableElements.length;
-                    focusableElements[prevIndex].focus();
-                } else {
-                    // Tab: move to next, or wrap to first
-                    const nextIndex = (currentIndex + 1) % focusableElements.length;
-                    focusableElements[nextIndex].focus();
-                }
-            } else {
-                // If focus is somewhere else in the bar (like the label), go to first element
-                e.preventDefault();
-                focusableElements[0].focus();
-            }
-        }
-    });
-
-    el.editorFindInput.onkeydown = (e) => {
-        if (e.key === 'Enter') {
-            if (e.shiftKey) findPrev();
-            else findNext();
-            e.preventDefault();
-        }
-    };
-
-    el.editorFindPrev.onclick = () => findPrev();
-    el.editorFindNext.onclick = () => findNext();
-    el.editorFindDone.onclick = () => closeFindBar();
-
-    el.editorFindReplaceCheck.onchange = (e) => {
-        el.editorReplaceRow.classList.toggle('hidden', !e.target.checked);
-        if (e.target.checked) {
-            setTimeout(() => el.editorReplaceInput.focus(), 50);
-        }
-    };
-
-    el.editorReplaceOne.onclick = () => performReplace();
-    el.editorReplaceAll.onclick = () => performReplaceAll();
-    el.editorReplaceInput.onkeydown = (e) => {
-        if (e.key === 'Enter') {
-            performReplace();
-            e.preventDefault();
-        }
-    };
-}
 
 function bindTranslationProgressEvents() {
     if (translationProgressEventsBound) return;
@@ -1431,9 +794,9 @@ function getOrderedTranslationLanguageCodes(selectedCodes) {
 
 function showTranslationLanguagePrompt() {
     return new Promise((resolve) => {
+        const modalContent = el.modalOverlay.querySelector('.modal-content');
         const configuredLanguages = getConfiguredLanguages();
         const selectedCodes = new Set(getStoredTranslationLanguageCodes());
-        const modalContent = el.modalOverlay.querySelector('.modal-content');
         let languageList = null;
 
         const renderLanguageList = () => {
@@ -1705,7 +1068,6 @@ export function showViewerTranslationPrompt() {
         return Promise.resolve(null);
     }
     return new Promise((resolve) => {
-        const modalContent = el.modalOverlay.querySelector('.modal-content');
         
         // Populate select elements
         const savedTarget = localStorage.getItem('dkst.viewer.translation.target') || 'ko-KR';
@@ -1903,8 +1265,8 @@ function getStoredSpellcheckLanguageCode() {
 
 function showSpellcheckLanguagePrompt() {
     return new Promise((resolve) => {
-        const configuredLanguages = getConfiguredLanguages();
         const modalContent = el.modalOverlay.querySelector('.modal-content');
+        const configuredLanguages = getConfiguredLanguages();
         const languageItems = [
             { code: 'auto', name: 'Auto Detect', nativeName: 'Language auto detection', auto: true },
             ...configuredLanguages.map(language => ({ ...language, auto: false })),
@@ -2046,189 +1408,6 @@ function getSpellcheckAIConfig() {
     return aiConfig;
 }
 
-function splitOversizedSpellcheckBlock(block) {
-    if (block.content.length <= SPELLCHECK_CHUNK_MAX_LENGTH) {
-        return [block];
-    }
-
-    const pieces = [];
-    let start = 0;
-    while (start < block.content.length) {
-        const maxEnd = Math.min(block.content.length, start + SPELLCHECK_CHUNK_MAX_LENGTH);
-        if (maxEnd >= block.content.length) {
-            pieces.push({ start: block.start + start, content: block.content.slice(start) });
-            break;
-        }
-
-        const windowStart = Math.min(block.content.length, start + SPELLCHECK_CHUNK_TARGET_LENGTH);
-        const windowText = block.content.slice(windowStart, maxEnd);
-        let relativeCut = -1;
-        for (const boundary of ['\n', '. ', '.\n', '? ', '?\n', '! ', '!\n', '。', '؟ ']) {
-            const index = windowText.lastIndexOf(boundary);
-            if (index > relativeCut) {
-                relativeCut = index + boundary.length;
-            }
-        }
-
-        const end = relativeCut > 0 ? windowStart + relativeCut : maxEnd;
-        pieces.push({ start: block.start + start, content: block.content.slice(start, end) });
-        start = end;
-    }
-    return pieces.filter(piece => piece.content.trim());
-}
-
-function createSpellcheckBlocks(content) {
-    const blocks = [];
-    const blockRegex = /(?:^|\n)(?:#{1,6}\s.+(?:\n+|$)|```[\s\S]*?(?:```|$)|(?:[-*+]\s.+(?:\n|$))+|(?:\d+\.\s.+(?:\n|$))+|(?:>\s?.+(?:\n|$))+|(?:\|.*\|(?:\n|$))+|[^\n]+(?:\n(?!\n)[^\n]+)*)(?:\n*)/g;
-    let match;
-
-    while ((match = blockRegex.exec(content)) !== null) {
-        const raw = match[0];
-        const leadingNewline = raw.startsWith('\n') ? 1 : 0;
-        const blockContent = raw.slice(leadingNewline);
-        if (!blockContent.trim()) continue;
-        blocks.push({
-            start: match.index + leadingNewline,
-            content: blockContent,
-        });
-    }
-
-    return blocks.flatMap(splitOversizedSpellcheckBlock);
-}
-
-function createSpellcheckChunks(content) {
-    const blocks = createSpellcheckBlocks(content);
-    if (blocks.length === 0) return [];
-
-    const chunks = [];
-    let current = null;
-
-    for (const block of blocks) {
-        if (!current) {
-            current = { start: block.start, content: block.content };
-            continue;
-        }
-
-        const gap = content.slice(current.start + current.content.length, block.start);
-        const candidate = `${current.content}${gap}${block.content}`;
-        const currentIsHeadingOnly = /^#{1,6}\s.+\s*$/.test(current.content.trim());
-        const shouldAttachToHeading = currentIsHeadingOnly && candidate.length <= SPELLCHECK_CHUNK_MAX_LENGTH;
-
-        if (candidate.length <= SPELLCHECK_CHUNK_TARGET_LENGTH || shouldAttachToHeading) {
-            current.content = candidate;
-            continue;
-        }
-
-        chunks.push(current);
-        current = { start: block.start, content: block.content };
-    }
-
-    if (current) chunks.push(current);
-
-    return chunks.flatMap(chunk => {
-        if (chunk.content.length <= SPELLCHECK_CHUNK_MAX_LENGTH) {
-            return [chunk];
-        }
-        return splitOversizedSpellcheckBlock(chunk);
-    }).map(chunk => {
-        let start = chunk.start;
-        let text = chunk.content;
-        while (text.length && /^\s$/.test(text[0])) {
-            text = text.slice(1);
-            start += 1;
-        }
-        while (text.length && /\s$/.test(text[text.length - 1])) {
-            text = text.slice(0, -1);
-        }
-        return { start, content: text };
-    }).filter(chunk => chunk.content.trim());
-}
-
-function findSpellcheckOriginalInChunk(content, original, startHint = 0) {
-    if (!original) return -1;
-    const exactAtHint = Number.isInteger(startHint) ? content.indexOf(original, Math.max(0, startHint)) : -1;
-    if (exactAtHint >= 0 && Math.abs(exactAtHint - startHint) <= SPELLCHECK_COORDINATE_RECOVERY_RADIUS) {
-        return exactAtHint;
-    }
-
-    if (Number.isInteger(startHint)) {
-        const radiusStart = Math.max(0, startHint - SPELLCHECK_COORDINATE_RECOVERY_RADIUS);
-        const radiusEnd = Math.min(content.length, startHint + SPELLCHECK_COORDINATE_RECOVERY_RADIUS + original.length);
-        const nearbyIndex = content.slice(radiusStart, radiusEnd).indexOf(original);
-        if (nearbyIndex >= 0) {
-            return radiusStart + nearbyIndex;
-        }
-    }
-
-    const matches = [];
-    let index = content.indexOf(original);
-    while (index >= 0) {
-        matches.push(index);
-        index = content.indexOf(original, index + original.length);
-    }
-    if (matches.length === 1) {
-        return matches[0];
-    }
-    if (matches.length > 1 && Number.isInteger(startHint)) {
-        return matches.reduce((best, next) => (
-            Math.abs(next - startHint) < Math.abs(best - startHint) ? next : best
-        ), matches[0]);
-    }
-    return -1;
-}
-
-function normalizeSpellcheckSuggestions(suggestions, content, offset = 0) {
-    return (suggestions || [])
-        .map((suggestion, index) => {
-            const original = String(suggestion.original || '');
-            const replacement = String(suggestion.replacement || '');
-            let start = Number(suggestion.start);
-            let end = Number(suggestion.end);
-            if (!Number.isInteger(start) || !Number.isInteger(end) || content.slice(start, end) !== original) {
-                const recoveredStart = findSpellcheckOriginalInChunk(content, original, start);
-                if (recoveredStart >= 0) {
-                    start = recoveredStart;
-                    end = recoveredStart + original.length;
-                }
-            }
-            return {
-                id: `spell-${Date.now()}-${offset}-${index}`,
-                tabId: state.activeTabId,
-                original,
-                replacement,
-                reason: String(suggestion.reason || ''),
-                start: start + offset,
-                end: end + offset,
-            };
-        })
-        .filter(suggestion => {
-            const localStart = suggestion.start - offset;
-            const localEnd = suggestion.end - offset;
-            if (!Number.isInteger(localStart) || !Number.isInteger(localEnd)) return false;
-            if (localStart < 0 || localEnd <= localStart || localEnd > content.length) return false;
-            if (!suggestion.original || !suggestion.replacement || suggestion.original === suggestion.replacement) return false;
-            return content.slice(localStart, localEnd) === suggestion.original;
-        });
-}
-
-function mergeSpellcheckSuggestions(existing, incoming, currentContent) {
-    const merged = [...existing];
-    const occupied = new Set(existing.map(suggestion => `${suggestion.start}:${suggestion.end}:${suggestion.replacement}`));
-    for (const suggestion of incoming) {
-        if (currentContent.slice(suggestion.start, suggestion.end) !== suggestion.original) {
-            continue;
-        }
-        const key = `${suggestion.start}:${suggestion.end}:${suggestion.replacement}`;
-        if (occupied.has(key)) {
-            continue;
-        }
-        occupied.add(key);
-        merged.push(suggestion);
-    }
-    merged.sort((a, b) => a.start === b.start ? a.end - b.end : a.start - b.start);
-    return merged;
-}
-
 function getSpellcheckState() {
     return cmView?.state.field(spellcheckField, false) || { suggestions: [] };
 }
@@ -2297,7 +1476,6 @@ function updateSpellcheckNavigator() {
     if (!suggestions.length) {
         spellcheckNavigator?.remove();
         spellcheckNavigator = null;
-        spellcheckCloseButton = null;
         return;
     }
 
@@ -2524,7 +1702,6 @@ function ensureSpellcheckCloseButton() {
     nextButton?.addEventListener('click', () => moveSpellcheckSuggestion(1));
     applyButton?.addEventListener('click', applyActiveSpellcheckSuggestion);
     closeButton?.addEventListener('click', clearSpellcheckSuggestions);
-    spellcheckCloseButton = closeButton || null;
     el.documentArea?.appendChild(spellcheckNavigator);
 }
 
@@ -2535,14 +1712,12 @@ export function clearSpellcheckSuggestions() {
     hideSpellcheckTooltip();
     spellcheckNavigator?.remove();
     spellcheckNavigator = null;
-    spellcheckCloseButton = null;
 }
 
 function hideSpellcheckChrome() {
     hideSpellcheckTooltip();
     spellcheckNavigator?.remove();
     spellcheckNavigator = null;
-    spellcheckCloseButton = null;
 }
 
 export function clearTransientEditorOverlays() {
@@ -2607,7 +1782,7 @@ async function runSpellcheck() {
                         return;
                     }
 
-                    const incoming = normalizeSpellcheckSuggestions(result?.suggestions || [], chunk.content, chunk.start);
+                    const incoming = normalizeSpellcheckSuggestions(result?.suggestions || [], chunk.content, chunk.start, requestTabId);
                     if (incoming.length === 0) {
                         continue;
                     }
@@ -2708,7 +1883,6 @@ function updatePreviewForEditorChange(update) {
                 delay: 80,
                 syncScroll: state.editorPreviewScrollSyncEnabled,
             });
-            lastPreviewTopLine = nextTopLine;
             lastRenderedPreviewContent = nextDocText;
         }
         lastPreviewCursorLine = nextCursorLine;
@@ -3512,10 +2686,10 @@ export function initCodeMirror() {
         ]
     });
 
-    cmView = new EditorView({
+    setEditorView(new EditorView({
         state: startState,
         parent: el.editorView
-    });
+    }));
     bindEditorGutterWidthSync();
     bindEditorScrollSync();
     bindEditorSearchEvents();
@@ -3547,18 +2721,6 @@ function bindEditorGutterWidthSync() {
         editorGutterResizeObserver = new ResizeObserver(syncGutterWidth);
         editorGutterResizeObserver.observe(gutters);
     }
-}
-
-export function setEditorTheme(isDark) {
-    if (cmView) {
-        cmView.dispatch({
-            effects: themeCompartment.reconfigure(isDark ? oneDark : [])
-        });
-    }
-    state.editorTokenColors = normalizeTokenColors(state.editorTokenColors, isDark ? 'dark' : 'light');
-    state.editorBackgroundColor = normalizeBackgroundColor(state.editorBackgroundColor, isDark ? 'dark' : 'light');
-    applyEditorTokenColors();
-    applyEditorBackgroundColor();
 }
 
 export function syncEditorSessionFromState() {
@@ -3639,7 +2801,6 @@ export function syncEditorSessionFromState() {
 
     lastRenderedPreviewContent = nextContent;
     lastPreviewCursorLine = getCursorLineNumber(cmView.state);
-    lastPreviewTopLine = getTopVisibleLineNumber(cmView);
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
     }
@@ -3649,7 +2810,6 @@ export function syncEditorSessionFromState() {
         hideSpellcheckChrome();
     }
     updateSlashMenu();
-    syncEditorStateToBackend();
 }
 
 function restoreEditorViewPosition(topLine, fallbackScrollTop = 0) {
@@ -3825,7 +2985,6 @@ export function enterEditMode() {
         tab.editorState = cmView.state;
     }
     lastPreviewCursorLine = getCursorLineNumber(cmView.state);
-    lastPreviewTopLine = 0;
     if (el.edRenderMode) {
         el.edRenderMode.value = state.currentEditorRenderMode;
     }
@@ -4082,8 +3241,8 @@ export async function saveCurrentDocumentAs() {
                 state.navHistory = savingTab.navHistory.map(item => ({ ...item }));
                 state.navIndex = savingTab.navIndex;
             }
-            syncEditorStateToBackend();
         }
+        syncEditorStateToBackend();
         renderTabs();
         showToast("File saved successfully.", "check_circle");
         return true;
@@ -4114,6 +3273,7 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
                 if (state.activeTabId === tab.id) state.editorOriginalContent = contentToSave;
                 // Keep any edits made while this background save was in flight.
                 showToast('Document exported successfully.', 'check_circle');
+                syncEditorStateToBackend();
                 renderTabs();
             }
             return saved;
@@ -4132,6 +3292,7 @@ export async function saveTabDocument(tab, { confirm = true } = {}) {
         tab.editingPreviewPath = tab.editingSourcePath || targetPath;
         tab.editingPreviewFolder = tab.editingSourceFolder || getPathDirname(targetPath);
         showToast("File saved successfully.", "check_circle");
+        syncEditorStateToBackend();
         renderTabs();
         return true;
     } catch (error) {
@@ -4533,7 +3694,7 @@ async function insertLink() {
         return;
     }
 
-    const url = await showCustomPrompt("Insert Link", "Enter link URL:", "https://");
+    const url = await showTextPrompt("Insert Link", "Enter link URL:", "https://");
     if (url) insertTextAtCursor('[', `](${formatMarkdownDestination(url)})`);
 }
 
@@ -4548,113 +3709,12 @@ async function insertImage() {
         return;
     }
 
-    const url = await showCustomPrompt("Insert Image", "Enter image URL:", "https://");
+    const url = await showTextPrompt("Insert Image", "Enter image URL:", "https://");
     if (url) insertTextAtCursor('![', `](${formatMarkdownDestination(url)})`);
 }
 
 function insertCodeBlock() {
     insertTextAtCursor('\n\`\`\`\n', '\n\`\`\`\n');
-}
-
-export function showTablePicker() {
-    return new Promise((resolve) => {
-        let rows = 0;
-        let cols = 0;
-        const maxRows = 10;
-        const maxCols = 10;
-
-        el.modalTitle.textContent = "Insert Table";
-        el.modalMessage.textContent = "Select table size (Rows x Columns).";
-        el.modalInputGroup.classList.add('hidden');
-        el.modalOptionGrid.classList.add('hidden');
-        el.modalEmojiContainer.classList.add('hidden');
-        el.modalTableContainer.classList.remove('hidden');
-        el.modalOverlay.classList.remove('hidden');
-
-        const grid = el.modalTableGrid;
-        grid.innerHTML = '';
-        for (let r = 1; r <= maxRows; r++) {
-            for (let c = 1; c <= maxCols; c++) {
-                const cell = document.createElement('div');
-                cell.className = 'table-grid-cell';
-                cell.dataset.row = r;
-                cell.dataset.col = c;
-                grid.appendChild(cell);
-            }
-        }
-
-        const updateHighlight = (r, c) => {
-            rows = r;
-            cols = c;
-            const cells = grid.querySelectorAll('.table-grid-cell');
-            cells.forEach(cell => {
-                const cr = parseInt(cell.dataset.row);
-                const cc = parseInt(cell.dataset.col);
-                cell.classList.toggle('highlighted', cr <= rows && cc <= cols);
-            });
-            el.modalTableInfo.textContent = `${rows} x ${cols} Table`;
-        };
-
-        const handleMouseOver = (e) => {
-            const cell = e.target.closest('.table-grid-cell');
-            if (cell) {
-                updateHighlight(parseInt(cell.dataset.row), parseInt(cell.dataset.col));
-            }
-        };
-
-        const handleClick = (e) => {
-            if (rows > 0 && cols > 0) {
-                cleanup();
-                resolve({ rows, cols });
-            }
-        };
-
-        const handleKeyDown = (e) => {
-            if (e.key === 'ArrowRight') {
-                updateHighlight(rows, Math.min(cols + 1, maxCols));
-                e.preventDefault();
-            } else if (e.key === 'ArrowLeft') {
-                updateHighlight(rows, Math.max(cols - 1, 1));
-                e.preventDefault();
-            } else if (e.key === 'ArrowDown') {
-                updateHighlight(Math.min(rows + 1, maxRows), cols);
-                e.preventDefault();
-            } else if (e.key === 'ArrowUp') {
-                updateHighlight(Math.max(rows - 1, 1), cols);
-                e.preventDefault();
-            } else if (e.key === 'Enter' || e.key === ' ') {
-                if (rows > 0 && cols > 0) {
-                    cleanup();
-                    resolve({ rows, cols });
-                }
-                e.preventDefault();
-            } else if (e.key === 'Escape') {
-                handleCancelClick();
-                e.preventDefault();
-            }
-        };
-
-        const handleCancelClick = () => {
-            cleanup();
-            resolve(null);
-        };
-
-        const cleanup = () => {
-            el.modalOverlay.classList.add('hidden');
-            el.modalTableContainer.classList.add('hidden');
-            grid.removeEventListener('mouseover', handleMouseOver);
-            grid.removeEventListener('click', handleClick);
-            el.modalBtnCancel.removeEventListener('click', handleCancelClick);
-            document.removeEventListener('keydown', handleKeyDown, true);
-        };
-
-        grid.addEventListener('mouseover', handleMouseOver);
-        grid.addEventListener('click', handleClick);
-        el.modalBtnCancel.addEventListener('click', handleCancelClick);
-        document.addEventListener('keydown', handleKeyDown, true);
-
-        updateHighlight(3, 3);
-    });
 }
 
 async function insertTable() {
@@ -4698,7 +3758,7 @@ async function insertDivWrapper() {
         { value: 'bottom-right', label: 'Bottom right', previewIndex: 8 },
     ], 'center');
     if (!align) return;
-    const width = await showCustomPrompt("DIV Wrapper", "Width (e.g. 100%, 400px):", "100%");
+    const width = await showTextPrompt("DIV Wrapper", "Width (e.g. 100%, 400px):", "100%");
     if (!width) return;
 
     const alignMap = {
@@ -4717,369 +3777,6 @@ async function insertDivWrapper() {
     const style = `display: grid; width: ${width}; place-items: ${selectedAlign.placeItems}; text-align: ${selectedAlign.textAlign};`;
 
     insertTextAtCursor(`<div style="${style}">\n`, '\n</div>');
-}
-
-// ── Custom Prompt Modal ────────────────────────────────────
-export function showCustomPrompt(title, message, defaultValue = "") {
-    return showTextPrompt(title, message, defaultValue);
-}
-
-export function showOptionGridPrompt(title, message, options, defaultValue = "") {
-    return new Promise((resolve) => {
-        const normalizedOptions = Array.isArray(options) ? options.filter(Boolean) : [];
-        if (normalizedOptions.length === 0) {
-            resolve(null);
-            return;
-        }
-
-        let selectedIndex = Math.max(0, normalizedOptions.findIndex(option => option.value === defaultValue));
-
-        const renderOptionCell = (option, index) => {
-            const targetIndex = Math.max(0, Math.min(8, Number(option.previewIndex) || 4));
-            const dots = Array.from({ length: 9 }, (_, dotIndex) => `
-                <span class="modal-option-dot ${dotIndex === targetIndex ? 'is-target' : ''}"></span>
-            `).join('');
-            return `
-                <button
-                    type="button"
-                    class="modal-option-cell ${index === selectedIndex ? 'active' : ''}"
-                    data-option-index="${index}"
-                    aria-label="${option.label}"
-                >
-                    <span class="modal-option-preview" aria-hidden="true">${dots}</span>
-                </button>
-            `;
-        };
-
-        const syncActiveState = () => {
-            el.modalOptionGrid.querySelectorAll('.modal-option-cell').forEach((node, index) => {
-                node.classList.toggle('active', index === selectedIndex);
-            });
-        };
-
-        const moveSelection = (deltaRow, deltaCol) => {
-            const row = Math.floor(selectedIndex / 3);
-            const col = selectedIndex % 3;
-            const nextRow = Math.max(0, Math.min(2, row + deltaRow));
-            const nextCol = Math.max(0, Math.min(2, col + deltaCol));
-            selectedIndex = nextRow * 3 + nextCol;
-            syncActiveState();
-        };
-
-        const confirmSelection = () => {
-            const selected = normalizedOptions[selectedIndex];
-            cleanup();
-            resolve(selected?.value ?? null);
-        };
-
-        const cancelSelection = () => {
-            cleanup();
-            resolve(null);
-        };
-
-        const handleGridClick = event => {
-            const button = event.target.closest('.modal-option-cell');
-            if (!button) return;
-            selectedIndex = Number(button.dataset.optionIndex) || 0;
-            confirmSelection();
-        };
-
-        const handleKey = event => {
-            if (event.key === 'ArrowUp') {
-                event.preventDefault();
-                moveSelection(-1, 0);
-                return;
-            }
-            if (event.key === 'ArrowDown') {
-                event.preventDefault();
-                moveSelection(1, 0);
-                return;
-            }
-            if (event.key === 'ArrowLeft') {
-                event.preventDefault();
-                moveSelection(0, -1);
-                return;
-            }
-            if (event.key === 'ArrowRight') {
-                event.preventDefault();
-                moveSelection(0, 1);
-                return;
-            }
-            if (event.key === 'Enter') {
-                event.preventDefault();
-                confirmSelection();
-                return;
-            }
-            if (event.key === 'Escape') {
-                event.preventDefault();
-                cancelSelection();
-            }
-        };
-
-        const cleanup = () => {
-            el.modalOverlay.classList.add('hidden');
-            el.modalOptionGrid.removeEventListener('click', handleGridClick);
-            document.removeEventListener('keydown', handleKey, true);
-            el.modalBtnOk.removeEventListener('click', confirmSelection);
-            el.modalBtnCancel.removeEventListener('click', cancelSelection);
-            el.modalBtnOk.classList.remove('hidden');
-        };
-
-        el.modalTitle.textContent = title;
-        el.modalMessage.textContent = message;
-        el.modalOptionGrid.innerHTML = normalizedOptions.map(renderOptionCell).join('');
-        el.modalOverlay.classList.remove('hidden');
-        el.modalInputGroup.classList.add('hidden');
-        el.modalOptionGrid.classList.remove('hidden');
-        el.modalEmojiContainer.classList.add('hidden');
-        el.modalBtnOk.classList.remove('hidden');
-
-        syncActiveState();
-
-        el.modalOptionGrid.addEventListener('click', handleGridClick);
-        document.addEventListener('keydown', handleKey, true);
-        el.modalBtnOk.addEventListener('click', confirmSelection);
-        el.modalBtnCancel.addEventListener('click', cancelSelection);
-    });
-}
-
-const emojiData = [
-    {
-        name: "GitHub",
-        emojis: ["👍", "👎", "😄", "🎉", "😕", "❤️", "🚀", "👀", "✅", "❌", "📝", "💡", "⚠️", "⭐", "✨"]
-    },
-    {
-        name: "Smileys",
-        emojis: [
-            "😀", "😃", "😄", "😁", "😅", "🤣", "😂", "🙂", "🙃", "😉", "😊", "😇", "🥰", "😍", "🤩", "😘", "😋", "😛", "😜", "🤪",
-            "🤨", "🧐", "🤓", "😎", "🤩", "🥳", "😏", "😒", "😞", "😔", "😟", "😕", "🙁", "☹️", "😣", "😖", "😫", "😩", "🥺",
-            "😢", "😭", "😤", "😠", "😡", "🤬", "🤯", "😳", "🥵", "🥶", "😱", "😨", "😰", "😥", "😓", "🤗", "🤔", "🤭", "🤫",
-            "🤥", "😶", "😐", "😑", "😬", "🙄", "😯", "😦", "😧", "😮", "😲", "🥱", "😴", "🤤", "😪", "😵", "🤐", "🥴", "🤢",
-            "🤮", "🤧", "😷", "🤒", "🤕"
-        ]
-    },
-    {
-        name: "People",
-        emojis: [
-            "👋", "🤚", "🖐️", "✋", "🖖", "👌", "🤌", "🤏", "✌️", "🤞", "🤟", "🤘", "🤙", "👈", "👉", "👆", "🖕", "👇", "☝️",
-            "👍", "👎", "✊", "👊", "🤛", "🤜", "👏", "🙌", "👐", "🤲", "🤝", "🙏", "✍️", "💅", "🤳", "💪", "🦾", "🦵", "🦿",
-            "🦶", "👣", "👂", "🦻", "👃", "🧠", "🫀", "🫁", "🦷", "🦴", "👀", "👁️", "👅", "👄"
-        ]
-    },
-    {
-        name: "Animals",
-        emojis: [
-            "🐶", "🐱", "🐭", "🐹", "🐰", "🦊", "🐻", "🐼", "🐻‍❄️", "🐨", "🐯", "🦁", "🐮", "🐷", "🐽", "🐸", "🐵", "🙈", "🙉",
-            "🙊", "🐒", "🐔", "🐧", "🐦", "🐤", "🐣", "🐥", "🦆", "🦅", "🦉", "🦇", "🐺", "🐗", "🐴", "🦄", "🐝", "🪱", "🐛",
-            "🦋", "🐌", "🐞", "🐜", "🪰", "🪲", "🪳", "🦟", "🦗", "🕷️", "🕸️", "🦂", "🐢", "🐍", "🦎", "🦖", "🦕", "🐙", "🦑",
-            "🦐", "🦞", "🦀", "🐡", "🐠", "🐟", "🐬", "🐳", "🐋", "🦈", "🐊", "🐅", "🐆", "🦓", "🦍", "🦧", "🐘", "🦛", "🦏",
-            "🐪", "🐫", "🦒", "🦘", "🦬", "🐃", "🐂", "🐄", "🐎", "🐖", "🐏", "🐑", "🐐", "🦌", "🐕", "🐩", "🦮", "🐕‍🦺", "🐈",
-            "🐈‍⬛", "🐓", "🦃", "🦚", "🦜", "🦢", "🦩", "🕊️", "🐇", "🦝", "🦨", "🦡", "🦦", "🦥", "🐁", "🐀", "🐿️", "🦔"
-        ]
-    },
-    {
-        name: "Food",
-        emojis: [
-            "🍏", "🍎", "🍐", "🍊", "🍋", "🍌", "🍉", "🍇", "🍓", "🫐", "🍈", "🍒", "🍑", "🥭", "🍍", "🥥", "🥝", "🍅", "🍆",
-            "🥑", "🥦", "🥬", "🥒", "🌶️", "🫑", "🌽", "🥕", "🫒", "🧄", "🧅", "🥔", "🍠", "🥐", "🥯", "🍞", "🥖", "🥨", "🧀",
-            "🥚", "🍳", "🧈", "🥞", "🧇", "🥓", "🥩", "🍗", "🍖", "🦴", "🌭", "🍔", "🍟", "🍕", "🫓", "🥪", "🥙", "🧆", "🌮",
-            "🌯", "🫔", "🥗", "🥘", "🫕", "🥣", "🍝", "🍜", "🍲", "🍛", "🍣", "🍱", "🥟", "🦪", "🍤", "🍙", "🍚", "🍘", "🍥",
-            "🥠", "🥮", "🍢", "🍡", "🍧", "🍨", "🍦", "🥧", "🧁", "🍰", "🎂", "🍮", "🍭", "🍬", "🍫", "🍿", "🍩", "🍪", "🌰",
-            "🥜", "🍯", "🥛", "🍼", "☕", "🍵", "🧃", "🥤", "🧋", "🍶", "🍺", "🍻", "🥂", "🍷", "🥃", "🍸", "🍹", "🧉", "🍾",
-            "🧊", "🥄", "🍴", "🍽️", "🥣", "🥡", "🥢", "🧂"
-        ]
-    },
-    {
-        name: "Devices",
-        emojis: [
-            "💻", "🖥️", "⌨️", "🖱️", "🖲️", "🖨️", "📱", "📲", "☎️", "📞", "📟", "📠",
-            "🔋", "🪫", "🔌", "💡", "🔦", "🧮", "📷", "📸", "📹", "🎥", "📽️", "📺",
-            "📻", "🎙️", "🎚️", "🎛️", "🎧", "🎤", "💾", "💿", "📀", "💽", "📼", "📡",
-            "⌚", "⏰", "⏱️", "⏲️", "🧭", "🛰️", "🤖", "🦾", "🦿", "🎮", "🕹️", "👾",
-            "⚙️", "🔧", "🔩", "🛠️", "🪛", "🔬", "🔭", "🧲"
-        ]
-    },
-    {
-        name: "Symbols",
-        emojis: [
-            "❤️", "🧡", "💛", "💚", "💙", "💜", "🖤", "🤍", "🤎", "💔", "❣️", "💕", "💞", "💓", "💗", "💖", "💘", "💝", "💟",
-            "☮️", "✝️", "☪️", "🕉️", "☸️", "✡️", "🔯", "🕎", "☯️", "☦️", "🛐", "⛎", "♈", "♉", "♊", "♋", "♌", "♍", "♎",
-            "♏", "♐", "♑", "♒", "♓", "🆔", "⚛️", "🉑", "☢️", "☣️", "📴", "📳", "🈶", "🈚", "🈸", "🈺", "🈷️", "✴️", "🆚",
-            "💮", "🉐", "㊙️", "㊗️", "🈴", "🈵", "🈹", "🈲", "🅰️", "🅱️", "🆑", "🅾️", "🆘", "❌", "⭕", "🛑", "⛔", "📛", "🚫",
-            "💯", "💢", "♨️", "🚷", "🚯", "🚳", "🚱", "🔞", "📵", "🚭", "❗", "❕", "❓", "❔", "‼️", "⁉️", "🔅", "🔆", "〽️",
-            "⚠️", "🚸", "🔱", "⚜️", "🔰", "♻️", "✅", "🈯", "💹", "❇️", "✳️", "❎", "🌐", "💠", "Ⓜ️", "🌀", "💤", "🏧", "🚾",
-            "♿", "🅿️", "🈳", "🈂️", "🛂", "🛃", "🛄", "🛅", "🚹", "🚺", "🚼", "⚧️", "🚻", "🚮", "🎦", "📶", "🈁", "🔣", "ℹ️",
-            "🔤", "🔡", "🔠", "🆖", "🆗", "🆙", "🆒", "🆕", "🆓", "0️⃣", "1️⃣", "2️⃣", "3️⃣", "4️⃣", "5️⃣", "6️⃣", "7️⃣", "8️⃣",
-            "9️⃣", "🔟", "🔢", "#️⃣", "*️⃣", "⏏️", "▶️", "⏸️", "⏯️", "⏹️", "⏺️", "⏭️", "⏮️", "⏩", "⏪", "⏫", "⏬", "◀️", "🔼",
-            "🔽", "➡️", "⬅️", "⬆️", "⬇️", "↗️", "↘️", "↙️", "↖️", "↕️", "↔️", "↪️", "↩️", "⤴️", "⤵️", "🔀", "🔁", "🔂", "🔄",
-            "🔃", "🎵", "🎶", "➕", "➖", "➗", "✖️", "♾️", "💲", "💱", "™️", "©️", "®️", "🔚", "🔙", "🔛", "🔝", "🔜", "〰️",
-            "➰", "➿", "✔️", "☑️", "🔘", "🔴", "🟠", "🟡", "🟢", "🔵", "🟣", "⚫", "⚪", "🟤", "🔺", "🔻", "🔸", "🔹", "🔶",
-            "🔷", "🔳", "🔲", "▪️", "▫️", "◾", "◽", "◼️", "◻️", "🟥", "🟧", "🟨", "🟩", "🟦", "🟪", "⬛", "⬜", "🟫", "🔈",
-            "🔇", "🔉", "🔊", "🔔", "🔕", "📣", "📢", "💬", "💭", "🗯️", "♠️", "♣️", "♥️", "♦️", "🃏", "🎴", "🀄"
-        ]
-    }
-];
-
-export function showEmojiPicker() {
-    return new Promise((resolve) => {
-        let currentCategoryIndex = 0;
-        let selectedEmojiIndex = -1;
-
-        el.modalTitle.textContent = "Select Emoji";
-        el.modalMessage.textContent = "Browse categories and select an emoji to insert.";
-        el.modalInputGroup.classList.add('hidden');
-        el.modalOptionGrid.classList.add('hidden');
-        el.modalEmojiContainer.classList.remove('hidden');
-        el.modalEmojiGrid.classList.remove('hidden');
-        el.modalOverlay.classList.remove('hidden');
-
-        const renderCategories = () => {
-            el.modalEmojiCategories.innerHTML = emojiData.map((cat, idx) => `
-                <button class="emoji-category-btn ${idx === currentCategoryIndex ? 'active' : ''}" 
-                        data-index="${idx}" tabindex="0">${cat.name}</button>
-            `).join('');
-        };
-
-        const renderEmojis = () => {
-            const emojis = emojiData[currentCategoryIndex].emojis;
-            el.modalEmojiGrid.innerHTML = emojis.map((emoji, idx) => `
-                <div class="emoji-item ${idx === selectedEmojiIndex ? 'selected' : ''}" 
-                     data-emoji="${emoji}" data-index="${idx}" tabindex="0">${emoji}</div>
-            `).join('');
-        };
-
-        const updateSelection = () => {
-            const items = el.modalEmojiGrid.querySelectorAll('.emoji-item');
-            items.forEach((item, idx) => {
-                item.classList.toggle('selected', idx === selectedEmojiIndex);
-                if (idx === selectedEmojiIndex) {
-                    item.focus();
-                    item.scrollIntoView({ block: 'nearest' });
-                }
-            });
-        };
-
-        const handleCategoryClick = (e) => {
-            const btn = e.target.closest('.emoji-category-btn');
-            if (btn) {
-                currentCategoryIndex = parseInt(btn.dataset.index);
-                selectedEmojiIndex = -1;
-                renderCategories();
-                renderEmojis();
-            }
-        };
-
-        const handleEmojiClick = (e) => {
-            const item = e.target.closest('.emoji-item');
-            if (item) {
-                const emoji = item.dataset.emoji;
-                cleanup();
-                resolve(emoji);
-            }
-        };
-
-        const handleKeyDown = (e) => {
-            const emojis = emojiData[currentCategoryIndex].emojis;
-            const cols = 6;
-
-            if (e.key === 'Tab') {
-                // Let native tab handle focusing between categories and grid
-                return;
-            }
-
-            if (document.activeElement.classList.contains('emoji-category-btn')) {
-                if (e.key === 'ArrowRight') {
-                    currentCategoryIndex = (currentCategoryIndex + 1) % emojiData.length;
-                    renderCategories();
-                    renderEmojis();
-                    el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
-                    e.preventDefault();
-                } else if (e.key === 'ArrowLeft') {
-                    currentCategoryIndex = (currentCategoryIndex - 1 + emojiData.length) % emojiData.length;
-                    renderCategories();
-                    renderEmojis();
-                    el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
-                    e.preventDefault();
-                } else if (e.key === 'ArrowDown') {
-                    selectedEmojiIndex = 0;
-                    updateSelection();
-                    e.preventDefault();
-                }
-            } else if (document.activeElement.classList.contains('emoji-item') || selectedEmojiIndex >= 0) {
-                if (selectedEmojiIndex === -1) selectedEmojiIndex = 0;
-
-                if (e.key === 'ArrowRight') {
-                    selectedEmojiIndex = (selectedEmojiIndex + 1) % emojis.length;
-                    updateSelection();
-                    e.preventDefault();
-                } else if (e.key === 'ArrowLeft') {
-                    selectedEmojiIndex = (selectedEmojiIndex - 1 + emojis.length) % emojis.length;
-                    updateSelection();
-                    e.preventDefault();
-                } else if (e.key === 'ArrowDown') {
-                    if (selectedEmojiIndex + cols < emojis.length) {
-                        selectedEmojiIndex += cols;
-                    } else {
-                        // Stay on last row? Or wrap?
-                    }
-                    updateSelection();
-                    e.preventDefault();
-                } else if (e.key === 'ArrowUp') {
-                    if (selectedEmojiIndex - cols >= 0) {
-                        selectedEmojiIndex -= cols;
-                    } else {
-                        // Go back to categories?
-                        selectedEmojiIndex = -1;
-                        renderEmojis();
-                        el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
-                    }
-                    updateSelection();
-                    e.preventDefault();
-                } else if (e.key === 'Enter' || e.key === ' ') {
-                    const emoji = emojis[selectedEmojiIndex];
-                    if (emoji) {
-                        cleanup();
-                        resolve(emoji);
-                    }
-                    e.preventDefault();
-                }
-            }
-
-            if (e.key === 'Escape') {
-                handleCancelClick();
-                e.preventDefault();
-            }
-        };
-
-        const handleCancelClick = () => {
-            cleanup();
-            resolve(null);
-        };
-
-        const cleanup = () => {
-            el.modalOverlay.classList.add('hidden');
-            el.modalEmojiContainer.classList.add('hidden');
-            el.modalEmojiCategories.removeEventListener('click', handleCategoryClick);
-            el.modalEmojiGrid.removeEventListener('click', handleEmojiClick);
-            el.modalBtnCancel.removeEventListener('click', handleCancelClick);
-            document.removeEventListener('keydown', handleKeyDown, true);
-            el.modalBtnOk.classList.remove('hidden');
-        };
-
-        el.modalBtnOk.classList.add('hidden');
-        renderCategories();
-        renderEmojis();
-
-        el.modalEmojiCategories.addEventListener('click', handleCategoryClick);
-        el.modalEmojiGrid.addEventListener('click', handleEmojiClick);
-        el.modalBtnCancel.addEventListener('click', handleCancelClick);
-        document.addEventListener('keydown', handleKeyDown, true);
-
-        // Initial focus
-        setTimeout(() => {
-            el.modalEmojiCategories.querySelectorAll('.emoji-category-btn')[currentCategoryIndex].focus();
-        }, 10);
-    });
 }
 
 // ── Editor Event Bindings ──────────────────────────────────
@@ -5143,7 +3840,7 @@ function bindToolbarPopupEvents() {
 }
 
 export function bindEditorEvents() {
-    bindEditorPaneSplitter();
+    bindEditorPaneSplitter({ syncPreviewScroll: schedulePreviewScrollSync, hideLinkTooltip });
     bindSlashMenuEvents();
     bindTranslationProgressEvents();
     bindToolbarPopupEvents();
@@ -5264,352 +3961,6 @@ function insertPageInfoFrontMatter() {
     });
     cmView.focus();
     showToast('Page Info inserted. Click the draft value to toggle it.');
-}
-
-function bindEditorPaneSplitter() {
-    const splitter = el.editorPaneSplitter;
-    const container = el.documentArea;
-    if (!splitter || !container) return;
-
-    let splitMode = DEFAULT_EDITOR_SPLIT_MODE;
-    const splitPercent = {
-        horizontal: DEFAULT_EDITOR_PANE_PERCENT,
-        vertical: DEFAULT_EDITOR_PANE_PERCENT,
-    };
-    const previewFirst = {
-        horizontal: false,
-        vertical: true,
-    };
-    let isPreviewVisible = true;
-    try {
-        splitMode = normalizeEditorSplitMode(localStorage.getItem(EDITOR_SPLIT_MODE_STORAGE_KEY));
-        splitPercent.horizontal = normalizeEditorPanePercent(
-            localStorage.getItem(EDITOR_PANE_PERCENT_STORAGE_KEY)
-        );
-        splitPercent.vertical = normalizeEditorPanePercent(
-            localStorage.getItem(EDITOR_VERTICAL_PANE_PERCENT_STORAGE_KEY)
-        );
-        previewFirst.horizontal = readStoredBoolean(
-            EDITOR_HORIZONTAL_PREVIEW_FIRST_STORAGE_KEY,
-            false
-        );
-        previewFirst.vertical = readStoredBoolean(
-            EDITOR_VERTICAL_PREVIEW_FIRST_STORAGE_KEY,
-            true
-        );
-    } catch {
-        // localStorage can be unavailable in restricted browser contexts.
-    }
-
-    let activePointerId = null;
-    let pendingPointerPosition = null;
-    let resizeFrame = 0;
-
-    const applySplitPercent = value => {
-        const percent = normalizeEditorPanePercent(value);
-        splitPercent[splitMode] = percent;
-        container.style.setProperty('--editor-split-position', `${percent}%`);
-
-        const roundedPercent = Math.round(percent * 10) / 10;
-        const trailingPercent = Math.round((100 - percent) * 10) / 10;
-        const firstPane = previewFirst[splitMode] ? 'Preview' : 'Editor';
-        const secondPane = previewFirst[splitMode] ? 'editor' : 'preview';
-        splitter.setAttribute('aria-valuenow', String(roundedPercent));
-        splitter.setAttribute(
-            'aria-valuetext',
-            `${firstPane} ${roundedPercent}%, ${secondPane} ${trailingPercent}%`
-        );
-        return percent;
-    };
-
-    const updateSplitControls = () => {
-        const isVertical = splitMode === 'vertical';
-        container.classList.toggle('editor-split-horizontal', !isVertical);
-        container.classList.toggle('editor-split-vertical', isVertical);
-        container.classList.toggle('editor-preview-first', previewFirst[splitMode]);
-        splitter.setAttribute('aria-orientation', isVertical ? 'horizontal' : 'vertical');
-        splitter.setAttribute(
-            'aria-label',
-            isVertical ? 'Resize preview and editor vertically' : 'Resize editor and preview horizontally'
-        );
-
-        if (el.edSplitDirectionIcon) {
-            el.edSplitDirectionIcon.textContent = isVertical ? 'split_scene' : 'split_scene_2';
-        }
-        if (el.edSplitDirection) {
-            const directionTitle = isVertical ? 'Switch to Horizontal Split' : 'Switch to Vertical Split';
-            el.edSplitDirection.title = directionTitle;
-            el.edSplitDirection.setAttribute('aria-label', directionTitle);
-        }
-        if (el.edSplitSwapIcon) {
-            el.edSplitSwapIcon.textContent = isVertical ? 'swap_vert' : 'swap_horiz';
-        }
-        if (el.edSplitSwap) {
-            const swapTitle = isVertical
-                ? 'Swap Top and Bottom Panes'
-                : 'Swap Left and Right Panes';
-            el.edSplitSwap.title = swapTitle;
-            el.edSplitSwap.setAttribute('aria-label', swapTitle);
-        }
-
-        applySplitPercent(splitPercent[splitMode]);
-
-        if (cmView) {
-            requestAnimationFrame(() => {
-                cmView.requestMeasure();
-                schedulePreviewScrollSync(cmView);
-                import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
-                    updateCustomVerticalScrollbars();
-                }).catch(() => {});
-            });
-        }
-    };
-
-    const updatePreviewToggle = () => {
-        container.classList.toggle('editor-preview-hidden', !isPreviewVisible);
-        el.edPreviewToggle?.classList.toggle('preview-off', !isPreviewVisible);
-        if (el.edPreviewToggleIcon) {
-            el.edPreviewToggleIcon.textContent = isPreviewVisible ? 'preview' : 'preview_off';
-        }
-        if (el.edPreviewToggle) {
-            const previewAction = isPreviewVisible ? 'Hide Preview' : 'Show Preview';
-            const previewTitle = `${previewAction} (${isMacOS() ? '⌘G' : 'Ctrl+G'})`;
-            el.edPreviewToggle.title = previewTitle;
-            el.edPreviewToggle.setAttribute('aria-label', previewAction);
-            el.edPreviewToggle.setAttribute('aria-pressed', String(isPreviewVisible));
-        }
-        if (!isPreviewVisible && el.contentViewScrollbar) {
-            el.contentViewScrollbar.classList.remove('is-overflowing', 'is-active');
-        }
-        requestAnimationFrame(() => {
-            cmView?.requestMeasure();
-            import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
-                updateCustomVerticalScrollbars();
-            }).catch(() => {});
-        });
-    };
-
-    updateSplitControls();
-    updatePreviewToggle();
-    setEditorPreviewVisibleFn = (visible) => {
-        if (isPreviewVisible === visible) return;
-        isPreviewVisible = visible;
-        updatePreviewToggle();
-    };
-
-    const positionTooltip = event => {
-        const tooltip = el.linkTooltip;
-        if (!tooltip || tooltip.classList.contains('hidden')) return;
-
-        const padding = 8;
-        const gap = 12;
-        const tooltipRect = tooltip.getBoundingClientRect();
-        const left = Math.min(
-            Math.max(padding, event.clientX - (tooltipRect.width / 2)),
-            window.innerWidth - tooltipRect.width - padding
-        );
-        let top = event.clientY - tooltipRect.height - gap;
-        if (top < padding) {
-            top = Math.min(event.clientY + gap, window.innerHeight - tooltipRect.height - padding);
-        }
-
-        tooltip.style.left = `${left}px`;
-        tooltip.style.top = `${top}px`;
-    };
-
-    const showTooltip = event => {
-        if (!el.linkTooltip || activePointerId !== null) return;
-        hideLinkTooltip();
-        const resizeArrow = splitMode === 'vertical' ? '↕' : '↔';
-        el.linkTooltip.innerHTML = `${resizeArrow} Drag to resize<br>Double-click: Reset`;
-        el.linkTooltip.classList.remove('hidden');
-        positionTooltip(event);
-    };
-
-    const updateFromPointer = pointer => {
-        const bounds = container.getBoundingClientRect();
-        const isVertical = splitMode === 'vertical';
-        const pointerPosition = isVertical ? pointer.clientY : pointer.clientX;
-        const containerStart = isVertical ? bounds.top : bounds.left;
-        const containerSize = isVertical ? bounds.height : bounds.width;
-        applySplitPercent(editorSplitPercentFromPosition(
-            pointerPosition,
-            containerStart,
-            containerSize
-        ));
-    };
-
-    const flushPendingResize = () => {
-        resizeFrame = 0;
-        if (!pendingPointerPosition) return;
-        updateFromPointer(pendingPointerPosition);
-        pendingPointerPosition = null;
-    };
-
-    const finishResize = event => {
-        if (activePointerId === null || event.pointerId !== activePointerId) return;
-        if (resizeFrame) {
-            cancelAnimationFrame(resizeFrame);
-            resizeFrame = 0;
-        }
-        if (pendingPointerPosition) {
-            updateFromPointer(pendingPointerPosition);
-            pendingPointerPosition = null;
-        }
-        activePointerId = null;
-        document.body.classList.remove(
-            'editor-split-is-resizing-horizontal',
-            'editor-split-is-resizing-vertical'
-        );
-        splitter.classList.remove('is-resizing');
-        splitter.blur();
-        persistEditorSplitPercent(splitMode, splitPercent[splitMode]);
-        requestAnimationFrame(() => {
-            cmView?.requestMeasure();
-            if (cmView) {
-                schedulePreviewScrollSync(cmView);
-            }
-            import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
-                updateCustomVerticalScrollbars();
-            }).catch(() => {});
-        });
-    };
-
-    splitter.addEventListener('pointerdown', event => {
-        if (event.button !== 0 || activePointerId !== null) return;
-        hideLinkTooltip();
-        activePointerId = event.pointerId;
-        splitter.setPointerCapture?.(event.pointerId);
-        document.body.classList.add(`editor-split-is-resizing-${splitMode}`);
-        splitter.classList.add('is-resizing');
-        updateFromPointer(event);
-        event.preventDefault();
-    });
-
-    splitter.addEventListener('pointermove', event => {
-        if (activePointerId === null) {
-            positionTooltip(event);
-            return;
-        }
-        if (event.pointerId !== activePointerId) return;
-        pendingPointerPosition = { clientX: event.clientX, clientY: event.clientY };
-        if (!resizeFrame) {
-            resizeFrame = requestAnimationFrame(flushPendingResize);
-        }
-    });
-    splitter.addEventListener('pointerup', finishResize);
-    splitter.addEventListener('pointercancel', finishResize);
-    splitter.addEventListener('pointerenter', showTooltip);
-    splitter.addEventListener('pointerleave', hideLinkTooltip);
-    splitter.addEventListener('lostpointercapture', event => {
-        if (event.pointerId === activePointerId) finishResize(event);
-    });
-
-    splitter.addEventListener('dblclick', () => {
-        applySplitPercent(DEFAULT_EDITOR_PANE_PERCENT);
-        persistEditorSplitPercent(splitMode, DEFAULT_EDITOR_PANE_PERCENT);
-        requestAnimationFrame(() => {
-            cmView?.requestMeasure();
-            if (cmView) {
-                schedulePreviewScrollSync(cmView);
-            }
-            import('./main-settings.js').then(({ updateCustomVerticalScrollbars }) => {
-                updateCustomVerticalScrollbars();
-            }).catch(() => {});
-        });
-    });
-
-    splitter.addEventListener('keydown', event => {
-        const currentPercent = splitPercent[splitMode];
-        const step = event.shiftKey ? 10 : 2;
-        let nextPercent = null;
-        if (splitMode === 'horizontal' && event.key === 'ArrowLeft') nextPercent = currentPercent - step;
-        if (splitMode === 'horizontal' && event.key === 'ArrowRight') nextPercent = currentPercent + step;
-        if (splitMode === 'vertical' && event.key === 'ArrowUp') nextPercent = currentPercent - step;
-        if (splitMode === 'vertical' && event.key === 'ArrowDown') nextPercent = currentPercent + step;
-        if (event.key === 'Home') nextPercent = 20;
-        if (event.key === 'End') nextPercent = 80;
-        if (nextPercent === null) return;
-
-        const normalizedPercent = applySplitPercent(nextPercent);
-        persistEditorSplitPercent(splitMode, normalizedPercent);
-        event.preventDefault();
-    });
-
-    if (el.edSplitDirection) {
-        el.edSplitDirection.onclick = () => {
-            hideLinkTooltip();
-            splitMode = splitMode === 'horizontal' ? 'vertical' : 'horizontal';
-            updateSplitControls();
-            persistEditorSplitMode(splitMode);
-        };
-    }
-    if (el.edSplitSwap) {
-        el.edSplitSwap.onclick = () => {
-            hideLinkTooltip();
-            previewFirst[splitMode] = !previewFirst[splitMode];
-            updateSplitControls();
-            persistEditorPreviewFirst(splitMode, previewFirst[splitMode]);
-        };
-    }
-    if (el.edPreviewToggle) {
-        el.edPreviewToggle.onclick = () => {
-            hideLinkTooltip();
-            isPreviewVisible = !isPreviewVisible;
-            updatePreviewToggle();
-        };
-    }
-}
-
-export function toggleEditorPreview() {
-    if (!state.isEditing || !el.edPreviewToggle) return false;
-    el.edPreviewToggle.click();
-    return true;
-}
-
-export function setEditorPreviewVisible(visible) {
-    if (typeof setEditorPreviewVisibleFn === 'function') {
-        setEditorPreviewVisibleFn(visible);
-        return true;
-    }
-    const container = el.documentArea;
-    if (container) {
-        container.classList.toggle('editor-preview-hidden', !visible);
-    }
-    return false;
-}
-
-function readStoredBoolean(key, fallback) {
-    const storedValue = localStorage.getItem(key);
-    if (storedValue === 'true') return true;
-    if (storedValue === 'false') return false;
-    return fallback;
-}
-
-function persistEditorSplitMode(mode) {
-    persistEditorSplitSetting(EDITOR_SPLIT_MODE_STORAGE_KEY, normalizeEditorSplitMode(mode));
-}
-
-function persistEditorSplitPercent(mode, value) {
-    const storageKey = mode === 'vertical'
-        ? EDITOR_VERTICAL_PANE_PERCENT_STORAGE_KEY
-        : EDITOR_PANE_PERCENT_STORAGE_KEY;
-    persistEditorSplitSetting(storageKey, normalizeEditorPanePercent(value));
-}
-
-function persistEditorPreviewFirst(mode, value) {
-    const storageKey = mode === 'vertical'
-        ? EDITOR_VERTICAL_PREVIEW_FIRST_STORAGE_KEY
-        : EDITOR_HORIZONTAL_PREVIEW_FIRST_STORAGE_KEY;
-    persistEditorSplitSetting(storageKey, !!value);
-}
-
-function persistEditorSplitSetting(key, value) {
-    try {
-        localStorage.setItem(key, String(value));
-    } catch {
-        // Keep the current layout even when persistence is unavailable.
-    }
 }
 
 export function scrollEditorToLine(lineNumber) {

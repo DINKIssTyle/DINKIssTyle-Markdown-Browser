@@ -2,18 +2,8 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import vm from 'node:vm';
+import { controller } from '../test-support/controller.mjs';
 
-// Run the actual controllers with native I/O and rendering replaced by
-// controllable promises, so races can be tested without a WebView.
-function controller(file, globals, exports, overrides = '') {
-    const source = fs.readFileSync(new URL(`../src/${file}`, import.meta.url), 'utf8')
-        .replace(/^import\s[\s\S]*?;\n/gm, '')
-        .replace(/^export /gm, '')
-        .replace(/import\.meta\.glob\([^;]+\)/g, '{}')
-        .replace(/\bimport\(/g, '__import(');
-    const context = vm.createContext({ console, setTimeout, clearTimeout, ...globals });
-    return vm.runInContext(`${source}\n${overrides}\n;({${exports.join(',')}})`, context);
-}
 function deferred() {
     let resolve;
     const promise = new Promise(r => { resolve = r; });
@@ -26,7 +16,7 @@ function navigation() {
     const reads = new Map();
     const recent = deferred();
     const api = controller('main-navigation.js', {
-        state, HOME_SCREEN_PATH: '__home__', normalizeFileURLPath: p => p, hideLinkTooltip() {},
+        state, syncEditorStateToBackend() {}, HOME_SCREEN_PATH: '__home__', normalizeFileURLPath: p => p, hideLinkTooltip() {},
         getActiveTab: () => state.tabs.find(t => t.id === state.activeTabId),
         syncTabFromGlobals(t) { Object.assign(t, { path: state.currentFilePath, currentMarkdownSource: state.currentMarkdownSource, navHistory: state.navHistory, navIndex: state.navIndex }); },
         renderTabs() {}, renderActiveTab: async () => {}, switchToTab: async id => { state.activeTabId = id; },
@@ -90,10 +80,10 @@ test('a refresh completing after navigation cannot replace the new document', as
 function tabsController(state, extra = {}) {
     const animation = deferred();
     const api = controller('main-tabs.js', {
-        state, HOME_SCREEN_PATH: '__home__', hasUnsavedEditorChanges: () => false, hasUnsavedTabChanges: () => false,
-        clearTransientEditorOverlays() {}, syncEditorSessionFromState() {}, __animateTabClose: () => animation.promise,
+        state, syncEditorStateToBackend() {}, HOME_SCREEN_PATH: '__home__', hasUnsavedEditorChanges: () => false, hasUnsavedTabChanges: () => false,
+        clearTransientEditorOverlays() {}, syncEditorSessionFromState() {}, __saveCurrentScroll() {}, normalizeFileURLPath: p => p.replace(/^file:\/\//, ''), __animateTabClose: () => animation.promise,
         __renderTabs() {}, __renderActiveTab: async () => {}, __syncGlobalsFromTab(t) { state.currentFilePath = t.path; }, ...extra,
-    }, ['closeTab'], 'animateTabClose = __animateTabClose; renderTabs = __renderTabs; renderActiveTab = __renderActiveTab; syncGlobalsFromTab = __syncGlobalsFromTab;');
+    }, ['closeTab', 'switchToTab', 'findTabByPath', 'moveTabToIndex'], 'saveCurrentScroll = __saveCurrentScroll; animateTabClose = __animateTabClose; renderTabs = __renderTabs; renderActiveTab = __renderActiveTab; syncGlobalsFromTab = __syncGlobalsFromTab;');
     return { ...api, animation };
 }
 test('closing A preserves C selected during its close animation', async () => {
@@ -232,4 +222,44 @@ test('each tab receives its own overlapping load result', async () => {
     assert.equal(h.a.currentMarkdownSource, 'first document');
     assert.equal(h.b.path, '/second.md');
     assert.equal(h.state.currentMarkdownSource, 'second document');
+});
+
+
+test('click and reorder activation preserve the outgoing session exactly once', async () => {
+    const state = { tabs: [tab('a'), tab('b'), tab('c')], activeTabId: 'a', isEditing: false };
+    let snapshots = 0, restored = 0;
+    const h = tabsController(state, {
+        __saveCurrentScroll() { snapshots++; },
+        syncEditorSessionFromState() { restored++; },
+    });
+    await h.switchToTab('b');
+    assert.equal(state.activeTabId, 'b');
+    await h.moveTabToIndex('c', 0);
+    assert.equal(state.activeTabId, 'c');
+    assert.deepEqual(state.tabs.map(t => t.id), ['c', 'a', 'b']);
+    assert.equal(snapshots, 2);
+    assert.equal(restored, 2);
+});
+
+test('path lookup reuses the editing source and closing tabs cannot be activated', async () => {
+    const state = { tabs: [{ ...tab('a'), editingSourcePath: '/source.md' }, tab('b')], activeTabId: 'b', isEditing: false };
+    const h = tabsController(state);
+    assert.equal(h.findTabByPath('file:///source.md'), state.tabs[0]);
+    assert.equal(h.findTabByPath('/missing.md'), null);
+    const closing = h.closeTab('a');
+    await h.switchToTab('a');
+    assert.equal(state.activeTabId, 'b');
+    h.animation.resolve();
+    await closing;
+});
+
+
+test('rendering the tab strip does not send session snapshots', () => {
+    let deliveries = 0;
+    const api = controller('main-tabs.js', {
+        state: { tabs: [], activeTabId: '' }, window: { innerWidth: 600 },
+        syncEditorStateToBackend() { deliveries++; },
+    }, ['renderTabs'], 'ensureTabDragBindings = () => {}; ensureMobileTabsModalBindings = () => {};');
+    api.renderTabs();
+    assert.equal(deliveries, 0);
 });

@@ -8,7 +8,6 @@
 package app
 
 import (
-	"fmt"
 	"log"
 	"os"
 	"path/filepath"
@@ -127,11 +126,6 @@ func persistIncomingDocument(sourcePath string) string {
 		}
 	}
 
-	// Fallback to cleanSource if it is already readable
-	if isReadableFile(cleanSource) {
-		return cleanSource
-	}
-
 	return cleanSource
 }
 
@@ -163,16 +157,4 @@ func resolvePersistedDocumentPath(savedPath string) string {
 func isInsideDir(parent, target string) bool {
 	rel, err := filepath.Rel(parent, target)
 	return err == nil && rel != "." && !filepath.IsAbs(rel) && rel != ".." && !strings.HasPrefix(rel, ".."+string(filepath.Separator))
-}
-
-func findAvailablePath(directory, fileName string) string {
-	ext := filepath.Ext(fileName)
-	base := strings.TrimSuffix(fileName, ext)
-	for i := 2; i < 1000; i++ {
-		candidate := filepath.Join(directory, fmt.Sprintf("%s %d%s", base, i, ext))
-		if _, err := os.Stat(candidate); os.IsNotExist(err) {
-			return candidate
-		}
-	}
-	return filepath.Join(directory, fileName)
 }

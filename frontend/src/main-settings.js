@@ -38,10 +38,6 @@ export function syncThemeSettingsControls() {
     }
 }
 
-export function collectThemeSettingsFromControls() {
-    state.themeMode = normalizeThemeMode(el.settingsThemeMode?.value);
-}
-
 export function normalizeScrollbarVisibility(value) {
     return SCROLLBAR_VISIBILITY_VALUES.has(value) ? value : 'always';
 }

@@ -10,16 +10,16 @@ import {
     collectMainToolbarSettingsFromControls,
     collectRestoreWindowStateFromControl,
     collectScrollbarSettingsFromControls,
-    collectThemeSettingsFromControls,
     persistAppSettings,
     syncMainToolbarSettingsControls,
     syncRestoreWindowStateControl,
     syncScrollbarSettingsControls,
-    syncThemeSettingsControls,
 } from './main-settings.js';
 import { GetSettings, MakeAIRequest, MakeLMStudioRequest, MakeAppleIntelligenceRequest, GetAppleIntelligenceStatus, GetAIModelCatalog, GetAIModelList, UnloadAIModel, CancelAIRequest, GetSystemFonts } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { EventsOn } from './wails-runtime';
-import { cmView, insertPlainTextAtCursor, EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
+import { cmView } from './editor-view.js';
+import { EDITOR_TOKEN_COLOR_FIELDS, EDITOR_TOKEN_COLOR_PRESETS, getEditorDefaultTokenColors, getEditorDefaultBackgroundColor, applyEditorTokenColors, applyEditorBackgroundColor } from './editor-appearance.js';
+import { insertPlainTextAtCursor, applyEditorToolbarMode, isSpellcheckActive } from './main-editor.js';
 import { beginProgressTask, finishProgressTask, showProgressDelta, showToast, updateProgress } from './main-ui.js';
 import { renderMarkdown } from './main-render.js';
 import { AI_SUPPORT_AGENT_POP_MS, AI_SUPPORT_AGENT_POP_ORIGIN, AI_SUPPORT_AGENT_POP_SCALE } from './config.js';
@@ -114,7 +114,6 @@ const SUPPORT_REPORT_MAX_CHARS = 600;
 const SUPPORT_AGENT_FALLBACK_REPORT = "Work is done, but I couldn't prepare an appropriate response. Please try again.";
 const AI_DOCK_FADE_MS = 180;
 const AI_DELTA_TICKER_INTERVAL_MS = 170;
-const AI_DELTA_TICKER_HIDE_MS = 850;
 const AI_DELTA_TICKER_COALESCE_MS = 220;
 const AI_DELTA_TICKER_MIN_CHARS = 18;
 const AI_DELTA_TICKER_MAX_QUEUE = 18;

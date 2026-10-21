@@ -9,7 +9,8 @@ import {
     syncEngineSelector, getPathDirname, getScroller, basename,
 } from './main-state.js';
 import { renderActiveTab } from './main-render.js';
-import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, getEditorSelectionSnapshot, getEditorStateSnapshot, getEditorTopLineSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState, syncEditorStateToBackend } from './main-editor.js';
+import { clearTransientEditorOverlays, exitEditMode, getEditorScrollSnapshot, getEditorSelectionSnapshot, getEditorStateSnapshot, getEditorTopLineSnapshot, hasUnsavedEditorChanges, hasUnsavedTabChanges, saveCurrentDocument, saveTabDocument, syncEditorSessionFromState } from './main-editor.js';
+import { syncEditorStateToBackend } from './main-session.js';
 import { openPath } from './main-navigation.js';
 import { showToast } from './main-ui.js';
 import { TAB_CLOSE_ANIMATION } from './config.js';
@@ -121,10 +122,10 @@ export function syncGlobalsFromTab(tab) {
 
 export function saveCurrentScroll() {
     const tab = getActiveTab();
-    if (!tab || state.navIndex < 0 || state.navIndex >= state.navHistory.length) {
-        return;
+    if (!tab) return;
+    if (state.navIndex >= 0 && state.navIndex < state.navHistory.length) {
+        state.navHistory[state.navIndex].scroll = getScroller().scrollTop;
     }
-    state.navHistory[state.navIndex].scroll = getScroller().scrollTop;
     if (state.isEditing) {
         state.editorScrollTop = getEditorScrollSnapshot();
         state.editorTopLine = getEditorTopLineSnapshot();
@@ -136,35 +137,31 @@ export function saveCurrentScroll() {
 
 // ── Tab Switching ──────────────────────────────────────────
 
+// All activation paths restore the same editor session and transient UI.
+function activateTab(tab, { preserveCurrent = true, renderDocument = true } = {}) {
+    clearTransientEditorOverlays();
+    if (preserveCurrent) saveCurrentScroll();
+    state.activeTabId = tab.id;
+    syncGlobalsFromTab(tab);
+    syncEditorSessionFromState();
+    syncEditorStateToBackend();
+    renderTabs();
+    return renderDocument ? renderActiveTab() : Promise.resolve();
+}
+
 export async function switchToTab(tabID) {
     const nextTab = state.tabs.find(tab => tab.id === tabID);
-    if (!nextTab || pendingCloseTabIds.has(tabID) || nextTab.id === state.activeTabId) {
-        return;
-    }
-    clearTransientEditorOverlays();
-    saveCurrentScroll();
-    state.activeTabId = nextTab.id;
-    syncGlobalsFromTab(nextTab);
-    syncEditorSessionFromState();
-    renderTabs();
-    await renderActiveTab();
+    if (!nextTab || pendingCloseTabIds.has(tabID) || nextTab.id === state.activeTabId) return;
+    await activateTab(nextTab);
 }
 
-export async function switchToTabByPath(path) {
-    if (!path) return false;
+export function findTabByPath(path) {
+    if (!path) return null;
     const normalized = normalizeFileURLPath(path);
-    const targetTab = state.tabs.find(tab => {
-        const tabPath = normalizeFileURLPath(tab.editingSourcePath || tab.path || "");
-        return tabPath === normalized;
-    });
-    if (targetTab) {
-        await switchToTab(targetTab.id);
-        return true;
-    }
-    return false;
+    return state.tabs.find(tab =>
+        normalizeFileURLPath(tab.editingSourcePath || tab.path || '') === normalized
+    ) || null;
 }
-
-// ── Tab Rendering ──────────────────────────────────────────
 
 function isPhoneScreen() {
     return window.innerWidth <= 768;
@@ -173,7 +170,6 @@ function isPhoneScreen() {
 // ── Tab Rendering ──────────────────────────────────────────
 
 export function renderTabs() {
-    syncEditorStateToBackend();
     ensureTabDragBindings();
     ensureMobileTabsModalBindings();
 
@@ -345,19 +341,10 @@ function beginPointerDrag(tabNode, event) {
     let sourceNode = tabNode;
 
     if (tabId !== state.activeTabId) {
-        const nextTab = state.tabs.find(tab => tab.id === tabId);
-        if (nextTab) {
-            clearTransientEditorOverlays();
-            saveCurrentScroll();
-            state.activeTabId = nextTab.id;
-            syncGlobalsFromTab(nextTab);
-            syncEditorSessionFromState();
-            renderTabs();
-            renderActiveTab().catch(error => {
-                console.error('Failed to render dragged tab:', error);
-            });
-            sourceNode = el.tabsList.querySelector(`[data-tab-id="${tabId}"]`);
-        }
+        switchToTab(tabId).catch(error => {
+            LogError(`Failed to activate dragged tab: ${error?.message || error}`);
+        });
+        sourceNode = el.tabsList.querySelector(`[data-tab-id="${tabId}"]`);
     }
 
     if (!sourceNode) {
@@ -541,7 +528,7 @@ function autoScrollTabs(clientX) {
 }
 
 async function moveTabToIndex(sourceTabID, insertionIndex) {
-    if (!sourceTabID) {
+    if (!sourceTabID || pendingCloseTabIds.has(sourceTabID)) {
         return;
     }
 
@@ -553,19 +540,14 @@ async function moveTabToIndex(sourceTabID, insertionIndex) {
     const [movedTab] = state.tabs.splice(sourceIndex, 1);
     const boundedIndex = Math.max(0, Math.min(insertionIndex, state.tabs.length));
     state.tabs.splice(boundedIndex, 0, movedTab);
+    syncEditorStateToBackend();
 
     if (state.activeTabId === movedTab.id) {
         renderTabs();
         return;
     }
 
-    clearTransientEditorOverlays();
-    saveCurrentScroll();
-    state.activeTabId = movedTab.id;
-    syncGlobalsFromTab(movedTab);
-    syncEditorSessionFromState();
-    renderTabs();
-    await renderActiveTab();
+    await switchToTab(movedTab.id);
 }
 
 // ── Tab Close ──────────────────────────────────────────────
@@ -612,25 +594,18 @@ export async function closeTab(tabID) {
             return;
         }
         state.tabs.splice(idx, 1);
+        syncEditorStateToBackend();
 
         if (state.tabs.length === 0) {
             const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
             state.tabs.push(freshTab);
-            state.activeTabId = freshTab.id;
-            syncGlobalsFromTab(freshTab);
-            renderTabs();
-            await renderActiveTab();
+            await activateTab(freshTab, { preserveCurrent: false });
             return;
         }
 
         if (state.activeTabId === tabID) {
-            clearTransientEditorOverlays();
             const fallback = state.tabs[Math.max(0, idx - 1)] || state.tabs[0];
-            state.activeTabId = fallback.id;
-            syncGlobalsFromTab(fallback);
-            syncEditorSessionFromState();
-            renderTabs();
-            await renderActiveTab();
+            await activateTab(fallback, { preserveCurrent: false });
             return;
         }
 
@@ -703,28 +678,19 @@ export async function discardTabsForDeletedPath(deletedPath, { isDirectory = fal
 
     const wasActiveDeleted = deletedTabIds.has(state.activeTabId);
     state.tabs = state.tabs.filter(tab => !deletedTabIds.has(tab.id));
+    syncEditorStateToBackend();
     deletedTabIds.forEach(tabId => closingTabIds.delete(tabId));
 
     if (state.tabs.length === 0) {
         const freshTab = createTab({ path: HOME_SCREEN_PATH, title: 'Start' });
         state.tabs.push(freshTab);
-        clearTransientEditorOverlays();
-        state.activeTabId = freshTab.id;
-        syncGlobalsFromTab(freshTab);
-        syncEditorSessionFromState();
-        renderTabs();
-        await renderActiveTab();
+        await activateTab(freshTab, { preserveCurrent: false });
         return;
     }
 
     if (wasActiveDeleted || !state.tabs.some(tab => tab.id === state.activeTabId)) {
         const fallback = state.tabs[0];
-        clearTransientEditorOverlays();
-        state.activeTabId = fallback.id;
-        syncGlobalsFromTab(fallback);
-        syncEditorSessionFromState();
-        renderTabs();
-        await renderActiveTab();
+        await activateTab(fallback, { preserveCurrent: false });
         return;
     }
 
@@ -807,30 +773,16 @@ function getTabCloseFallbackMs() {
 // ── New Tab ────────────────────────────────────────────────
 
 export async function createAndSwitchToNewTab(path = HOME_SCREEN_PATH, options = {}) {
-    // 편집 중인 탭의 상태를 보존
-    const currentTab = getActiveTab();
-    if (currentTab) {
-        syncTabFromGlobals(currentTab);
-    }
-    clearTransientEditorOverlays();
-    saveCurrentScroll();
     const tab = createTab({
         path,
         title: path === HOME_SCREEN_PATH ? 'Start' : (options.title || basename(path) || 'Untitled'),
     });
     state.tabs.push(tab);
-    state.activeTabId = tab.id;
-    syncGlobalsFromTab(tab);
-    renderTabs();
+    activateTab(tab, { renderDocument: false });
     await openPath(path, { ...options, pushHistory: false, tabId: tab.id });
 }
 
 export async function createUnsavedMarkdownTab() {
-    const currentTab = getActiveTab();
-    if (currentTab) syncTabFromGlobals(currentTab);
-    clearTransientEditorOverlays();
-    saveCurrentScroll();
-
     const tab = createTab({ path: MOBILE_UNTITLED_PATH, title: 'Untitled' });
     tab.currentMarkdownSource = '';
     tab.isEditing = true;
@@ -842,11 +794,7 @@ export async function createUnsavedMarkdownTab() {
     tab.homeTargetPath = HOME_SCREEN_PATH;
 
     state.tabs.push(tab);
-    state.activeTabId = tab.id;
-    syncGlobalsFromTab(tab);
-    syncEditorSessionFromState();
-    renderTabs();
-    await renderActiveTab();
+    await activateTab(tab);
 }
 
 export function activateTabByShortcut(index) {

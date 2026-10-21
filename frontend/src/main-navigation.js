@@ -6,12 +6,14 @@
 import {
     state, el, HOME_SCREEN_PATH, ABOUT_PATH, FEATURES_PATH, SHORTCUTS_PATH, THIRD_PARTY_NOTICES_PATH, WHATS_NEW_PATH,
     getPathDirname, normalizeFileURLPath, normalizeAppLocalFileHref,
-    documentTypeFromPath, kindFromPath, splitLinkTarget, isExternalURL,
-    joinPath, getScroller, syncEngineSelector, deriveTabTitle,
+    documentTypeFromPath, kindFromPath, splitLinkTarget,
+    joinPath, syncEngineSelector, deriveTabTitle,
     isMacOS, isEditableTarget, isBundledDocumentPath, isActiveMarkdownEditTab,
     isSupportedPreviewPath, getLocalizedBundledDocument, isEditableDocumentType,
 } from './main-state.js';
 import { getActiveTab, syncTabFromGlobals, renderTabs, createAndSwitchToNewTab, switchToTab, saveCurrentScroll } from './main-tabs.js';
+import { loadBundledMarkdown } from './bundled-documents.js';
+import { syncEditorStateToBackend } from './main-session.js';
 import { renderActiveTab, hideLinkTooltip } from './main-render.js';
 import { undoAction, redoAction, getUndoDepth, getRedoDepth, enterEditMode, getEditorSelectionSnapshot } from './main-editor.js';
 import {
@@ -154,6 +156,7 @@ export async function openPath(path, options = {}) {
             } else {
                 applyHomeToTab(tab, pushHistory);
             }
+            syncEditorStateToBackend();
             renderTabs();
             if (isActiveTab(tab)) {
                 await renderActiveTab();
@@ -343,6 +346,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
             pushTabHistory(tab, path);
         }
         tab.title = deriveTabTitle(path, content);
+        syncEditorStateToBackend();
         renderTabs();
         await touchRecentPreviewPath(path);
         return;
@@ -378,6 +382,7 @@ async function loadFile(path, content, pushHistory = true, setHome = false, tab 
     if (tab) {
         syncTabFromGlobals(tab);
         tab.title = deriveTabTitle(path, content);
+        syncEditorStateToBackend();
         renderTabs();
     }
 
@@ -480,6 +485,7 @@ async function applyReloadedContent(tab, path, documentType, content) {
         if (tab.path === path) {
             tab.title = deriveTabTitle(path, content);
         }
+        syncEditorStateToBackend();
         renderTabs();
         return;
     }
@@ -532,36 +538,6 @@ function getPreferredLocalizedBundledPath(key, fallbackPath) {
     }
 
     return document.defaultPath || fallbackPath;
-}
-
-const bundledMarkdownModules = import.meta.glob('./docs/*.md', { as: 'raw', eager: true });
-
-async function loadBundledMarkdown(path) {
-    const cleanName = path.replace(/^\/+/, '');
-    const globKey = `./docs/${cleanName}`;
-    if (typeof bundledMarkdownModules[globKey] === 'string') {
-        return bundledMarkdownModules[globKey];
-    }
-
-    try {
-        const response = await fetch(path);
-        if (response.ok) {
-            return await response.text();
-        }
-    } catch {
-        // fetch fallback
-    }
-
-    try {
-        const response = await fetch('.' + path);
-        if (response.ok) {
-            return await response.text();
-        }
-    } catch {
-        // relative fetch fallback
-    }
-
-    throw new Error(`Failed to load bundled markdown: ${path}`);
 }
 
 // ── Link Resolution ────────────────────────────────────────

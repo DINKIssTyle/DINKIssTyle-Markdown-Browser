@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command strip_wails_location creates a machine-local Wails module replacement
 // with the unused iOS geolocation bridge removed. The original module cache is
 // never changed, and a new Wails version automatically regenerates the copy.

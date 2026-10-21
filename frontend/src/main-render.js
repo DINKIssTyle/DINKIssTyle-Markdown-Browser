@@ -3,6 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { loadBundledMarkdown } from './bundled-documents.js';
 import { DEFAULT_CONTENT_FONT_SIZE } from './config.js';
 import { marked } from 'marked';
 import katex from 'katex';

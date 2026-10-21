@@ -1,3 +1,5 @@
+//go:build ignore
+
 // Command patch_xcode_project restores the maintained Xcode project after
 // `wails3 ios xcode:gen` or `wails3 update build-assets` regenerates Wails files.
 //

@@ -5,12 +5,15 @@
 
 import './style.css';
 import 'katex/dist/katex.min.css';
+import { setEditorTheme } from './editor-appearance.js';
+import { toggleEditorPreview } from './editor-layout.js';
+import { syncEditorStateToBackend } from './main-session.js';
 import { DEFAULT_CONTENT_FONT_SIZE, MIN_SPLASH_MS } from './config.js';
 
 // ── Module Imports ─────────────────────────────────────────
-import { state, el, HOME_SCREEN_PATH, debounce, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector, normalizeFileURLPath, isEditableDocumentType } from './main-state.js';
+import { state, el, HOME_SCREEN_PATH, isEditableTarget, isLinux, formatSaveDialogMessage, syncEngineSelector, normalizeFileURLPath, isEditableDocumentType } from './main-state.js';
 import {
-    createTab, getActiveTab, syncGlobalsFromTab, renderTabs,
+    createTab, getActiveTab, findTabByPath, syncGlobalsFromTab, renderTabs,
     createAndSwitchToNewTab, closeTab, reopenClosedTab, activateTabByShortcut, switchToTab,
 } from './main-tabs.js';
 import {
@@ -20,22 +23,22 @@ import {
     bindHistoryMouseNavigation, bindNativeHistoryNavigation,
 } from './main-navigation.js';
 import { bindDocumentMetadataUI, renderActiveTab, renderRecentFiles, applyHTMLZoom, restoreEditingPreview, openEditingPreviewInNewTab } from './main-render.js';
-import { enterEditMode, bindEditorEvents, createNewDocument, setEditorTheme, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, toggleEditorPreview, scrollEditorToLine } from './main-editor.js';
+import { enterEditMode, bindEditorEvents, createNewDocument, saveCurrentDocument, saveCurrentDocumentAs, hasUnsavedEditorChanges, exitEditMode, isEditorFocused, changeEditorFontSize, resetEditorFontSize, applyEditorPreferencesFromSettings, translateViewerDocument, scrollEditorToLine } from './main-editor.js';
 import {
-    showToast, toggleSearch, handleSearch, handleSearchInputKeydown, applyHighlight,
-    updateSearchClearButton, clearSearchInput, cancelCurrentTask, closeContextMenu,
-    copyTextToClipboard, bindHighlightNav, bindContextMenu,
+    showToast, toggleSearch, applyHighlight,
+    cancelCurrentTask, closeContextMenu,
+    bindHighlightNav, bindContextMenu,
 } from './main-ui.js';
 import { initAI, bindAIEvents, openSettings, showAskAIPrompt } from './main-ai.js';
 import { bindUpdateEvents, runAutomaticUpdateCheck } from './main-update.js';
 import { initSidebar, toggleSidebar, toggleSidebarTab } from './main-sidebar.js';
 import {
-    applyAccentColors, applyDocumentMarginStyle, applyViewerFontFamily, resolveAccentSettings,
-    applyThemeMode, normalizeThemeMode, resolveEffectiveTheme,
+    applyDocumentMarginStyle, applyViewerFontFamily, resolveAccentSettings,
+    applyThemeMode, resolveEffectiveTheme,
 } from './main-theme.js';
 import {
     loadScrollbarVisibility, loadMainToolbarVisibility, loadRestoreWindowState, loadThemeMode,
-    syncThemeSettingsControls, syncScrollbarSettingsControls, syncMainToolbarSettingsControls,
+    syncThemeSettingsControls,
     persistAppSettings,
 } from './main-settings.js';
 import { loadLanguageSettings } from './main-languages.js';
@@ -120,6 +123,7 @@ window.addEventListener('DOMContentLoaded', async () => {
         state.tabs = [initialTab];
         state.activeTabId = initialTab.id;
         syncGlobalsFromTab(initialTab);
+        syncEditorStateToBackend();
         renderTabs();
 
         if (hasStartupFiles) {
@@ -182,14 +186,6 @@ function removeAfterOpacityTransition(element) {
     element.addEventListener('transitioncancel', remove, { once: true });
 
     window.setTimeout(remove, 300);
-}
-
-function parseCSSTimeList(value) {
-    return String(value || '0s').split(',').map(part => {
-        const time = part.trim();
-        const numericValue = Number.parseFloat(time) || 0;
-        return time.endsWith('ms') ? numericValue : numericValue * 1000;
-    });
 }
 
 // ── Settings ───────────────────────────────────────────────
@@ -510,13 +506,8 @@ function bindHomeScreen() {
         const targetMatchIndex = Number(item.dataset.matchIndex) || 0;
 
         setTimeout(async () => {
-            const normalizedTargetPath = targetPath ? normalizeFileURLPath(targetPath) : "";
-            const matchedTab = state.tabs.find(tab => {
-                if (targetTabId && tab.id === targetTabId) return true;
-                if (!normalizedTargetPath) return false;
-                const tabPath = normalizeFileURLPath(tab.editingSourcePath || tab.path || "");
-                return tabPath === normalizedTargetPath;
-            });
+            const matchedTab = state.tabs.find(tab => targetTabId && tab.id === targetTabId)
+                || findTabByPath(targetPath);
 
             if (matchedTab) {
                 if (matchedTab.id !== state.activeTabId) {
@@ -587,10 +578,7 @@ function bindHomeScreen() {
 
 async function openRecentFile(path) {
     const normalizedPath = normalizeFileURLPath(path);
-    const openTab = state.tabs.find(tab => {
-        const tabPath = normalizeFileURLPath(tab.editingSourcePath || tab.path || "");
-        return tabPath === normalizedPath;
-    });
+    const openTab = findTabByPath(normalizedPath);
     if (openTab) {
         await switchToTab(openTab.id);
         return;
@@ -701,7 +689,6 @@ function bindMenuEvents() {
 // ── Global Keyboard Shortcuts ──────────────────────────────
 
 async function handleGlobalKeydown(event) {
-    const isEditingShortcut = (event.metaKey || event.ctrlKey) && event.key.toLowerCase() === 'w';
     const isAskAIShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
         && (event.key === '/' || event.code === 'Slash');
     const isEditorFontDownShortcut = (event.metaKey || event.ctrlKey) && !event.shiftKey && !event.altKey
@@ -740,7 +727,7 @@ async function handleGlobalKeydown(event) {
         && event.key.toLowerCase() === 'g';
 
     // 편집 가능한 요소(textarea, input)에 포커스가 있을 때
-    // Cmd+W(isEditingShortcut), Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
+    // Cmd+W, Cmd+A, Cmd+C 등의 글로벌 단축키가 아니라면
     // 브라우저 기본 동작에 맡기고 글로벌 단축키 처리를 건너뜁니다.
     if (isEditableTarget(event.target)) {
         const isGlobalKey = (event.metaKey || event.ctrlKey)

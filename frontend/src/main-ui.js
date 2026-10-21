@@ -3,6 +3,7 @@
  * Copyright (C) 2026 DINKI'ssTyle. All rights reserved.
  */
 
+import { cmView } from './editor-view.js';
 import { state, el, getScroller, escapeRegex, escapeAttr, escapeHTML, getPathDirname, basename } from './main-state.js';
 import { SearchMarkdown, CancelAIRequest } from '../bindings/dinkisstyle-markdown-browser/internal/app/app';
 import { ClipboardGetText, ClipboardSetText, LogError } from './wails-runtime';
@@ -17,7 +18,6 @@ let toastTimer = null;
 let progressHideTimer = null;
 let progressDeltaHideTimer = null;
 let contextMenuState = null;
-let mobileSelectionMenuTimer = null;
 let activeProgressTaskId = 0;
 const cancelledProgressTaskIds = new Set();
 
@@ -708,12 +708,11 @@ export function bindContextMenu() {
         if (!contextMenuState?.isEditor || !contextMenuState.selectionText) return;
         try {
             await copyTextToClipboard(contextMenuState.selectionText);
-            const mod = await import('./main-editor.js');
-            if (mod.cmView) {
-                const selection = mod.cmView.state.selection.main;
+            if (cmView) {
+                const selection = cmView.state.selection.main;
                 if (!selection.empty) {
-                    mod.cmView.focus();
-                    mod.cmView.dispatch({
+                    cmView.focus();
+                    cmView.dispatch({
                         changes: { from: selection.from, to: selection.to, insert: '' },
                         selection: { anchor: selection.from }
                     });
@@ -732,8 +731,8 @@ export function bindContextMenu() {
                 const text = await ClipboardGetText();
                 if (typeof text === 'string') {
                     const mod = await import('./main-editor.js');
-                    if (mod.cmView) {
-                        mod.cmView.focus();
+                    if (cmView) {
+                        cmView.focus();
                         mod.insertTextAtCursor(text, '');
                         showToast('Pasted.', 'content_paste');
                     }
@@ -747,11 +746,10 @@ export function bindContextMenu() {
 
     bindContextMenuAction(el.contextSelectAll, async () => {
         if (contextMenuState?.isEditor) {
-            const mod = await import('./main-editor.js');
-            if (mod.cmView) {
-                mod.cmView.focus();
-                mod.cmView.dispatch({
-                    selection: { anchor: 0, head: mod.cmView.state.doc.length }
+            if (cmView) {
+                cmView.focus();
+                cmView.dispatch({
+                    selection: { anchor: 0, head: cmView.state.doc.length }
                 });
             }
         } else if (contextMenuState?.targetElement) {
@@ -801,10 +799,9 @@ async function handleContextMenu(event) {
 
     let selectionText = "";
     if (isEditor) {
-        const mod = await import('./main-editor.js');
-        if (mod.cmView) {
-            const sel = mod.cmView.state.selection.main;
-            selectionText = mod.cmView.state.sliceDoc(sel.from, sel.to);
+        if (cmView) {
+            const sel = cmView.state.selection.main;
+            selectionText = cmView.state.sliceDoc(sel.from, sel.to);
         }
     } else {
         selectionText = window.getSelection()?.toString() || "";
@@ -865,62 +862,6 @@ function showContextMenuForState(nextState, x, y) {
     positionContextMenu(x, y);
 }
 
-function getIOSSelectionText() {
-    if (state.isEditing) return '';
-    return window.getSelection()?.toString().trim() || '';
-}
-
-function scheduleIOSSelectionContextMenu(pointerEvent = null) {
-    window.clearTimeout(mobileSelectionMenuTimer);
-    mobileSelectionMenuTimer = window.setTimeout(() => {
-        void showIOSSelectionContextMenu(pointerEvent);
-    }, 120);
-}
-
-async function showIOSSelectionContextMenu(pointerEvent) {
-    if (!isMobilePlatform() || pointerEvent?.target?.closest?.('#context-menu')) return;
-
-    const editorTarget = pointerEvent?.target?.closest?.('.cm-editor');
-    if (state.isEditing && (editorTarget || document.activeElement?.closest?.('.cm-editor'))) {
-        const mod = await import('./main-editor.js');
-        const selection = mod.cmView?.state.selection.main;
-        if (!selection || selection.empty) {
-            closeContextMenu();
-            return;
-        }
-        const selectionText = mod.cmView.state.sliceDoc(selection.from, selection.to);
-        const coords = mod.cmView.coordsAtPos(selection.head);
-        if (!selectionText || !coords) return;
-        showContextMenuForState({
-            selectionText,
-            linkHref: '',
-            isEditor: true,
-            targetElement: editorTarget || mod.cmView.dom,
-        }, coords.left, coords.bottom + 8);
-        return;
-    }
-
-    const selection = window.getSelection();
-    const selectionText = selection?.toString().trim() || '';
-    if (!selectionText || !selection.rangeCount) {
-        closeContextMenu();
-        return;
-    }
-    const range = selection.getRangeAt(0);
-    const targetNode = range.commonAncestorContainer.nodeType === Node.ELEMENT_NODE
-        ? range.commonAncestorContainer
-        : range.commonAncestorContainer.parentElement;
-    const targetElement = targetNode?.closest?.('#markdown-container');
-    if (!targetElement) return;
-    const rect = range.getBoundingClientRect();
-    showContextMenuForState({
-        selectionText,
-        linkHref: '',
-        isEditor: false,
-        targetElement,
-    }, rect.left + (rect.width / 2), rect.bottom + 8);
-}
-
 function positionContextMenu(x, y) {
     el.contextMenu.classList.remove('show');
     el.contextMenu.classList.add('hidden');
@@ -937,7 +878,6 @@ function positionContextMenu(x, y) {
 }
 
 export function closeContextMenu() {
-    window.clearTimeout(mobileSelectionMenuTimer);
     contextMenuState = null;
     el.contextMenu.classList.remove('show');
     el.contextMenu.classList.add('hidden');
